@@ -59,10 +59,10 @@ const sb = {
     "Prefer": "return=representation",
   }),
 
-  async signUp(email: string, password: string) {
+  async signUp(email: string, password: string, metadata: object) {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
       method: "POST", headers: this.h(),
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, data: metadata }),
     });
     return r.json();
   },
@@ -654,8 +654,15 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // 1. Créer le compte auth
-      const authRes = await sb.signUp(form.email, form.password);
+      // 1. Créer le compte auth avec les metadata du profil
+      const metadata = {
+        name: form.name.trim(),
+        age: form.age,
+        city: form.city,
+        gender: form.gender,
+        bio: form.bio.trim(),
+      };
+      const authRes = await sb.signUp(form.email, form.password, metadata);
 
       // Gestion des erreurs d'inscription en français
       if (authRes.error) {
