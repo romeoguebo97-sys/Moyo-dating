@@ -654,17 +654,17 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // 1. Créer le compte auth avec les metadata du profil
       const metadata = {
         name: form.name.trim(),
         age: form.age,
         city: form.city,
         gender: form.gender,
         bio: form.bio.trim(),
+        photo_url: null,
       };
+
       const authRes = await sb.signUp(form.email, form.password, metadata);
 
-      // Gestion des erreurs d'inscription en français
       if (authRes.error) {
         const code = authRes.error.message || "";
         let msg = "Une erreur est survenue. Veuillez réessayer.";
@@ -680,58 +680,17 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
         return;
       }
 
-      // 2. Vérifier si confirmation email requise
-      const userId = authRes.user?.id || authRes.id;
-      const emailConfirmed = authRes.user?.email_confirmed_at || authRes.user?.confirmed_at;
+      // Succès — ne pas connecter automatiquement
+      // Rediriger vers login avec message clair
+      setToast({ msg: "Compte créé. Vous pouvez maintenant vous connecter.", type: "success" });
+      setLoading(false);
+      setTimeout(() => onNav("login"), 2500);
 
-      if (!emailConfirmed) {
-        // Confirmation email requise — on sauvegarde quand même le profil via service key si possible
-        // Sinon on informe l'utilisateur
-        setToast({
-          msg: "Compte créé ! Vérifiez votre boîte mail et confirmez votre adresse e-mail avant de vous connecter.",
-          type: "success"
-        });
-        setLoading(false);
-        // Rediriger vers login après 3 secondes
-        setTimeout(() => onNav("login"), 3500);
-        return;
-      }
-
-      // 3. Si email déjà confirmé (mode dev sans confirmation), se connecter
-      const login = await sb.signIn(form.email, form.password);
-      if (login.error) {
-        setToast({ msg: "Compte créé ! Vérifiez votre boîte mail pour activer votre compte.", type: "success" });
-        setLoading(false);
-        setTimeout(() => onNav("login"), 3500);
-        return;
-      }
-
-      // 4. Créer le profil dans la table profiles
-      const profileData = {
-        id: login.user.id,
-        name: form.name.trim(),
-        age: parseInt(form.age) || 0,
-        city: form.city,
-        gender: form.gender,
-        bio: form.bio.trim(),
-        photo_url: null,
-        is_premium: false,
-        is_admin: false,
-      };
-
-      await sb.upsert(login.access_token, "profiles", profileData);
-      onAuth({
-        token: login.access_token,
-        userId: login.user.id,
-        name: form.name.trim(),
-        isPremium: false,
-        isAdmin: false,
-      });
     } catch (e) {
       console.error("Signup error:", e);
       setToast({ msg: "Une erreur réseau est survenue. Veuillez réessayer.", type: "error" });
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
