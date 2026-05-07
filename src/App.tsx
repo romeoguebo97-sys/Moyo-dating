@@ -1,165 +1,330 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useEffect } from "react";
 
-/* ─── SUPABASE CONFIG ─── */
-const SUPABASE_URL = "https://jqcrpdoyvrhsjrfyaakn.supabase.co";
-const SUPABASE_KEY = "sb_publishable_zVgmtOt6bLmBxT8JQKDoAw_odpG-8g5";
-
-const sb = {
-  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` },
-  async fetch(path, opts = {}) {
-    const r = await fetch(`${SUPABASE_URL}${path}`, { headers: this.headers, ...opts });
-    return r.json();
-  },
-  // Auth
-  async signUp(email, password) {
-    return fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-      method: "POST", headers: this.headers,
-      body: JSON.stringify({ email, password })
-    }).then(r => r.json());
-  },
-  async signIn(email, password) {
-    return fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: "POST", headers: this.headers,
-      body: JSON.stringify({ email, password })
-    }).then(r => r.json());
-  },
-  async signOut(token) {
-    return fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-      method: "POST",
-      headers: { ...this.headers, "Authorization": `Bearer ${token}` }
-    });
-  },
-  async getUser(token) {
-    return fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { ...this.headers, "Authorization": `Bearer ${token}` }
-    }).then(r => r.json());
-  },
-  // DB avec token utilisateur
-  authHeaders(token) {
-    return { ...this.headers, "Authorization": `Bearer ${token}` };
-  },
-  async query(token, table, params = "") {
-    return fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
-      headers: { ...this.authHeaders(token), "Prefer": "return=representation" }
-    }).then(r => r.json());
-  },
-  async insert(token, table, data) {
-    return fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: "POST",
-      headers: { ...this.authHeaders(token), "Prefer": "return=representation" },
-      body: JSON.stringify(data)
-    }).then(r => r.json());
-  },
-  async update(token, table, id, data) {
-    return fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
-      method: "PATCH",
-      headers: { ...this.authHeaders(token), "Prefer": "return=representation" },
-      body: JSON.stringify(data)
-    }).then(r => r.json());
-  },
-  async upsert(token, table, data) {
-    return fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: "POST",
-      headers: { ...this.authHeaders(token), "Prefer": "return=representation,resolution=merge-duplicates" },
-      body: JSON.stringify(data)
-    }).then(r => r.json());
-  },
-};
-
-/* ─── PALETTE ─── */
 const G = {
-  rouge: "#C0392B", rougeDark: "#922B21",
-  or: "#D4A843", orLight: "#F0C96A",
-  vert: "#1A5C3A", creme: "#FAF3E8",
-  cremeDark: "#F0E6D3", brun: "#2C1A0E",
-  brunLight: "#5C3D2A", blanc: "#FFFFFF", gris: "#E8DDD0",
+  rouge:"#C0392B", rougeDark:"#922B21", or:"#D4A843",
+  vert:"#1A5C3A", creme:"#FAF3E8", cremeDark:"#F0E6D3",
+  brun:"#2C1A0E", brunLight:"#5C3D2A", blanc:"#FFFFFF", gris:"#E8DDD0",
 };
 
-/* ─── HELPERS UI ─── */
-function Btn({ children, variant = "primary", onClick, style = {}, disabled = false, loading = false }) {
-  const base = {
-    border: "none", borderRadius: 50, padding: "13px 28px",
-    fontWeight: 600, fontSize: "0.93rem", transition: "all 0.2s",
-    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
-    cursor: disabled || loading ? "not-allowed" : "pointer",
-    opacity: disabled || loading ? 0.65 : 1, fontFamily: "inherit", ...style,
-  };
-  const v = {
-    primary: { background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.3)" },
-    gold: { background: G.or, color: G.brun, boxShadow: "0 4px 18px rgba(212,168,67,0.3)" },
-    outline: { background: "transparent", color: G.brun, border: `2px solid ${G.brun}` },
-    ghost: { background: "rgba(44,26,14,0.06)", color: G.brun },
-    danger: { background: "#e74c3c", color: G.blanc },
-    white: { background: G.blanc, color: G.rouge },
-  };
-  return <button style={{ ...base, ...v[variant] }} onClick={onClick} disabled={disabled || loading}>{loading ? "⏳" : children}</button>;
-}
+const VILLES = [
+  "Brazzaville","Pointe-Noire","Dolisie","Nkayi","Owando",
+  "Ouesso","Impfondo","Sibiti","Djambala","Kinkala",
+  "Ewo","Gamboma","Madingou","Mossaka","Odziba",
+  "──────────────",
+  "Diaspora Europe","Diaspora Amérique","Diaspora Asie / Océanie","Diaspora Afrique (autre pays)",
+];
 
-function Input({ label, type = "text", value, onChange, placeholder, icon, error }) {
-  const [focus, setFocus] = useState(false);
-  return (
-    <div style={{ marginBottom: 18 }}>
-      {label && <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>{label}</label>}
-      <div style={{ position: "relative" }}>
-        {icon && <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: "1rem", opacity: 0.6 }}>{icon}</span>}
-        <input type={type} value={value} onChange={onChange} placeholder={placeholder}
-          onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
-          style={{
-            width: "100%", padding: icon ? "13px 14px 13px 42px" : "13px 14px",
-            border: `2px solid ${error ? "#e74c3c" : focus ? G.or : G.gris}`,
-            borderRadius: 12, fontSize: "0.93rem", background: G.blanc,
-            color: G.brun, outline: "none", transition: "border-color 0.2s", fontFamily: "inherit",
-          }}
-        />
-      </div>
-      {error && <p style={{ color: "#e74c3c", fontSize: "0.78rem", marginTop: 4 }}>{error}</p>}
-    </div>
-  );
-}
-
-function Toast({ msg, type = "success", onClose }) {
-  useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t); }, []);
-  return (
-    <div style={{
-      position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
-      background: type === "error" ? "#e74c3c" : G.vert,
-      color: G.blanc, padding: "12px 24px", borderRadius: 50,
-      fontSize: "0.9rem", fontWeight: 600, zIndex: 9999,
-      boxShadow: "0 8px 30px rgba(0,0,0,0.2)", whiteSpace: "nowrap",
-    }}>{type === "error" ? "❌" : "✅"} {msg}</div>
-  );
+function Btn({children,variant="primary",onClick=()=>{},style={},disabled=false}) {
+  const base={border:"none",borderRadius:50,padding:"12px 24px",fontWeight:600,fontSize:"0.9rem",cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.65:1,fontFamily:"inherit",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,transition:"all 0.2s",...style};
+  const v={
+    primary:{background:G.rouge,color:G.blanc,boxShadow:"0 4px 16px rgba(192,57,43,0.3)"},
+    gold:{background:`linear-gradient(135deg,${G.or},#B8860B)`,color:G.brun},
+    outline:{background:"transparent",color:G.brun,border:`2px solid ${G.brun}`},
+    ghost:{background:"rgba(44,26,14,0.06)",color:G.brun},
+    danger:{background:"#e74c3c",color:G.blanc},
+    white:{background:G.blanc,color:G.rouge},
+  };
+  return <button style={{...base,...v[variant]}} onClick={onClick} disabled={disabled}>{children}</button>;
 }
 
 /* ─── LANDING ─── */
-function Landing({ onNav }) {
-  return (
-    <div style={{ minHeight: "100vh", background: `linear-gradient(160deg, ${G.creme} 55%, ${G.vert} 100%)` }}>
-      <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 32px" }}>
-        <div style={{ fontFamily: "Georgia, serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
-        <div style={{ display: "flex", gap: 12 }}>
-          <Btn variant="ghost" onClick={() => onNav("login")} style={{ padding: "10px 20px" }}>Connexion</Btn>
-          <Btn variant="primary" onClick={() => onNav("signup")} style={{ padding: "10px 22px" }}>S'inscrire →</Btn>
+function Landing({onNav}) {
+  const [visible,setVisible]=useState(false);
+  useEffect(()=>{setTimeout(()=>setVisible(true),50);},[]);
+  return <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${G.creme} 50%,${G.vert} 100%)`,overflow:"hidden"}}>
+    <style>{`
+      @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+      @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+      @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+      @keyframes heartbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+      .fu1{animation:fadeUp 0.7s 0.1s both ease-out}
+      .fu2{animation:fadeUp 0.7s 0.25s both ease-out}
+      .fu3{animation:fadeUp 0.7s 0.4s both ease-out}
+      .fu4{animation:fadeUp 0.7s 0.55s both ease-out}
+      .fu5{animation:fadeUp 0.7s 0.7s both ease-out}
+      .fu6{animation:fadeUp 0.7s 0.85s both ease-out}
+      .heart{animation:float 3s ease-in-out infinite;display:inline-block}
+      .btn-p:hover{transform:translateY(-3px)!important;box-shadow:0 14px 36px rgba(192,57,43,0.5)!important;transition:all 0.25s!important}
+      .btn-o:hover{background:#2C1A0E!important;color:#FAF3E8!important;transform:translateY(-3px)!important;transition:all 0.25s!important}
+      .stat:hover{transform:translateY(-5px) scale(1.04)!important;box-shadow:0 10px 28px rgba(44,26,14,0.14)!important}
+      .stat{transition:all 0.25s ease!important}
+      .store:hover{transform:translateY(-3px);opacity:0.92}
+      .store{transition:all 0.22s ease!important}
+      .fb:hover{opacity:0.88;transform:translateY(-2px)}
+      .fb{transition:all 0.2s!important}
+      .nav-link:hover{color:#C0392B!important}
+      .nav-link{transition:color 0.2s!important}
+    `}</style>
+    <nav style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"20px 24px",animation:"fadeIn 0.5s ease both"}}>
+      <div style={{fontFamily:"Georgia,serif",fontSize:"2rem",color:G.rouge,fontWeight:700}}>Mo<span style={{color:G.or}}>yo</span></div>
+      <div style={{display:"flex",gap:12,alignItems:"center"}}>
+        <span className="nav-link" style={{fontSize:"0.88rem",fontWeight:500,color:G.brunLight,cursor:"pointer"}} onClick={()=>onNav("about")}>À propos</span>
+        <a href="https://www.facebook.com/share/1CHQizobz9/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer"
+          className="fb" style={{display:"flex",alignItems:"center",gap:6,background:"#1877F2",color:"#fff",borderRadius:50,padding:"8px 16px",textDecoration:"none",fontSize:"0.82rem",fontWeight:600}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          Facebook
+        </a>
+      </div>
+    </nav>
+    <div style={{maxWidth:560,margin:"40px auto 0",padding:"0 24px",textAlign:"center"}}>
+      <div className="fu1" style={{display:"inline-block",background:"rgba(212,168,67,0.15)",border:`1px solid ${G.or}`,padding:"6px 16px",borderRadius:50,fontSize:"0.75rem",fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:24,color:G.brunLight}}>🇨🇬 Site de rencontres — Congo-Brazzaville</div>
+      <h1 className="fu2" style={{fontFamily:"Georgia,serif",fontSize:"clamp(2.2rem,8vw,3.8rem)",lineHeight:1.1,fontWeight:700,marginBottom:20}}>
+        Trouve ton <span className="heart" style={{color:G.rouge,fontStyle:"italic",fontFamily:"Georgia,serif"}}>âme sœur</span><br/>au Congo
+      </h1>
+      <p className="fu3" style={{fontSize:"1rem",lineHeight:1.75,color:G.brunLight,marginBottom:36}}>
+        Moyo connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.
+      </p>
+      <div className="fu4" style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",marginBottom:40}}>
+        <button className="btn-p" onClick={()=>onNav("signup")} style={{border:"none",borderRadius:50,padding:"15px 36px",fontWeight:600,fontSize:"0.95rem",background:G.rouge,color:G.blanc,boxShadow:"0 4px 18px rgba(192,57,43,0.35)",cursor:"pointer",fontFamily:"inherit"}}>
+          Créer mon profil gratuit
+        </button>
+        <button className="btn-o" onClick={()=>onNav("login")} style={{border:`2px solid ${G.brun}`,borderRadius:50,padding:"13px 28px",fontWeight:600,fontSize:"0.95rem",background:"transparent",color:G.brun,cursor:"pointer",fontFamily:"inherit"}}>
+          J'ai déjà un compte
+        </button>
+      </div>
+      <div className="fu5" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:32}}>
+        {[["12 000+","Membres inscrits"],["850+","Couples formés"],["19","Villes & diasporas"]].map(([n,l])=>(
+          <div key={l} className="stat" style={{background:"rgba(255,255,255,0.75)",borderRadius:14,padding:"16px 8px",textAlign:"center",backdropFilter:"blur(8px)"}}>
+            <div style={{fontFamily:"Georgia,serif",fontSize:"1.5rem",fontWeight:700,color:G.rouge,marginBottom:4}}>{n}</div>
+            <div style={{fontSize:"0.72rem",color:G.brunLight,fontWeight:500}}>{l}</div>
+          </div>
+        ))}
+      </div>
+      <div className="fu6" style={{marginBottom:40}}>
+        <p style={{fontSize:"0.82rem",color:G.brunLight,marginBottom:14,fontWeight:500}}>📲 Bientôt disponible sur</p>
+        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+          <div className="store" style={{display:"flex",alignItems:"center",gap:10,background:G.brun,color:G.blanc,borderRadius:12,padding:"10px 18px",minWidth:150,cursor:"pointer"}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
+            <div><div style={{fontSize:"0.6rem",opacity:0.75,letterSpacing:"0.05em"}}>DISPONIBLE SUR</div><div style={{fontSize:"0.9rem",fontWeight:700}}>Google Play</div></div>
+          </div>
+          <div className="store" style={{display:"flex",alignItems:"center",gap:10,background:G.brun,color:G.blanc,borderRadius:12,padding:"10px 18px",minWidth:150,cursor:"pointer"}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+            <div><div style={{fontSize:"0.6rem",opacity:0.75,letterSpacing:"0.05em"}}>TÉLÉCHARGER SUR</div><div style={{fontSize:"0.9rem",fontWeight:700}}>App Store</div></div>
+          </div>
         </div>
-      </nav>
-      <div style={{ maxWidth: 600, margin: "60px auto 0", padding: "0 32px", textAlign: "center" }}>
-        <div style={{ display: "inline-block", background: "rgba(212,168,67,0.15)", border: `1px solid ${G.or}`, padding: "6px 18px", borderRadius: 50, fontSize: "0.78rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 28, color: G.brunLight }}>🇨🇬 Site de rencontres — Congo-Brazzaville</div>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2.5rem,6vw,4rem)", lineHeight: 1.1, fontWeight: 700, marginBottom: 24 }}>
-          Trouve ton <em style={{ color: G.rouge, fontStyle: "italic" }}>âme sœur</em><br />au Congo
-        </h1>
-        <p style={{ fontSize: "1.05rem", lineHeight: 1.75, color: G.brunLight, marginBottom: 40 }}>
-          Moyo connecte les Congolais à la recherche d'une relation sincère — Brazzaville, Pointe-Noire, Dolisie et la diaspora.
+      </div>
+    </div>
+  </div>;
+}
+
+/* ─── ABOUT ─── */
+function About({onBack}) {
+  return <div style={{minHeight:"100vh",background:G.creme}}>
+    <div style={{background:`linear-gradient(160deg,${G.vert},#0D2E1C)`,padding:"24px 24px 40px"}}>
+      <div onClick={onBack} style={{color:"rgba(255,255,255,0.7)",fontSize:"0.88rem",cursor:"pointer",marginBottom:20,display:"flex",alignItems:"center",gap:6}}>← Retour</div>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontFamily:"Georgia,serif",fontSize:"2.5rem",color:G.blanc,fontWeight:700,marginBottom:4}}>Mo<span style={{color:G.or}}>yo</span></div>
+        <p style={{color:"rgba(255,255,255,0.75)",fontSize:"0.9rem"}}>Le premier site de rencontres congolais</p>
+      </div>
+    </div>
+    <div style={{padding:"0 20px 60px",maxWidth:600,margin:"0 auto"}}>
+      {/* Mission */}
+      <div style={{background:G.blanc,borderRadius:20,padding:"24px",marginTop:-20,boxShadow:"0 8px 32px rgba(44,26,14,0.1)",marginBottom:16}}>
+        <div style={{fontSize:"2rem",marginBottom:10}}>❤️</div>
+        <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.4rem",fontWeight:700,marginBottom:10}}>Notre mission</h2>
+        <p style={{fontSize:"0.88rem",lineHeight:1.8,color:G.brunLight}}>
+          <strong>Moyo</strong> (qui signifie "cœur" en swahili) est le premier site de rencontres dédié aux Congolais. Notre mission est simple : créer des rencontres sincères et durables entre Congolais, qu'ils soient au pays ou dans la diaspora.
         </p>
-        <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-          <Btn variant="primary" onClick={() => onNav("signup")} style={{ padding: "16px 40px", fontSize: "1rem" }}>Créer mon profil gratuit</Btn>
-          <Btn variant="outline" onClick={() => onNav("login")} style={{ padding: "14px 32px", fontSize: "1rem" }}>J'ai déjà un compte</Btn>
-        </div>
-        <div style={{ display: "flex", gap: 48, justifyContent: "center", marginTop: 56 }}>
-          {[["❤️", "Rencontres sincères"], ["✅", "Profils vérifiés"], ["🇨🇬", "100% Congolais"]].map(([i, l]) => (
-            <div key={l} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "1.8rem", marginBottom: 6 }}>{i}</div>
-              <div style={{ fontSize: "0.8rem", color: G.brunLight, fontWeight: 500 }}>{l}</div>
+        <p style={{fontSize:"0.88rem",lineHeight:1.8,color:G.brunLight,marginTop:10}}>
+          Nous croyons que chaque Congolais mérite de trouver l'amour dans un espace sûr, respectueux et adapté à notre culture et nos valeurs.
+        </p>
+      </div>
+
+      {/* Conseils */}
+      <div style={{background:G.blanc,borderRadius:20,padding:"24px",marginBottom:16,boxShadow:"0 4px 16px rgba(44,26,14,0.07)"}}>
+        <div style={{fontSize:"2rem",marginBottom:10}}>💡</div>
+        <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.4rem",fontWeight:700,marginBottom:16}}>Conseils pour bien rencontrer</h2>
+        {[
+          {icon:"📸",titre:"Mets une vraie photo",desc:"Les profils avec une photo reçoivent 5x plus de messages. Utilise une photo récente et souriante."},
+          {icon:"✍️",titre:"Remplis bien ta bio",desc:"Parle de tes passions, tes valeurs, ce que tu recherches. Une bio sincère attire les bonnes personnes."},
+          {icon:"💬",titre:"Prends le temps de discuter",desc:"Ne te précipite pas. Apprends à connaître la personne avant de proposer une rencontre."},
+          {icon:"🔒",titre:"Protège tes informations",desc:"Ne partage pas ton numéro trop vite. Prends le temps de vérifier que la personne est sérieuse."},
+          {icon:"🚨",titre:"Signale les faux profils",desc:"Si tu suspectes une arnaque, utilise le bouton Reporter. Tu protèges toute la communauté."},
+          {icon:"🤝",titre:"Sois respectueux(se)",desc:"Traite les autres comme tu voudrais être traité(e). Un message sincère fait toujours bonne impression."},
+        ].map(c=>(
+          <div key={c.titre} style={{display:"flex",gap:14,alignItems:"flex-start",padding:"12px 0",borderBottom:`1px solid ${G.gris}`}}>
+            <div style={{fontSize:"1.4rem",flexShrink:0}}>{c.icon}</div>
+            <div>
+              <div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:3}}>{c.titre}</div>
+              <div style={{fontSize:"0.82rem",color:G.brunLight,lineHeight:1.6}}>{c.desc}</div>
             </div>
-          ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Services */}
+      <div style={{background:G.blanc,borderRadius:20,padding:"24px",marginBottom:16,boxShadow:"0 4px 16px rgba(44,26,14,0.07)"}}>
+        <div style={{fontSize:"2rem",marginBottom:10}}>🌟</div>
+        <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.4rem",fontWeight:700,marginBottom:16}}>Nos services</h2>
+        {[
+          {icon:"💞",titre:"Rencontres en ligne",desc:"Trouve ton âme sœur parmi des milliers de profils vérifiés au Congo et dans la diaspora.",badge:"Gratuit"},
+          {icon:"⭐",titre:"Abonnement Premium",desc:"Likes illimités, messages illimités, voir qui t'a liké, profil mis en avant et bien plus.",badge:"5 000 FCFA/mois"},
+          {icon:"💍",titre:"Accompagnement mariage",desc:"Nous t'accompagnons dans l'organisation de ta cérémonie congolaise traditionnelle et moderne.",badge:"Sur demande"},
+          {icon:"🤵",titre:"Mise en relation VIP",desc:"Service personnalisé pour une approche discrète et accompagnée dans ta recherche.",badge:"Premium"},
+          {icon:"📋",titre:"Conseil relationnel",desc:"Nos conseillers t'aident à rédiger ton profil et te guident dans tes rencontres.",badge:"Bientôt"},
+        ].map(s=>(
+          <div key={s.titre} style={{display:"flex",gap:14,alignItems:"flex-start",padding:"14px 0",borderBottom:`1px solid ${G.gris}`}}>
+            <div style={{fontSize:"1.5rem",flexShrink:0}}>{s.icon}</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
+                <div style={{fontWeight:700,fontSize:"0.9rem"}}>{s.titre}</div>
+                <div style={{background:"rgba(212,168,67,0.15)",border:`1px solid ${G.or}`,borderRadius:50,padding:"2px 8px",fontSize:"0.68rem",fontWeight:600,color:G.brunLight,flexShrink:0,marginLeft:8}}>{s.badge}</div>
+              </div>
+              <div style={{fontSize:"0.82rem",color:G.brunLight,lineHeight:1.6}}>{s.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Mariage */}
+      <div style={{background:`linear-gradient(135deg,${G.rouge},${G.rougeDark})`,borderRadius:20,padding:"24px",marginBottom:16,color:G.blanc}}>
+        <div style={{fontSize:"2rem",marginBottom:10}}>💍</div>
+        <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.3rem",fontWeight:700,marginBottom:10}}>Accompagnement mariage congolais</h2>
+        {["Organisation du mariage traditionnel et civil (Possibilité de préfinancement)","Coordination de la cérémonie traditionnelle","Mise en relation avec des prestataires congolais","Accompagnement pour les couples diaspora/Congo","Accompagnement administratif (mariage civil)"].map(s=>(
+          <div key={s} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"6px 0",fontSize:"0.82rem",opacity:0.9}}>
+            <span style={{color:G.or,fontWeight:700,flexShrink:0}}>✓</span> {s}
+          </div>
+        ))}
+        <div style={{marginTop:16,background:"rgba(255,255,255,0.15)",borderRadius:12,padding:"12px 16px",fontSize:"0.82rem",display:"flex",alignItems:"center",gap:8}}>
+          <span>📱</span>
+          <div>
+            <div style={{fontWeight:700}}>SR Event — Agence événementielle</div>
+            <div style={{opacity:0.85}}>Mariages · Dots · Conférences · Anniversaires · Brazzaville</div>
+          </div>
+        </div>
+        <div style={{marginTop:10,background:"rgba(255,255,255,0.15)",borderRadius:12,padding:"12px 16px",fontSize:"0.82rem"}}>
+          📞 Devis : <strong>+33 07 53 35 64 71</strong>
+        </div>
+      </div>
+
+      {/* Conseils relationnels */}
+      <div style={{background:G.blanc,borderRadius:20,padding:"24px",marginBottom:16,boxShadow:"0 4px 16px rgba(44,26,14,0.07)"}}>
+        <div style={{fontSize:"2rem",marginBottom:10}}>🧠</div>
+        <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.4rem",fontWeight:700,marginBottom:16}}>Conseils relationnels</h2>
+        {[
+          {icon:"💌",titre:"Réussir son premier message",desc:"Sois original, pose une question ouverte, montre que tu as lu son profil. Évite le simple 'Bonjour'."},
+          {icon:"📱",titre:"Bien se lancer sur Moyo",desc:"Remplis ton profil à 100%, utilise des photos récentes. Sois patient — les belles rencontres prennent du temps."},
+          {icon:"☕",titre:"Préparer son premier RDV",desc:"Choisis un lieu public. Sois à l'heure, sois toi-même. Pas de pression !"},
+          {icon:"💑",titre:"Construire une relation durable",desc:"La confiance se construit progressivement. Communique honnêtement sur tes attentes dès le début."},
+          {icon:"💔",titre:"Surmonter une rupture",desc:"Prends le temps de te reconstruire et reviens sur Moyo quand tu te sens prêt(e)."},
+          {icon:"🔐",titre:"Sécurité sur les applis",desc:"Ne partage jamais d'argent, méfie-toi des profils trop parfaits. Rencontre dans un lieu public."},
+        ].map(c=>(
+          <div key={c.titre} style={{display:"flex",gap:14,alignItems:"flex-start",padding:"12px 0",borderBottom:`1px solid ${G.gris}`}}>
+            <div style={{fontSize:"1.4rem",flexShrink:0}}>{c.icon}</div>
+            <div>
+              <div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:3}}>{c.titre}</div>
+              <div style={{fontSize:"0.82rem",color:G.brunLight,lineHeight:1.6}}>{c.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Contact */}
+      <div style={{background:G.blanc,borderRadius:20,padding:"24px",marginBottom:16,boxShadow:"0 4px 16px rgba(44,26,14,0.07)"}}>
+        <div style={{fontSize:"2rem",marginBottom:10}}>📞</div>
+        <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.4rem",fontWeight:700,marginBottom:16}}>Nous contacter</h2>
+        {[
+          {icon:"📘",label:"Facebook",value:"Page Moyo Congo",color:"#1877F2"},
+          {icon:"📱",label:"Téléphone / WhatsApp",value:"+33 07 53 35 64 71",color:"#25D366"},
+          {icon:"📧",label:"Email",value:"contact@moyo-congo.com",color:G.rouge},
+        ].map(c=>(
+          <div key={c.label} style={{display:"flex",gap:14,alignItems:"center",padding:"14px 0",borderBottom:`1px solid ${G.gris}`}}>
+            <div style={{fontSize:"1.5rem",flexShrink:0}}>{c.icon}</div>
+            <div>
+              <div style={{fontWeight:600,fontSize:"0.82rem",color:G.brunLight,marginBottom:2}}>{c.label}</div>
+              <div style={{fontSize:"0.9rem",color:c.color,fontWeight:700}}>{c.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Facebook CTA */}
+      <a href="https://www.facebook.com/share/1CHQizobz9/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"#1877F2",color:"#fff",borderRadius:16,padding:"18px",marginBottom:16,cursor:"pointer",textDecoration:"none"}}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        <div>
+          <div style={{fontWeight:700,fontSize:"0.95rem"}}>Rejoins notre communauté Facebook</div>
+          <div style={{fontSize:"0.78rem",opacity:0.85}}>Actualités, conseils et témoignages</div>
+        </div>
+      </a>
+
+      <div style={{textAlign:"center",color:G.brunLight}}>
+        <p style={{fontSize:"0.75rem"}}>© 2026 Moyo Congo · Tous droits réservés</p>
+      </div>
+    </div>
+  </div>;
+}
+
+/* ─── LOGIN ─── */
+function Login({onNav}) {
+  const [form,setForm]=useState({email:"",password:""});
+  const [showPwd,setShowPwd]=useState(false);
+  const [showForgot,setShowForgot]=useState(false);
+  const [forgotEmail,setForgotEmail]=useState("");
+  const [forgotSent,setForgotSent]=useState(false);
+
+  if(showForgot) return (
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",background:`linear-gradient(160deg,${G.creme},${G.cremeDark})`,padding:"0 16px"}}>
+      <div onClick={()=>onNav("landing")} style={{padding:"20px 4px",cursor:"pointer",color:G.brunLight,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>← Accueil</div>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",paddingBottom:40}}>
+        <div style={{background:G.blanc,borderRadius:24,padding:"40px 28px",width:"100%",maxWidth:420,boxShadow:"0 20px 70px rgba(44,26,14,0.12)"}}>
+          <div style={{textAlign:"center",marginBottom:24}}>
+            <div style={{fontFamily:"Georgia,serif",fontSize:"2rem",color:G.rouge,fontWeight:700}}>Mo<span style={{color:G.or}}>yo</span></div>
+            <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.4rem",fontWeight:700,marginTop:8}}>Mot de passe oublié</h2>
+          </div>
+          {forgotSent ? (
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:"3rem",marginBottom:12}}>📧</div>
+              <p style={{color:G.brunLight,fontSize:"0.88rem",marginBottom:20}}>Email envoyé ! Vérifie ta boîte mail.</p>
+              <Btn variant="ghost" onClick={()=>{setShowForgot(false);setForgotSent(false);}}>← Retour</Btn>
+            </div>
+          ) : <>
+            <div style={{marginBottom:18}}>
+              <label style={{display:"block",fontWeight:500,marginBottom:7,fontSize:"0.88rem",color:G.brunLight}}>Ton email</label>
+              <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="ton@email.com"
+                style={{width:"100%",padding:"13px 14px",border:`2px solid ${G.gris}`,borderRadius:12,fontSize:"0.93rem",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+            </div>
+            <Btn variant="primary" onClick={()=>setForgotSent(true)} style={{width:"100%",marginBottom:12}}>Envoyer le lien 📧</Btn>
+            <div style={{textAlign:"center"}}><span onClick={()=>setShowForgot(false)} style={{fontSize:"0.85rem",color:G.brunLight,cursor:"pointer"}}>← Retour</span></div>
+          </>}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",background:`linear-gradient(160deg,${G.creme},${G.cremeDark})`,padding:"0 16px"}}>
+      <div onClick={()=>onNav("landing")} style={{padding:"20px 4px",cursor:"pointer",color:G.brunLight,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>← Accueil</div>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",paddingBottom:40}}>
+        <div style={{background:G.blanc,borderRadius:24,padding:"40px 28px",width:"100%",maxWidth:420,boxShadow:"0 20px 70px rgba(44,26,14,0.12)"}}>
+          <div style={{textAlign:"center",marginBottom:28}}>
+            <div style={{fontFamily:"Georgia,serif",fontSize:"2rem",color:G.rouge,fontWeight:700}}>Mo<span style={{color:G.or}}>yo</span></div>
+            <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.6rem",fontWeight:700,marginTop:6}}>Bon retour !</h2>
+            <p style={{color:G.brunLight,fontSize:"0.85rem",marginTop:4}}>Retrouve tes matchs</p>
+          </div>
+          <div style={{marginBottom:18}}>
+            <label style={{display:"block",fontWeight:500,marginBottom:7,fontSize:"0.88rem",color:G.brunLight}}>Email</label>
+            <div style={{position:"relative"}}>
+              <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",opacity:0.5}}>✉️</span>
+              <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="ton@email.com"
+                style={{width:"100%",padding:"13px 14px 13px 42px",border:`2px solid ${G.gris}`,borderRadius:12,fontSize:"0.93rem",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+            </div>
+          </div>
+          <div style={{marginBottom:8}}>
+            <label style={{display:"block",fontWeight:500,marginBottom:7,fontSize:"0.88rem",color:G.brunLight}}>Mot de passe</label>
+            <div style={{position:"relative"}}>
+              <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",opacity:0.5}}>🔒</span>
+              <input type={showPwd?"text":"password"} value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="••••••••"
+                style={{width:"100%",padding:"13px 44px 13px 42px",border:`2px solid ${G.gris}`,borderRadius:12,fontSize:"0.93rem",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+              <span onClick={()=>setShowPwd(s=>!s)} style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",cursor:"pointer",opacity:0.6}}>{showPwd?"🙈":"👁️"}</span>
+            </div>
+          </div>
+          <div style={{textAlign:"right",marginBottom:20}}>
+            <span onClick={()=>setShowForgot(true)} style={{fontSize:"0.82rem",color:G.rouge,cursor:"pointer",fontWeight:500}}>Mot de passe oublié ?</span>
+          </div>
+          <Btn variant="primary" onClick={()=>onNav("app")} style={{width:"100%"}} disabled={!form.email||!form.password}>Se connecter →</Btn>
+          <p style={{textAlign:"center",marginTop:20,fontSize:"0.85rem",color:G.brunLight}}>
+            Pas encore de compte ? <span style={{color:G.rouge,cursor:"pointer",fontWeight:600}} onClick={()=>onNav("signup")}>S'inscrire</span>
+          </p>
         </div>
       </div>
     </div>
@@ -167,546 +332,160 @@ function Landing({ onNav }) {
 }
 
 /* ─── SIGNUP ─── */
-function SignUp({ onNav, onAuth }) {
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "" });
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
-  const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    try {
-      // 1. Créer le compte auth
-      const auth = await sb.signUp(form.email, form.password);
-      if (auth.error) { setToast({ msg: auth.error.message, type: "error" }); setLoading(false); return; }
-
-      // 2. Se connecter pour avoir le token
-      const login = await sb.signIn(form.email, form.password);
-      if (login.error) { setToast({ msg: "Compte créé ! Vérifie ton email.", type: "success" }); setLoading(false); return; }
-
-      const token = login.access_token;
-      const userId = login.user.id;
-
-      // 3. Créer le profil
-      await sb.upsert(token, "profiles", {
-        id: userId,
-        name: form.name,
-        age: parseInt(form.age),
-        city: form.city,
-        gender: form.gender,
-        bio: form.bio,
-        is_premium: false,
-      });
-
-      onAuth({ token, userId, name: form.name });
-    } catch (e) {
-      setToast({ msg: "Erreur de connexion. Réessaie.", type: "error" });
-    }
-    setLoading(false);
-  };
+function SignUp({onNav}) {
+  const [step,setStep]=useState(1);
+  const [form,setForm]=useState({email:"",password:"",name:"",age:"",city:"",gender:"",bio:""});
+  const [showPwd,setShowPwd]=useState(false);
+  const upd=(k,v)=>setForm(f=>({...f,[k]:v}));
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: `linear-gradient(160deg, ${G.creme}, ${G.cremeDark})` }}>
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      <div style={{ background: G.blanc, borderRadius: 28, padding: "44px 40px", width: "100%", maxWidth: 440, boxShadow: "0 20px 70px rgba(44,26,14,0.12)" }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: "2rem", color: G.rouge, fontWeight: 700, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "1.6rem", fontWeight: 700 }}>{step === 1 ? "Crée ton compte" : "Ton profil"}</h2>
-          <p style={{ color: G.brunLight, fontSize: "0.88rem", marginTop: 4 }}>Étape {step}/2</p>
-        </div>
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",background:`linear-gradient(160deg,${G.creme},${G.cremeDark})`,padding:"0 16px"}}>
+      <div onClick={()=>onNav("landing")} style={{padding:"20px 4px",cursor:"pointer",color:G.brunLight,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>← Accueil</div>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",paddingBottom:40}}>
+        <div style={{background:G.blanc,borderRadius:24,padding:"40px 28px",width:"100%",maxWidth:440,boxShadow:"0 20px 70px rgba(44,26,14,0.12)"}}>
+          <div style={{textAlign:"center",marginBottom:20}}>
+            <div style={{fontFamily:"Georgia,serif",fontSize:"2rem",color:G.rouge,fontWeight:700}}>Mo<span style={{color:G.or}}>yo</span></div>
+            <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.5rem",fontWeight:700,marginTop:6}}>Crée ton compte</h2>
+            <p style={{color:G.brunLight,fontSize:"0.85rem",marginTop:4}}>Étape {step}/2</p>
+          </div>
+          <div style={{display:"flex",gap:8,marginBottom:24}}>
+            {[1,2].map(s=><div key={s} style={{flex:1,height:4,borderRadius:2,background:s<=step?G.rouge:G.gris}}/>)}
+          </div>
 
-        {/* Progress */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
-          {[1, 2].map(s => <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? G.rouge : G.gris, transition: "background 0.3s" }} />)}
-        </div>
-
-        {step === 1 && <>
-          <Input label="Email" type="email" value={form.email} onChange={e => upd("email", e.target.value)} placeholder="ton@email.com" icon="✉️" />
-          <Input label="Mot de passe" type="password" value={form.password} onChange={e => upd("password", e.target.value)} placeholder="Minimum 6 caractères" icon="🔒" />
-          <Btn variant="primary" onClick={() => setStep(2)} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>
-            Continuer →
-          </Btn>
-        </>}
-
-        {step === 2 && <>
-          <Input label="Prénom" value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="👤" />
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Je suis</label>
-            <div style={{ display: "flex", gap: 10 }}>
-              {["Homme", "Femme"].map(g => (
-                <div key={g} onClick={() => upd("gender", g)} style={{
-                  flex: 1, padding: "12px", borderRadius: 12, textAlign: "center", cursor: "pointer",
-                  border: `2px solid ${form.gender === g ? G.rouge : G.gris}`,
-                  background: form.gender === g ? "rgba(192,57,43,0.06)" : G.blanc,
-                  fontWeight: 600, fontSize: "0.9rem", transition: "all 0.2s",
-                }}>{g === "Homme" ? "👨🏿 Homme" : "👩🏿 Femme"}</div>
-              ))}
+          {step===1&&<>
+            <div style={{marginBottom:18}}>
+              <label style={{display:"block",fontWeight:500,marginBottom:7,fontSize:"0.88rem",color:G.brunLight}}>Email</label>
+              <input type="email" value={form.email} onChange={e=>upd("email",e.target.value)} placeholder="ton@email.com"
+                style={{width:"100%",padding:"13px 14px",border:`2px solid ${G.gris}`,borderRadius:12,fontSize:"0.93rem",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
             </div>
-          </div>
-          <Input label="Âge" type="number" value={form.age} onChange={e => upd("age", e.target.value)} placeholder="Ex: 25" icon="🎂" />
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Ville</label>
-            <select value={form.city} onChange={e => upd("city", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", fontFamily: "inherit" }}>
-              <option value="">Sélectionne ta ville</option>
-              {["Brazzaville", "Pointe-Noire", "Dolisie", "Nkayi", "Impfondo", "Ouesso", "Madingou", "Diaspora / Autre"].map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Bio (optionnel)</label>
-            <textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Parle un peu de toi..." rows={3}
-              style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", resize: "none", fontFamily: "inherit" }} />
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Btn variant="ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Retour</Btn>
-            <Btn variant="primary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }} disabled={!form.name || !form.gender || !form.age || !form.city}>
-              Créer mon compte 🎉
-            </Btn>
-          </div>
-        </>}
-
-        <p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>
-          Déjà un compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("login")}>Se connecter</span>
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ─── LOGIN ─── */
-function Login({ onNav, onAuth }) {
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
-
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      const res = await sb.signIn(form.email, form.password);
-      if (res.error) { setToast({ msg: "Email ou mot de passe incorrect.", type: "error" }); setLoading(false); return; }
-      const profile = await sb.query(res.access_token, "profiles", `?id=eq.${res.user.id}`);
-      onAuth({ token: res.access_token, userId: res.user.id, name: profile[0]?.name || "Utilisateur" });
-    } catch { setToast({ msg: "Erreur de connexion.", type: "error" }); }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: `linear-gradient(160deg, ${G.creme}, ${G.cremeDark})` }}>
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      <div style={{ background: G.blanc, borderRadius: 28, padding: "44px 40px", width: "100%", maxWidth: 420, boxShadow: "0 20px 70px rgba(44,26,14,0.12)" }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: "2rem", color: G.rouge, fontWeight: 700, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "1.6rem", fontWeight: 700 }}>Bon retour !</h2>
-          <p style={{ color: G.brunLight, fontSize: "0.88rem", marginTop: 4 }}>Retrouve tes matchs</p>
-        </div>
-        <Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="✉️" />
-        <Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="🔒" />
-        <Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || !form.password}>
-          Se connecter →
-        </Btn>
-        <p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>
-          Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span>
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ─── APP SHELL ─── */
-function AppShell({ children, tab, setTab, name, onLogout }) {
-  const tabs = [
-    { id: "discover", icon: "🔥", label: "Découvrir" },
-    { id: "matches", icon: "💞", label: "Matchs" },
-    { id: "messages", icon: "💬", label: "Messages" },
-    { id: "profile", icon: "👤", label: "Profil" },
-  ];
-  return (
-    <div style={{ maxWidth: 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme }}>
-      <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "sticky", top: 0, zIndex: 50 }}>
-        <div style={{ fontFamily: "Georgia, serif", fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
-        <div style={{ fontSize: "0.85rem", color: G.brunLight, fontWeight: 500 }}>Bonjour {name} 👋</div>
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 75 }}>{children}</div>
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", justifyContent: "space-around", padding: "10px 0 14px", zIndex: 50 }}>
-        {tabs.map(t => (
-          <div key={t.id} onClick={() => setTab(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", color: tab === t.id ? G.rouge : "#bbb", transition: "color 0.2s" }}>
-            <div style={{ fontSize: "1.3rem", transform: tab === t.id ? "scale(1.15)" : "scale(1)", transition: "transform 0.2s" }}>{t.icon}</div>
-            <div style={{ fontSize: "0.62rem", fontWeight: tab === t.id ? 700 : 400 }}>{t.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─── DISCOVER ─── */
-function Discover({ auth }) {
-  const [profiles, setProfiles] = useState([]);
-  const [idx, setIdx] = useState(0);
-  const [action, setAction] = useState(null);
-  const [matchPop, setMatchPop] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-
-  useEffect(() => {
-    loadProfiles();
-  }, []);
-
-  const loadProfiles = async () => {
-    setLoading(true);
-    try {
-      // Charger profils sauf le sien + ceux déjà likés
-      const all = await sb.query(auth.token, "profiles", `?id=neq.${auth.userId}&limit=20`);
-      const liked = await sb.query(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user`);
-      const likedIds = liked.map ? liked.map(l => l.to_user) : [];
-      setProfiles((all || []).filter(p => !likedIds.includes(p.id)));
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  const swipe = async (dir) => {
-    if (!profiles[idx]) return;
-    setAction(dir);
-    const target = profiles[idx];
-
-    if (dir === "like") {
-      try {
-        await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: target.id });
-        // Vérifier si match mutuel
-        const mutual = await sb.query(auth.token, "likes", `?from_user=eq.${target.id}&to_user=eq.${auth.userId}`);
-        if (mutual && mutual.length > 0) {
-          await sb.insert(auth.token, "matches", { user1: auth.userId, user2: target.id });
-          setTimeout(() => setMatchPop(target), 300);
-        }
-      } catch (e) { console.error(e); }
-    }
-
-    setTimeout(() => {
-      setAction(null);
-      setIdx(i => i + 1);
-    }, 400);
-  };
-
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: G.brunLight }}>⏳ Chargement des profils...</div>;
-
-  const p = profiles[idx];
-
-  return (
-    <div style={{ padding: "20px" }}>
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      <h2 style={{ fontFamily: "Georgia, serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 20 }}>Découvrir 🔥</h2>
-
-      {!p ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}>
-          <div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div>
-          <h3 style={{ fontFamily: "Georgia, serif", fontSize: "1.3rem", marginBottom: 8 }}>Tu as vu tous les profils !</h3>
-          <p style={{ fontSize: "0.9rem", marginBottom: 24 }}>Reviens plus tard quand de nouveaux membres s'inscriront.</p>
-          <Btn variant="primary" onClick={loadProfiles}>Actualiser</Btn>
-        </div>
-      ) : (
-        <>
-          <div style={{ position: "relative", marginBottom: 24 }}>
-            {/* Carte arrière */}
-            {profiles[idx + 1] && <div style={{ position: "absolute", inset: "10px 10px -4px", background: G.blanc, borderRadius: 24, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }} />}
-            {/* Carte principale */}
-            <div style={{
-              background: G.blanc, borderRadius: 24,
-              boxShadow: "0 8px 36px rgba(44,26,14,0.13)", overflow: "hidden",
-              transform: action === "like" ? "rotate(7deg) translateX(50px)" : action === "nope" ? "rotate(-7deg) translateX(-50px)" : "none",
-              opacity: action ? 0.4 : 1, transition: "all 0.35s ease", position: "relative",
-            }}>
-              {/* Photo placeholder */}
-              <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem", background: `linear-gradient(160deg, #E8C5A0, #C47A4A)`, position: "relative" }}>
-                {p.gender === "Femme" ? "👩🏿" : "👨🏿"}
-                {action === "like" && <div style={{ position: "absolute", top: 20, left: 20, border: "4px solid #27ae60", color: "#27ae60", borderRadius: 8, padding: "5px 14px", fontWeight: 700, fontSize: "1.3rem", transform: "rotate(-15deg)", background: "rgba(255,255,255,0.9)" }}>LIKE ✓</div>}
-                {action === "nope" && <div style={{ position: "absolute", top: 20, right: 20, border: `4px solid ${G.rouge}`, color: G.rouge, borderRadius: 8, padding: "5px 14px", fontWeight: 700, fontSize: "1.3rem", transform: "rotate(15deg)", background: "rgba(255,255,255,0.9)" }}>NOPE ✗</div>}
+            <div style={{marginBottom:18}}>
+              <label style={{display:"block",fontWeight:500,marginBottom:7,fontSize:"0.88rem",color:G.brunLight}}>Mot de passe</label>
+              <div style={{position:"relative"}}>
+                <input type={showPwd?"text":"password"} value={form.password} onChange={e=>upd("password",e.target.value)} placeholder="Minimum 6 caractères"
+                  style={{width:"100%",padding:"13px 44px 13px 14px",border:`2px solid ${G.gris}`,borderRadius:12,fontSize:"0.93rem",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+                <span onClick={()=>setShowPwd(s=>!s)} style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",cursor:"pointer",opacity:0.6}}>{showPwd?"🙈":"👁️"}</span>
               </div>
-              <div style={{ padding: "20px 22px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                  <div>
-                    <div style={{ fontFamily: "Georgia, serif", fontSize: "1.5rem", fontWeight: 700 }}>{p.name}, {p.age}</div>
-                    <div style={{ color: G.brunLight, fontSize: "0.83rem" }}>📍 {p.city}</div>
+            </div>
+            <Btn variant="primary" onClick={()=>setStep(2)} style={{width:"100%"}} disabled={!form.email||form.password.length<6}>Continuer →</Btn>
+          </>}
+
+          {step===2&&<>
+            <div style={{marginBottom:18}}>
+              <label style={{display:"block",fontWeight:500,marginBottom:7,fontSize:"0.88rem",color:G.brunLight}}>Prénom</label>
+              <input value={form.name} onChange={e=>upd("name",e.target.value)} placeholder="Ex: Faïda"
+                style={{width:"100%",padding:"13px 14px",border:`2px solid ${G.gris}`,borderRadius:12,fontSize:"0.93rem",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{marginBottom:18}}>
+              <label style={{display:"block",fontWeight:500,marginBottom:7,fontSize:"0.88rem",color:G.brunLight}}>Je suis</label>
+              <div style={{display:"flex",gap:10}}>
+                {["Homme","Femme"].map(g=>(
+                  <div key={g} onClick={()=>upd("gender",g)} style={{flex:1,padding:"12px",borderRadius:12,textAlign:"center",cursor:"pointer",border:`2px solid ${form.gender===g?G.rouge:G.gris}`,background:form.gender===g?"rgba(192,57,43,0.06)":G.blanc,fontWeight:600,fontSize:"0.88rem"}}>
+                    {g==="Homme"?"👨🏿 Homme":"👩🏿 Femme"}
                   </div>
-                </div>
-                {p.bio && <p style={{ fontSize: "0.88rem", color: G.brunLight, lineHeight: 1.6 }}>{p.bio}</p>}
+                ))}
               </div>
             </div>
-          </div>
+            <div style={{marginBottom:18}}>
+              <label style={{display:"block",fontWeight:500,marginBottom:7,fontSize:"0.88rem",color:G.brunLight}}>Âge</label>
+              <input type="number" value={form.age} onChange={e=>upd("age",e.target.value)} placeholder="Ex: 25"
+                style={{width:"100%",padding:"13px 14px",border:`2px solid ${G.gris}`,borderRadius:12,fontSize:"0.93rem",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{marginBottom:18}}>
+              <label style={{display:"block",fontWeight:500,marginBottom:7,fontSize:"0.88rem",color:G.brunLight}}>Ville</label>
+              <select value={form.city} onChange={e=>upd("city",e.target.value)} style={{width:"100%",padding:"13px 14px",border:`2px solid ${G.gris}`,borderRadius:12,fontSize:"0.93rem",background:G.blanc,color:G.brun,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}>
+                <option value="">Sélectionne ta ville</option>
+                {VILLES.map(c=>c.startsWith("──")?<option key={c} disabled>{c}</option>:<option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <Btn variant="ghost" onClick={()=>setStep(1)} style={{flex:1}}>← Retour</Btn>
+              <Btn variant="primary" onClick={()=>onNav("app")} style={{flex:2}} disabled={!form.name||!form.gender||!form.age||!form.city}>Créer mon compte 🎉</Btn>
+            </div>
+          </>}
 
-          {/* Boutons */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 28, alignItems: "center" }}>
-            <div onClick={() => swipe("nope")} style={{ width: 60, height: 60, borderRadius: "50%", background: G.blanc, border: "2px solid #e74c3c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.6rem", cursor: "pointer", boxShadow: "0 4px 16px rgba(231,76,60,0.18)", transition: "transform 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1)"} onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>✗</div>
-            <div onClick={() => swipe("like")} style={{ width: 70, height: 70, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.8rem", cursor: "pointer", boxShadow: `0 6px 22px rgba(192,57,43,0.38)`, transition: "transform 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1)"} onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>❤️</div>
-          </div>
-          <p style={{ textAlign: "center", marginTop: 16, fontSize: "0.78rem", color: "#bbb" }}>{profiles.length - idx - 1} profil(s) restant(s)</p>
-        </>
-      )}
-
-      {/* Match popup */}
-      {matchPop && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}>
-          <div style={{ textAlign: "center", color: G.blanc }}>
-            <div style={{ fontSize: "4.5rem", marginBottom: 12 }}>💞</div>
-            <h2 style={{ fontFamily: "Georgia, serif", fontSize: "2.5rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2>
-            <p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 32, fontSize: "1rem" }}>Toi et {matchPop.name} vous vous plaisez mutuellement !</p>
-            <Btn variant="white" onClick={() => setMatchPop(null)}>Continuer à découvrir →</Btn>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── MATCHES ─── */
-function Matches({ auth }) {
-  const [matches, setMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => { loadMatches(); }, []);
-
-  const loadMatches = async () => {
-    setLoading(true);
-    try {
-      const res = await sb.query(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})`);
-      if (!res || !res.length) { setMatches([]); setLoading(false); return; }
-      // Charger les profils des partenaires
-      const enriched = await Promise.all(res.map(async m => {
-        const partnerId = m.user1 === auth.userId ? m.user2 : m.user1;
-        const p = await sb.query(auth.token, "profiles", `?id=eq.${partnerId}`);
-        return { ...m, partner: p[0] };
-      }));
-      setMatches(enriched.filter(m => m.partner));
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ padding: "20px" }}>
-      <h2 style={{ fontFamily: "Georgia, serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 20 }}>Mes Matchs 💞</h2>
-      {loading ? <div style={{ textAlign: "center", color: G.brunLight, padding: 40 }}>⏳ Chargement...</div> :
-        matches.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "50px 20px", color: G.brunLight }}>
-            <div style={{ fontSize: "3rem", marginBottom: 12 }}>💘</div>
-            <h3 style={{ fontFamily: "Georgia, serif", fontSize: "1.2rem", marginBottom: 8 }}>Pas encore de matchs</h3>
-            <p style={{ fontSize: "0.88rem" }}>Continue à liker des profils pour avoir des matchs !</p>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
-            {matches.map(m => (
-              <div key={m.id} style={{ background: G.blanc, borderRadius: 18, overflow: "hidden", boxShadow: "0 3px 16px rgba(44,26,14,0.08)" }}>
-                <div style={{ height: 110, background: `linear-gradient(160deg, #E8C5A0, #C47A4A)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "3rem" }}>
-                  {m.partner.gender === "Femme" ? "👩🏿" : "👨🏿"}
-                </div>
-                <div style={{ padding: "12px" }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{m.partner.name}, {m.partner.age}</div>
-                  <div style={{ fontSize: "0.75rem", color: G.brunLight }}>📍 {m.partner.city}</div>
-                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 4, fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>💞 Match !</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-    </div>
-  );
-}
-
-/* ─── MESSAGES ─── */
-function Messages({ auth }) {
-  const [convs, setConvs] = useState([]);
-  const [open, setOpen] = useState(null);
-  const [msgs, setMsgs] = useState([]);
-  const [text, setText] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const bottomRef = useRef(null);
-
-  useEffect(() => { loadConvs(); }, []);
-  useEffect(() => { if (open) loadMsgs(open); }, [open]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
-
-  const loadConvs = async () => {
-    setLoading(true);
-    try {
-      const res = await sb.query(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})`);
-      if (!res?.length) { setConvs([]); setLoading(false); return; }
-      const enriched = await Promise.all(res.map(async m => {
-        const partnerId = m.user1 === auth.userId ? m.user2 : m.user1;
-        const p = await sb.query(auth.token, "profiles", `?id=eq.${partnerId}`);
-        const lastMsg = await sb.query(auth.token, "messages", `?match_id=eq.${m.id}&order=created_at.desc&limit=1`);
-        return { ...m, partner: p[0], lastMsg: lastMsg[0] };
-      }));
-      setConvs(enriched.filter(c => c.partner));
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  const loadMsgs = async (conv) => {
-    const res = await sb.query(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
-    setMsgs(res || []);
-  };
-
-  const send = async () => {
-    if (!text.trim() || !open) return;
-    setSending(true);
-    const res = await sb.insert(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: text });
-    if (res && !res.error) { setMsgs(m => [...m, res[0]]); setText(""); }
-    setSending(false);
-  };
-
-  if (open) return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 130px)" }}>
-      <div style={{ padding: "14px 18px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 14, alignItems: "center" }}>
-        <div onClick={() => { setOpen(null); loadConvs(); }} style={{ cursor: "pointer", fontSize: "1.2rem", color: G.brunLight }}>←</div>
-        <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(160deg,#E8C5A0,#C47A4A)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}>{open.partner?.gender === "Femme" ? "👩🏿" : "👨🏿"}</div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{open.partner?.name}</div>
-          <div style={{ fontSize: "0.72rem", color: "#27ae60" }}>● Actif</div>
+          <p style={{textAlign:"center",marginTop:20,fontSize:"0.85rem",color:G.brunLight}}>
+            Déjà un compte ? <span style={{color:G.rouge,cursor:"pointer",fontWeight:600}} onClick={()=>onNav("login")}>Se connecter</span>
+          </p>
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 10 }}>
-        {msgs.length === 0 && <div style={{ textAlign: "center", color: G.brunLight, padding: "30px 0", fontSize: "0.88rem" }}>C'est votre nouveau match ! Dites bonjour 👋</div>}
-        {msgs.map((m, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: m.sender_id === auth.userId ? "flex-end" : "flex-start" }}>
-            <div style={{ background: m.sender_id === auth.userId ? G.rouge : G.blanc, color: m.sender_id === auth.userId ? G.blanc : G.brun, padding: "10px 15px", borderRadius: m.sender_id === auth.userId ? "18px 18px 4px 18px" : "18px 18px 18px 4px", maxWidth: "72%", fontSize: "0.9rem", lineHeight: 1.5, boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
-              {m.content}
+    </div>
+  );
+}
+
+/* ─── APP (demo) ─── */
+function AppDemo({onLogout}) {
+  const [tab,setTab]=useState("discover");
+  const tabs=[{id:"discover",icon:"🔥",label:"Découvrir"},{id:"matches",icon:"💞",label:"Matchs"},{id:"messages",icon:"💬",label:"Messages"},{id:"profile",icon:"👤",label:"Profil"}];
+  return (
+    <div style={{maxWidth:500,margin:"0 auto",minHeight:"100vh",display:"flex",flexDirection:"column",background:G.creme}}>
+      <div style={{padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",background:G.blanc,borderBottom:`1px solid ${G.gris}`,position:"sticky",top:0,zIndex:50}}>
+        <div style={{fontFamily:"Georgia,serif",fontSize:"1.6rem",color:G.rouge,fontWeight:700}}>Mo<span style={{color:G.or}}>yo</span></div>
+        <div style={{fontSize:"0.78rem",color:G.brunLight}}>🇨🇬 Congo-Brazzaville</div>
+      </div>
+      <div style={{flex:1,padding:"20px",paddingBottom:80}}>
+        {tab==="discover"&&<div style={{textAlign:"center",padding:"40px 20px"}}>
+          <div style={{background:G.blanc,borderRadius:22,boxShadow:"0 8px 36px rgba(44,26,14,0.12)",overflow:"hidden",marginBottom:20}}>
+            <div style={{height:260,background:`linear-gradient(160deg,#E8C5A0,#C47A4A)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"7rem"}}>👩🏿</div>
+            <div style={{padding:"16px 20px",textAlign:"left"}}>
+              <div style={{fontFamily:"Georgia,serif",fontSize:"1.4rem",fontWeight:700}}>Faïda, 24</div>
+              <div style={{color:G.brunLight,fontSize:"0.82rem"}}>📍 Brazzaville</div>
             </div>
           </div>
+          <div style={{display:"flex",justifyContent:"center",gap:16}}>
+            <div style={{width:48,height:48,borderRadius:"50%",background:G.blanc,border:`2px solid ${G.gris}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>←</div>
+            <div style={{width:68,height:68,borderRadius:"50%",background:`linear-gradient(135deg,${G.rouge},${G.rougeDark})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.7rem",cursor:"pointer",boxShadow:`0 6px 20px rgba(192,57,43,0.35)`}}>❤️</div>
+            <div style={{width:48,height:48,borderRadius:"50%",background:G.blanc,border:`2px solid ${G.gris}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>→</div>
+          </div>
+        </div>}
+        {tab==="matches"&&<div style={{padding:"4px 0"}}>
+          <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.3rem",fontWeight:700,marginBottom:16}}>Mes Matchs 💞</h2>
+          <div style={{background:`linear-gradient(135deg,${G.rouge},${G.rougeDark})`,borderRadius:16,padding:"14px 18px",marginBottom:16,color:G.blanc,display:"flex",alignItems:"center",gap:12}}>
+            <div style={{fontSize:"1.8rem"}}>🔒</div>
+            <div><div style={{fontWeight:700}}>Des personnes ont liké ton profil</div><div style={{fontSize:"0.78rem",opacity:0.85}}>Passe Premium pour les découvrir 👀</div></div>
+          </div>
+        </div>}
+        {tab==="messages"&&<div>
+          <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.3rem",fontWeight:700,marginBottom:16}}>Messages 💬</h2>
+          <div style={{textAlign:"center",padding:"40px 20px",color:G.brunLight}}>
+            <div style={{fontSize:"3rem",marginBottom:12}}>💬</div>
+            <p style={{fontSize:"0.88rem"}}>Fais des matchs pour commencer à discuter !</p>
+          </div>
+        </div>}
+        {tab==="profile"&&<div>
+          <div style={{height:110,background:`linear-gradient(160deg,${G.vert},#0D2E1C)`,borderRadius:"0 0 0 0",position:"relative",marginTop:-20,marginLeft:-20,marginRight:-20,width:"calc(100% + 40px)"}}>
+            <div style={{position:"absolute",bottom:-36,left:"50%",transform:"translateX(-50%)",width:72,height:72,borderRadius:"50%",background:`linear-gradient(160deg,#E8C5A0,#C47A4A)`,border:"4px solid white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.2rem"}}>👨🏿</div>
+          </div>
+          <div style={{textAlign:"center",marginTop:48,marginBottom:20}}>
+            <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.4rem",fontWeight:700}}>Mon profil</h2>
+            <p style={{color:G.brunLight,fontSize:"0.83rem"}}>📍 Brazzaville · 28 ans</p>
+          </div>
+          <div style={{background:`linear-gradient(135deg,${G.rouge},${G.rougeDark})`,borderRadius:16,padding:"18px",marginBottom:10,color:G.blanc,cursor:"pointer"}}>
+            <div style={{fontWeight:700,marginBottom:4}}>✨ Passe à Premium</div>
+            <div style={{fontFamily:"Georgia,serif",fontSize:"1.6rem",fontWeight:700,color:G.or}}>5 000 FCFA/mois</div>
+            <div style={{background:G.or,color:G.brun,borderRadius:50,padding:"10px",textAlign:"center",fontWeight:700,marginTop:12}}>Voir tous les avantages ⭐</div>
+          </div>
+          <Btn variant="danger" onClick={onLogout} style={{width:"100%"}}>🚪 Se déconnecter</Btn>
+        </div>}
+      </div>
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,background:G.blanc,borderTop:`1px solid ${G.gris}`,display:"flex",justifyContent:"space-around",padding:"10px 0 14px",zIndex:50}}>
+        {tabs.map(t=>(
+          <div key={t.id} onClick={()=>setTab(t.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",color:tab===t.id?G.rouge:"#bbb"}}>
+            <div style={{fontSize:"1.3rem",transform:tab===t.id?"scale(1.15)":"scale(1)"}}>{t.icon}</div>
+            <div style={{fontSize:"0.6rem",fontWeight:tab===t.id?700:400}}>{t.label}</div>
+          </div>
         ))}
-        <div ref={bottomRef} />
       </div>
-      <div style={{ padding: "10px 14px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", gap: 10 }}>
-        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()}
-          placeholder="Écris un message..." style={{ flex: 1, padding: "12px 16px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "0.9rem", outline: "none", background: G.creme, fontFamily: "inherit" }} />
-        <div onClick={send} style={{ width: 42, height: 42, borderRadius: "50%", background: sending ? G.gris : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1rem", color: G.blanc }}>➤</div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{ padding: "20px" }}>
-      <h2 style={{ fontFamily: "Georgia, serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 20 }}>Messages 💬</h2>
-      {loading ? <div style={{ textAlign: "center", color: G.brunLight, padding: 40 }}>⏳ Chargement...</div> :
-        convs.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "50px 20px", color: G.brunLight }}>
-            <div style={{ fontSize: "3rem", marginBottom: 12 }}>💬</div>
-            <h3 style={{ fontFamily: "Georgia, serif", fontSize: "1.2rem", marginBottom: 8 }}>Pas encore de conversations</h3>
-            <p style={{ fontSize: "0.88rem" }}>Fais des matchs pour pouvoir envoyer des messages !</p>
-          </div>
-        ) : convs.map(c => (
-          <div key={c.id} onClick={() => setOpen(c)} style={{ display: "flex", gap: 14, alignItems: "center", padding: "15px", background: G.blanc, borderRadius: 16, marginBottom: 10, cursor: "pointer", boxShadow: "0 2px 10px rgba(44,26,14,0.05)", transition: "transform 0.2s" }}
-            onMouseEnter={e => e.currentTarget.style.transform = "translateX(4px)"} onMouseLeave={e => e.currentTarget.style.transform = "translateX(0)"}>
-            <div style={{ width: 50, height: 50, borderRadius: "50%", background: `linear-gradient(160deg,#E8C5A0,#C47A4A)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.6rem", flexShrink: 0 }}>{c.partner?.gender === "Femme" ? "👩🏿" : "👨🏿"}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: 3 }}>{c.partner?.name}</div>
-              <div style={{ fontSize: "0.82rem", color: G.brunLight, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.lastMsg?.content || "Dis bonjour ! 👋"}</div>
-            </div>
-          </div>
-        ))}
-    </div>
-  );
-}
-
-/* ─── PROFILE ─── */
-function Profile({ auth, onLogout }) {
-  const [profile, setProfile] = useState(null);
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-
-  useEffect(() => { loadProfile(); }, []);
-
-  const loadProfile = async () => {
-    const res = await sb.query(auth.token, "profiles", `?id=eq.${auth.userId}`);
-    if (res[0]) { setProfile(res[0]); setForm(res[0]); }
-    setLoading(false);
-  };
-
-  const saveProfile = async () => {
-    const res = await sb.update(auth.token, "profiles", auth.userId, { name: form.name, age: form.age, city: form.city, bio: form.bio });
-    if (res && !res.error) { setProfile(form); setEditing(false); setToast({ msg: "Profil mis à jour !" }); }
-  };
-
-  const handleLogout = async () => {
-    await sb.signOut(auth.token);
-    onLogout();
-  };
-
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: G.brunLight }}>⏳ Chargement...</div>;
-
-  return (
-    <div style={{ paddingBottom: 20 }}>
-      {toast && <Toast msg={toast.msg} onClose={() => setToast(null)} />}
-      {/* Cover */}
-      <div style={{ height: 120, background: `linear-gradient(160deg, ${G.vert}, #0D2E1C)`, position: "relative" }}>
-        <div style={{ position: "absolute", bottom: -34, left: "50%", transform: "translateX(-50%)", width: 70, height: 70, borderRadius: "50%", background: `linear-gradient(160deg,#E8C5A0,#C47A4A)`, border: "4px solid white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.2rem" }}>
-          {profile?.gender === "Femme" ? "👩🏿" : "👨🏿"}
-        </div>
-      </div>
-      <div style={{ textAlign: "center", marginTop: 44, padding: "0 20px 0" }}>
-        <h2 style={{ fontFamily: "Georgia, serif", fontSize: "1.5rem", fontWeight: 700 }}>{profile?.name}</h2>
-        <p style={{ color: G.brunLight, fontSize: "0.85rem" }}>📍 {profile?.city} · {profile?.age} ans</p>
-        {profile?.bio && <p style={{ color: G.brunLight, fontSize: "0.88rem", marginTop: 8, lineHeight: 1.6, maxWidth: 300, margin: "8px auto 0" }}>{profile.bio}</p>}
-      </div>
-
-      {/* Edit form */}
-      {editing ? (
-        <div style={{ padding: "20px" }}>
-          <Input label="Prénom" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-          <Input label="Âge" type="number" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Ville</label>
-            <select value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", fontFamily: "inherit" }}>
-              {["Brazzaville", "Pointe-Noire", "Dolisie", "Nkayi", "Impfondo", "Ouesso", "Madingou", "Diaspora / Autre"].map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Bio</label>
-            <textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3}
-              style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, resize: "none", outline: "none", fontFamily: "inherit" }} />
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Btn variant="ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Annuler</Btn>
-            <Btn variant="primary" onClick={saveProfile} style={{ flex: 2 }}>Sauvegarder ✓</Btn>
-          </div>
-        </div>
-      ) : (
-        <div style={{ padding: "20px" }}>
-          <Btn variant="ghost" onClick={() => setEditing(true)} style={{ width: "100%", marginBottom: 10 }}>✏️ Modifier mon profil</Btn>
-          <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 18, padding: "20px", marginBottom: 10, color: G.blanc, textAlign: "center" }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>✨ Passe à Premium</div>
-            <div style={{ fontSize: "0.82rem", opacity: 0.85, marginBottom: 12 }}>Likes illimités · Voir qui t'a liké · Messages illimités</div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: "1.7rem", fontWeight: 700, color: G.or, marginBottom: 12 }}>5 000 FCFA/mois</div>
-            <Btn variant="gold" style={{ width: "100%", opacity: 0.9 }}>Bientôt disponible 🔜</Btn>
-          </div>
-          <Btn variant="danger" onClick={handleLogout} style={{ width: "100%", marginTop: 8 }}>🚪 Se déconnecter</Btn>
-        </div>
-      )}
     </div>
   );
 }
 
 /* ─── MAIN ─── */
 export default function App() {
-  const [page, setPage] = useState("landing");
-  const [tab, setTab] = useState("discover");
-  const [auth, setAuth] = useState(null);
-
-  const handleAuth = (authData) => { setAuth(authData); setPage("app"); };
-  const handleLogout = () => { setAuth(null); setPage("landing"); };
-
-  if (page === "landing") return <Landing onNav={setPage} />;
-  if (page === "signup") return <SignUp onNav={setPage} onAuth={handleAuth} />;
-  if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
-
-  return (
-    <AppShell tab={tab} setTab={setTab} name={auth?.name} onLogout={handleLogout}>
-      {tab === "discover" && <Discover auth={auth} />}
-      {tab === "matches" && <Matches auth={auth} />}
-      {tab === "messages" && <Messages auth={auth} />}
-      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} />}
-    </AppShell>
-  );
+  const [page,setPage]=useState("landing");
+  if(page==="landing") return <Landing onNav={setPage}/>;
+  if(page==="about") return <About onBack={()=>setPage("landing")}/>;
+  if(page==="login") return <Login onNav={setPage}/>;
+  if(page==="signup") return <SignUp onNav={setPage}/>;
+  if(page==="app") return <AppDemo onLogout={()=>setPage("landing")}/>;
+  return <Landing onNav={setPage}/>;
 }
