@@ -1,4 +1,4 @@
-import { useState, useEffect, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 const G = {
   rouge:"#C0392B", rougeDark:"#922B21", or:"#D4A843",
