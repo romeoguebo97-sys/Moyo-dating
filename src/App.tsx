@@ -122,15 +122,43 @@ const sb = {
   },
 
   async uploadPhoto(token: string, userId: string, file: File): Promise<string | null> {
-    const ext = file.name.split(".").pop();
-    const path = `${userId}/avatar.${ext}`;
-    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${token}`, "Content-Type": file.type, "x-upsert": "true" },
-      body: file,
-    });
-    if (r.ok) return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?t=${Date.now()}`;
-    return null;
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${userId}/avatar.${ext}`;
+      // Essayer d'abord POST (nouvelle photo), puis PUT (remplacement)
+      let r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": file.type || "image/jpeg",
+          "x-upsert": "true",
+          "Cache-Control": "3600",
+        },
+        body: file,
+      });
+      if (!r.ok) {
+        // Essayer avec PUT si POST échoue
+        r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": file.type || "image/jpeg",
+            "x-upsert": "true",
+          },
+          body: file,
+        });
+      }
+      if (r.ok) {
+        // URL publique avec cache busting
+        return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
+      }
+      const err = await r.json().catch(() => ({}));
+      console.error("Upload error:", err);
+      return null;
+    } catch (e) {
+      console.error("Upload exception:", e);
+      return null;
+    }
   },
 
   async markMessagesRead(token: string, matchId: string, userId: string) {
@@ -155,6 +183,10 @@ const sb = {
 // UI COMPONENTS
 // ============================================================
 const GLOBAL_CSS = `
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{overflow-x:hidden;max-width:100vw}
+  input,select,textarea,button{font-family:inherit;box-sizing:border-box}
+  img{max-width:100%;height:auto}
   @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
@@ -177,8 +209,6 @@ const GLOBAL_CSS = `
   .nav-link{transition:color 0.2s!important}
   .card-hover:hover{transform:translateX(4px)}
   .card-hover{transition:transform 0.2s!important}
-  *{box-sizing:border-box}
-  input,select,textarea,button{font-family:inherit}
 `;
 
 function Btn({ children, variant = "primary", onClick, style = {}, disabled = false, loading = false }: {
@@ -210,24 +240,26 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
   const [showPwd, setShowPwd] = useState(false);
   const isPwd = type === "password";
   return (
-    <div style={{ marginBottom: 18 }}>
+    <div style={{ marginBottom: 18, width: "100%" }}>
       {label && <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>{label}</label>}
-      <div style={{ position: "relative" }}>
-        {icon && <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>{icon}</span>}
+      <div style={{ position: "relative", width: "100%" }}>
+        {icon && <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.5, pointerEvents: "none", zIndex: 1 }}>{icon}</span>}
         <input
           type={isPwd ? (showPwd ? "text" : "password") : type}
           value={value} onChange={onChange} placeholder={placeholder}
           onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
           style={{
             width: "100%",
-            padding: icon ? (isPwd ? "13px 44px 13px 42px" : "13px 14px 13px 42px") : (isPwd ? "13px 44px 13px 14px" : "13px 14px"),
+            boxSizing: "border-box",
+            padding: icon ? (isPwd ? "13px 42px 13px 40px" : "13px 14px 13px 40px") : (isPwd ? "13px 42px 13px 14px" : "13px 14px"),
             border: `2px solid ${error ? "#e74c3c" : focus ? G.or : G.gris}`,
             borderRadius: 12, fontSize: "0.93rem", background: G.blanc,
             color: G.brun, outline: "none", transition: "border-color 0.2s",
+            display: "block",
           }}
         />
         {isPwd && (
-          <span onClick={() => setShowPwd(s => !s)} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", cursor: "pointer", opacity: 0.6 }}>
+          <span onClick={() => setShowPwd(s => !s)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", cursor: "pointer", opacity: 0.6, zIndex: 1 }}>
             {showPwd ? "🙈" : "👁️"}
           </span>
         )}
@@ -519,12 +551,12 @@ function About({ onBack }: { onBack: () => void }) {
 // ============================================================
 function AuthLayout({ children, onBack }: { children: React.ReactNode; onBack: () => void }) {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: `linear-gradient(160deg,${G.creme},${G.cremeDark})`, padding: "0 16px" }}>
-      <div onClick={onBack} style={{ padding: "20px 4px", cursor: "pointer", color: G.brunLight, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, fontSize: "0.9rem" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: `linear-gradient(160deg,${G.creme},${G.cremeDark})`, padding: "0", overflowX: "hidden" }}>
+      <div onClick={onBack} style={{ padding: "16px 20px", cursor: "pointer", color: G.brunLight, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, fontSize: "0.9rem", flexShrink: 0 }}>
         ← Accueil
       </div>
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 40 }}>
-        <div style={{ background: G.blanc, borderRadius: 24, padding: "40px 28px", width: "100%", maxWidth: 420, boxShadow: "0 20px 70px rgba(44,26,14,0.12)" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px 40px" }}>
+        <div style={{ background: G.blanc, borderRadius: 24, padding: "36px 24px", width: "100%", maxWidth: 420, boxShadow: "0 20px 70px rgba(44,26,14,0.12)", overflowX: "hidden" }}>
           {children}
         </div>
       </div>
@@ -622,20 +654,76 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const auth = await sb.signUp(form.email, form.password);
-      if (auth.error) { setToast({ msg: auth.error.message, type: "error" }); setLoading(false); return; }
+      // 1. Créer le compte auth
+      const authRes = await sb.signUp(form.email, form.password);
+
+      // Gestion des erreurs d'inscription en français
+      if (authRes.error) {
+        const code = authRes.error.message || "";
+        let msg = "Une erreur est survenue. Veuillez réessayer.";
+        if (code.includes("already registered") || code.includes("already been registered")) {
+          msg = "Cette adresse e-mail est déjà utilisée.";
+        } else if (code.includes("password") || code.includes("characters")) {
+          msg = "Le mot de passe doit contenir au moins 6 caractères.";
+        } else if (code.includes("invalid") || code.includes("email")) {
+          msg = "Adresse e-mail invalide.";
+        }
+        setToast({ msg, type: "error" });
+        setLoading(false);
+        return;
+      }
+
+      // 2. Vérifier si confirmation email requise
+      const userId = authRes.user?.id || authRes.id;
+      const emailConfirmed = authRes.user?.email_confirmed_at || authRes.user?.confirmed_at;
+
+      if (!emailConfirmed) {
+        // Confirmation email requise — on sauvegarde quand même le profil via service key si possible
+        // Sinon on informe l'utilisateur
+        setToast({
+          msg: "Compte créé ! Vérifiez votre boîte mail et confirmez votre adresse e-mail avant de vous connecter.",
+          type: "success"
+        });
+        setLoading(false);
+        // Rediriger vers login après 3 secondes
+        setTimeout(() => onNav("login"), 3500);
+        return;
+      }
+
+      // 3. Si email déjà confirmé (mode dev sans confirmation), se connecter
       const login = await sb.signIn(form.email, form.password);
       if (login.error) {
-        setToast({ msg: "Compte créé ! Vérifie ton email avant de te connecter.", type: "success" });
-        setLoading(false); return;
+        setToast({ msg: "Compte créé ! Vérifiez votre boîte mail pour activer votre compte.", type: "success" });
+        setLoading(false);
+        setTimeout(() => onNav("login"), 3500);
+        return;
       }
-      await sb.upsert(login.access_token, "profiles", {
-        id: login.user.id, name: form.name, age: parseInt(form.age),
-        city: form.city, gender: form.gender, bio: form.bio,
-        is_premium: false, is_admin: false,
+
+      // 4. Créer le profil dans la table profiles
+      const profileData = {
+        id: login.user.id,
+        name: form.name.trim(),
+        age: parseInt(form.age) || 0,
+        city: form.city,
+        gender: form.gender,
+        bio: form.bio.trim(),
+        photo_url: null,
+        is_premium: false,
+        is_admin: false,
+      };
+
+      await sb.upsert(login.access_token, "profiles", profileData);
+      onAuth({
+        token: login.access_token,
+        userId: login.user.id,
+        name: form.name.trim(),
+        isPremium: false,
+        isAdmin: false,
       });
-      onAuth({ token: login.access_token, userId: login.user.id, name: form.name, isPremium: false, isAdmin: false });
-    } catch { setToast({ msg: "Erreur. Réessaie.", type: "error" }); }
+    } catch (e) {
+      console.error("Signup error:", e);
+      setToast({ msg: "Une erreur réseau est survenue. Veuillez réessayer.", type: "error" });
+    }
     setLoading(false);
   };
 
@@ -675,7 +763,8 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
           <Input label="Âge" type="number" value={form.age} onChange={e => upd("age", e.target.value)} placeholder="Ex: 25" icon="🎂" />
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Ville</label>
-            <select value={form.city} onChange={e => upd("city", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }}>
+            <select value={form.city} onChange={e => upd("city", e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", display: "block" }}>
               <option value="">Sélectionne ta ville</option>
               {VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}
             </select>
@@ -683,7 +772,7 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Bio (optionnel)</label>
             <textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Parle un peu de toi..." rows={3}
-              style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", resize: "none" }} />
+              style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", resize: "none", display: "block" }} />
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <Btn variant="ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Retour</Btn>
@@ -761,21 +850,29 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const loadProfiles = async () => {
     setLoading(true);
     try {
-      let params = `?id=neq.${auth.userId}&limit=50`;
-      if (filters.city) params += `&city=eq.${filters.city}`;
+      // Requête de base : tous les profils sauf le sien
+      let params = `?id=neq.${auth.userId}&order=is_premium.desc,created_at.desc&limit=50`;
+      if (filters.city && !filters.city.startsWith("──")) params += `&city=eq.${encodeURIComponent(filters.city)}`;
       if (filters.gender) params += `&gender=eq.${filters.gender}`;
       if (filters.ageMin) params += `&age=gte.${filters.ageMin}`;
       if (filters.ageMax) params += `&age=lte.${filters.ageMax}`;
+
       const [all, liked] = await Promise.all([
         sb.query<Profile>(auth.token, "profiles", params),
         sb.query<{ to_user: string }>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user`),
       ]);
+
       setLikedIds(new Set(liked.map(l => l.to_user)));
-      setProfiles(all);
+      setProfiles(Array.isArray(all) ? all : []);
+
+      // Compter likes aujourd'hui
       const today = new Date().toISOString().split("T")[0];
       const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`);
-      setLikesToday(tl.length);
-    } catch (e) { console.error(e); }
+      setLikesToday(Array.isArray(tl) ? tl.length : 0);
+    } catch (e) {
+      console.error("loadProfiles error:", e);
+      setProfiles([]);
+    }
     setLoading(false);
   };
 
@@ -856,8 +953,15 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       {!p ? (
         <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}>
           <div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div>
-          <h3 style={{ fontFamily: "Georgia,serif", marginBottom: 8 }}>Aucun profil trouvé</h3>
-          <Btn variant="primary" onClick={() => { setFilters({ city: "", ageMin: "", ageMax: "", gender: "" }); loadProfiles(); }} style={{ marginTop: 12 }}>Voir tous les profils</Btn>
+          <h3 style={{ fontFamily: "Georgia,serif", marginBottom: 8, fontSize: "1.2rem" }}>
+            {profiles.length === 0 ? "Aucun profil disponible pour le moment." : "Tu as vu tous les profils !"}
+          </h3>
+          <p style={{ fontSize: "0.85rem", marginBottom: 20 }}>
+            {profiles.length === 0 ? "Reviens plus tard, de nouveaux membres arrivent bientôt !" : "Reviens demain pour de nouveaux profils."}
+          </p>
+          <Btn variant="primary" onClick={() => { setFilters({ city: "", ageMin: "", ageMax: "", gender: "" }); loadProfiles(); }} style={{ marginTop: 8 }}>
+            🔄 Actualiser
+          </Btn>
         </div>
       ) : (
         <>
