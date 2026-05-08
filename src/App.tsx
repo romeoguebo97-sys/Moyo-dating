@@ -1,10 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 
-// ============================================================
-// MOYO CONGO v6 - Production Ready
-// Stack: React + TypeScript + Vite + Supabase + Vercel
-// ============================================================
-
 const SUPABASE_URL = "https://mcswcapxpruiffzrxfvl.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nx44ipF3_X98flDVXxBZ5A_aztvDdgN";
 const APP_URL = "https://moyo-congo-appe.vercel.app";
@@ -46,44 +41,35 @@ const sb = {
     "Authorization": `Bearer ${token || SUPABASE_KEY}`,
     "Prefer": "return=representation",
   }),
-
   async signUp(email: string, password: string, metadata: object) {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-      method: "POST",
-      headers: this.h(),
+      method: "POST", headers: this.h(),
       body: JSON.stringify({ email, password, data: metadata }),
     });
     return r.json();
   },
-
   async signIn(email: string, password: string) {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: this.h(),
+      method: "POST", headers: this.h(),
       body: JSON.stringify({ email, password }),
     });
     return r.json();
   },
-
   async signOut(token: string) {
     await fetch(`${SUPABASE_URL}/auth/v1/logout`, { method: "POST", headers: this.h(token) });
   },
-
   async resetPassword(email: string) {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
-      method: "POST",
-      headers: this.h(),
+      method: "POST", headers: this.h(),
       body: JSON.stringify({ email, redirect_to: `${APP_URL}/reset-password` }),
     });
     return r.json();
   },
-
   async query<T>(token: string, table: string, params = ""): Promise<T[]> {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { headers: this.h(token) });
     const data = await r.json().catch(() => []);
     return Array.isArray(data) ? data : [];
   },
-
   async insert<T>(token: string, table: string, data: object): Promise<T[]> {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
       method: "POST", headers: this.h(token), body: JSON.stringify(data),
@@ -91,14 +77,12 @@ const sb = {
     const res = await r.json().catch(() => null);
     return Array.isArray(res) ? res : res ? [res] : [];
   },
-
   async update(token: string, table: string, id: string, data: object) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
       method: "PATCH", headers: this.h(token), body: JSON.stringify(data),
     });
     return r.json().catch(() => null);
   },
-
   async upsert(token: string, table: string, data: object) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
       method: "POST",
@@ -107,38 +91,27 @@ const sb = {
     });
     return r.json().catch(() => null);
   },
-
   async delete(token: string, table: string, params: string) {
     await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { method: "DELETE", headers: this.h(token) });
   },
-
   async uploadPhoto(token: string, userId: string, file: File): Promise<string | null> {
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${userId}/avatar.${ext}`;
       const r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": file.type || "image/jpeg",
-          "x-upsert": "true",
-          "Cache-Control": "3600",
-        },
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true", "Cache-Control": "3600" },
         body: file,
       });
       if (!r.ok) return null;
       return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   },
-
   async markMessagesRead(token: string, matchId: string, userId: string) {
     await fetch(`${SUPABASE_URL}/rest/v1/messages?match_id=eq.${matchId}&sender_id=neq.${userId}&is_read=eq.false`, {
       method: "PATCH", headers: this.h(token), body: JSON.stringify({ is_read: true }),
     });
   },
-
   async recordVisit(token: string, visitorId: string, visitedId: string) {
     if (visitorId === visitedId) return;
     await fetch(`${SUPABASE_URL}/rest/v1/profile_visits`, {
@@ -217,8 +190,7 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
           value={value} onChange={onChange} placeholder={placeholder}
           onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
           style={{
-            width: "100%",
-            boxSizing: "border-box",
+            width: "100%", boxSizing: "border-box",
             padding: icon ? (isPwd ? "13px 42px 13px 40px" : "13px 14px 13px 40px") : (isPwd ? "13px 42px 13px 14px" : "13px 14px"),
             border: `2px solid ${error ? "#e74c3c" : focus ? G.or : G.gris}`,
             borderRadius: 12, fontSize: "0.93rem", background: G.blanc,
@@ -265,11 +237,136 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 }
 
 function About({ onBack }: { onBack: () => void }) {
-  return <div style={{ minHeight: "100vh", background: G.creme }}><div style={{ background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, padding: "24px 24px 40px" }}><div onClick={onBack} style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.88rem", cursor: "pointer", marginBottom: 20 }}>← Retour</div><div style={{ textAlign: "center" }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2.5rem", color: G.blanc, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", gap: 0, alignItems: "baseline" }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><p style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.9rem" }}>Le premier site de rencontres congolais</p></div></div><div style={{ padding: "0 20px 60px", maxWidth: 600, margin: "0 auto" }}><div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginTop: -20, boxShadow: "0 8px 32px rgba(44,26,14,0.1)", marginBottom: 16 }}><div style={{ fontSize: "2rem", marginBottom: 10 }}>❤️</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 10 }}>Notre mission</h2><p style={{ fontSize: "0.88rem", lineHeight: 1.8, color: G.brunLight }}><strong>Moyo</strong> (qui signifie "cœur" en swahili) est le premier site de rencontres dédié aux Congolais. Notre mission est simple : créer des rencontres sincères et durables entre Congolais, qu'ils soient au pays ou dans la diaspora.</p></div>{[
-    ["💡", "Conseils pour bien rencontrer", ["Mets une vraie photo", "Remplis bien ta bio", "Prends le temps de discuter", "Protège tes informations", "Signale les faux profils", "Sois respectueux(se)"]],
-    ["🌟", "Nos services", ["Rencontres en ligne", "Abonnement Premium", "Accompagnement mariage", "Mise en relation VIP", "Conseil relationnel"]],
-    ["🧠", "Conseils relationnels", ["Réussir son premier message", "Bien se lancer sur Moyo", "Préparer son premier RDV", "Construire une relation durable", "Surmonter une rupture", "Sécurité sur les applis"]],
-  ].map(([icon, title, items]: any) => <div key={title} style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}><div style={{ fontSize: "2rem", marginBottom: 10 }}>{icon}</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>{title}</h2>{items.map((it: string) => <div key={it} style={{ padding: "12px 0", borderBottom: `1px solid ${G.gris}`, fontWeight: 700, fontSize: "0.9rem" }}>{it}</div>)}</div>)}<div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 20, padding: "24px", marginBottom: 16, color: G.blanc }}><div style={{ fontSize: "2rem", marginBottom: 10 }}>💍</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.3rem", fontWeight: 700, marginBottom: 10 }}>Accompagnement mariage congolais</h2>{["Organisation du mariage traditionnel et civil (Possibilité de préfinancement)", "Coordination de la cérémonie traditionnelle", "Mise en relation avec des prestataires congolais", "Accompagnement pour les couples diaspora/Congo", "Accompagnement administratif (mariage civil)"].map(s => <div key={s} style={{ padding: "6px 0", fontSize: "0.82rem" }}>✓ {s}</div>)}<div style={{ marginTop: 10, background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "12px 16px", fontSize: "0.82rem" }}>📞 Devis : <strong>+33 07 53 35 64 71</strong></div></div><div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16 }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Nous contacter</h2><a href="https://www.facebook.com/share/1CHQizobz9/?mibextid=wwXIfr" target="_blank" style={{ display: "block", color: "#1877F2", fontWeight: 700, marginBottom: 10 }}>Facebook — Page Moyo Congo</a><a href="https://wa.me/33753356471" target="_blank" style={{ display: "block", color: "#25D366", fontWeight: 700, marginBottom: 10 }}>WhatsApp — +33 07 53 35 64 71</a><a href="mailto:contact@moyo-congo.com" style={{ display: "block", color: G.rouge, fontWeight: 700 }}>contact@moyo-congo.com</a></div></div></div>;
+  return (
+    <div style={{ minHeight: "100vh", background: G.creme }}>
+      <div style={{ background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, padding: "24px 24px 40px" }}>
+        <div onClick={onBack} style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.88rem", cursor: "pointer", marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}>← Retour</div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "Georgia,serif", fontSize: "2.5rem", color: G.blanc, fontWeight: 700, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+          <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.9rem" }}>Le premier site de rencontres congolais</p>
+        </div>
+      </div>
+      <div style={{ padding: "0 20px 60px", maxWidth: 600, margin: "0 auto" }}>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginTop: -20, boxShadow: "0 8px 32px rgba(44,26,14,0.1)", marginBottom: 16 }}>
+          <div style={{ fontSize: "2rem", marginBottom: 10 }}>❤️</div>
+          <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 10 }}>Notre mission</h2>
+          <p style={{ fontSize: "0.88rem", lineHeight: 1.8, color: G.brunLight }}>
+            <strong>Moyo</strong> (qui signifie "cœur" en swahili) est le premier site de rencontres dédié aux Congolais. Notre mission est simple : créer des rencontres sincères et durables entre Congolais, qu'ils soient au pays ou dans la diaspora.
+          </p>
+          <p style={{ fontSize: "0.88rem", lineHeight: 1.8, color: G.brunLight, marginTop: 10 }}>
+            Nous croyons que chaque Congolais mérite de trouver l'amour dans un espace sûr, respectueux et adapté à notre culture et nos valeurs.
+          </p>
+        </div>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}>
+          <div style={{ fontSize: "2rem", marginBottom: 10 }}>💡</div>
+          <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Conseils pour bien rencontrer</h2>
+          {[
+            { icon: "📸", titre: "Mets une vraie photo", desc: "Les profils avec une photo reçoivent 5x plus de messages. Utilise une photo récente et souriante." },
+            { icon: "✍️", titre: "Remplis bien ta bio", desc: "Parle de tes passions, tes valeurs. Une bio sincère attire les bonnes personnes." },
+            { icon: "💬", titre: "Prends le temps de discuter", desc: "Ne te précipite pas. Apprends à connaître la personne avant de proposer une rencontre." },
+            { icon: "🔒", titre: "Protège tes informations", desc: "Ne partage pas ton numéro trop vite. Vérifie que la personne est sérieuse." },
+            { icon: "🚨", titre: "Signale les faux profils", desc: "Si tu suspectes une arnaque, utilise le bouton Reporter. Tu protèges toute la communauté." },
+            { icon: "🤝", titre: "Sois respectueux(se)", desc: "Traite les autres comme tu voudrais être traité(e)." },
+          ].map(c => (
+            <div key={c.titre} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 0", borderBottom: `1px solid ${G.gris}` }}>
+              <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>{c.icon}</div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 3 }}>{c.titre}</div>
+                <div style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.6 }}>{c.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}>
+          <div style={{ fontSize: "2rem", marginBottom: 10 }}>🌟</div>
+          <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Nos services</h2>
+          {[
+            { icon: "💞", titre: "Rencontres en ligne", desc: "Trouve ton âme sœur parmi des profils vérifiés.", badge: "Gratuit" },
+            { icon: "⭐", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké et bien plus.", badge: "5 000 FCFA/mois" },
+            { icon: "💍", titre: "Accompagnement mariage", desc: "Nous t'accompagnons dans l'organisation de ta cérémonie congolaise.", badge: "Sur demande" },
+            { icon: "🤵", titre: "Mise en relation VIP", desc: "Service personnalisé et discret dans ta recherche de l'âme sœur.", badge: "Premium" },
+            { icon: "📋", titre: "Conseil relationnel", desc: "Nos conseillers t'aident à rédiger ton profil et te guident.", badge: "Bientôt" },
+          ].map(s => (
+            <div key={s.titre} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "14px 0", borderBottom: `1px solid ${G.gris}` }}>
+              <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>{s.icon}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{s.titre}</div>
+                  <div style={{ background: "rgba(212,168,67,0.15)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "2px 8px", fontSize: "0.68rem", fontWeight: 600, color: G.brunLight, marginLeft: 8 }}>{s.badge}</div>
+                </div>
+                <div style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.6 }}>{s.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 20, padding: "24px", marginBottom: 16, color: G.blanc }}>
+          <div style={{ fontSize: "2rem", marginBottom: 10 }}>💍</div>
+          <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.3rem", fontWeight: 700, marginBottom: 10 }}>Accompagnement mariage congolais</h2>
+          {["Organisation du mariage traditionnel et civil (Possibilité de préfinancement)", "Coordination de la cérémonie traditionnelle", "Mise en relation avec des prestataires congolais", "Accompagnement pour les couples diaspora/Congo", "Accompagnement administratif (mariage civil)"].map(s => (
+            <div key={s} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "6px 0", fontSize: "0.82rem", opacity: 0.9 }}>
+              <span style={{ color: G.or, fontWeight: 700, flexShrink: 0 }}>✓</span> {s}
+            </div>
+          ))}
+          <div style={{ marginTop: 16, background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "12px 16px", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: 8 }}>
+            <span>📱</span>
+            <div><div style={{ fontWeight: 700 }}>SR Event — Agence événementielle</div><div style={{ opacity: 0.85 }}>Mariages · Dots · Conférences · Anniversaires · Brazzaville</div></div>
+          </div>
+          <div style={{ marginTop: 10, background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "12px 16px", fontSize: "0.82rem" }}>
+            📞 Devis : <strong>+33 07 53 35 64 71</strong>
+          </div>
+        </div>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}>
+          <div style={{ fontSize: "2rem", marginBottom: 10 }}>🧠</div>
+          <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Conseils relationnels</h2>
+          {[
+            { icon: "💌", titre: "Réussir son premier message", desc: "Sois original, pose une question ouverte, montre que tu as lu son profil." },
+            { icon: "📱", titre: "Bien se lancer sur Moyo", desc: "Remplis ton profil à 100%, utilise des photos récentes. Sois patient." },
+            { icon: "☕", titre: "Préparer son premier RDV", desc: "Choisis un lieu public. Sois à l'heure, sois toi-même." },
+            { icon: "💑", titre: "Construire une relation durable", desc: "Communique honnêtement sur tes attentes dès le début." },
+            { icon: "💔", titre: "Surmonter une rupture", desc: "Prends le temps de te reconstruire et reviens quand tu es prêt(e)." },
+            { icon: "🔐", titre: "Sécurité sur les applis", desc: "Ne partage jamais d'argent. Rencontre dans un lieu public la première fois." },
+          ].map(c => (
+            <div key={c.titre} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 0", borderBottom: `1px solid ${G.gris}` }}>
+              <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>{c.icon}</div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 3 }}>{c.titre}</div>
+                <div style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.6 }}>{c.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}>
+          <div style={{ fontSize: "2rem", marginBottom: 10 }}>📞</div>
+          <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Nous contacter</h2>
+          {[
+            { icon: "📘", label: "Facebook", value: "Page Moyo Congo", href: "https://www.facebook.com/share/1CHQizobz9/?mibextid=wwXIfr", color: "#1877F2" },
+            { icon: "📱", label: "Téléphone / WhatsApp", value: "+33 07 53 35 64 71", href: "https://wa.me/33753356471", color: "#25D366" },
+            { icon: "📧", label: "Email", value: "contact@moyo-congo.com", href: "mailto:contact@moyo-congo.com", color: G.rouge },
+          ].map(c => (
+            <div key={c.label} style={{ display: "flex", gap: 14, alignItems: "center", padding: "14px 0", borderBottom: `1px solid ${G.gris}` }}>
+              <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>{c.icon}</div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: "0.82rem", color: G.brunLight, marginBottom: 2 }}>{c.label}</div>
+                <a href={c.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.9rem", color: c.color, fontWeight: 700, textDecoration: "none" }}>{c.value}</a>
+              </div>
+            </div>
+          ))}
+        </div>
+        <a href="https://www.facebook.com/share/1CHQizobz9/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#1877F2", color: "#fff", borderRadius: 16, padding: "18px", marginBottom: 16, textDecoration: "none" }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>Rejoins notre communauté Facebook</div>
+            <div style={{ fontSize: "0.78rem", opacity: 0.85 }}>Actualités, conseils et témoignages</div>
+          </div>
+        </a>
+        <div style={{ textAlign: "center", color: G.brunLight }}>
+          <p style={{ fontSize: "0.75rem" }}>© 2026 Moyo Congo · Tous droits réservés</p>
+          <p style={{ fontSize: "0.72rem", marginTop: 4 }}>Confidentialité · CGU · Contact</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function AuthLayout({ children, onBack }: { children: React.ReactNode; onBack: () => void }) {
@@ -308,33 +405,24 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     setForgotSent(true);
   };
 
-  if (showForgot) return <AuthLayout onBack={() => onNav("landing")}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 24 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", gap: 0, alignItems: "baseline" }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2></div>{forgotSent ? <div style={{ textAlign: "center" }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>📧</div><p style={{ color: G.brunLight, fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p><Btn variant="ghost" onClick={() => { setShowForgot(false); setForgotSent(false); }}>← Retour à la connexion</Btn></div> : <><Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="✉️" /><Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien 📧</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowForgot(false)} style={{ fontSize: "0.85rem", color: G.brunLight, cursor: "pointer" }}>← Retour</span></div></>}</AuthLayout>;
+  if (showForgot) return <AuthLayout onBack={() => onNav("landing")}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 24 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2></div>{forgotSent ? <div style={{ textAlign: "center" }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>📧</div><p style={{ color: G.brunLight, fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p><Btn variant="ghost" onClick={() => { setShowForgot(false); setForgotSent(false); }}>← Retour à la connexion</Btn></div> : <><Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="✉️" /><Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien 📧</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowForgot(false)} style={{ fontSize: "0.85rem", color: G.brunLight, cursor: "pointer" }}>← Retour</span></div></>}</AuthLayout>;
 
-  return <AuthLayout onBack={() => onNav("landing")}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", gap: 0, alignItems: "baseline" }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="✉️" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="🔒" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="✉️" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="🔒" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
-function SignUp({ onNav }: { onNav: (p: string) => void; onAuth?: (a: Auth) => void }) {
+function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-    name: "",
-    age: "",
-    city: "",
-    gender: "",
-    bio: "",
-  });
-
+  const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "" });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
-
-  const upd = (k: string, v: string) =>
-    setForm(f => ({ ...f, [k]: v }));
+  const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSubmit = async () => {
     setLoading(true);
-
     try {
+      const emailClean = form.email.trim().toLowerCase();
+
+      // Vérifier si email déjà utilisé via identities
       const metadata = {
         name: form.name.trim(),
         age: form.age,
@@ -344,358 +432,101 @@ function SignUp({ onNav }: { onNav: (p: string) => void; onAuth?: (a: Auth) => v
         photo_url: null,
       };
 
-      const authRes = await sb.signUp(
-        form.email.trim().toLowerCase(),
-        form.password,
-        metadata
-      );
+      const authRes = await sb.signUp(emailClean, form.password, metadata);
 
-      if (authRes.error) {
+      if (authRes?.error) {
         const code = authRes.error.message || "";
-
         let msg = "Impossible de créer le compte. Veuillez réessayer.";
-
-        if (
-          code.includes("already registered") ||
-          code.includes("already been registered") ||
-          code.includes("User already registered")
-        ) {
-          msg =
-            "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt à votre compte.";
-        } else if (
-          code.includes("password") ||
-          code.includes("characters")
-        ) {
+        if (code.includes("already registered") || code.includes("already been registered") || code.includes("User already registered")) {
+          msg = "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt à votre compte.";
+        } else if (code.includes("password") || code.includes("characters")) {
           msg = "Le mot de passe doit contenir au moins 6 caractères.";
-        } else if (
-          code.includes("invalid") ||
-          code.includes("email")
-        ) {
+        } else if (code.includes("invalid") || code.includes("email")) {
           msg = "Adresse e-mail invalide.";
         }
-
         setToast({ msg, type: "error" });
         setLoading(false);
         return;
       }
 
-      if (
-        authRes.user?.identities &&
-        authRes.user.identities.length === 0
-      ) {
+      if (authRes.user?.identities && authRes.user.identities.length === 0) {
         setToast({
-          msg:
-            "Cette adresse e-mail possède déjà un compte. Connectez-vous directement.",
+          msg: "Cette adresse e-mail possède déjà un compte. Connectez-vous directement.",
           type: "error",
         });
-
         setLoading(false);
         return;
       }
 
       setToast({
-        msg:
-          "Compte créé avec succès. Vous pouvez maintenant vous connecter.",
+        msg: "Compte créé avec succès. Vous pouvez maintenant vous connecter.",
         type: "success",
       });
-
       setLoading(false);
+      setTimeout(() => { onNav("login"); }, 2500);
 
-      setTimeout(() => {
-        onNav("login");
-      }, 2500);
     } catch (e) {
       console.error("Signup error:", e);
-
-      setToast({
-        msg:
-          "Erreur technique pendant la création du compte. Veuillez réessayer.",
-        type: "error",
-      });
-
+      setToast({ msg: "Erreur technique pendant la création du compte. Veuillez réessayer.", type: "error" });
       setLoading(false);
     }
   };
 
   return (
     <AuthLayout onBack={() => onNav("landing")}>
-      {toast && (
-        <Toast
-          msg={toast.msg}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div
-          style={{
-            fontFamily: "Georgia,serif",
-            fontSize: "2rem",
-            color: G.rouge,
-            fontWeight: 700,
-            letterSpacing: "-0.03em",
-            display: "inline-flex",
-            gap: 0,
-            alignItems: "baseline",
-          }}
-        >
-          <span>Mo</span>
-          <span style={{ color: G.or }}>yo</span>
-        </div>
-
-        <h2
-          style={{
-            fontFamily: "Georgia,serif",
-            fontSize: "1.5rem",
-            fontWeight: 700,
-            marginTop: 6,
-          }}
-        >
-          Crée ton compte
-        </h2>
-
-        <p
-          style={{
-            color: G.brunLight,
-            fontSize: "0.85rem",
-            marginTop: 4,
-          }}
-        >
-          Étape {step}/2
-        </p>
+        <div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
+        <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
+        <p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Étape {step}/2</p>
       </div>
-
       <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-        {[1, 2].map(s => (
-          <div
-            key={s}
-            style={{
-              flex: 1,
-              height: 4,
-              borderRadius: 2,
-              background: s <= step ? G.rouge : G.gris,
-            }}
-          />
-        ))}
+        {[1, 2].map(s => <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? G.rouge : G.gris }} />)}
       </div>
-
-      {step === 1 && (
-        <>
-          <Input
-            label="Email"
-            type="email"
-            value={form.email}
-            onChange={e => upd("email", e.target.value)}
-            placeholder="ton@email.com"
-            icon="✉️"
-          />
-
-          <Input
-            label="Mot de passe"
-            type="password"
-            value={form.password}
-            onChange={e => upd("password", e.target.value)}
-            placeholder="Minimum 6 caractères"
-            icon="🔒"
-            hint="Au moins 6 caractères"
-          />
-
-          <Btn
-            variant="primary"
-            onClick={() => setStep(2)}
-            style={{ width: "100%", marginTop: 8 }}
-            disabled={!form.email || form.password.length < 6}
-          >
-            Continuer →
-          </Btn>
-        </>
-      )}
-
-      {step === 2 && (
-        <>
-          <Input
-            label="Prénom"
-            value={form.name}
-            onChange={e => upd("name", e.target.value)}
-            placeholder="Ex: Faïda"
-            icon="👤"
-          />
-
-          <div style={{ marginBottom: 18 }}>
-            <label
-              style={{
-                display: "block",
-                fontWeight: 500,
-                marginBottom: 7,
-                fontSize: "0.88rem",
-                color: G.brunLight,
-              }}
-            >
-              Je suis
-            </label>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              {["Homme", "Femme"].map(g => (
-                <div
-                  key={g}
-                  onClick={() => upd("gender", g)}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    borderRadius: 12,
-                    textAlign: "center",
-                    cursor: "pointer",
-                    border: `2px solid ${
-                      form.gender === g ? G.rouge : G.gris
-                    }`,
-                    background:
-                      form.gender === g
-                        ? "rgba(192,57,43,0.06)"
-                        : G.blanc,
-                    fontWeight: 600,
-                    fontSize: "0.88rem",
-                  }}
-                >
-                  {g === "Homme" ? "👨🏿 Homme" : "👩🏿 Femme"}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Input
-            label="Âge"
-            type="number"
-            value={form.age}
-            onChange={e => upd("age", e.target.value)}
-            placeholder="Ex: 25"
-            icon="🎂"
-          />
-
-          <div style={{ marginBottom: 18 }}>
-            <label
-              style={{
-                display: "block",
-                fontWeight: 500,
-                marginBottom: 7,
-                fontSize: "0.88rem",
-                color: G.brunLight,
-              }}
-            >
-              Ville
-            </label>
-
-            <select
-              value={form.city}
-              onChange={e => upd("city", e.target.value)}
-              style={{
-                width: "100%",
-                padding: "13px 14px",
-                border: `2px solid ${G.gris}`,
-                borderRadius: 12,
-                fontSize: "0.93rem",
-                background: G.blanc,
-                color: G.brun,
-                outline: "none",
-              }}
-            >
-              <option value="">Sélectionne ta ville</option>
-              {VILLES.map(c =>
-                c.startsWith("──") ? (
-                  <option key={c} disabled>
-                    {c}
-                  </option>
-                ) : (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                )
-              )}
-            </select>
-          </div>
-
-          <div style={{ marginBottom: 18 }}>
-            <label
-              style={{
-                display: "block",
-                fontWeight: 500,
-                marginBottom: 7,
-                fontSize: "0.88rem",
-                color: G.brunLight,
-              }}
-            >
-              Bio (optionnel)
-            </label>
-
-            <textarea
-              value={form.bio}
-              onChange={e => upd("bio", e.target.value)}
-              placeholder="Parle un peu de toi..."
-              rows={3}
-              style={{
-                width: "100%",
-                padding: "13px 14px",
-                border: `2px solid ${G.gris}`,
-                borderRadius: 12,
-                fontSize: "0.93rem",
-                background: G.blanc,
-                color: G.brun,
-                outline: "none",
-                resize: "none",
-              }}
-            />
-          </div>
-
+      {step === 1 && <>
+        <Input label="Email" type="email" value={form.email} onChange={e => upd("email", e.target.value)} placeholder="ton@email.com" icon="✉️" />
+        <Input label="Mot de passe" type="password" value={form.password} onChange={e => upd("password", e.target.value)} placeholder="Minimum 6 caractères" icon="🔒" hint="Au moins 6 caractères" />
+        <Btn variant="primary" onClick={() => setStep(2)} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn>
+      </>}
+      {step === 2 && <>
+        <Input label="Prénom" value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="👤" />
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Je suis</label>
           <div style={{ display: "flex", gap: 10 }}>
-            <Btn
-              variant="ghost"
-              onClick={() => setStep(1)}
-              style={{ flex: 1 }}
-            >
-              ← Retour
-            </Btn>
-
-            <Btn
-              variant="primary"
-              onClick={handleSubmit}
-              loading={loading}
-              style={{ flex: 2 }}
-              disabled={
-                !form.name || !form.gender || !form.age || !form.city
-              }
-            >
-              Créer mon compte 🎉
-            </Btn>
+            {["Homme", "Femme"].map(g => (
+              <div key={g} onClick={() => upd("gender", g)} style={{ flex: 1, padding: "12px", borderRadius: 12, textAlign: "center", cursor: "pointer", border: `2px solid ${form.gender === g ? G.rouge : G.gris}`, background: form.gender === g ? "rgba(192,57,43,0.06)" : G.blanc, fontWeight: 600, fontSize: "0.88rem" }}>
+                {g === "Homme" ? "👨🏿 Homme" : "👩🏿 Femme"}
+              </div>
+            ))}
           </div>
-        </>
-      )}
-
-      <p
-        style={{
-          textAlign: "center",
-          marginTop: 20,
-          fontSize: "0.85rem",
-          color: G.brunLight,
-        }}
-      >
-        Déjà un compte ?{" "}
-        <span
-          style={{
-            color: G.rouge,
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
-          onClick={() => onNav("login")}
-        >
-          Se connecter
-        </span>
+        </div>
+        <Input label="Âge" type="number" value={form.age} onChange={e => upd("age", e.target.value)} placeholder="Ex: 25" icon="🎂" />
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Ville</label>
+          <select value={form.city} onChange={e => upd("city", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }}>
+            <option value="">Sélectionne ta ville</option>
+            {VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Bio (optionnel)</label>
+          <textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Parle un peu de toi..." rows={3} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", resize: "none" }} />
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn variant="ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Retour</Btn>
+          <Btn variant="primary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }} disabled={!form.name || !form.gender || !form.age || !form.city}>Créer mon compte 🎉</Btn>
+        </div>
+      </>}
+      <p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>
+        Déjà un compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("login")}>Se connecter</span>
       </p>
     </AuthLayout>
   );
 }
+
 function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; auth: Auth; }) {
   const tabs = [{ id: "discover", icon: "🔥", label: "Découvrir" }, { id: "matches", icon: "💞", label: "Matchs" }, { id: "messages", icon: "💬", label: "Messages" }, { id: "profile", icon: "👤", label: "Profil" }];
-  return <div style={{ maxWidth: 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme }}><div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "sticky", top: 0, zIndex: 50 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", gap: 0, alignItems: "baseline" }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><div style={{ display: "flex", gap: 10, alignItems: "center" }}>{auth.isAdmin && <div onClick={() => setTab("admin")} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>⚙️ Admin</div>}<div style={{ fontSize: "0.78rem", color: G.brunLight }}>🇨🇬</div></div></div><div style={{ flex: 1, overflowY: "auto", paddingBottom: 75 }}>{children}</div><div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", justifyContent: "space-around", padding: "10px 0 14px", zIndex: 50 }}>{tabs.map(t => <div key={t.id} onClick={() => setTab(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", color: tab === t.id ? G.rouge : "#bbb", position: "relative", minWidth: 60 }}><div style={{ fontSize: "1.3rem" }}>{t.icon}</div>{t.id === "messages" && unreadCount > 0 && <div style={{ position: "absolute", top: -4, right: 8, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 700 }}>{unreadCount > 9 ? "9+" : unreadCount}</div>}{t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: 8, background: G.or, color: G.brun, borderRadius: "50%", width: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 700 }}>{notifCount}</div>}<div style={{ fontSize: "0.6rem", fontWeight: tab === t.id ? 700 : 400 }}>{t.label}</div></div>)}</div></div>;
+  return <div style={{ maxWidth: 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme }}><div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "sticky", top: 0, zIndex: 50 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><div style={{ display: "flex", gap: 10, alignItems: "center" }}>{auth.isAdmin && <div onClick={() => setTab("admin")} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>⚙️ Admin</div>}<div style={{ fontSize: "0.78rem", color: G.brunLight }}>🇨🇬</div></div></div><div style={{ flex: 1, overflowY: "auto", paddingBottom: 75 }}>{children}</div><div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", justifyContent: "space-around", padding: "10px 0 14px", zIndex: 50 }}>{tabs.map(t => <div key={t.id} onClick={() => setTab(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", color: tab === t.id ? G.rouge : "#bbb", position: "relative", minWidth: 60 }}><div style={{ fontSize: "1.3rem" }}>{t.icon}</div>{t.id === "messages" && unreadCount > 0 && <div style={{ position: "absolute", top: -4, right: 8, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 700 }}>{unreadCount > 9 ? "9+" : unreadCount}</div>}{t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: 8, background: G.or, color: G.brun, borderRadius: "50%", width: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 700 }}>{notifCount}</div>}<div style={{ fontSize: "0.6rem", fontWeight: tab === t.id ? 700 : 400 }}>{t.label}</div></div>)}</div></div>;
 }
 
 function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
@@ -748,7 +579,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const p = profiles[current];
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: G.brunLight }}>⏳ Chargement...</div>;
 
-  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.3rem", fontWeight: 700 }}>Découvrir 🔥</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{!p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{ fontFamily: "Georgia,serif", marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Crée un deuxième compte test pour voir des profils ici.</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "16px 20px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}><div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{p.name}, {p.age}</div><div style={{ color: G.brunLight, fontSize: "0.82rem", marginBottom: 6 }}>📍 {p.city}</div></div><div onClick={() => setShowReport(true)} style={{ fontSize: "0.72rem", color: "#e74c3c", cursor: "pointer", background: "rgba(231,76,60,0.08)", padding: "4px 10px", borderRadius: 50, fontWeight: 600 }}>🚨 Reporter</div></div>{p.bio && <p style={{ fontSize: "0.85rem", color: G.brunLight, lineHeight: 1.6 }}>{p.bio}</p>}</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => setCurrent(c => Math.max(0, c - 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>❤️</div><div onClick={() => setCurrent(c => Math.min(profiles.length - 1, c + 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{showReport && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "28px 20px 40px" }}><h3 style={{ fontFamily: "Georgia,serif", fontSize: "1.2rem", fontWeight: 700, marginBottom: 16 }}>🚨 Signaler ce profil</h3>{["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => <div key={r} onClick={() => handleReport(r)} style={{ padding: "14px 16px", background: G.creme, borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500 }}>{r}</div>)}<Btn variant="ghost" onClick={() => setShowReport(false)} style={{ width: "100%", marginTop: 8 }}>Annuler</Btn></div></div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}</div>;
+  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.3rem", fontWeight: 700 }}>Découvrir 🔥</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{!p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{ fontFamily: "Georgia,serif", marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "16px 20px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}><div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{p.name}, {p.age}</div><div style={{ color: G.brunLight, fontSize: "0.82rem", marginBottom: 6 }}>📍 {p.city}</div></div><div onClick={() => setShowReport(true)} style={{ fontSize: "0.72rem", color: "#e74c3c", cursor: "pointer", background: "rgba(231,76,60,0.08)", padding: "4px 10px", borderRadius: 50, fontWeight: 600 }}>🚨 Reporter</div></div>{p.bio && <p style={{ fontSize: "0.85rem", color: G.brunLight, lineHeight: 1.6 }}>{p.bio}</p>}</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => setCurrent(c => Math.max(0, c - 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>❤️</div><div onClick={() => setCurrent(c => Math.min(profiles.length - 1, c + 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{showReport && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "28px 20px 40px" }}><h3 style={{ fontFamily: "Georgia,serif", fontSize: "1.2rem", fontWeight: 700, marginBottom: 16 }}>🚨 Signaler ce profil</h3>{["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => <div key={r} onClick={() => handleReport(r)} style={{ padding: "14px 16px", background: G.creme, borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500 }}>{r}</div>)}<Btn variant="ghost" onClick={() => setShowReport(false)} style={{ width: "100%", marginTop: 8 }}>Annuler</Btn></div></div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}</div>;
 }
 
 function Matches({ auth, onShowPremium, onNotifCount }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void }) {
@@ -777,7 +608,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (!file) return; setUploadLoading(true); const url = await sb.uploadPhoto(auth.token, auth.userId, file); if (url) { await sb.update(auth.token, "profiles", auth.userId, { photo_url: url }); setProfile(p => p ? { ...p, photo_url: url } : null); setToast({ msg: "Photo mise à jour ! 📸" }); } else setToast({ msg: "Erreur upload. Vérifie le bucket avatars.", type: "error" }); setUploadLoading(false); };
   const handleDelete = async () => { await sb.delete(auth.token, "profiles", `?id=eq.${auth.userId}`); await sb.signOut(auth.token); onLogout(); };
   if (loading) return <div style={{ padding: 40, textAlign: "center" }}>⏳</div>;
-  return <div style={{ paddingBottom: 20 }}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ height: 110, background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, position: "relative" }}><div style={{ position: "absolute", bottom: -34, left: "50%", transform: "translateX(-50%)", cursor: "pointer" }} onClick={() => fileRef.current?.click()}><Avatar url={profile?.photo_url} gender={profile?.gender} size={72} border premium={profile?.is_premium} /><div style={{ position: "absolute", bottom: 0, right: 0, background: G.or, borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", border: `2px solid ${G.blanc}` }}>{uploadLoading ? "⏳" : "📷"}</div></div></div><input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} /><div style={{ textAlign: "center", marginTop: 44, padding: "0 16px" }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{profile?.name} {profile?.is_premium && "⭐"}</h2><p style={{ color: G.brunLight, fontSize: "0.83rem" }}>📍 {profile?.city} · {profile?.age} ans</p><p style={{ color: G.brunLight, fontSize: "0.72rem", marginTop: 3 }}>Appuie sur 📷 pour changer ta photo</p>{profile?.bio && <p style={{ color: G.brunLight, fontSize: "0.85rem", lineHeight: 1.6, maxWidth: 280, margin: "8px auto 0" }}>{profile.bio}</p>}</div>{editing ? <div style={{ padding: "16px" }}><input value={form.name || ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><input type="number" value={form.age || ""} onChange={e => setForm(f => ({ ...f, age: parseInt(e.target.value) }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.city || ""} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}>{VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}</select><textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="primary" onClick={saveProfile} style={{ flex: 2 }}>Sauvegarder ✓</Btn></div></div> : <div style={{ padding: "16px" }}><Btn variant="ghost" onClick={() => setEditing(true)} style={{ width: "100%", marginBottom: 10 }}>✏️ Modifier mon profil</Btn>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "18px", marginBottom: 10, color: G.blanc, cursor: "pointer" }}><div style={{ fontWeight: 700 }}>✨ Passe à Premium</div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, color: G.or }}>5 000 FCFA/mois</div></div>}<Btn variant="danger" onClick={() => { sb.signOut(auth.token); onLogout(); }} style={{ width: "100%", marginBottom: 10 }}>🚪 Se déconnecter</Btn>{!showDelete ? <div style={{ textAlign: "center" }}><span onClick={() => setShowDelete(true)} style={{ fontSize: "0.8rem", color: "#e74c3c", cursor: "pointer", textDecoration: "underline" }}>Supprimer mon compte</span></div> : <div style={{ background: "#fff5f5", border: "1px solid #e74c3c", borderRadius: 14, padding: "18px", textAlign: "center" }}><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 14 }}>Action irréversible.</p><div style={{ display: "flex", gap: 8 }}><Btn variant="ghost" onClick={() => setShowDelete(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="danger" onClick={handleDelete} style={{ flex: 1 }}>Supprimer</Btn></div></div>}</div>}</div>;
+  return <div style={{ paddingBottom: 20 }}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ height: 110, background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, position: "relative" }}><div style={{ position: "absolute", bottom: -34, left: "50%", transform: "translateX(-50%)", cursor: "pointer" }} onClick={() => fileRef.current?.click()}><Avatar url={profile?.photo_url} gender={profile?.gender} size={72} border premium={profile?.is_premium} /><div style={{ position: "absolute", bottom: 0, right: 0, background: G.or, borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", border: `2px solid ${G.blanc}` }}>{uploadLoading ? "⏳" : "📷"}</div></div></div><input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} /><div style={{ textAlign: "center", marginTop: 44, padding: "0 16px" }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{profile?.name} {profile?.is_premium && "⭐"}</h2><p style={{ color: G.brunLight, fontSize: "0.83rem" }}>📍 {profile?.city} · {profile?.age} ans</p>{profile?.bio && <p style={{ color: G.brunLight, fontSize: "0.85rem", lineHeight: 1.6, maxWidth: 280, margin: "8px auto 0" }}>{profile.bio}</p>}</div>{editing ? <div style={{ padding: "16px" }}><input value={form.name || ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><input type="number" value={form.age || ""} onChange={e => setForm(f => ({ ...f, age: parseInt(e.target.value) }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.city || ""} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}>{VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}</select><textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="primary" onClick={saveProfile} style={{ flex: 2 }}>Sauvegarder ✓</Btn></div></div> : <div style={{ padding: "16px" }}><Btn variant="ghost" onClick={() => setEditing(true)} style={{ width: "100%", marginBottom: 10 }}>✏️ Modifier mon profil</Btn>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "18px", marginBottom: 10, color: G.blanc, cursor: "pointer" }}><div style={{ fontWeight: 700 }}>✨ Passe à Premium</div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, color: G.or }}>5 000 FCFA/mois</div></div>}<Btn variant="danger" onClick={() => { sb.signOut(auth.token); onLogout(); }} style={{ width: "100%", marginBottom: 10 }}>🚪 Se déconnecter</Btn>{!showDelete ? <div style={{ textAlign: "center" }}><span onClick={() => setShowDelete(true)} style={{ fontSize: "0.8rem", color: "#e74c3c", cursor: "pointer", textDecoration: "underline" }}>Supprimer mon compte</span></div> : <div style={{ background: "#fff5f5", border: "1px solid #e74c3c", borderRadius: 14, padding: "18px", textAlign: "center" }}><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 14 }}>Action irréversible.</p><div style={{ display: "flex", gap: 8 }}><Btn variant="ghost" onClick={() => setShowDelete(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="danger" onClick={handleDelete} style={{ flex: 1 }}>Supprimer</Btn></div></div>}</div>}</div>;
 }
 
 function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
