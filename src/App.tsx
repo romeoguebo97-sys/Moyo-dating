@@ -417,6 +417,35 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [toast, setToast] = useState<ToastState>(null);
   const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
+  const checkEmailAndContinue = async () => {
+    if (!form.email || form.password.length < 6) return;
+    setLoading(true);
+    try {
+      // Tenter une inscription test pour vérifier si l'email existe
+      // Supabase retourne identities vide si email déjà utilisé
+      const testRes = await sb.signUp(form.email.trim().toLowerCase(), form.password, {});
+      if (testRes?.error) {
+        const code = testRes.error.message || "";
+        if (code.includes("already registered") || code.includes("already been registered") || code.includes("User already registered")) {
+          setToast({ msg: "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt.", type: "error" });
+          setLoading(false);
+          return;
+        }
+      }
+      if (testRes?.user?.identities && testRes.user.identities.length === 0) {
+        setToast({ msg: "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt.", type: "error" });
+        setLoading(false);
+        return;
+      }
+      // Email disponible → passer à l'étape 2
+      setStep(2);
+    } catch {
+      // En cas d'erreur réseau on laisse passer quand même
+      setStep(2);
+    }
+    setLoading(false);
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
@@ -486,7 +515,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       {step === 1 && <>
         <Input label="Email" type="email" value={form.email} onChange={e => upd("email", e.target.value)} placeholder="ton@email.com" icon="✉️" />
         <Input label="Mot de passe" type="password" value={form.password} onChange={e => upd("password", e.target.value)} placeholder="Minimum 6 caractères" icon="🔒" hint="Au moins 6 caractères" />
-        <Btn variant="primary" onClick={() => setStep(2)} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn>
+        <Btn variant="primary" onClick={checkEmailAndContinue} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn>
       </>}
       {step === 2 && <>
         <Input label="Prénom" value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="👤" />
