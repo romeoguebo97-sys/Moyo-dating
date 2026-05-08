@@ -421,26 +421,27 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     if (!form.email || form.password.length < 6) return;
     setLoading(true);
     try {
-      // Tenter une inscription test pour vérifier si l'email existe
-      // Supabase retourne identities vide si email déjà utilisé
-      const testRes = await sb.signUp(form.email.trim().toLowerCase(), form.password, {});
-      if (testRes?.error) {
-        const code = testRes.error.message || "";
-        if (code.includes("already registered") || code.includes("already been registered") || code.includes("User already registered")) {
+      const emailClean = form.email.trim().toLowerCase();
+      // On tente une connexion avec un faux mot de passe
+      // Si l'erreur est "Invalid login credentials" → l'email existe déjà
+      // Si l'erreur est "Email not confirmed" → l'email existe déjà
+      // Si aucune erreur ou autre erreur → l'email est libre
+      const testSignIn = await sb.signIn(emailClean, "FAKE_PASSWORD_CHECK_12345!");
+      if (testSignIn?.error) {
+        const msg = testSignIn.error.message || "";
+        if (
+          msg.includes("Invalid login credentials") ||
+          msg.includes("Email not confirmed") ||
+          msg.includes("invalid_credentials")
+        ) {
           setToast({ msg: "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt.", type: "error" });
           setLoading(false);
           return;
         }
       }
-      if (testRes?.user?.identities && testRes.user.identities.length === 0) {
-        setToast({ msg: "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt.", type: "error" });
-        setLoading(false);
-        return;
-      }
-      // Email disponible → passer à l'étape 2
+      // Email libre → passer à l'étape 2
       setStep(2);
     } catch {
-      // En cas d'erreur réseau on laisse passer quand même
       setStep(2);
     }
     setLoading(false);
