@@ -315,38 +315,384 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
 
 function SignUp({ onNav }: { onNav: (p: string) => void; onAuth?: (a: Auth) => void }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "" });
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    name: "",
+    age: "",
+    city: "",
+    gender: "",
+    bio: "",
+  });
+
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
-  const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const upd = (k: string, v: string) =>
+    setForm(f => ({ ...f, [k]: v }));
 
   const handleSubmit = async () => {
     setLoading(true);
+
     try {
-      const metadata = { name: form.name.trim(), age: form.age, city: form.city, gender: form.gender, bio: form.bio.trim(), photo_url: null };
-      const authRes = await sb.signUp(form.email.trim(), form.password, metadata);
+      const metadata = {
+        name: form.name.trim(),
+        age: form.age,
+        city: form.city,
+        gender: form.gender,
+        bio: form.bio.trim(),
+        photo_url: null,
+      };
+
+      const authRes = await sb.signUp(
+        form.email.trim().toLowerCase(),
+        form.password,
+        metadata
+      );
+
       if (authRes.error) {
         const code = authRes.error.message || "";
-        let msg = "Une erreur est survenue. Veuillez réessayer.";
-        if (code.includes("already registered") || code.includes("already been registered")) msg = "Cette adresse e-mail est déjà utilisée.";
-        else if (code.includes("password") || code.includes("characters")) msg = "Le mot de passe doit contenir au moins 6 caractères.";
-        else if (code.includes("invalid") || code.includes("email")) msg = "Adresse e-mail invalide.";
+
+        let msg = "Impossible de créer le compte. Veuillez réessayer.";
+
+        if (
+          code.includes("already registered") ||
+          code.includes("already been registered") ||
+          code.includes("User already registered")
+        ) {
+          msg =
+            "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt à votre compte.";
+        } else if (
+          code.includes("password") ||
+          code.includes("characters")
+        ) {
+          msg = "Le mot de passe doit contenir au moins 6 caractères.";
+        } else if (
+          code.includes("invalid") ||
+          code.includes("email")
+        ) {
+          msg = "Adresse e-mail invalide.";
+        }
+
         setToast({ msg, type: "error" });
         setLoading(false);
         return;
       }
-      setToast({ msg: "Compte créé. Vérifie ton e-mail si Supabase demande une confirmation, puis connecte-toi.", type: "success" });
+
+      if (
+        authRes.user?.identities &&
+        authRes.user.identities.length === 0
+      ) {
+        setToast({
+          msg:
+            "Cette adresse e-mail possède déjà un compte. Connectez-vous directement.",
+          type: "error",
+        });
+
+        setLoading(false);
+        return;
+      }
+
+      setToast({
+        msg:
+          "Compte créé avec succès. Vous pouvez maintenant vous connecter.",
+        type: "success",
+      });
+
       setLoading(false);
-      setTimeout(() => onNav("login"), 3000);
-    } catch {
-      setToast({ msg: "Une erreur réseau est survenue. Veuillez réessayer.", type: "error" });
+
+      setTimeout(() => {
+        onNav("login");
+      }, 2500);
+    } catch (e) {
+      console.error("Signup error:", e);
+
+      setToast({
+        msg:
+          "Erreur technique pendant la création du compte. Veuillez réessayer.",
+        type: "error",
+      });
+
       setLoading(false);
     }
   };
 
-  return <AuthLayout onBack={() => onNav("landing")}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 20 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", gap: 0, alignItems: "baseline" }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2><p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Étape {step}/2</p></div><div style={{ display: "flex", gap: 8, marginBottom: 24 }}>{[1, 2].map(s => <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? G.rouge : G.gris }} />)}</div>{step === 1 && <><Input label="Email" type="email" value={form.email} onChange={e => upd("email", e.target.value)} placeholder="ton@email.com" icon="✉️" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => upd("password", e.target.value)} placeholder="Minimum 6 caractères" icon="🔒" hint="Au moins 6 caractères" /><Btn variant="primary" onClick={() => setStep(2)} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn></>}{step === 2 && <><Input label="Prénom" value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="👤" /><div style={{ marginBottom: 18 }}><label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Je suis</label><div style={{ display: "flex", gap: 10 }}>{["Homme", "Femme"].map(g => <div key={g} onClick={() => upd("gender", g)} style={{ flex: 1, padding: "12px", borderRadius: 12, textAlign: "center", cursor: "pointer", border: `2px solid ${form.gender === g ? G.rouge : G.gris}`, background: form.gender === g ? "rgba(192,57,43,0.06)" : G.blanc, fontWeight: 600, fontSize: "0.88rem" }}>{g === "Homme" ? "👨🏿 Homme" : "👩🏿 Femme"}</div>)}</div></div><Input label="Âge" type="number" value={form.age} onChange={e => upd("age", e.target.value)} placeholder="Ex: 25" icon="🎂" /><div style={{ marginBottom: 18 }}><label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Ville</label><select value={form.city} onChange={e => upd("city", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }}><option value="">Sélectionne ta ville</option>{VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}</select></div><div style={{ marginBottom: 18 }}><label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Bio (optionnel)</label><textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Parle un peu de toi..." rows={3} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", resize: "none" }} /></div><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Retour</Btn><Btn variant="primary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }} disabled={!form.name || !form.gender || !form.age || !form.city}>Créer mon compte 🎉</Btn></div></>}<p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>Déjà un compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("login")}>Se connecter</span></p></AuthLayout>;
-}
+  return (
+    <AuthLayout onBack={() => onNav("landing")}>
+      {toast && (
+        <Toast
+          msg={toast.msg}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
+      <div style={{ textAlign: "center", marginBottom: 20 }}>
+        <div
+          style={{
+            fontFamily: "Georgia,serif",
+            fontSize: "2rem",
+            color: G.rouge,
+            fontWeight: 700,
+            letterSpacing: "-0.03em",
+            display: "inline-flex",
+            gap: 0,
+            alignItems: "baseline",
+          }}
+        >
+          <span>Mo</span>
+          <span style={{ color: G.or }}>yo</span>
+        </div>
+
+        <h2
+          style={{
+            fontFamily: "Georgia,serif",
+            fontSize: "1.5rem",
+            fontWeight: 700,
+            marginTop: 6,
+          }}
+        >
+          Crée ton compte
+        </h2>
+
+        <p
+          style={{
+            color: G.brunLight,
+            fontSize: "0.85rem",
+            marginTop: 4,
+          }}
+        >
+          Étape {step}/2
+        </p>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+        {[1, 2].map(s => (
+          <div
+            key={s}
+            style={{
+              flex: 1,
+              height: 4,
+              borderRadius: 2,
+              background: s <= step ? G.rouge : G.gris,
+            }}
+          />
+        ))}
+      </div>
+
+      {step === 1 && (
+        <>
+          <Input
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={e => upd("email", e.target.value)}
+            placeholder="ton@email.com"
+            icon="✉️"
+          />
+
+          <Input
+            label="Mot de passe"
+            type="password"
+            value={form.password}
+            onChange={e => upd("password", e.target.value)}
+            placeholder="Minimum 6 caractères"
+            icon="🔒"
+            hint="Au moins 6 caractères"
+          />
+
+          <Btn
+            variant="primary"
+            onClick={() => setStep(2)}
+            style={{ width: "100%", marginTop: 8 }}
+            disabled={!form.email || form.password.length < 6}
+          >
+            Continuer →
+          </Btn>
+        </>
+      )}
+
+      {step === 2 && (
+        <>
+          <Input
+            label="Prénom"
+            value={form.name}
+            onChange={e => upd("name", e.target.value)}
+            placeholder="Ex: Faïda"
+            icon="👤"
+          />
+
+          <div style={{ marginBottom: 18 }}>
+            <label
+              style={{
+                display: "block",
+                fontWeight: 500,
+                marginBottom: 7,
+                fontSize: "0.88rem",
+                color: G.brunLight,
+              }}
+            >
+              Je suis
+            </label>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              {["Homme", "Femme"].map(g => (
+                <div
+                  key={g}
+                  onClick={() => upd("gender", g)}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    borderRadius: 12,
+                    textAlign: "center",
+                    cursor: "pointer",
+                    border: `2px solid ${
+                      form.gender === g ? G.rouge : G.gris
+                    }`,
+                    background:
+                      form.gender === g
+                        ? "rgba(192,57,43,0.06)"
+                        : G.blanc,
+                    fontWeight: 600,
+                    fontSize: "0.88rem",
+                  }}
+                >
+                  {g === "Homme" ? "👨🏿 Homme" : "👩🏿 Femme"}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Input
+            label="Âge"
+            type="number"
+            value={form.age}
+            onChange={e => upd("age", e.target.value)}
+            placeholder="Ex: 25"
+            icon="🎂"
+          />
+
+          <div style={{ marginBottom: 18 }}>
+            <label
+              style={{
+                display: "block",
+                fontWeight: 500,
+                marginBottom: 7,
+                fontSize: "0.88rem",
+                color: G.brunLight,
+              }}
+            >
+              Ville
+            </label>
+
+            <select
+              value={form.city}
+              onChange={e => upd("city", e.target.value)}
+              style={{
+                width: "100%",
+                padding: "13px 14px",
+                border: `2px solid ${G.gris}`,
+                borderRadius: 12,
+                fontSize: "0.93rem",
+                background: G.blanc,
+                color: G.brun,
+                outline: "none",
+              }}
+            >
+              <option value="">Sélectionne ta ville</option>
+              {VILLES.map(c =>
+                c.startsWith("──") ? (
+                  <option key={c} disabled>
+                    {c}
+                  </option>
+                ) : (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <label
+              style={{
+                display: "block",
+                fontWeight: 500,
+                marginBottom: 7,
+                fontSize: "0.88rem",
+                color: G.brunLight,
+              }}
+            >
+              Bio (optionnel)
+            </label>
+
+            <textarea
+              value={form.bio}
+              onChange={e => upd("bio", e.target.value)}
+              placeholder="Parle un peu de toi..."
+              rows={3}
+              style={{
+                width: "100%",
+                padding: "13px 14px",
+                border: `2px solid ${G.gris}`,
+                borderRadius: 12,
+                fontSize: "0.93rem",
+                background: G.blanc,
+                color: G.brun,
+                outline: "none",
+                resize: "none",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn
+              variant="ghost"
+              onClick={() => setStep(1)}
+              style={{ flex: 1 }}
+            >
+              ← Retour
+            </Btn>
+
+            <Btn
+              variant="primary"
+              onClick={handleSubmit}
+              loading={loading}
+              style={{ flex: 2 }}
+              disabled={
+                !form.name || !form.gender || !form.age || !form.city
+              }
+            >
+              Créer mon compte 🎉
+            </Btn>
+          </div>
+        </>
+      )}
+
+      <p
+        style={{
+          textAlign: "center",
+          marginTop: 20,
+          fontSize: "0.85rem",
+          color: G.brunLight,
+        }}
+      >
+        Déjà un compte ?{" "}
+        <span
+          style={{
+            color: G.rouge,
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+          onClick={() => onNav("login")}
+        >
+          Se connecter
+        </span>
+      </p>
+    </AuthLayout>
+  );
+}
 function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; auth: Auth; }) {
   const tabs = [{ id: "discover", icon: "🔥", label: "Découvrir" }, { id: "matches", icon: "💞", label: "Matchs" }, { id: "messages", icon: "💬", label: "Messages" }, { id: "profile", icon: "👤", label: "Profil" }];
   return <div style={{ maxWidth: 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme }}><div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "sticky", top: 0, zIndex: 50 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", gap: 0, alignItems: "baseline" }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><div style={{ display: "flex", gap: 10, alignItems: "center" }}>{auth.isAdmin && <div onClick={() => setTab("admin")} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>⚙️ Admin</div>}<div style={{ fontSize: "0.78rem", color: G.brunLight }}>🇨🇬</div></div></div><div style={{ flex: 1, overflowY: "auto", paddingBottom: 75 }}>{children}</div><div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", justifyContent: "space-around", padding: "10px 0 14px", zIndex: 50 }}>{tabs.map(t => <div key={t.id} onClick={() => setTab(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", color: tab === t.id ? G.rouge : "#bbb", position: "relative", minWidth: 60 }}><div style={{ fontSize: "1.3rem" }}>{t.icon}</div>{t.id === "messages" && unreadCount > 0 && <div style={{ position: "absolute", top: -4, right: 8, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 700 }}>{unreadCount > 9 ? "9+" : unreadCount}</div>}{t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: 8, background: G.or, color: G.brun, borderRadius: "50%", width: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 700 }}>{notifCount}</div>}<div style={{ fontSize: "0.6rem", fontWeight: tab === t.id ? 700 : 400 }}>{t.label}</div></div>)}</div></div>;
