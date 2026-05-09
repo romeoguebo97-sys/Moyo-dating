@@ -261,12 +261,12 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <style>{GLOBAL_CSS}</style>
 
       {/* ── NAV ── */}
-      <nav style={{ background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "sticky", top: 0, zIndex: 100 }}>
-        <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px" }}>
-          <div style={{ fontFamily: "Georgia,serif", fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline" }}>
+      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", position: "sticky", top: 0, zIndex: 100 }}>
+        <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 24px" }}>
+          <div style={{ fontFamily: "Georgia,serif", fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
             <span>Mo</span><span style={{ color: G.or }}>yo</span>
           </div>
-          <span onClick={() => onNav("about")} style={{ fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", padding: "8px 18px", borderRadius: 50, border: `1px solid ${G.gris}`, background: G.creme, transition: "all 0.2s", display: "inline-block" }} onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.rouge; (e.currentTarget as HTMLElement).style.color = G.blanc; (e.currentTarget as HTMLElement).style.borderColor = G.rouge; }} onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; (e.currentTarget as HTMLElement).style.color = G.brun; (e.currentTarget as HTMLElement).style.borderColor = G.gris; }}>À propos</span>
+          <span onClick={() => onNav("about")} style={{ fontSize: "0.85rem", fontWeight: 600, color: G.blanc, cursor: "pointer", padding: "9px 22px", borderRadius: 50, background: G.rouge, boxShadow: "0 4px 14px rgba(192,57,43,0.3)", transition: "all 0.2s", display: "inline-block", letterSpacing: "0.01em" }} onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.rougeDark; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 18px rgba(192,57,43,0.4)"; }} onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.rouge; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 14px rgba(192,57,43,0.3)"; }}>À propos</span>
         </div>
       </nav>
 
