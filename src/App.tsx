@@ -1373,7 +1373,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
       </div>
       {/* Barre envoi fixe */}
       <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
-        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Écris un message..." style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "0.88rem", outline: "none", background: G.creme }} />
+        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Écris un message..." style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "16px", outline: "none", background: G.creme }} />
         <div onClick={send} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.95rem", color: G.blanc, flexShrink: 0, flexGrow: 0 }}>➤</div>
       </div>
       {/* Modal suppression */}
