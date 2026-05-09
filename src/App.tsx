@@ -33,7 +33,7 @@ const G = {
 };
 
 type Auth = { token: string; userId: string; name: string; isPremium: boolean; isAdmin: boolean };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; email?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; created_at?: string };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
