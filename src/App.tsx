@@ -1357,14 +1357,53 @@ export default function App() {
   };
   useEffect(() => {
     if (!auth) return;
+
+    // Rafraîchir le statut premium
+    const refreshPremium = async () => {
+      const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`);
+      if (profiles[0] && profiles[0].is_premium !== auth.isPremium) {
+        const updated = { ...auth, isPremium: profiles[0].is_premium, isAdmin: profiles[0].is_admin || false };
+        setAuth(updated);
+        try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+      }
+    };
+    refreshPremium();
+
+    // Likes reçus
     const loadLikesReceived = async () => {
       const res = await sb.query<object>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
       setLikesReceived(Array.isArray(res) ? res.length : 0);
     };
     loadLikesReceived();
-    const interval = setInterval(loadLikesReceived, 30000);
-    return () => clearInterval(interval);
-  }, [auth]);
+    const likesInterval = setInterval(loadLikesReceived, 30000);
+
+    // Temps réel — écouter les nouveaux messages via WebSocket Supabase
+    const wsUrl = `${SUPABASE_URL.replace("https://", "wss://")}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`;
+    let ws: WebSocket | null = null;
+    let wsOpen = false;
+    try {
+      ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        wsOpen = true;
+        ws?.send(JSON.stringify({ topic: "realtime:public:messages", event: "phx_join", payload: {}, ref: "1" }));
+      };
+      ws.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.event === "INSERT" && data.payload?.record?.sender_id !== auth.userId) {
+            // Nouveau message reçu — mettre à jour le badge immédiatement
+            setUnreadCount(c => c + 1);
+          }
+        } catch {}
+      };
+      ws.onerror = () => {};
+    } catch {}
+
+    return () => {
+      clearInterval(likesInterval);
+      if (ws && wsOpen) try { ws.close(); } catch {}
+    };
+  }, [auth?.userId]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
   if (page === "landing") return <Landing onNav={setPage} />;
   if (page === "about") return <About onBack={() => setPage("landing")} />;
@@ -1372,5 +1411,5 @@ export default function App() {
   if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
   if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
-  return <><AppShell tab={tab} setTab={setTab} unreadCount={unreadCount} notifCount={likesReceived} auth={auth}>{tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}{tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} />}{tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}{tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} />}{tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}</AppShell>{premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}</>;
+  return <><AppShell tab={tab} setTab={(t) => { setTab(t); if (t === "messages") setUnreadCount(0); }} unreadCount={unreadCount} notifCount={likesReceived} auth={auth}>{tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}{tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} />}{tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}{tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} />}{tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}</AppShell>{premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}</>;
 }
