@@ -1313,12 +1313,19 @@ export default function App() {
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
   // Restaurer session au chargement
   useEffect(() => {
-    // Vérifier si c'est un lien de reset password
+    // Vérifier si c'est un lien de reset password ou confirmation email
     const hash = window.location.hash;
     const params = new URLSearchParams(hash.replace("#", "?"));
     const type = params.get("type");
+    const accessToken = params.get("access_token");
     if (type === "recovery") {
       setPage("reset-password");
+      return;
+    }
+    // Confirmation email — rediriger vers login (Supabase valide le token automatiquement via l'URL)
+    if ((type === "signup" || type === "email_confirmation") && accessToken) {
+      window.location.hash = "";
+      setPage("login");
       return;
     }
     try {
