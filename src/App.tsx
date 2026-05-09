@@ -1377,31 +1377,21 @@ export default function App() {
     loadLikesReceived();
     const likesInterval = setInterval(loadLikesReceived, 30000);
 
-    // Temps réel — écouter les nouveaux messages via WebSocket Supabase
-    const wsUrl = `${SUPABASE_URL.replace("https://", "wss://")}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`;
-    let ws: WebSocket | null = null;
-    let wsOpen = false;
-    try {
-      ws = new WebSocket(wsUrl);
-      ws.onopen = () => {
-        wsOpen = true;
-        ws?.send(JSON.stringify({ topic: "realtime:public:messages", event: "phx_join", payload: {}, ref: "1" }));
-      };
-      ws.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data.event === "INSERT" && data.payload?.record?.sender_id !== auth.userId) {
-            // Nouveau message reçu — mettre à jour le badge immédiatement
-            setUnreadCount(c => c + 1);
-          }
-        } catch {}
-      };
-      ws.onerror = () => {};
-    } catch {}
+    // Polling 5s pour les messages non lus
+    const checkUnread = async () => {
+      try {
+        const res = await sb.query<object>(auth.token, "messages",
+          `?sender_id=neq.${auth.userId}&is_read=eq.false&select=id`
+        );
+        setUnreadCount(Array.isArray(res) ? res.length : 0);
+      } catch {}
+    };
+    checkUnread();
+    const msgInterval = setInterval(checkUnread, 5000);
 
     return () => {
       clearInterval(likesInterval);
-      if (ws && wsOpen) try { ws.close(); } catch {}
+      clearInterval(msgInterval);
     };
   }, [auth?.userId]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
