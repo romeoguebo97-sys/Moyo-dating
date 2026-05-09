@@ -150,6 +150,24 @@ const GLOBAL_CSS = `
   .nav-link{transition:color 0.2s!important}
   .card-hover:hover{transform:translateX(4px)}
   .card-hover{transition:transform 0.2s!important}
+  .trust-card{transition:transform 0.22s ease,box-shadow 0.22s ease!important}
+  .trust-card:hover{transform:translateY(-6px)!important;box-shadow:0 16px 40px rgba(44,26,14,0.13)!important}
+  .testi-card{transition:transform 0.22s ease,box-shadow 0.22s ease!important}
+  .testi-card:hover{transform:translateY(-5px)!important;box-shadow:0 14px 36px rgba(44,26,14,0.12)!important}
+  .social-icon{transition:transform 0.18s ease,opacity 0.18s ease!important}
+  .social-icon:hover{transform:translateY(-3px) scale(1.12)!important;opacity:0.85!important}
+  @media(min-width:768px){
+    .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
+    .landing-hero-text{text-align:left!important}
+    .landing-hero-btns{justify-content:flex-start!important}
+    .landing-stats{max-width:1100px!important;margin:0 auto!important;padding:0 40px 0!important;grid-template-columns:repeat(4,1fr)!important}
+    .landing-sections{max-width:1100px!important;margin:0 auto!important;padding:0 40px!important}
+    .trust-grid{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:20px!important}
+    .testi-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:20px!important}
+    .steps-layout{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:32px!important}
+    .step-connector{display:block!important}
+    .nav-inner{max-width:1100px!important;margin:0 auto!important;padding:0 40px!important;width:100%!important}
+  }
 `;
 
 function Btn({ children, variant = "primary", onClick, style = {}, disabled = false, loading = false }: {
@@ -229,12 +247,462 @@ function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string
     { icon: "🔒", titre: "Profil vérifié", desc: "Badge de confiance visible" },
     { icon: "🎧", titre: "Support prioritaire", desc: "Assistance rapide 7j/7" },
   ];
-  return <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "28px 28px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", padding: "32px 20px 40px" }}><div style={{ textAlign: "center", marginBottom: 24 }}><div style={{ fontSize: "2.5rem", marginBottom: 8 }}>⭐</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.7rem", fontWeight: 700, marginBottom: 8 }}>Passe à Premium</h2>{reason && <div style={{ background: "rgba(192,57,43,0.08)", border: `1px solid ${G.rouge}`, borderRadius: 12, padding: "10px 16px", fontSize: "0.82rem", color: G.rouge, fontWeight: 600, marginBottom: 12 }}>{reason}</div>}<div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", fontWeight: 700, color: G.or }}>5 000 FCFA<span style={{ fontSize: "0.9rem", color: G.brunLight, fontWeight: 400 }}>/mois</span></div><div style={{ fontSize: "0.75rem", color: G.brunLight, marginTop: 4 }}>MTN MoMo · Airtel Money · Orange Money · Carte bancaire</div></div><h3 style={{ fontWeight: 700, marginBottom: 12, fontSize: "0.88rem", textTransform: "uppercase", letterSpacing: "0.05em", color: G.brunLight }}>Tout ce que tu obtiens :</h3>{avantages.map(a => <div key={a.titre} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}><div style={{ fontSize: "1.3rem", width: 30, textAlign: "center", flexShrink: 0 }}>{a.icon}</div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{a.titre}</div><div style={{ fontSize: "0.78rem", color: G.brunLight }}>{a.desc}</div></div><div style={{ color: "#27ae60", fontWeight: 700 }}>✓</div></div>)}<Btn variant="gold" onClick={() => {}} style={{ width: "100%", padding: "16px", fontSize: "1rem", marginTop: 20, marginBottom: 12 }}>Activer Premium — 5 000 FCFA/mois</Btn><div style={{ textAlign: "center" }}><span onClick={onClose} style={{ fontSize: "0.85rem", color: G.brunLight, cursor: "pointer" }}>Peut-être plus tard</span></div></div></div>;
+  return <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "28px 28px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", padding: "32px 20px 40px" }}><div style={{ textAlign: "center", marginBottom: 24 }}><div style={{ fontSize: "2.5rem", marginBottom: 8 }}>⭐</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.7rem", fontWeight: 700, marginBottom: 8 }}>Passe à Premium</h2>{reason && <div style={{ background: "rgba(192,57,43,0.08)", border: `1px solid ${G.rouge}`, borderRadius: 12, padding: "10px 16px", fontSize: "0.82rem", color: G.rouge, fontWeight: 600, marginBottom: 12 }}>{reason}</div>}<div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", fontWeight: 700, color: G.or }}>5 000 FCFA<span style={{ fontSize: "0.9rem", color: G.brunLight, fontWeight: 400 }}>/mois</span></div><div style={{ fontSize: "0.75rem", color: G.brunLight, marginTop: 4 }}>MTN MoMo · Airtel Money · Orange Money · Carte bancaire</div></div><div style={{ background: "linear-gradient(135deg,rgba(212,168,67,0.12),rgba(192,57,43,0.08))", border: "1px solid rgba(212,168,67,0.4)", borderRadius: 14, padding: "12px 16px", marginBottom: 20, fontSize: "0.84rem", color: G.brunLight, lineHeight: 1.6, textAlign: "center", fontStyle: "italic" }}>✨ Premium t'aide à discuter plus librement et à augmenter tes chances de rencontre sérieuse.</div><h3 style={{ fontWeight: 700, marginBottom: 12, fontSize: "0.88rem", textTransform: "uppercase", letterSpacing: "0.05em", color: G.brunLight }}>Tout ce que tu obtiens :</h3>{avantages.map(a => <div key={a.titre} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}><div style={{ fontSize: "1.3rem", width: 30, textAlign: "center", flexShrink: 0 }}>{a.icon}</div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{a.titre}</div><div style={{ fontSize: "0.78rem", color: G.brunLight }}>{a.desc}</div></div><div style={{ color: "#27ae60", fontWeight: 700 }}>✓</div></div>)}<Btn variant="gold" onClick={() => {}} style={{ width: "100%", padding: "16px", fontSize: "1rem", marginTop: 20, marginBottom: 12 }}>Activer Premium — 5 000 FCFA/mois</Btn><div style={{ textAlign: "center" }}><span onClick={onClose} style={{ fontSize: "0.85rem", color: G.brunLight, cursor: "pointer" }}>Peut-être plus tard</span></div></div></div>;
 }
 
 function Landing({ onNav }: { onNav: (p: string) => void }) {
-  return <div style={{ minHeight: "100vh", background: `linear-gradient(160deg,${G.creme} 50%,${G.vert} 100%)`, overflow: "hidden" }}><style>{GLOBAL_CSS}</style><nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", animation: "fadeIn 0.5s ease both" }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", gap: 0, alignItems: "baseline" }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><div style={{ display: "flex", gap: 12, alignItems: "center" }}><span className="nav-link" style={{ fontSize: "0.88rem", fontWeight: 500, color: G.brunLight, cursor: "pointer" }} onClick={() => onNav("about")}>À propos</span><a href="https://www.facebook.com/share/1CHQizobz9/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="fb" style={{ display: "flex", alignItems: "center", gap: 6, background: "#1877F2", color: "#fff", borderRadius: 50, padding: "8px 16px", textDecoration: "none", fontSize: "0.82rem", fontWeight: 600 }}>Facebook</a></div></nav><div style={{ maxWidth: 560, margin: "40px auto 0", padding: "0 24px", textAlign: "center" }}><div className="fu1" style={{ display: "inline-block", background: "rgba(212,168,67,0.15)", border: `1px solid ${G.or}`, padding: "6px 16px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 24, color: G.brunLight }}>Site de rencontres Congolais</div><h1 className="fu2" style={{ fontFamily: "Georgia,serif", fontSize: "clamp(2.2rem,8vw,3.8rem)", lineHeight: 1.1, fontWeight: 700, marginBottom: 20 }}>Trouve ton <span className="heart" style={{ color: G.rouge, fontStyle: "italic", fontFamily: "Georgia,serif" }}>âme sœur</span><br />au Congo</h1><p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.75, color: G.brunLight, marginBottom: 36 }}>Moyo connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.</p><div className="fu4" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 40 }}><button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 600, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>Créer mon profil gratuit</button><button className="btn-o" onClick={() => onNav("login")} style={{ border: `2px solid ${G.brun}`, borderRadius: 50, padding: "13px 28px", fontWeight: 600, fontSize: "0.95rem", background: "transparent", color: G.brun, cursor: "pointer" }}>J'ai déjà un compte</button></div><div className="fu5" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 32 }}>{[["12 000+", "Membres inscrits"], ["850+", "Couples formés"], ["19", "Villes & diasporas"]].map(([n, l]) => <div key={l} className="stat" style={{ background: "rgba(255,255,255,0.75)", borderRadius: 14, padding: "16px 8px", textAlign: "center" }}><div style={{ fontFamily: "Georgia,serif", fontSize: "1.5rem", fontWeight: 700, color: G.rouge, marginBottom: 4 }}>{n}</div><div style={{ fontSize: "0.72rem", color: G.brunLight, fontWeight: 500 }}>{l}</div></div>)}</div><div className="fu6" style={{ marginBottom: 40 }}><p style={{ fontSize: "0.88rem", color: G.blanc, marginBottom: 14, fontWeight: 600 }}>Bientôt disponible sur</p><div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}><div className="store" style={{ display: "flex", alignItems: "center", gap: 10, background: G.brun, color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg><div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>Google Play</div></div></div><div className="store" style={{ display: "flex", alignItems: "center", gap: 10, background: G.brun, color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg><div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>App Store</div></div></div></div></div></div></div>;
+  const NEW_FB = "https://www.facebook.com/share/1HssYavG19/?mibextid=wwXIfr";
+  const svgFb = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>;
+  const svgIg = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>;
+  const svgTk = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.75a4.85 4.85 0 01-1.01-.06z"/></svg>;
+
+  return (
+    <div style={{ minHeight: "100vh", background: G.creme, overflow: "hidden" }}>
+      <style>{GLOBAL_CSS}</style>
+
+      {/* ── NAV ── */}
+      <nav style={{ background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "sticky", top: 0, zIndex: 100 }}>
+        <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px" }}>
+          <div style={{ fontFamily: "Georgia,serif", fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline" }}>
+            <span>Mo</span><span style={{ color: G.or }}>yo</span>
+          </div>
+          <span className="nav-link" style={{ fontSize: "0.88rem", fontWeight: 500, color: G.brunLight, cursor: "pointer" }} onClick={() => onNav("about")}>À propos</span>
+        </div>
+      </nav>
+
+      {/* ── HERO ── */}
+      <div style={{ background: `linear-gradient(150deg,${G.creme} 0%,#F0E8D8 60%,rgba(26,92,58,0.12) 100%)`, overflow: "hidden", position: "relative" }}>
+        {/* Cercle déco fond */}
+        <div style={{ position: "absolute", top: -60, right: -60, width: 520, height: 520, borderRadius: "50%", border: `2px solid rgba(212,168,67,0.25)`, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: 20, right: -10, width: 420, height: 420, borderRadius: "50%", background: "rgba(212,168,67,0.08)", pointerEvents: "none" }} />
+
+        <div className="landing-hero" style={{ padding: "52px 24px 0", textAlign: "center", alignItems: "flex-end" }}>
+
+          {/* ── Texte gauche ── */}
+          <div className="landing-hero-text fu1" style={{ paddingBottom: 52 }}>
+            <div style={{ display: "inline-block", background: "rgba(212,168,67,0.15)", border: `1px solid ${G.or}`, padding: "6px 16px", borderRadius: 50, fontSize: "0.73rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 22, color: G.brunLight }}>
+              Site de rencontres Congolais
+            </div>
+            <h1 className="fu2" style={{ fontFamily: "Georgia,serif", fontSize: "clamp(2.4rem,5.5vw,3.8rem)", lineHeight: 1.08, fontWeight: 700, marginBottom: 20, color: G.brun }}>
+              Trouve ton{" "}
+              <span className="heart" style={{ color: G.rouge, fontStyle: "italic" }}>âme sœur</span>
+              <br />au Congo
+            </h1>
+            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: G.brunLight, marginBottom: 36, maxWidth: 440 }}>
+              Moyo connecte les Congolais à la recherche d'une relation sincère et durable.
+              Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.
+            </p>
+            <div className="fu4 landing-hero-btns" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 32 }}>
+              <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>
+                Créer mon profil gratuit
+              </button>
+              <button className="btn-o" onClick={() => onNav("login")} style={{ border: `2px solid ${G.brun}`, borderRadius: 50, padding: "13px 28px", fontWeight: 600, fontSize: "0.95rem", background: "transparent", color: G.brun, cursor: "pointer" }}>
+                J'ai déjà un compte
+              </button>
+            </div>
+          </div>
+
+          {/* ── Composition visuelle hero desktop ── */}
+          <div className="fu1" style={{ display: "none", position: "relative", alignSelf: "center", justifyContent: "center" }} id="hero-img-desktop">
+
+            {/* Cercle déco principal */}
+            <div style={{
+              position: "absolute", top: "50%", left: "50%",
+              transform: "translate(-50%,-50%)",
+              width: 440, height: 440, borderRadius: "50%",
+              background: `linear-gradient(135deg,rgba(212,168,67,0.12),rgba(26,92,58,0.08))`,
+              border: "2px solid rgba(212,168,67,0.3)",
+              zIndex: 0,
+            }} />
+            <div style={{
+              position: "absolute", top: "50%", left: "50%",
+              transform: "translate(-50%,-50%)",
+              width: 350, height: 350, borderRadius: "50%",
+              background: "rgba(212,168,67,0.05)",
+              zIndex: 0,
+            }} />
+
+            {/* Mockup téléphone principal */}
+            <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 20, height: 500 }}>
+
+              {/* Téléphone gauche — légèrement incliné */}
+              <div style={{
+                transform: "rotate(-6deg) translateY(20px)",
+                width: 160, flexShrink: 0,
+              }}>
+                <div style={{
+                  background: "#1C1A2E",
+                  borderRadius: 28,
+                  padding: "10px",
+                  boxShadow: "0 24px 60px rgba(44,26,14,0.25), 0 0 0 1px rgba(255,255,255,0.08)",
+                  overflow: "hidden",
+                }}>
+                  {/* Encoche */}
+                  <div style={{ width: 40, height: 8, background: "#0D0B1A", borderRadius: 8, margin: "0 auto 10px" }} />
+                  {/* Écran — profil Moyo */}
+                  <div style={{ background: G.creme, borderRadius: 20, overflow: "hidden", height: 280 }}>
+                    {/* Header app */}
+                    <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "14px 12px 10px", display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ fontFamily: "Georgia,serif", fontSize: "0.9rem", color: G.blanc, fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+                      <div style={{ marginLeft: "auto", width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.55rem", color: G.blanc }}>💬</div>
+                    </div>
+                    {/* Profil card */}
+                    <div style={{ padding: "12px 10px" }}>
+                      <div style={{ width: "100%", height: 110, borderRadius: 14, background: `linear-gradient(160deg,#C47A4A,#8B4513)`, marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+                        {/* Silhouette abstraite — cercle + ovale */}
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)", marginBottom: 0, position: "absolute", top: 18 }} />
+                        <div style={{ width: 54, height: 32, borderRadius: "50% 50% 0 0", background: "rgba(255,255,255,0.18)", position: "absolute", bottom: 0 }} />
+                        {/* Badge premium */}
+                        <div style={{ position: "absolute", top: 8, right: 8, background: G.or, borderRadius: 6, padding: "2px 6px", fontSize: "0.45rem", fontWeight: 700, color: G.brun }}>⭐ Premium</div>
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: "0.72rem", color: G.brun, marginBottom: 2 }}>Sandrine, 27</div>
+                      <div style={{ fontSize: "0.6rem", color: G.brunLight, marginBottom: 8 }}>📍 Brazzaville</div>
+                      {/* Like button */}
+                      <div style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 20, padding: "6px", textAlign: "center", fontSize: "0.6rem", color: G.blanc, fontWeight: 600 }}>❤️ Liker</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Téléphone central — principal, droit */}
+              <div style={{ transform: "translateY(-10px)", width: 175, flexShrink: 0, zIndex: 3 }}>
+                <div style={{
+                  background: "#0D0B1A",
+                  borderRadius: 32,
+                  padding: "10px",
+                  boxShadow: "0 32px 80px rgba(44,26,14,0.3), 0 0 0 1.5px rgba(212,168,67,0.4)",
+                  overflow: "hidden",
+                }}>
+                  <div style={{ width: 44, height: 8, background: "#050408", borderRadius: 8, margin: "0 auto 10px" }} />
+                  <div style={{ background: G.blanc, borderRadius: 22, overflow: "hidden", height: 310 }}>
+                    {/* Header */}
+                    <div style={{ background: `linear-gradient(135deg,${G.vert},#0D4020)`, padding: "14px 14px 10px", display: "flex", alignItems: "center" }}>
+                      <div style={{ fontFamily: "Georgia,serif", fontSize: "1rem", color: G.blanc, fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+                      <div style={{ marginLeft: "auto", fontSize: "0.7rem", color: "rgba(255,255,255,0.7)" }}>🇨🇬</div>
+                    </div>
+                    {/* Match notification */}
+                    <div style={{ background: `linear-gradient(135deg,rgba(192,57,43,0.08),rgba(212,168,67,0.06))`, margin: "10px 10px 0", borderRadius: 12, padding: "10px 10px", border: `1px solid rgba(192,57,43,0.15)` }}>
+                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: G.rouge, marginBottom: 3 }}>💞 Nouveau match !</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ width: 14, height: 14, borderRadius: "50%", background: "rgba(255,255,255,0.3)" }} />
+                        </div>
+                        <div style={{ fontSize: "0.6rem", color: G.brun, fontWeight: 500 }}>Junior t'a liké aussi</div>
+                      </div>
+                    </div>
+                    {/* Profil principal */}
+                    <div style={{ padding: "8px 10px" }}>
+                      <div style={{ width: "100%", height: 120, borderRadius: 14, background: `linear-gradient(160deg,#7A4A20,#3D1A05)`, position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.22)", position: "absolute", top: 16 }} />
+                        <div style={{ width: 64, height: 36, borderRadius: "50% 50% 0 0", background: "rgba(255,255,255,0.16)", position: "absolute", bottom: 0 }} />
+                        <div style={{ position: "absolute", bottom: 8, left: 8, right: 8 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.68rem", color: G.blanc }}>Faïda, 25</div>
+                          <div style={{ fontSize: "0.56rem", color: "rgba(255,255,255,0.7)" }}>📍 Pointe-Noire</div>
+                        </div>
+                      </div>
+                      {/* Actions */}
+                      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                        <div style={{ flex: 1, background: G.gris, borderRadius: 16, padding: "5px", textAlign: "center", fontSize: "0.55rem", color: G.brunLight }}>✕</div>
+                        <div style={{ flex: 2, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "5px", textAlign: "center", fontSize: "0.58rem", color: G.blanc, fontWeight: 600 }}>❤️ Liker</div>
+                        <div style={{ flex: 1, background: `rgba(212,168,67,0.15)`, border: `1px solid ${G.or}`, borderRadius: 16, padding: "5px", textAlign: "center", fontSize: "0.55rem", color: G.brunLight }}>⭐</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Téléphone droit — incliné */}
+              <div style={{ transform: "rotate(6deg) translateY(20px)", width: 155, flexShrink: 0 }}>
+                <div style={{
+                  background: "#1C1A2E",
+                  borderRadius: 28,
+                  padding: "10px",
+                  boxShadow: "0 20px 50px rgba(44,26,14,0.2), 0 0 0 1px rgba(255,255,255,0.06)",
+                  overflow: "hidden",
+                }}>
+                  <div style={{ width: 38, height: 8, background: "#0D0B1A", borderRadius: 8, margin: "0 auto 10px" }} />
+                  <div style={{ background: G.creme, borderRadius: 20, overflow: "hidden", height: 270 }}>
+                    <div style={{ background: `linear-gradient(135deg,${G.brun},#5C3A1E)`, padding: "12px 10px 8px", display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ fontFamily: "Georgia,serif", fontSize: "0.85rem", color: G.blanc, fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+                    </div>
+                    {/* Conversation */}
+                    <div style={{ padding: "8px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ alignSelf: "flex-start", background: G.blanc, borderRadius: "10px 10px 10px 2px", padding: "5px 8px", fontSize: "0.55rem", color: G.brun, maxWidth: "80%", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>Bonsoir Lionel 😊</div>
+                      <div style={{ alignSelf: "flex-end", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: "10px 10px 2px 10px", padding: "5px 8px", fontSize: "0.55rem", color: G.blanc, maxWidth: "80%" }}>Bonsoir ! Comment tu vas ?</div>
+                      <div style={{ alignSelf: "flex-start", background: G.blanc, borderRadius: "10px 10px 10px 2px", padding: "5px 8px", fontSize: "0.55rem", color: G.brun, maxWidth: "80%", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>Très bien merci ❤️</div>
+                      <div style={{ fontSize: "0.5rem", color: G.brunLight, textAlign: "center", marginTop: 4 }}>Match depuis 2 jours</div>
+                      {/* Input message */}
+                      <div style={{ background: G.blanc, borderRadius: 14, padding: "5px 8px", display: "flex", alignItems: "center", gap: 4, border: `1px solid ${G.gris}`, marginTop: 4 }}>
+                        <div style={{ flex: 1, fontSize: "0.5rem", color: "#ccc" }}>Un message...</div>
+                        <div style={{ width: 16, height: 16, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: G.blanc }}>➤</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Bulle 850+ couples */}
+            <div style={{ position: "absolute", bottom: 30, right: -20, background: G.blanc, borderRadius: 18, padding: "12px 18px", boxShadow: "0 12px 36px rgba(44,26,14,0.14)", display: "flex", alignItems: "center", gap: 10, zIndex: 4 }}>
+              <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>💞</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "0.88rem", color: G.brun }}>850+ couples</div>
+                <div style={{ fontSize: "0.65rem", color: G.brunLight }}>formés sur Moyo</div>
+              </div>
+            </div>
+            {/* Bulle 12 000+ */}
+            <div style={{ position: "absolute", top: 30, left: -20, background: G.blanc, borderRadius: 18, padding: "10px 14px", boxShadow: "0 10px 30px rgba(44,26,14,0.12)", display: "flex", alignItems: "center", gap: 8, zIndex: 4 }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", background: `linear-gradient(135deg,${G.vert},#0D4020)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", flexShrink: 0 }}>🇨🇬</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "0.8rem", color: G.brun }}>12 000+ membres</div>
+                <div style={{ fontSize: "0.62rem", color: G.brunLight }}>Congo & diaspora</div>
+              </div>
+            </div>
+            {/* Badge vérifiés */}
+            <div style={{ position: "absolute", top: 160, right: -20, background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "6px 14px", boxShadow: "0 6px 20px rgba(212,168,67,0.4)", display: "flex", alignItems: "center", gap: 5, zIndex: 4 }}>
+              <span style={{ fontSize: "0.68rem", color: G.brun }}>✓</span>
+              <span style={{ fontWeight: 700, fontSize: "0.7rem", color: G.brun }}>Profils vérifiés</span>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+      <style>{`@media(min-width:768px){#hero-img-desktop{display:flex!important}}`}</style>
+
+      {/* ── STATS ── */}
+      <div style={{ background: G.blanc, padding: "28px 24px", borderBottom: `1px solid ${G.gris}` }}>
+        <div className="landing-stats fu5" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, maxWidth: 600, margin: "0 auto" }}>
+          {[
+            ["12 000+", "Membres inscrits", "👥"],
+            ["850+", "Couples formés", "💞"],
+            ["19", "Villes & diasporas", "📍"],
+            ["Sécurisé", "& modéré", "🛡️"],
+          ].map(([n, l, icon]) => (
+            <div key={l} className="stat" style={{ background: G.creme, borderRadius: 16, padding: "18px 12px", textAlign: "center" }}>
+              <div style={{ fontSize: "1.4rem", marginBottom: 4 }}>{icon}</div>
+              <div style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, color: G.rouge, marginBottom: 2 }}>{n}</div>
+              <div style={{ fontSize: "0.7rem", color: G.brunLight, fontWeight: 500 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── CONFIANCE ── */}
+      <div style={{ padding: "48px 24px" }}>
+        <div className="landing-sections">
+          <h2 className="fu2" style={{ fontFamily: "Georgia,serif", fontSize: "clamp(1.4rem,4vw,2rem)", fontWeight: 700, textAlign: "center", marginBottom: 8, color: G.brun }}>
+            Pourquoi faire confiance à <span style={{ color: G.rouge }}>Moyo</span> ?
+          </h2>
+          <p style={{ textAlign: "center", color: G.brunLight, fontSize: "0.88rem", marginBottom: 32 }}>
+            Une plateforme pensée pour des rencontres sincères et sécurisées
+          </p>
+          <div className="trust-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 16 }}>
+            {[
+              { icon: "🛡️", iconBg: G.rouge, titre: "Profils modérés", desc: "Les profils sont surveillés afin de limiter les faux comptes." },
+              { icon: "🔔", iconBg: G.or, titre: "Signalement rapide", desc: "Signale rapidement un comportement inapproprié." },
+              { icon: "👥", iconBg: G.vert, titre: "Communauté congolaise", desc: "Des membres du Congo et de la diaspora." },
+              { icon: "❤️", iconBg: G.rouge, titre: "Respect & sécurité", desc: "Des échanges sérieux et respectueux." },
+            ].map(c => (
+              <div key={c.titre} className="trust-card" style={{ background: G.blanc, borderRadius: 20, padding: "24px 20px", textAlign: "center", boxShadow: "0 4px 20px rgba(44,26,14,0.07)" }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: c.iconBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", margin: "0 auto 16px" }}>{c.icon}</div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", marginBottom: 8, color: G.brun }}>{c.titre}</div>
+                <div style={{ fontSize: "0.8rem", color: G.brunLight, lineHeight: 1.6 }}>{c.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── TÉMOIGNAGES PREMIUM ── */}
+      <div style={{ background: `linear-gradient(160deg,${G.blanc} 0%,${G.creme} 100%)`, padding: "64px 24px", overflow: "hidden", position: "relative" }}>
+        {/* Déco background */}
+        <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: `rgba(212,168,67,0.1)`, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -60, left: -60, width: 240, height: 240, borderRadius: "50%", background: `rgba(192,57,43,0.06)`, pointerEvents: "none" }} />
+        <div className="landing-sections" style={{ position: "relative", zIndex: 1 }}>
+          {/* Header section */}
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(212,168,67,0.15)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "6px 18px", marginBottom: 18 }}>
+              <span style={{ color: G.or, fontSize: "0.78rem" }}>★★★★★</span>
+              <span style={{ color: G.brunLight, fontSize: "0.75rem", fontWeight: 500 }}>Histoires vraies</span>
+            </div>
+            <h2 style={{ fontFamily: "Georgia,serif", fontSize: "clamp(1.6rem,4vw,2.4rem)", fontWeight: 700, color: G.brun, marginBottom: 10 }}>
+              Des histoires qui commencent sur <span style={{ color: G.rouge }}>Moyo</span> ❤️
+            </h2>
+            <p style={{ color: G.brunLight, fontSize: "0.9rem", maxWidth: 460, margin: "0 auto" }}>
+              Chaque jour, de nouveaux couples se forment au Congo et dans la diaspora
+            </p>
+          </div>
+          {/* Cartes témoignages */}
+          <div className="testi-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
+            {[
+              {
+                initiales: "OA",
+                noms: "Orlane & Armel",
+                lieu: "Diaspora France / Congo",
+                since: "Ensemble depuis 2024",
+                temoignage: "Même à distance, nous avons réussi à créer une vraie connexion. Moyo nous a donné l'espace pour nous découvrir vraiment avant de se rencontrer.",
+                stars: 5,
+                accent: G.rouge,
+              },
+              {
+                initiales: "GJ",
+                noms: "Grâce & Junior",
+                lieu: "Brazzaville",
+                since: "Mariage coutumier en préparation",
+                temoignage: "On discutait simplement au début… aujourd'hui nous préparons notre mariage coutumier. Moyo nous a mis en contact avec les bonnes personnes.",
+                stars: 5,
+                accent: G.or,
+              },
+              {
+                initiales: "RL",
+                noms: "Ruth & Lionel",
+                lieu: "Pointe-Noire",
+                since: "En couple depuis 18 mois",
+                temoignage: "Après plusieurs déceptions sur d'autres applis, Moyo nous a permis de construire une relation sérieuse. Ici les gens cherchent vraiment l'amour.",
+                stars: 5,
+                accent: G.vert,
+              },
+            ].map((t, i) => (
+              <div key={t.noms} className="testi-card" style={{
+                background: G.blanc,
+                border: `1px solid ${G.gris}`,
+                boxShadow: "0 4px 24px rgba(44,26,14,0.07)",
+                borderRadius: 24,
+                padding: "28px 24px",
+                position: "relative",
+                overflow: "hidden",
+              }}>
+                {/* Accent couleur */}
+                <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: t.accent, borderRadius: "24px 0 0 24px" }} />
+                {/* Guillemet décoratif */}
+                <div style={{ position: "absolute", top: 16, right: 20, fontFamily: "Georgia,serif", fontSize: "5rem", color: "rgba(44,26,14,0.06)", lineHeight: 1, userSelect: "none" }}>"</div>
+                {/* Étoiles */}
+                <div style={{ display: "flex", gap: 3, marginBottom: 16, paddingLeft: 12 }}>
+                  {[...Array(t.stars)].map((_, si) => (
+                    <span key={si} style={{ color: G.or, fontSize: "0.85rem" }}>★</span>
+                  ))}
+                </div>
+                {/* Texte */}
+                <p style={{ fontSize: "0.92rem", color: G.brunLight, lineHeight: 1.8, fontStyle: "italic", marginBottom: 22, paddingLeft: 12, fontFamily: "Georgia,serif" }}>
+                  "{t.temoignage}"
+                </p>
+                {/* Profil */}
+                <div style={{ display: "flex", alignItems: "center", gap: 14, paddingLeft: 12 }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: "50%", flexShrink: 0,
+                    background: `linear-gradient(135deg,${G.cremeDark},${G.creme})`,
+                    border: `2px solid ${t.accent}`,
+                    boxShadow: `0 4px 14px rgba(44,26,14,0.12), 0 0 0 3px rgba(212,168,67,0.15)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <span style={{
+                      fontFamily: "Georgia,serif", fontWeight: 700,
+                      fontSize: "1rem", color: G.brun, letterSpacing: "0.02em",
+                    }}>{t.initiales}</span>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>{t.noms}</div>
+                    <div style={{ fontSize: "0.72rem", color: G.brunLight, marginTop: 2 }}>📍 {t.lieu}</div>
+                    <div style={{ fontSize: "0.7rem", color: t.accent, fontWeight: 600, marginTop: 2 }}>💍 {t.since}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* CTA sous les témoignages */}
+          <div style={{ textAlign: "center", marginTop: 40 }}>
+            <p style={{ color: G.brunLight, fontSize: "0.82rem", marginBottom: 16 }}>Rejoins des milliers de Congolais qui ont trouvé l'amour</p>
+            <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 40px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 8px 28px rgba(192,57,43,0.4)", cursor: "pointer" }}>
+              Créer mon profil — c'est gratuit ❤️
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── COMMENT ÇA MARCHE ── */}
+      <div style={{ padding: "48px 24px", background: `linear-gradient(160deg,${G.creme},rgba(26,92,58,0.06))` }}>
+        <div className="landing-sections">
+          <h2 style={{ fontFamily: "Georgia,serif", fontSize: "clamp(1.4rem,4vw,2rem)", fontWeight: 700, textAlign: "center", marginBottom: 8, color: G.brun }}>
+            Comment <span style={{ color: G.rouge }}>ça marche</span> ?
+          </h2>
+          <p style={{ textAlign: "center", color: G.brunLight, fontSize: "0.88rem", marginBottom: 36 }}>3 étapes simples pour trouver l'amour</p>
+          <div className="steps-layout" style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {[
+              { num: "1", icon: "👤", iconBg: G.rouge, titre: "Crée ton profil", desc: "Inscris-toi gratuitement et complète ton profil." },
+              { num: "2", icon: "❤️", iconBg: G.or, titre: "Découvre des célibataires", desc: "Parcours les profils compatibles." },
+              { num: "3", icon: "💬", iconBg: G.vert, titre: "Discute après un match", desc: "Échange en toute sécurité après un like mutuel." },
+            ].map((s, i) => (
+              <div key={s.num} style={{ display: "flex", gap: 20, alignItems: "flex-start", padding: "20px 0", borderBottom: i < 2 ? `1px dashed ${G.gris}` : "none" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <div style={{ width: 52, height: 52, borderRadius: "50%", background: s.iconBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0, boxShadow: `0 6px 20px rgba(44,26,14,0.15)` }}>{s.icon}</div>
+                </div>
+                <div style={{ flex: 1, paddingTop: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: "50%", background: G.brun, display: "flex", alignItems: "center", justifyContent: "center", color: G.blanc, fontSize: "0.75rem", fontWeight: 700 }}>{s.num}</div>
+                    <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>{s.titre}</div>
+                  </div>
+                  <p style={{ fontSize: "0.84rem", color: G.brunLight, lineHeight: 1.6 }}>{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── CTA FINAL + STORES ── */}
+      <div style={{ background: `linear-gradient(135deg,${G.vert},#0D2E1C)`, padding: "48px 24px", textAlign: "center" }}>
+        <div className="landing-sections" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <p style={{ fontSize: "0.88rem", color: "rgba(255,255,255,0.7)", marginBottom: 6, fontWeight: 500 }}>L'amour n'attend pas.</p>
+          <h2 style={{ fontFamily: "Georgia,serif", fontSize: "clamp(1.6rem,5vw,2.4rem)", fontWeight: 700, color: G.blanc, marginBottom: 28 }}>
+            Rejoins <span style={{ color: G.or }}>Moyo</span> aujourd'hui.
+          </h2>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 32 }}>
+            <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.4)", cursor: "pointer" }}>
+              Créer mon profil gratuit
+            </button>
+            <button className="btn-o" onClick={() => onNav("login")} style={{ border: `2px solid rgba(255,255,255,0.6)`, borderRadius: 50, padding: "13px 28px", fontWeight: 600, fontSize: "0.95rem", background: "transparent", color: G.blanc, cursor: "pointer" }}>
+              Se connecter
+            </button>
+          </div>
+          <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.6)", marginBottom: 16, fontWeight: 600 }}>Bientôt disponible sur</p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <div className="store" style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
+              <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Disponible sur</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>Google Play</div></div>
+            </div>
+            <div className="store" style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+              <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Télécharger dans</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>App Store</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── FOOTER ── */}
+      <footer style={{ background: G.brun, padding: "28px 24px" }}>
+        <div className="landing-sections" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+            <a href={NEW_FB} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Facebook">{svgFb}</a>
+            <a href="javascript:void(0)" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Instagram">{svgIg}</a>
+            <a href="javascript:void(0)" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="TikTok">{svgTk}</a>
+          </div>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
+            {["À propos", "Confidentialité", "Conditions d'utilisation", "Contact"].map(l => (
+              <span key={l} onClick={l === "À propos" ? () => onNav("about") : undefined} style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.78rem", cursor: l === "À propos" ? "pointer" : "default" }}
+                onMouseOver={e => { if(l === "À propos") (e.target as HTMLElement).style.color = G.or; }}
+                onMouseOut={e => { if(l === "À propos") (e.target as HTMLElement).style.color = "rgba(255,255,255,0.55)"; }}
+              >{l}</span>
+            ))}
+          </div>
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>© 2026 Moyo Congo · Tous droits réservés</p>
+        </div>
+      </footer>
+    </div>
+  );
 }
+
 
 function About({ onBack }: { onBack: () => void }) {
   return (
@@ -265,7 +733,7 @@ function About({ onBack }: { onBack: () => void }) {
             { icon: "✍️", titre: "Remplis bien ta bio", desc: "Parle de tes passions, tes valeurs. Une bio sincère attire les bonnes personnes." },
             { icon: "💬", titre: "Prends le temps de discuter", desc: "Ne te précipite pas. Apprends à connaître la personne avant de proposer une rencontre." },
             { icon: "🔒", titre: "Protège tes informations", desc: "Ne partage pas ton numéro trop vite. Vérifie que la personne est sérieuse." },
-            { icon: "🚨", titre: "Signale les faux profils", desc: "Si tu suspectes une arnaque, utilise le bouton Reporter. Tu protèges toute la communauté." },
+            { icon: "🚨", titre: "Signale les faux profils", desc: "Si tu suspectes une arnaque, utilise le bouton Signaler le profil. Tu protèges toute la communauté." },
             { icon: "🤝", titre: "Sois respectueux(se)", desc: "Traite les autres comme tu voudrais être traité(e)." },
           ].map(c => (
             <div key={c.titre} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 0", borderBottom: `1px solid ${G.gris}` }}>
@@ -380,7 +848,7 @@ function About({ onBack }: { onBack: () => void }) {
         </div>
         <div style={{ borderRadius: 20, marginBottom: 16 }}>
           <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Nous contacter</h2>
-          <a href="https://www.facebook.com/share/1CHQizobz9/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer"
+          <a href="https://www.facebook.com/share/1HssYavG19/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#1877F2", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
             <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
@@ -584,7 +1052,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         </div>
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Bio (optionnel)</label>
-          <textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Parle un peu de toi..." rows={3} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", resize: "none" }} />
+          <textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Parle un peu de toi..." rows={3} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", resize: "none" }} />
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Retour</Btn>
@@ -613,6 +1081,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const [showReport, setShowReport] = useState(false);
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "" });
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<"card" | "list">("card");
   useEffect(() => { loadProfiles(); }, []);
   useEffect(() => { if (profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
 
@@ -653,7 +1122,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const p = profiles[current];
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: G.brunLight }}>⏳ Chargement...</div>;
 
-  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.3rem", fontWeight: 700 }}>Découvrir 🔥</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{!p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{ fontFamily: "Georgia,serif", marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "16px 20px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}><div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{p.name}, {p.age}</div><div style={{ color: G.brunLight, fontSize: "0.82rem", marginBottom: 6 }}>📍 {p.city}</div></div><div onClick={() => setShowReport(true)} style={{ fontSize: "0.72rem", color: "#e74c3c", cursor: "pointer", background: "rgba(231,76,60,0.08)", padding: "4px 10px", borderRadius: 50, fontWeight: 600 }}>🚨 Signaler le profil</div></div>{p.bio && <p style={{ fontSize: "0.85rem", color: G.brunLight, lineHeight: 1.6 }}>{p.bio}</p>}</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => setCurrent(c => Math.max(0, c - 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>❤️</div><div onClick={() => setCurrent(c => Math.min(profiles.length - 1, c + 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{showReport && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "28px 20px 40px" }}><h3 style={{ fontFamily: "Georgia,serif", fontSize: "1.2rem", fontWeight: 700, marginBottom: 16 }}>🚨 Signaler le profil</h3>{["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => <div key={r} onClick={() => handleReport(r)} style={{ padding: "14px 16px", background: G.creme, borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500 }}>{r}</div>)}<Btn variant="ghost" onClick={() => setShowReport(false)} style={{ width: "100%", marginTop: 8 }}>Annuler</Btn></div></div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}</div>;
+  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.3rem", fontWeight: 700 }}>Découvrir 🔥</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{ fontFamily: "Georgia,serif", marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>{profiles.map(prof => <div key={prof.id} style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}><div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>{prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{prof.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{prof.name}, {prof.age} {prof.is_premium && "⭐"}</div><div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {prof.city}</div>{prof.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}</div><div onClick={() => handleLike(prof)} style={{ width: 44, height: 44, borderRadius: "50%", background: likedIds.has(prof.id) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", cursor: likedIds.has(prof.id) ? "default" : "pointer", flexShrink: 0 }}>❤️</div></div>)}</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{ fontFamily: "Georgia,serif", marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "16px 20px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}><div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{p.name}, {p.age}</div><div style={{ color: G.brunLight, fontSize: "0.82rem", marginBottom: 6 }}>📍 {p.city}</div></div><div onClick={() => setShowReport(true)} style={{ fontSize: "0.72rem", color: "#e74c3c", cursor: "pointer", background: "rgba(231,76,60,0.08)", padding: "4px 10px", borderRadius: 50, fontWeight: 600 }}>🚨 Signaler le profil</div></div>{p.bio && <p style={{ fontSize: "0.85rem", color: G.brunLight, lineHeight: 1.6 }}>{p.bio}</p>}</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => setCurrent(c => Math.max(0, c - 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>❤️</div><div onClick={() => setCurrent(c => Math.min(profiles.length - 1, c + 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{showReport && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "28px 20px 40px" }}><h3 style={{ fontFamily: "Georgia,serif", fontSize: "1.2rem", fontWeight: 700, marginBottom: 16 }}>🚨 Signaler le profil</h3>{["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => <div key={r} onClick={() => handleReport(r)} style={{ padding: "14px 16px", background: G.creme, borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500 }}>{r}</div>)}<Btn variant="ghost" onClick={() => setShowReport(false)} style={{ width: "100%", marginTop: 8 }}>Annuler</Btn></div></div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}</div>;
 }
 
 function Matches({ auth, onShowPremium, onNotifCount }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void }) {
