@@ -247,6 +247,19 @@ function Toast({ msg, type = "success", onClose }: { msg: string; type?: string;
   return <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: bg, color: type === "premium" ? G.brun : G.blanc, padding: "12px 22px", borderRadius: 50, fontSize: "0.85rem", fontWeight: 600, zIndex: 9999, boxShadow: "0 8px 30px rgba(0,0,0,0.2)", maxWidth: "88vw", textAlign: "center" }}>{type === "error" ? "❌" : type === "premium" ? "⭐" : "✅"} {msg}</div>;
 }
 
+function ErrorModal({ msg, onClose }: { msg: string; onClose: () => void }) {
+  if (!msg) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+        <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>❌</div>
+        <p style={{ fontSize: "0.88rem", color: G.brun, lineHeight: 1.6, marginBottom: 22, fontWeight: 500 }}>{msg}</p>
+        <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>OK</Btn>
+      </div>
+    </div>
+  );
+}
+
 function Avatar({ url, gender, size = 54, border = false, premium = false }: { url?: string | null; gender?: string; size?: number; border?: boolean; premium?: boolean }) {
   return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: border ? `3px solid ${G.rouge}` : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.45 }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (gender === "Femme" ? "👩🏿" : "👨🏿")}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", border: `2px solid ${G.blanc}` }}>⭐</div>}</div>;
 }
@@ -273,6 +286,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const [errorMsg, setErrorMsg] = useState("");
   const [token, setToken] = useState("");
 
   useEffect(() => {
@@ -290,12 +304,12 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
   }, []);
 
   const handleReset = async () => {
-    if (password.length < 6) { setToast({ msg: "Le mot de passe doit faire au moins 6 caractères.", type: "error" }); return; }
-    if (password !== confirm) { setToast({ msg: "Les mots de passe ne correspondent pas.", type: "error" }); return; }
+    if (password.length < 6) { setErrorMsg("Le mot de passe doit faire au moins 6 caractères."); return; }
+    if (password !== confirm) { setErrorMsg("Les mots de passe ne correspondent pas."); return; }
     setLoading(true);
     const res = await sb.updatePassword(token, password);
     if (res?.error) {
-      setToast({ msg: "Erreur : " + (res.error.message || "Réessaye."), type: "error" });
+      setErrorMsg("Une erreur est survenue. Veuillez réessayer.");
     } else {
       setToast({ msg: "Mot de passe modifié avec succès ! 🎉", type: "success" });
       setTimeout(() => { onNav("login"); }, 2000);
@@ -305,6 +319,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
 
   return (
     <AuthLayout onBack={() => onNav("landing")}>
+      <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
@@ -966,6 +981,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const [errorMsg, setErrorMsg] = useState("");
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
@@ -975,28 +991,28 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     try {
       const res = await sb.signIn(form.email.trim(), form.password);
       if (res.error) {
-        setToast({ msg: res.error.message === "Email not confirmed" ? "Confirme ton email avant de te connecter." : "Email ou mot de passe incorrect.", type: "error" });
+        setErrorMsg(res.error.message === "Email not confirmed" ? "Confirme ton email avant de te connecter. Vérifie ta boîte mail." : "Email ou mot de passe incorrect.");
         setLoading(false); return;
       }
       const profiles = await sb.query<Profile>(res.access_token, "profiles", `?id=eq.${res.user.id}`);
       if (!profiles[0]) {
-        setToast({ msg: "Profil introuvable. Réessaie dans quelques secondes.", type: "error" });
+        setErrorMsg("Profil introuvable. Réessaie dans quelques secondes.");
         setLoading(false); return;
       }
       onAuth({ token: res.access_token, userId: res.user.id, name: profiles[0].name || "Utilisateur", email: res.user.email || "", isPremium: profiles[0].is_premium || false, isAdmin: profiles[0].is_admin || false });
-    } catch { setToast({ msg: "Erreur de connexion. Réessaie.", type: "error" }); }
+    } catch { setErrorMsg("Erreur de connexion. Réessaie."); }
     setLoading(false);
   };
 
   const handleForgot = async () => {
-    if (!forgotEmail) { setToast({ msg: "Entre ton email.", type: "error" }); return; }
+    if (!forgotEmail) { setErrorMsg("Entre ton email."); return; }
     await sb.resetPassword(forgotEmail.trim());
     setForgotSent(true);
   };
 
-  if (showForgot) return <AuthLayout onBack={() => onNav("landing")}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 24 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2></div>{forgotSent ? <div style={{ textAlign: "center" }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>📧</div><p style={{ color: G.brunLight, fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p><Btn variant="ghost" onClick={() => { setShowForgot(false); setForgotSent(false); }}>← Retour à la connexion</Btn></div> : <><Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="✉️" /><Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien 📧</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowForgot(false)} style={{ fontSize: "0.85rem", color: G.brunLight, cursor: "pointer" }}>← Retour</span></div></>}</AuthLayout>;
+  if (showForgot) return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 24 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2></div>{forgotSent ? <div style={{ textAlign: "center" }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>📧</div><p style={{ color: G.brunLight, fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p><Btn variant="ghost" onClick={() => { setShowForgot(false); setForgotSent(false); }}>← Retour à la connexion</Btn></div> : <><Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="✉️" /><Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien 📧</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowForgot(false)} style={{ fontSize: "0.85rem", color: G.brunLight, cursor: "pointer" }}>← Retour</span></div></>}</AuthLayout>;
 
-  return <AuthLayout onBack={() => onNav("landing")}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="✉️" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="🔒" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="✉️" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="🔒" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
 function SignUp({ onNav }: { onNav: (p: string) => void }) {
@@ -1004,6 +1020,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "" });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const [errorMsg, setErrorMsg] = useState("");
   const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const checkEmailAndContinue = async () => {
@@ -1018,7 +1035,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         `?email=eq.${encodeURIComponent(emailClean)}&select=id`
       );
       if (existing.length > 0) {
-        setToast({ msg: "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt.", type: "error" });
+        setErrorMsg("Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt.");
         setLoading(false);
         return;
       }
@@ -1032,6 +1049,13 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
   const handleSubmit = async () => {
     setLoading(true);
+    // Vérification âge
+    const ageNum = parseInt(form.age);
+    if (!form.age || isNaN(ageNum) || ageNum < 18 || ageNum > 99) {
+      setErrorMsg("Vous êtes mineur(e). Votre inscription a échoué. Moyo est réservé aux personnes majeures.");
+      setLoading(false);
+      return;
+    }
     try {
       const emailClean = form.email.trim().toLowerCase();
 
@@ -1058,16 +1082,13 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         } else if (code.includes("invalid") || code.includes("email")) {
           msg = "Adresse e-mail invalide.";
         }
-        setToast({ msg, type: "error" });
+        setErrorMsg(msg);
         setLoading(false);
         return;
       }
 
       if (authRes.user?.identities && authRes.user.identities.length === 0) {
-        setToast({
-          msg: "Cette adresse e-mail possède déjà un compte. Connectez-vous directement.",
-          type: "error",
-        });
+        setErrorMsg("Cette adresse e-mail possède déjà un compte. Connectez-vous directement.");
         setLoading(false);
         return;
       }
@@ -1081,13 +1102,14 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
     } catch (e) {
       console.error("Signup error:", e);
-      setToast({ msg: "Erreur technique pendant la création du compte. Veuillez réessayer.", type: "error" });
+      setErrorMsg("Erreur technique pendant la création du compte. Veuillez réessayer.");
       setLoading(false);
     }
   };
 
   return (
     <AuthLayout onBack={() => onNav("landing")}>
+      <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <div style={{ textAlign: "center", marginBottom: 20 }}>
         <div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
@@ -1264,14 +1286,14 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
 }
 
 function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void }) {
-  const [profile, setProfile] = useState<Profile | null>(null); const [editing, setEditing] = useState(false); const [form, setForm] = useState<Partial<Profile>>({}); const [loading, setLoading] = useState(true); const [toast, setToast] = useState<ToastState>(null); const [uploadLoading, setUploadLoading] = useState(false); const [showDelete, setShowDelete] = useState(false); const [showLogout, setShowLogout] = useState(false); const fileRef = useRef<HTMLInputElement>(null);
+  const [profile, setProfile] = useState<Profile | null>(null); const [editing, setEditing] = useState(false); const [form, setForm] = useState<Partial<Profile>>({}); const [loading, setLoading] = useState(true); const [toast, setToast] = useState<ToastState>(null); const [errorMsg, setErrorMsg] = useState(""); const [uploadLoading, setUploadLoading] = useState(false); const [showDelete, setShowDelete] = useState(false); const [showLogout, setShowLogout] = useState(false); const fileRef = useRef<HTMLInputElement>(null);
   useEffect(() => { loadProfile(); }, []);
   const loadProfile = async () => { const res = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`); if (res[0]) { setProfile(res[0]); setForm(res[0]); } setLoading(false); };
   const saveProfile = async () => { await sb.update(auth.token, "profiles", auth.userId, { name: form.name, age: form.age, city: form.city, bio: form.bio, religion: form.religion }); setProfile(p => p ? { ...p, ...(form as Profile) } : null); setEditing(false); setToast({ msg: "Profil mis à jour !" }); };
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (!file) return; setUploadLoading(true); const url = await sb.uploadPhoto(auth.token, auth.userId, file); if (url) { await sb.update(auth.token, "profiles", auth.userId, { photo_url: url }); setProfile(p => p ? { ...p, photo_url: url } : null); setToast({ msg: "Photo mise à jour ! 📸" }); } else setToast({ msg: "Erreur upload. Vérifie le bucket avatars.", type: "error" }); setUploadLoading(false); };
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (!file) return; setUploadLoading(true); const url = await sb.uploadPhoto(auth.token, auth.userId, file); if (url) { await sb.update(auth.token, "profiles", auth.userId, { photo_url: url }); setProfile(p => p ? { ...p, photo_url: url } : null); setToast({ msg: "Photo mise à jour ! 📸" }); } else setErrorMsg("Erreur lors du téléchargement de la photo. Réessaie."); setUploadLoading(false); };
   const handleDelete = async () => { await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}`); await sb.delete(auth.token, "likes", `?to_user=eq.${auth.userId}`); await sb.rpc(auth.token, "delete_user"); await sb.signOut(auth.token); onLogout(); };
   if (loading) return <div style={{ padding: 40, textAlign: "center" }}>⏳</div>;
-  return <div style={{ paddingBottom: 20 }}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ height: 110, background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, position: "relative" }}><div style={{ position: "absolute", bottom: -34, left: "50%", transform: "translateX(-50%)", cursor: "pointer" }} onClick={() => fileRef.current?.click()}><Avatar url={profile?.photo_url} gender={profile?.gender} size={72} border premium={profile?.is_premium} /><div style={{ position: "absolute", bottom: 0, right: 0, background: G.or, borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", border: `2px solid ${G.blanc}` }}>{uploadLoading ? "⏳" : "📷"}</div></div></div><input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} /><div style={{ textAlign: "center", marginTop: 44, padding: "0 16px" }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{profile?.name} {profile?.is_premium && "⭐"}</h2><p style={{ color: G.brunLight, fontSize: "0.83rem" }}>📍 {profile?.city} · {profile?.age} ans</p>{profile?.religion && <p style={{ color: G.brunLight, fontSize: "0.78rem", marginTop: 6 }}>🙏 {profile.religion}</p>}{profile?.bio && <p style={{ color: G.brunLight, fontSize: "0.85rem", lineHeight: 1.6, maxWidth: 280, margin: "8px auto 0" }}>{profile.bio}</p>}</div>{editing ? <div style={{ padding: "16px" }}><input value={form.name || ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><input type="number" value={form.age || ""} min={18} max={99} onChange={e => setForm(f => ({ ...f, age: parseInt(e.target.value) }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.city || ""} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}>{VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}</select><textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.religion || ""} onChange={e => setForm(f => ({ ...f, religion: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}><option value="">Religion (optionnel)</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="primary" onClick={saveProfile} style={{ flex: 2 }}>Sauvegarder ✓</Btn></div></div> : <div style={{ padding: "16px" }}><div style={{ background: G.creme, border: `1px solid ${G.gris}`, borderRadius: 12, padding: "11px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}><span style={{ fontSize: "0.85rem", opacity: 0.6 }}>✉️</span><div style={{ flex: 1 }}><div style={{ fontSize: "0.68rem", color: G.brunLight, fontWeight: 500, marginBottom: 1 }}>Email de connexion</div><div style={{ fontSize: "0.83rem", color: "#aaa" }}>{auth.email || "—"}</div></div><span style={{ fontSize: "0.62rem", color: "#bbb", background: G.gris, padding: "2px 7px", borderRadius: 50, whiteSpace: "nowrap" }}>Non modifiable</span></div><Btn variant="ghost" onClick={() => setEditing(true)} style={{ width: "100%", marginBottom: 10 }}>✏️ Modifier mon profil</Btn>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "18px", marginBottom: 10, color: G.blanc, cursor: "pointer" }}><div style={{ fontWeight: 700 }}>✨ Passe à Premium</div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, color: G.or }}>5 000 FCFA/mois</div></div>}<Btn variant="danger" onClick={() => setShowLogout(true)} style={{ width: "100%", marginBottom: 10 }}>🚪 Se déconnecter</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowDelete(true)} style={{ fontSize: "0.8rem", color: "#e74c3c", cursor: "pointer", textDecoration: "underline" }}>Supprimer mon compte</span></div>{showLogout && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}><div style={{ fontSize: "2.5rem", marginBottom: 12 }}>👋</div><h3 style={{ fontFamily: "Georgia,serif", fontSize: "1.1rem", fontWeight: 700, marginBottom: 10, color: G.brun }}>Se déconnecter ?</h3><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 22, lineHeight: 1.5 }}>Tu seras redirigé vers la page d'accueil. À bientôt sur Moyo !</p><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setShowLogout(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="danger" onClick={() => { sb.signOut(auth.token); onLogout(); }} style={{ flex: 1 }}>Se déconnecter</Btn></div></div></div>}{showDelete && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}><div style={{ fontSize: "2.5rem", marginBottom: 12 }}>⚠️</div><h3 style={{ fontFamily: "Georgia,serif", fontSize: "1.1rem", fontWeight: 700, marginBottom: 10, color: G.brun }}>Supprimer mon compte ?</h3><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 6, lineHeight: 1.5 }}>Ton profil, tes likes et tes messages seront <strong>définitivement supprimés</strong>.</p><p style={{ fontSize: "0.8rem", color: "#e74c3c", marginBottom: 22, fontWeight: 600 }}>Cette action est irréversible.</p><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setShowDelete(false)} style={{ flex: 1 }}>Non, garder</Btn><Btn variant="danger" onClick={handleDelete} style={{ flex: 1 }}>Oui, supprimer</Btn></div></div></div>}</div>}</div>;
+  return <div style={{ paddingBottom: 20 }}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ height: 110, background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, position: "relative" }}><div style={{ position: "absolute", bottom: -34, left: "50%", transform: "translateX(-50%)", cursor: "pointer" }} onClick={() => fileRef.current?.click()}><Avatar url={profile?.photo_url} gender={profile?.gender} size={72} border premium={profile?.is_premium} /><div style={{ position: "absolute", bottom: 0, right: 0, background: G.or, borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", border: `2px solid ${G.blanc}` }}>{uploadLoading ? "⏳" : "📷"}</div></div></div><input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} /><div style={{ textAlign: "center", marginTop: 44, padding: "0 16px" }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{profile?.name} {profile?.is_premium && "⭐"}</h2><p style={{ color: G.brunLight, fontSize: "0.83rem" }}>📍 {profile?.city} · {profile?.age} ans</p>{profile?.religion && <p style={{ color: G.brunLight, fontSize: "0.78rem", marginTop: 6 }}>🙏 {profile.religion}</p>}{profile?.bio && <p style={{ color: G.brunLight, fontSize: "0.85rem", lineHeight: 1.6, maxWidth: 280, margin: "8px auto 0" }}>{profile.bio}</p>}</div>{editing ? <div style={{ padding: "16px" }}><input value={form.name || ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><input type="number" value={form.age || ""} min={18} max={99} onChange={e => setForm(f => ({ ...f, age: parseInt(e.target.value) }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.city || ""} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}>{VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}</select><textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.religion || ""} onChange={e => setForm(f => ({ ...f, religion: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}><option value="">Religion (optionnel)</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="primary" onClick={saveProfile} style={{ flex: 2 }}>Sauvegarder ✓</Btn></div></div> : <div style={{ padding: "16px" }}><div style={{ background: G.creme, border: `1px solid ${G.gris}`, borderRadius: 12, padding: "11px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}><span style={{ fontSize: "0.85rem", opacity: 0.6 }}>✉️</span><div style={{ flex: 1 }}><div style={{ fontSize: "0.68rem", color: G.brunLight, fontWeight: 500, marginBottom: 1 }}>Email de connexion</div><div style={{ fontSize: "0.83rem", color: "#aaa" }}>{auth.email || "—"}</div></div><span style={{ fontSize: "0.62rem", color: "#bbb", background: G.gris, padding: "2px 7px", borderRadius: 50, whiteSpace: "nowrap" }}>Non modifiable</span></div><Btn variant="ghost" onClick={() => setEditing(true)} style={{ width: "100%", marginBottom: 10 }}>✏️ Modifier mon profil</Btn>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "18px", marginBottom: 10, color: G.blanc, cursor: "pointer" }}><div style={{ fontWeight: 700 }}>✨ Passe à Premium</div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, color: G.or }}>5 000 FCFA/mois</div></div>}<Btn variant="danger" onClick={() => setShowLogout(true)} style={{ width: "100%", marginBottom: 10 }}>🚪 Se déconnecter</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowDelete(true)} style={{ fontSize: "0.8rem", color: "#e74c3c", cursor: "pointer", textDecoration: "underline" }}>Supprimer mon compte</span></div>{showLogout && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}><div style={{ fontSize: "2.5rem", marginBottom: 12 }}>👋</div><h3 style={{ fontFamily: "Georgia,serif", fontSize: "1.1rem", fontWeight: 700, marginBottom: 10, color: G.brun }}>Se déconnecter ?</h3><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 22, lineHeight: 1.5 }}>Tu seras redirigé vers la page d'accueil. À bientôt sur Moyo !</p><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setShowLogout(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="danger" onClick={() => { sb.signOut(auth.token); onLogout(); }} style={{ flex: 1 }}>Se déconnecter</Btn></div></div></div>}{showDelete && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}><div style={{ fontSize: "2.5rem", marginBottom: 12 }}>⚠️</div><h3 style={{ fontFamily: "Georgia,serif", fontSize: "1.1rem", fontWeight: 700, marginBottom: 10, color: G.brun }}>Supprimer mon compte ?</h3><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 6, lineHeight: 1.5 }}>Ton profil, tes likes et tes messages seront <strong>définitivement supprimés</strong>.</p><p style={{ fontSize: "0.8rem", color: "#e74c3c", marginBottom: 22, fontWeight: 600 }}>Cette action est irréversible.</p><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setShowDelete(false)} style={{ flex: 1 }}>Non, garder</Btn><Btn variant="danger" onClick={handleDelete} style={{ flex: 1 }}>Oui, supprimer</Btn></div></div></div>}</div>}</div>;
 }
 
 function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
