@@ -104,6 +104,14 @@ const sb = {
     });
     return r.json().catch(() => null);
   },
+  async updatePassword(accessToken: string, newPassword: string) {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: "PUT",
+      headers: { ...this.h(accessToken), "Authorization": `Bearer ${accessToken}` },
+      body: JSON.stringify({ password: newPassword }),
+    });
+    return r.json().catch(() => null);
+  },
   async uploadPhoto(token: string, userId: string, file: File): Promise<string | null> {
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -258,6 +266,60 @@ function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string
     { icon: "🎧", titre: "Support prioritaire", desc: "Assistance rapide 7j/7" },
   ];
   return <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "28px 28px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", padding: "32px 20px 40px" }}><div style={{ textAlign: "center", marginBottom: 24 }}><div style={{ fontSize: "2.5rem", marginBottom: 8 }}>⭐</div><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.7rem", fontWeight: 700, marginBottom: 8 }}>Passe à Premium</h2>{reason && <div style={{ background: "rgba(192,57,43,0.08)", border: `1px solid ${G.rouge}`, borderRadius: 12, padding: "10px 16px", fontSize: "0.82rem", color: G.rouge, fontWeight: 600, marginBottom: 12 }}>{reason}</div>}<div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", fontWeight: 700, color: G.or }}>5 000 FCFA<span style={{ fontSize: "0.9rem", color: G.brunLight, fontWeight: 400 }}>/mois</span></div><div style={{ fontSize: "0.75rem", color: G.brunLight, marginTop: 4 }}>MTN MoMo · Airtel Money · Orange Money · Carte bancaire</div></div><div style={{ background: "linear-gradient(135deg,rgba(212,168,67,0.12),rgba(192,57,43,0.08))", border: "1px solid rgba(212,168,67,0.4)", borderRadius: 14, padding: "12px 16px", marginBottom: 20, fontSize: "0.84rem", color: G.brunLight, lineHeight: 1.6, textAlign: "center", fontStyle: "italic" }}>✨ Premium t'aide à discuter plus librement et à augmenter tes chances de rencontre sérieuse.</div><h3 style={{ fontWeight: 700, marginBottom: 12, fontSize: "0.88rem", textTransform: "uppercase", letterSpacing: "0.05em", color: G.brunLight }}>Tout ce que tu obtiens :</h3>{avantages.map(a => <div key={a.titre} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}><div style={{ fontSize: "1.3rem", width: 30, textAlign: "center", flexShrink: 0 }}>{a.icon}</div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{a.titre}</div><div style={{ fontSize: "0.78rem", color: G.brunLight }}>{a.desc}</div></div><div style={{ color: "#27ae60", fontWeight: 700 }}>✓</div></div>)}<Btn variant="gold" onClick={() => {}} style={{ width: "100%", padding: "16px", fontSize: "1rem", marginTop: 20, marginBottom: 12 }}>Activer Premium — 5 000 FCFA/mois</Btn><div style={{ textAlign: "center" }}><button onClick={onClose} style={{ fontSize: "0.88rem", color: G.brunLight, cursor: "pointer", fontWeight: 600, padding: "12px 32px", display: "inline-block", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, width: "100%", transition: "all 0.2s" }} onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = G.brunLight; (e.currentTarget as HTMLButtonElement).style.color = G.brun; }} onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = G.gris; (e.currentTarget as HTMLButtonElement).style.color = G.brunLight; }}>Non merci, plus tard</button></div></div></div>;
+}
+
+function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<ToastState>(null);
+  const [token, setToken] = useState("");
+
+  useEffect(() => {
+    // Lire le access_token dans le hash de l'URL
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace("#", "?"));
+    const t = params.get("access_token");
+    const type = params.get("type");
+    if (t && type === "recovery") {
+      setToken(t);
+    } else {
+      // Pas de token valide → rediriger vers login
+      onNav("login");
+    }
+  }, []);
+
+  const handleReset = async () => {
+    if (password.length < 6) { setToast({ msg: "Le mot de passe doit faire au moins 6 caractères.", type: "error" }); return; }
+    if (password !== confirm) { setToast({ msg: "Les mots de passe ne correspondent pas.", type: "error" }); return; }
+    setLoading(true);
+    const res = await sb.updatePassword(token, password);
+    if (res?.error) {
+      setToast({ msg: "Erreur : " + (res.error.message || "Réessaye."), type: "error" });
+    } else {
+      setToast({ msg: "Mot de passe modifié avec succès ! 🎉", type: "success" });
+      setTimeout(() => { onNav("login"); }, 2000);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <AuthLayout onBack={() => onNav("landing")}>
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
+          <span>Mo</span><span style={{ color: G.or }}>yo</span>
+        </div>
+        <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.5rem", fontWeight: 700, marginTop: 8 }}>Nouveau mot de passe</h2>
+        <p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Choisis un nouveau mot de passe sécurisé</p>
+      </div>
+      <Input label="Nouveau mot de passe" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimum 6 caractères" icon="🔒" hint="Au moins 6 caractères" />
+      <Input label="Confirmer le mot de passe" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Répète ton mot de passe" icon="🔒" />
+      <Btn variant="primary" onClick={handleReset} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!password || !confirm}>
+        Changer mon mot de passe ✓
+      </Btn>
+    </AuthLayout>
+  );
 }
 
 function Landing({ onNav }: { onNav: (p: string) => void }) {
@@ -1209,7 +1271,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (!file) return; setUploadLoading(true); const url = await sb.uploadPhoto(auth.token, auth.userId, file); if (url) { await sb.update(auth.token, "profiles", auth.userId, { photo_url: url }); setProfile(p => p ? { ...p, photo_url: url } : null); setToast({ msg: "Photo mise à jour ! 📸" }); } else setToast({ msg: "Erreur upload. Vérifie le bucket avatars.", type: "error" }); setUploadLoading(false); };
   const handleDelete = async () => { await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}`); await sb.delete(auth.token, "likes", `?to_user=eq.${auth.userId}`); await sb.rpc(auth.token, "delete_user"); await sb.signOut(auth.token); onLogout(); };
   if (loading) return <div style={{ padding: 40, textAlign: "center" }}>⏳</div>;
-  return <div style={{ paddingBottom: 20 }}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ height: 110, background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, position: "relative" }}><div style={{ position: "absolute", bottom: -34, left: "50%", transform: "translateX(-50%)", cursor: "pointer" }} onClick={() => fileRef.current?.click()}><Avatar url={profile?.photo_url} gender={profile?.gender} size={72} border premium={profile?.is_premium} /><div style={{ position: "absolute", bottom: 0, right: 0, background: G.or, borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", border: `2px solid ${G.blanc}` }}>{uploadLoading ? "⏳" : "📷"}</div></div></div><input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} /><div style={{ textAlign: "center", marginTop: 44, padding: "0 16px" }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{profile?.name} {profile?.is_premium && "⭐"}</h2><p style={{ color: G.brunLight, fontSize: "0.83rem" }}>📍 {profile?.city} · {profile?.age} ans</p>{profile?.religion && <p style={{ color: G.brunLight, fontSize: "0.78rem", marginTop: 6 }}>🙏 {profile.religion}</p>}{profile?.bio && <p style={{ color: G.brunLight, fontSize: "0.85rem", lineHeight: 1.6, maxWidth: 280, margin: "8px auto 0" }}>{profile.bio}</p>}</div>{editing ? <div style={{ padding: "16px" }}><input value={form.name || ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><input type="number" value={form.age || ""} onChange={e => setForm(f => ({ ...f, age: parseInt(e.target.value) }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.city || ""} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}>{VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}</select><textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.religion || ""} onChange={e => setForm(f => ({ ...f, religion: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}><option value="">Religion (optionnel)</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="primary" onClick={saveProfile} style={{ flex: 2 }}>Sauvegarder ✓</Btn></div></div> : <div style={{ padding: "16px" }}><div style={{ background: G.creme, border: `1px solid ${G.gris}`, borderRadius: 12, padding: "11px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}><span style={{ fontSize: "0.85rem", opacity: 0.6 }}>✉️</span><div style={{ flex: 1 }}><div style={{ fontSize: "0.68rem", color: G.brunLight, fontWeight: 500, marginBottom: 1 }}>Email de connexion</div><div style={{ fontSize: "0.83rem", color: "#aaa" }}>{auth.email || "—"}</div></div><span style={{ fontSize: "0.62rem", color: "#bbb", background: G.gris, padding: "2px 7px", borderRadius: 50, whiteSpace: "nowrap" }}>Non modifiable</span></div><Btn variant="ghost" onClick={() => setEditing(true)} style={{ width: "100%", marginBottom: 10 }}>✏️ Modifier mon profil</Btn>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "18px", marginBottom: 10, color: G.blanc, cursor: "pointer" }}><div style={{ fontWeight: 700 }}>✨ Passe à Premium</div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, color: G.or }}>5 000 FCFA/mois</div></div>}<Btn variant="danger" onClick={() => { sb.signOut(auth.token); onLogout(); }} style={{ width: "100%", marginBottom: 10 }}>🚪 Se déconnecter</Btn>{!showDelete ? <div style={{ textAlign: "center" }}><span onClick={() => setShowDelete(true)} style={{ fontSize: "0.8rem", color: "#e74c3c", cursor: "pointer", textDecoration: "underline" }}>Supprimer mon compte</span></div> : <div style={{ background: "#fff5f5", border: "1px solid #e74c3c", borderRadius: 14, padding: "18px", textAlign: "center" }}><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 14 }}>Action irréversible.</p><div style={{ display: "flex", gap: 8 }}><Btn variant="ghost" onClick={() => setShowDelete(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="danger" onClick={handleDelete} style={{ flex: 1 }}>Supprimer</Btn></div></div>}</div>}</div>;
+  return <div style={{ paddingBottom: 20 }}>{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ height: 110, background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, position: "relative" }}><div style={{ position: "absolute", bottom: -34, left: "50%", transform: "translateX(-50%)", cursor: "pointer" }} onClick={() => fileRef.current?.click()}><Avatar url={profile?.photo_url} gender={profile?.gender} size={72} border premium={profile?.is_premium} /><div style={{ position: "absolute", bottom: 0, right: 0, background: G.or, borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", border: `2px solid ${G.blanc}` }}>{uploadLoading ? "⏳" : "📷"}</div></div></div><input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} /><div style={{ textAlign: "center", marginTop: 44, padding: "0 16px" }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.4rem", fontWeight: 700 }}>{profile?.name} {profile?.is_premium && "⭐"}</h2><p style={{ color: G.brunLight, fontSize: "0.83rem" }}>📍 {profile?.city} · {profile?.age} ans</p>{profile?.religion && <p style={{ color: G.brunLight, fontSize: "0.78rem", marginTop: 6 }}>🙏 {profile.religion}</p>}{profile?.bio && <p style={{ color: G.brunLight, fontSize: "0.85rem", lineHeight: 1.6, maxWidth: 280, margin: "8px auto 0" }}>{profile.bio}</p>}</div>{editing ? <div style={{ padding: "16px" }}><input value={form.name || ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><input type="number" value={form.age || ""} onChange={e => setForm(f => ({ ...f, age: parseInt(e.target.value) }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.city || ""} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}>{VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}</select><textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }} /><select value={form.religion || ""} onChange={e => setForm(f => ({ ...f, religion: e.target.value }))} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 10 }}><option value="">Religion (optionnel)</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="primary" onClick={saveProfile} style={{ flex: 2 }}>Sauvegarder ✓</Btn></div></div> : <div style={{ padding: "16px" }}><div style={{ background: G.creme, border: `1px solid ${G.gris}`, borderRadius: 12, padding: "11px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}><span style={{ fontSize: "0.85rem", opacity: 0.6 }}>✉️</span><div style={{ flex: 1 }}><div style={{ fontSize: "0.68rem", color: G.brunLight, fontWeight: 500, marginBottom: 1 }}>Email de connexion</div><div style={{ fontSize: "0.83rem", color: "#aaa" }}>{auth.email || "—"}</div></div><span style={{ fontSize: "0.62rem", color: "#bbb", background: G.gris, padding: "2px 7px", borderRadius: 50, whiteSpace: "nowrap" }}>Non modifiable</span></div><Btn variant="ghost" onClick={() => setEditing(true)} style={{ width: "100%", marginBottom: 10 }}>✏️ Modifier mon profil</Btn>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "18px", marginBottom: 10, color: G.blanc, cursor: "pointer" }}><div style={{ fontWeight: 700 }}>✨ Passe à Premium</div><div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, color: G.or }}>5 000 FCFA/mois</div></div>}<Btn variant="danger" onClick={() => { sb.signOut(auth.token); onLogout(); }} style={{ width: "100%", marginBottom: 10 }}>🚪 Se déconnecter</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowDelete(true)} style={{ fontSize: "0.8rem", color: "#e74c3c", cursor: "pointer", textDecoration: "underline" }}>Supprimer mon compte</span></div>{showDelete && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}><div style={{ fontSize: "2.5rem", marginBottom: 12 }}>⚠️</div><h3 style={{ fontFamily: "Georgia,serif", fontSize: "1.1rem", fontWeight: 700, marginBottom: 10, color: G.brun }}>Supprimer mon compte ?</h3><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 6, lineHeight: 1.5 }}>Ton profil, tes likes et tes messages seront <strong>définitivement supprimés</strong>.</p><p style={{ fontSize: "0.8rem", color: "#e74c3c", marginBottom: 22, fontWeight: 600 }}>Cette action est irréversible.</p><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setShowDelete(false)} style={{ flex: 1 }}>Non, garder</Btn><Btn variant="danger" onClick={handleDelete} style={{ flex: 1 }}>Oui, supprimer</Btn></div></div></div>}</div>}</div>;
 }
 
 function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
@@ -1229,6 +1291,14 @@ export default function App() {
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
   // Restaurer session au chargement
   useEffect(() => {
+    // Vérifier si c'est un lien de reset password
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace("#", "?"));
+    const type = params.get("type");
+    if (type === "recovery") {
+      setPage("reset-password");
+      return;
+    }
     try {
       const saved = localStorage.getItem("moyo_session");
       if (saved) {
@@ -1261,6 +1331,7 @@ export default function App() {
   if (page === "about") return <About onBack={() => setPage("landing")} />;
   if (page === "signup") return <SignUp onNav={setPage} />;
   if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
+  if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
   return <><AppShell tab={tab} setTab={setTab} unreadCount={unreadCount} notifCount={likesReceived} auth={auth}>{tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}{tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} />}{tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}{tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} />}{tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}</AppShell>{premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}</>;
 }
