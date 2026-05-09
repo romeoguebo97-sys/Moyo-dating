@@ -160,7 +160,7 @@ const GLOBAL_CSS = `
     .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
     .landing-hero-text{text-align:left!important}
     .landing-hero-btns{justify-content:flex-start!important}
-    .landing-stats{max-width:1100px!important;margin:0 auto!important;padding:0 40px 0!important;grid-template-columns:repeat(4,1fr)!important}
+    .landing-stats{max-width:900px!important;margin:0 auto!important;padding:0 40px 0!important;grid-template-columns:repeat(3,1fr)!important}
     .landing-sections{max-width:1100px!important;margin:0 auto!important;padding:0 40px!important}
     .trust-grid{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:20px!important}
     .testi-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:20px!important}
@@ -266,7 +266,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           <div style={{ fontFamily: "Georgia,serif", fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline" }}>
             <span>Mo</span><span style={{ color: G.or }}>yo</span>
           </div>
-          <span className="nav-link" style={{ fontSize: "0.88rem", fontWeight: 500, color: G.brunLight, cursor: "pointer" }} onClick={() => onNav("about")}>À propos</span>
+          <span onClick={() => onNav("about")} style={{ fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", padding: "8px 18px", borderRadius: 50, border: `1px solid ${G.gris}`, background: G.creme, transition: "all 0.2s", display: "inline-block" }} onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.rouge; (e.currentTarget as HTMLElement).style.color = G.blanc; (e.currentTarget as HTMLElement).style.borderColor = G.rouge; }} onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; (e.currentTarget as HTMLElement).style.color = G.brun; (e.currentTarget as HTMLElement).style.borderColor = G.gris; }}>À propos</span>
         </div>
       </nav>
 
@@ -297,7 +297,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 Créer mon profil gratuit
               </button>
               <button className="btn-o" onClick={() => onNav("login")} style={{ border: `2px solid ${G.brun}`, borderRadius: 50, padding: "13px 28px", fontWeight: 600, fontSize: "0.95rem", background: "transparent", color: G.brun, cursor: "pointer" }}>
-                J'ai déjà un compte
+                Me connecter
               </button>
             </div>
           </div>
@@ -478,7 +478,6 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             ["12 000+", "Membres inscrits", "👥"],
             ["850+", "Couples formés", "💞"],
             ["19", "Villes & diasporas", "📍"],
-            ["Sécurisé", "& modéré", "🛡️"],
           ].map(([n, l, icon]) => (
             <div key={l} className="stat" style={{ background: G.creme, borderRadius: 16, padding: "18px 12px", textAlign: "center" }}>
               <div style={{ fontSize: "1.4rem", marginBottom: 4 }}>{icon}</div>
