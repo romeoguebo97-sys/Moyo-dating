@@ -1226,8 +1226,33 @@ export default function App() {
   const [notifCount, setNotifCount] = useState(0);
   const [likesReceived, setLikesReceived] = useState(0);
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
-  const handleAuth = (a: Auth) => { setAuth(a); setPage("app"); };
-  const handleLogout = () => { setAuth(null); setPage("landing"); setUnreadCount(0); setNotifCount(0); setLikesReceived(0); };
+  const [sessionLoading, setSessionLoading] = useState(true);
+
+  // Restaurer la session au chargement
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("moyo_session");
+      if (saved) {
+        const a: Auth = JSON.parse(saved);
+        if (a?.token && a?.userId) { setAuth(a); setPage("app"); }
+      }
+    } catch { localStorage.removeItem("moyo_session"); }
+    setSessionLoading(false);
+  }, []);
+
+  const handleAuth = (a: Auth) => {
+    setAuth(a);
+    setPage("app");
+    try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch {}
+  };
+  const handleLogout = () => {
+    setAuth(null);
+    setPage("landing");
+    setUnreadCount(0);
+    setNotifCount(0);
+    setLikesReceived(0);
+    try { localStorage.removeItem("moyo_session"); } catch {}
+  };
   useEffect(() => {
     if (!auth) return;
     const loadLikesReceived = async () => {
@@ -1239,6 +1264,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [auth]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
+  if (sessionLoading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FAF3E8" }}><div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: "#C0392B", fontWeight: 700 }}>Mo<span style={{ color: "#D4A843" }}>yo</span></div></div>;
   if (page === "landing") return <Landing onNav={setPage} />;
   if (page === "about") return <About onBack={() => setPage("landing")} />;
   if (page === "signup") return <SignUp onNav={setPage} />;
