@@ -789,7 +789,7 @@ function About({ onBack }: { onBack: () => void }) {
             <div><div style={{ fontWeight: 700 }}>SR Event — Agence événementielle</div><div style={{ opacity: 0.85 }}>Mariages · Dots · Conférences · Anniversaires · Brazzaville</div></div>
           </div>
           <div style={{ marginTop: 10, background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "12px 16px", fontSize: "0.82rem" }}>
-            📞 Devis : <strong>+33 07 53 35 64 71</strong>
+            📘 <a href="https://www.facebook.com/share/1Cvwa61SKv/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" style={{ color: G.blanc, fontWeight: 700, textDecoration: "none" }}>Contacter SR Event sur Facebook</a>
           </div>
         </div>
         <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}>
@@ -1011,7 +1011,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       }
 
       setToast({
-        msg: "Compte créé avec succès. Vous pouvez maintenant vous connecter.",
+        msg: "Compte créé ! Vérifiez votre boîte mail pour confirmer votre adresse et activer votre compte. 📧",
         type: "success",
       });
       setLoading(false);
