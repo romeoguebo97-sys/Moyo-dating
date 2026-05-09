@@ -1021,6 +1021,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const checkEmailAndContinue = async () => {
@@ -1093,12 +1094,9 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         return;
       }
 
-      setToast({
-        msg: "Compte créé ! Vérifiez votre boîte mail pour confirmer votre adresse et activer votre compte. 📧",
-        type: "success",
-      });
       setLoading(false);
-      setTimeout(() => { onNav("login"); }, 2500);
+      setSuccessMsg("Compte créé avec succès ! 🎉\nVeuillez maintenant vous connecter.");
+      setTimeout(() => { onNav("login"); }, 3000);
 
     } catch (e) {
       console.error("Signup error:", e);
@@ -1110,6 +1108,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   return (
     <AuthLayout onBack={() => onNav("landing")}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
+      {successMsg && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}><div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🎉</div><p style={{ fontSize: "0.9rem", color: G.brun, lineHeight: 1.6, marginBottom: 22, fontWeight: 500, whiteSpace: "pre-line" }}>{successMsg}</p><div style={{ fontSize: "0.75rem", color: G.brunLight }}>Redirection en cours...</div></div></div>}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <div style={{ textAlign: "center", marginBottom: 20 }}>
         <div style={{ fontFamily: "Georgia,serif", fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
