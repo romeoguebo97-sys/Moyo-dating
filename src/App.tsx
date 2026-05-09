@@ -1276,12 +1276,69 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
   );
 }
 
-function Matches({ auth, onShowPremium, onNotifCount }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void }) {
+function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClose: () => void; onMessage: () => void }) {
+  const p = match.partner;
+  if (!p) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+        {/* Photo */}
+        <div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
+          {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</div>}
+          <div onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}>✕</div>
+          <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
+            <div style={{ fontFamily: "Georgia,serif", fontSize: "1.6rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age}</div>
+            <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>📍 {p.city}</div>
+          </div>
+        </div>
+        {/* Infos */}
+        <div style={{ padding: "20px 20px 32px" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>💞 Match !</span>
+            {p.is_premium && <span style={{ background: "rgba(212,168,67,0.12)", color: G.brunLight, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>⭐ Premium</span>}
+            {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: G.brunLight, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>🙏 {p.religion}</span>}
+          </div>
+          {p.bio && <p style={{ fontSize: "0.88rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 20 }}>{p.bio}</p>}
+          <Btn variant="primary" onClick={onMessage} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>💬 Envoyer un message</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void; onGoMessages?: () => void }) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   useEffect(() => { loadMatches(); }, []);
   const loadMatches = async () => { setLoading(true); const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&order=created_at.desc`); const enriched = await Promise.all(res.map(async m => { const pid = m.user1 === auth.userId ? m.user2 : m.user1; const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${pid}`); return { ...m, partner: profiles[0] }; })); const valid = enriched.filter(m => m.partner); setMatches(valid); onNotifCount(valid.length); setLoading(false); };
-  return <div style={{ padding: "16px" }}><h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.3rem", fontWeight: 700, marginBottom: 12 }}>Mes Matchs 💞</h2><LikesReceivedBanner auth={auth} onShowPremium={onShowPremium} />{loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>💘</div><p>Continue à liker des profils pour avoir des matchs !</p></div> : <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>{matches.map(m => <div key={m.id} style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 3px 16px rgba(44,26,14,0.08)" }}><div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden" }}>{m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "3rem" }}>{m.partner?.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "10px" }}><div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{m.partner?.name}, {m.partner?.age}</div><div style={{ fontSize: "0.72rem", color: G.brunLight }}>📍 {m.partner?.city}</div><div style={{ fontSize: "0.68rem", color: "#27ae60", fontWeight: 600, marginTop: 3 }}>💞 Match !</div></div></div>)}</div>}</div>;
+  const p = selectedMatch?.partner;
+  return <div style={{ padding: "16px" }}>
+    <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.3rem", fontWeight: 700, marginBottom: 12 }}>Mes Matchs 💞</h2>
+    <LikesReceivedBanner auth={auth} onShowPremium={onShowPremium} />
+    {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>💘</div><p>Continue à liker des profils pour avoir des matchs !</p></div> : <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>{matches.map(m => <div key={m.id} onClick={() => setSelectedMatch(m)} className="card-hover" style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 3px 16px rgba(44,26,14,0.08)", cursor: "pointer" }}><div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden" }}>{m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "3rem" }}>{m.partner?.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "10px" }}><div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{m.partner?.name}, {m.partner?.age}</div><div style={{ fontSize: "0.72rem", color: G.brunLight }}>📍 {m.partner?.city}</div><div style={{ fontSize: "0.68rem", color: "#27ae60", fontWeight: 600, marginTop: 3 }}>💞 Match !</div></div></div>)}</div>}
+    {selectedMatch && p && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedMatch(null)}>
+      <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+        <div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
+          {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</div>}
+          <div onClick={() => setSelectedMatch(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}>✕</div>
+          <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
+            <div style={{ fontFamily: "Georgia,serif", fontSize: "1.5rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age}</div>
+            <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>📍 {p.city}</div>
+          </div>
+        </div>
+        <div style={{ padding: "20px 20px 32px" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>💞 Match !</span>
+            {p.is_premium && <span style={{ background: "rgba(212,168,67,0.12)", color: G.brunLight, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>⭐ Premium</span>}
+            {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: `1px solid rgba(212,168,67,0.3)`, color: G.brunLight, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>🙏 {p.religion}</span>}
+          </div>
+          {p.bio && <p style={{ fontSize: "0.88rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 20 }}>{p.bio}</p>}
+          <Btn variant="primary" onClick={() => { setSelectedMatch(null); if (onGoMessages) onGoMessages(); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>💬 Envoyer un message</Btn>
+        </div>
+      </div>
+    </div>}
+  </div>;
 }
 
 function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void }) {
@@ -1401,5 +1458,5 @@ export default function App() {
   if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
   if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
-  return <><AppShell tab={tab} setTab={setTab} unreadCount={unreadCount} notifCount={likesReceived} auth={auth}>{tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}{tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} />}{tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}{tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} />}{tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}</AppShell>{premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}</>;
+  return <><AppShell tab={tab} setTab={setTab} unreadCount={unreadCount} notifCount={likesReceived} auth={auth}>{tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}{tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={() => setTab("messages")} />}{tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}{tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} />}{tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}</AppShell>{premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}</>;
 }
