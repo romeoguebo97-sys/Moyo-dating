@@ -1113,7 +1113,10 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       if (filters.religion) params += `&religion=eq.${encodeURIComponent(filters.religion)}`;
       const [all, liked] = await Promise.all([sb.query<Profile>(auth.token, "profiles", params), sb.query<{ to_user: string }>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user`)]);
       setLikedIds(new Set(liked.map(l => l.to_user)));
-      setProfiles(Array.isArray(all) ? all : []);
+      // Dédoublonner par ID pour éviter les doublons Supabase
+      const seen = new Set<string>();
+      const unique = (Array.isArray(all) ? all : []).filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+      setProfiles(unique);
       const today = new Date().toISOString().split("T")[0];
       const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`);
       setLikesToday(Array.isArray(tl) ? tl.length : 0);
