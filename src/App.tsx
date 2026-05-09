@@ -348,7 +348,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <style>{GLOBAL_CSS}</style>
 
       {/* ── NAV ── */}
-      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 00 }}>
+      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0 }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px" }}>
           <div style={{ fontFamily: "Georgia,serif", fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
             <span>Mo</span><span style={{ color: G.or }}>yo</span>
