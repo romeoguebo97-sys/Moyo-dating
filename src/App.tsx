@@ -24,7 +24,7 @@ const CONTACT_PATTERNS = [
   /(mon num|mon numero|mon numéro|appelle.?moi|contacte.?moi)/i,
 ];
 const hasContactInfo = (text: string): boolean => CONTACT_PATTERNS.some(p => p.test(text));
-const FREE_LIMITS = { likes: 5, messages: 2 };
+const FREE_LIMITS = { likes: 5, messages: 5 };
 
 const G = {
   rouge: "#C0392B", rougeDark: "#922B21", or: "#D4A843",
@@ -279,7 +279,7 @@ function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string
     { icon: "🔒", titre: "Profil vérifié", desc: "Badge de confiance visible" },
     { icon: "🎧", titre: "Support prioritaire", desc: "Assistance rapide 7j/7" },
   ];
-  return <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "28px 28px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", padding: "32px 20px 40px" }}><div style={{ textAlign: "center", marginBottom: 24 }}><div style={{ fontSize: "2.5rem", marginBottom: 8 }}>⭐</div><h2 style={{  fontSize: "1.7rem", fontWeight: 700, marginBottom: 8 }}>Passe à Premium</h2>{reason && <div style={{ background: "rgba(192,57,43,0.08)", border: `1px solid ${G.rouge}`, borderRadius: 12, padding: "10px 16px", fontSize: "0.82rem", color: G.rouge, fontWeight: 600, marginBottom: 12 }}>{reason}</div>}<div style={{  fontSize: "2rem", fontWeight: 700, color: G.or }}>5 000 FCFA<span style={{ fontSize: "0.9rem", color: G.brunLight, fontWeight: 400 }}>/mois</span></div><div style={{ fontSize: "0.75rem", color: G.brunLight, marginTop: 4 }}>MTN MoMo · Airtel Money · Orange Money · Carte bancaire</div></div><div style={{ background: "linear-gradient(135deg,rgba(212,168,67,0.12),rgba(192,57,43,0.08))", border: "1px solid rgba(212,168,67,0.4)", borderRadius: 14, padding: "12px 16px", marginBottom: 20, fontSize: "0.84rem", color: G.brunLight, lineHeight: 1.6, textAlign: "center", fontStyle: "italic" }}>✨ Premium t'aide à discuter plus librement et à augmenter tes chances de rencontre sérieuse.</div><h3 style={{ fontWeight: 700, marginBottom: 12, fontSize: "0.88rem", textTransform: "uppercase", letterSpacing: "0.05em", color: G.brunLight }}>Tout ce que tu obtiens :</h3>{avantages.map(a => <div key={a.titre} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}><div style={{ fontSize: "1.3rem", width: 30, textAlign: "center", flexShrink: 0 }}>{a.icon}</div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{a.titre}</div><div style={{ fontSize: "0.78rem", color: G.brunLight }}>{a.desc}</div></div><div style={{ color: "#27ae60", fontWeight: 700 }}>✓</div></div>)}<Btn variant="gold" onClick={() => {}} style={{ width: "100%", padding: "16px", fontSize: "1rem", marginTop: 20, marginBottom: 12 }}>Activer Premium — 5 000 FCFA/mois</Btn><div style={{ textAlign: "center" }}><button onClick={onClose} style={{ fontSize: "0.88rem", color: G.brunLight, cursor: "pointer", fontWeight: 600, padding: "12px 32px", display: "inline-block", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, width: "100%", transition: "all 0.2s" }} onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = G.brunLight; (e.currentTarget as HTMLButtonElement).style.color = G.brun; }} onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = G.gris; (e.currentTarget as HTMLButtonElement).style.color = G.brunLight; }}>Non merci, plus tard</button></div></div></div>;
+  return <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "28px 28px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", padding: "32px 20px 40px" }}><div style={{ textAlign: "center", marginBottom: 24 }}><div style={{ fontSize: "2.5rem", marginBottom: 8 }}>⭐</div><h2 style={{  fontSize: "1.7rem", fontWeight: 700, marginBottom: 8 }}>Passe à Premium</h2>{reason && <div style={{ background: "rgba(192,57,43,0.08)", border: `1px solid ${G.rouge}`, borderRadius: 12, padding: "10px 16px", fontSize: "0.82rem", color: G.rouge, fontWeight: 600, marginBottom: 12 }}>{reason}</div>}<div style={{  fontSize: "2rem", fontWeight: 700, color: G.or }}>3 500 FCFA<span style={{ fontSize: "0.9rem", color: G.brunLight, fontWeight: 400 }}>/mois</span></div><div style={{ fontSize: "0.75rem", color: G.brunLight, marginTop: 4 }}>MTN MoMo · Airtel Money · Orange Money · Carte bancaire</div></div><div style={{ background: "linear-gradient(135deg,rgba(212,168,67,0.12),rgba(192,57,43,0.08))", border: "1px solid rgba(212,168,67,0.4)", borderRadius: 14, padding: "12px 16px", marginBottom: 20, fontSize: "0.84rem", color: G.brunLight, lineHeight: 1.6, textAlign: "center", fontStyle: "italic" }}>✨ Premium t'aide à discuter plus librement et à augmenter tes chances de rencontre sérieuse.</div><h3 style={{ fontWeight: 700, marginBottom: 12, fontSize: "0.88rem", textTransform: "uppercase", letterSpacing: "0.05em", color: G.brunLight }}>Tout ce que tu obtiens :</h3>{avantages.map(a => <div key={a.titre} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}><div style={{ fontSize: "1.3rem", width: 30, textAlign: "center", flexShrink: 0 }}>{a.icon}</div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{a.titre}</div><div style={{ fontSize: "0.78rem", color: G.brunLight }}>{a.desc}</div></div><div style={{ color: "#27ae60", fontWeight: 700 }}>✓</div></div>)}<Btn variant="gold" onClick={() => {}} style={{ width: "100%", padding: "16px", fontSize: "1rem", marginTop: 20, marginBottom: 12 }}>Activer Premium — 3 500 FCFA/mois</Btn><div style={{ textAlign: "center" }}><button onClick={onClose} style={{ fontSize: "0.88rem", color: G.brunLight, cursor: "pointer", fontWeight: 600, padding: "12px 32px", display: "inline-block", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, width: "100%", transition: "all 0.2s" }} onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = G.brunLight; (e.currentTarget as HTMLButtonElement).style.color = G.brun; }} onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = G.gris; (e.currentTarget as HTMLButtonElement).style.color = G.brunLight; }}>Non merci, plus tard</button></div></div></div>;
 }
 
 function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
@@ -837,7 +837,7 @@ function About({ onBack }: { onBack: () => void }) {
           <h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Nos services</h2>
           {[
             { icon: "💞", titre: "Rencontres en ligne", desc: "Trouve ton âme sœur parmi des profils vérifiés.", badge: "Gratuit" },
-            { icon: "⭐", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké et bien plus.", badge: "5 000 FCFA/mois" },
+            { icon: "⭐", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké et bien plus.", badge: "3 500 FCFA/mois" },
             { icon: "💍", titre: "Accompagnement mariage", desc: "Nous t'accompagnons dans l'organisation de ta cérémonie congolaise.", badge: "Sur demande" },
             { icon: "🤵", titre: "Mise en relation VIP", desc: "Service personnalisé et discret dans ta recherche de l'âme sœur.", badge: "Premium" },
             { icon: "📋", titre: "Conseil relationnel", desc: "Nos conseillers t'aident à rédiger ton profil et te guident.", badge: "Bientôt" },
@@ -877,7 +877,7 @@ function About({ onBack }: { onBack: () => void }) {
           {[
             {
               q: "Moyo est-il gratuit ?",
-              a: "Oui, l'inscription et la découverte de profils sont entièrement gratuites. Un abonnement Premium à 5 000 FCFA/mois est disponible pour accéder à des fonctionnalités avancées comme les messages illimités et les likes illimités."
+              a: "Oui, l'inscription et la découverte de profils sont entièrement gratuites. Un abonnement Premium à 3 500 FCFA/mois est disponible pour accéder à des fonctionnalités avancées comme les messages illimités et les likes illimités."
             },
             {
               q: "Comment fonctionne le système de match ?",
@@ -1275,69 +1275,53 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               title: "Découvrir des profils",
               color: G.rouge,
               items: [
-                "L'onglet Découvrir affiche les profils disponibles en mode carte ou en liste.",
-                "Utilisez les flèches gauche et droite pour naviguer entre les profils.",
-                "Cliquez sur le cœur pour liker un profil. Cliquez à nouveau pour retirer votre like.",
-                "Compte gratuit : 5 likes par jour maximum. Passez Premium pour des likes illimités.",
-                "Utilisez les filtres pour affiner par genre, ville, âge ou religion.",
+                "L'onglet Découvrir affiche les profils disponibles en mode carte ou en liste. Utilisez les flèches pour naviguer. Cliquez sur le cœur pour liker un profil, cliquez à nouveau pour retirer votre like.",
+                "Compte gratuit : 5 likes par jour. Passez Premium pour des likes illimités. Utilisez les filtres pour affiner par genre, ville, âge ou religion.",
               ]
             },
             {
               title: "Matchs",
               color: G.rouge,
               items: [
-                "Un match se crée automatiquement quand deux personnes se likent mutuellement.",
-                "Une fois le match créé, vous pouvez vous envoyer des messages.",
-                "Le badge sur l'onglet Matchs indique le nombre de personnes qui ont liké votre profil.",
-                "Avec un compte Premium, vous pouvez voir exactement qui vous a liké.",
+                "Un match se crée automatiquement quand deux personnes se likent mutuellement. Une fois le match créé, vous pouvez vous envoyer des messages. Le badge sur l'onglet Matchs indique le nombre de personnes qui ont liké votre profil. Avec Premium, vous pouvez voir exactement qui vous a liké.",
               ]
             },
             {
               title: "Messages",
               color: G.rouge,
               items: [
-                "Compte gratuit : 2 messages par match. Premium : messages illimités.",
-                "Le badge rouge sur l'onglet Messages indique un nouveau message non lu.",
-                "Pour supprimer une conversation : ouvrez-la puis appuyez sur l'icône corbeille en haut à droite.",
+                "Compte gratuit : 5 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique un nouveau message non lu. Pour supprimer une conversation, ouvrez-la puis appuyez sur l'icône corbeille en haut à droite.",
               ]
             },
             {
               title: "Mon Profil",
               color: G.rouge,
               items: [
-                "Modifiez votre photo, prénom, âge, ville, religion et bio depuis l'onglet Profil.",
-                "Le bouton visible/invisible vous permet d'apparaître ou non dans Découvrir, sans supprimer votre compte.",
-                "Votre adresse email de connexion est affichée mais ne peut pas être modifiée.",
+                "Modifiez votre photo, prénom, âge, ville, religion et bio depuis l'onglet Profil. Le bouton visible/invisible vous permet d'apparaître ou non dans Découvrir, sans supprimer votre compte. Votre adresse email de connexion est affichée mais ne peut pas être modifiée.",
               ]
             },
             {
-              title: "Premium — 5 000 FCFA / mois",
+              title: "Premium — 3 500 FCFA / mois",
               color: G.or,
               items: [
                 "Avantages : messages illimités, likes illimités, voir qui vous a liké, profil mis en avant.",
-                "Pour activer Premium : rendez-vous dans l'onglet Profil et appuyez sur Passer à Moyo Premium.",
-                "Le paiement se fait via MoMo ou WhatsApp. L'activation est effectuée manuellement par notre équipe sous 24h.",
+                "Paiement accepté via MTN MoMo et Airtel MoMo uniquement. Pour payer, contactez notre service client via WhatsApp ou Facebook. L'activation est effectuée sous 24h maximum.",
               ]
             },
             {
               title: "Sécurité et confidentialité",
               color: G.rouge,
               items: [
-                "Pour signaler un profil suspect : ouvrez la fiche du profil et appuyez sur Signaler.",
-                "Pour supprimer votre compte : Profil puis Supprimer mon compte. Cette action est définitive et irréversible.",
-                "Moyo est réservé aux personnes majeures (18 ans et plus). Tout profil de mineur sera supprimé.",
+                "Pour signaler un profil suspect, ouvrez la fiche du profil et appuyez sur Signaler. Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible. Moyo est réservé aux personnes majeures (18 ans et plus).",
               ]
             },
           ].map((s, i) => (
-            <div key={i} style={{ marginBottom: 22 }}>
-              <div style={{ fontSize: "0.92rem", fontWeight: 700, color: s.color, marginBottom: 8, paddingBottom: 6, borderBottom: `2px solid ${s.color === G.or ? "rgba(212,168,67,0.25)" : "rgba(192,57,43,0.12)"}` }}>
+            <div key={i} style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: "0.92rem", fontWeight: 700, color: s.color, marginBottom: 6, paddingBottom: 5, borderBottom: `2px solid ${s.color === G.or ? "rgba(212,168,67,0.25)" : "rgba(192,57,43,0.12)"}` }}>
                 {s.title}
               </div>
               {s.items.map((item, j) => (
-                <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
-                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, marginTop: 7, flexShrink: 0 }} />
-                  <p style={{ fontSize: "0.83rem", color: "#555", lineHeight: 1.7, fontWeight: 400 }}>{item}</p>
-                </div>
+                <p key={j} style={{ fontSize: "0.83rem", color: "#555", lineHeight: 1.6, fontWeight: 400, marginBottom: 3 }}>{item}</p>
               ))}
             </div>
           ))}
@@ -1671,7 +1655,6 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
         <div style={{ marginTop: 16, paddingBottom: 24, paddingLeft: 16, paddingRight: 16 }}>
           <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8 }}>
             {profile?.name}
-            {profile?.is_premium && <span style={{ fontSize: "1rem", color: G.or }}>✦</span>}
           </div>
           <div style={{ color: "#444", fontSize: "0.92rem", fontWeight: 600, marginBottom: 4 }}>{profile?.age} ans · {profile?.gender}</div>
           {profile?.religion && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginBottom: 3 }}>🙏 {profile.religion}</div>}
@@ -1687,7 +1670,6 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
-              <div style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: G.rouge, border: `2px solid ${G.blanc}` }} />
             </div>
             <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier mon<br/>profil</div>
           </div>
@@ -1762,13 +1744,11 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
 
         {/* Se déconnecter */}
         <div onClick={() => setShowLogout(true)} style={{
-          background: G.blanc, borderRadius: 16, padding: "16px 20px",
-          display: "flex", alignItems: "center", gap: 14, cursor: "pointer",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8`,
+          background: G.rouge, borderRadius: 50, padding: "16px 20px",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", boxShadow: "0 4px 18px rgba(192,57,43,0.3)",
         }}>
-          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🚪</div>
-          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Se déconnecter</div>
-          <div style={{ marginLeft: "auto", color: "#ccc", fontSize: "1rem", fontWeight: 400 }}>›</div>
+          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.blanc }}>Se déconnecter</div>
         </div>
 
         {/* Supprimer mon compte */}
