@@ -936,7 +936,7 @@ function About({ onBack }: { onBack: () => void }) {
             },
             {
               q: "Comment fonctionne le système de match ?",
-              a: "Lorsque deux personnes se likent mutuellement, un match est créé automatiquement. Vous pouvez alors commencer à échanger des messages. En compte gratuit, vous avez droit à 3 messages par match. Moyo est réservé aux rencontres hétérosexuelles uniquement."
+              a: "Lorsque deux personnes se likent mutuellement, un match est créé automatiquement. Vous pouvez alors commencer à échanger des messages. En compte gratuit, vous avez droit à 3 messages par match. Moyo est réservé aux rencontres hétérosexuelles uniquement — un homme ne peut pas liker un autre homme, et une femme ne peut pas liker une autre femme."
             },
             {
               q: "Comment annuler un match ?",
@@ -1337,7 +1337,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
                 )}
               </div>
               {/* Label */}
-              <div style={{ fontSize: "0.62rem", fontWeight: active ? 700 : 400, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>
                 {t.label}
               </div>
             </div>
@@ -1361,6 +1361,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               color: G.rouge,
               items: [
                 "L'onglet Découvrir affiche les profils en mode carte ou en liste. En vue carte, utilisez les flèches pour naviguer et le cœur pour liker. En vue liste, le cœur est directement visible sur chaque profil.",
+                "Chaque profil affiche automatiquement un badge 👩 Femme ou 👨 Homme pour identifier clairement le genre, même si la photo ne le montre pas.",
                 "Compte gratuit : 5 likes par jour. Premium : likes illimités. Utilisez les filtres pour affiner par genre, ville, tranche d'âge (18-99) ou religion.",
                 "Moyo est réservé aux rencontres hétérosexuelles. Un homme ne peut pas liker un homme, et une femme ne peut pas liker une femme.",
               ]
@@ -1378,7 +1379,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               title: "Messages",
               color: G.rouge,
               items: [
-                "Compte gratuit : 3 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique un nouveau message non lu.",
+                "Compte gratuit : 3 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique le total de messages non lus. Dans la liste des conversations, chaque conversation affiche son propre badge avec le nombre de messages non lus — le badge disparaît dès que vous ouvrez la conversation.",
                 "Premium : envoi de photos via l'icône caméra. Cliquez sur une photo reçue pour l'agrandir. Les confirmations de lecture ✓✓ sont disponibles pour les membres Premium.",
                 "Vous pouvez offrir le Premium à votre partenaire via le bouton 🎁 dans le header de la conversation. Pour supprimer une conversation, appuyez sur l'icône corbeille.",
               ]
@@ -1449,7 +1450,11 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport }: { prof: Pro
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && "⭐"} {prof.is_verified && <VerifiedBadge size={15} />}</div>
-        <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {prof.city}{prof.religion && <span style={{ marginLeft: 6, fontSize: "0.72rem" }}>· 🙏 {prof.religion}</span>}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
+          <span style={{ background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{prof.gender === "Femme" ? "👩 Femme" : "👨 Homme"}</span>
+          <span style={{ fontSize: "0.78rem", color: G.brunLight }}>📍 {prof.city}</span>
+          {prof.religion && <span style={{ fontSize: "0.72rem", color: G.brunLight }}>· 🙏 {prof.religion}</span>}
+        </div>
         {prof.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}
       </div>
       {/* Cœur */}
@@ -1668,6 +1673,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     </div>
   )}
   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+    <span style={{ background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600 }}>{p.gender === "Femme" ? "👩 Femme" : "👨 Homme"}</span>
     <span style={{ fontSize: "0.78rem", color: G.brunLight }}>📍 {p.city}</span>
     {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: G.brunLight, fontWeight: 500 }}>🙏 {p.religion}</span>}
   </div>
@@ -2182,15 +2188,24 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
     {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : convs.length === 0
       ? <div style={{ textAlign: "center", padding: "50px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>💬</div><p style={{ fontSize: "0.85rem" }}>Fais des matchs pour commencer à discuter !</p></div>
       : convs.map(c => (
-        <div key={c.id} onClick={() => setOpen(c)} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px", background: G.blanc, borderRadius: 14, marginBottom: 8, cursor: "pointer" }}>
+        <div key={c.id} onClick={() => {
+          // Réinitialiser le badge immédiatement dans l'état local
+          setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
+          onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
+          setOpen(c);
+        }} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px", background: (c.unreadCount || 0) > 0 ? "rgba(192,57,43,0.03)" : G.blanc, borderRadius: 14, marginBottom: 8, cursor: "pointer", border: (c.unreadCount || 0) > 0 ? `1px solid rgba(192,57,43,0.1)` : "1px solid transparent" }}>
           <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, marginBottom: 3, fontSize: "0.92rem" }}>{c.partner?.name}</div>
-            <div style={{ fontSize: "0.82rem", color: G.brunLight, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, marginBottom: 3, fontSize: "0.92rem", color: (c.unreadCount || 0) > 0 ? "#1a1a1a" : G.brun }}>{c.partner?.name}</div>
+            <div style={{ fontSize: "0.82rem", color: (c.unreadCount || 0) > 0 ? G.rouge : G.brunLight, fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {c.lastMsg?.content?.startsWith("[img]") ? "📷 Photo" : c.lastMsg?.content || "Dis bonjour ! 👋"}
             </div>
           </div>
-          {(c.unreadCount || 0) > 0 && <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>{c.unreadCount}</div>}
+          {(c.unreadCount || 0) > 0 && (
+            <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", minWidth: 22, height: 22, padding: "0 5px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, flexShrink: 0 }}>
+              {(c.unreadCount || 0) > 9 ? "9+" : c.unreadCount}
+            </div>
+          )}
         </div>
       ))
     }
@@ -2752,7 +2767,10 @@ export default function App() {
     });
 
     // ── REALTIME : écoute les nouveaux matchs ──
-    const wsMatches = sb.subscribeRealtime(auth.token, "matches", `user2=eq.${auth.userId}`, () => {
+    const wsMatches = sb.subscribeRealtime(auth.token, "matches", `user2=eq.${auth.userId}`, async () => {
+      // Compter les nouveaux matchs
+      const res = await sb.query<object>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
+      setNotifCount(Array.isArray(res) ? res.length : 0);
       loadLikesReceived();
     });
 
@@ -2798,7 +2816,10 @@ export default function App() {
   if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
   return <>
-    <AppShell tab={tab} setTab={setTab} unreadCount={unreadCount} notifCount={likesReceived} auth={auth}>
+    <AppShell tab={tab} setTab={(t) => {
+      setTab(t);
+      if (t === "messages") setUnreadCount(0);
+    }} unreadCount={unreadCount} notifCount={notifCount} auth={auth}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={() => setTab("messages")} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}
