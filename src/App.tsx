@@ -1262,27 +1262,90 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
     </div>
     {showGuide && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
       <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
+        {/* Header */}
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px", position: "relative" }}>
           <div onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 14, right: 16, color: G.blanc, fontSize: "1.2rem", cursor: "pointer", opacity: 0.8 }}>✕</div>
-          <div style={{  fontSize: "1.6rem", color: G.blanc, fontWeight: 700 }}>Guide <span style={{ color: G.or }}>Moyo</span></div>
-          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem", marginTop: 4 }}>Tout ce que vous devez savoir 💑</div>
+          <div style={{ fontSize: "1.6rem", color: G.blanc, fontWeight: 800 }}>Guide <span style={{ color: G.or }}>Moyo</span></div>
+          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem", marginTop: 4, fontWeight: 400 }}>Tout ce que vous devez savoir pour bien utiliser Moyo</div>
         </div>
+        {/* Contenu */}
         <div style={{ padding: "20px" }}>
           {[
-            { icon: "🔥", title: "Découvrir des profils", items: ["L'onglet Découvrir (flamme 🔥) affiche les profils en carte ou en liste (bouton ☰ Liste).", "Le bouton ❤️ rouge = vous aimez ce profil. Le 🤍 = vous passez. Utilisez ← → pour naviguer.", "Compteur 1/5 = votre position. Compte gratuit : 5 likes par jour maximum."] },
-            { icon: "💞", title: "Matchs", items: ["Un Match se crée quand deux personnes se likent mutuellement. Vous pouvez alors vous écrire.", "Cliquez sur un match pour voir son profil complet et envoyer un message.", "Le badge doré sur Matchs = nombre de personnes qui ont liké votre profil. Premium pour savoir qui."] },
-            { icon: "💬", title: "Messages", items: ["Compte gratuit : 2 messages par match. Le compteur en haut indique vos messages restants.", "Badge rouge sur Messages = nouveau message reçu. Disparaît quand vous ouvrez la conversation.", "Pour supprimer une conversation : ouvrez-la → icône 🗑️ en haut à droite."] },
-            { icon: "👤", title: "Mon Profil", items: ["Modifiez votre photo, nom, âge, ville, religion et bio via ✏️ Modifier mon profil.", "Bouton vert/rouge : rend votre profil visible ou invisible. En invisible vous n'apparaissez plus dans Découvrir — utile si vous avez trouvé l'amour sans supprimer le compte.", "Votre email de connexion est affiché mais non modifiable pour sécurité."] },
-            { icon: "⭐", title: "Premium — 5 000 FCFA/mois", items: ["Messages illimités, likes illimités, voir qui vous a liké, profil mis en avant.", "Pour passer Premium : Profil → bouton ✨ Passe à Premium → suivre les instructions MoMo.", "L'activation est faite manuellement par notre équipe après réception du paiement."] },
-            { icon: "🔒", title: "Sécurité & Confidentialité", items: ["Pour signaler un profil suspect : ouvrez la carte → bouton 🚨 Signaler.", "Pour supprimer votre compte : Profil → Supprimer mon compte. Action irréversible.", "Moyo est réservé aux personnes majeures (18 ans et plus)."] },
-          ].map((s, i) => <div key={i} style={{ marginBottom: 20 }}>
-            <div style={{  fontSize: "0.95rem", fontWeight: 700, color: s.icon === "⭐" ? G.or : G.rouge, marginBottom: 8, paddingBottom: 6, borderBottom: `2px solid ${s.icon === "⭐" ? "rgba(212,168,67,0.2)" : "rgba(192,57,43,0.1)"}` }}>{s.icon} {s.title}</div>
-            {s.items.map((item, j) => <p key={j} style={{ fontSize: "0.81rem", color: G.brunLight, lineHeight: 1.7, marginBottom: 4 }}>• {item}</p>)}
-          </div>)}
-          <div style={{ background: "rgba(192,57,43,0.06)", borderRadius: 14, padding: "16px", textAlign: "center", marginTop: 8 }}>
-            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 6 }}>🐛 Un problème à signaler ?</div>
-            <p style={{ fontSize: "0.78rem", color: G.brunLight, marginBottom: 12, lineHeight: 1.5 }}>Notre équipe est disponible pour vous aider.</p>
-            <a href="https://www.facebook.com/share/1HssYavG19/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", background: G.rouge, color: G.blanc, borderRadius: 50, padding: "10px 22px", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none" }}>Contacter notre équipe 📘</a>
+            {
+              title: "Découvrir des profils",
+              color: G.rouge,
+              items: [
+                "L'onglet Découvrir affiche les profils disponibles en mode carte ou en liste.",
+                "Utilisez les flèches gauche et droite pour naviguer entre les profils.",
+                "Cliquez sur le cœur pour liker un profil. Cliquez à nouveau pour retirer votre like.",
+                "Compte gratuit : 5 likes par jour maximum. Passez Premium pour des likes illimités.",
+                "Utilisez les filtres pour affiner par genre, ville, âge ou religion.",
+              ]
+            },
+            {
+              title: "Matchs",
+              color: G.rouge,
+              items: [
+                "Un match se crée automatiquement quand deux personnes se likent mutuellement.",
+                "Une fois le match créé, vous pouvez vous envoyer des messages.",
+                "Le badge sur l'onglet Matchs indique le nombre de personnes qui ont liké votre profil.",
+                "Avec un compte Premium, vous pouvez voir exactement qui vous a liké.",
+              ]
+            },
+            {
+              title: "Messages",
+              color: G.rouge,
+              items: [
+                "Compte gratuit : 2 messages par match. Premium : messages illimités.",
+                "Le badge rouge sur l'onglet Messages indique un nouveau message non lu.",
+                "Pour supprimer une conversation : ouvrez-la puis appuyez sur l'icône corbeille en haut à droite.",
+              ]
+            },
+            {
+              title: "Mon Profil",
+              color: G.rouge,
+              items: [
+                "Modifiez votre photo, prénom, âge, ville, religion et bio depuis l'onglet Profil.",
+                "Le bouton visible/invisible vous permet d'apparaître ou non dans Découvrir, sans supprimer votre compte.",
+                "Votre adresse email de connexion est affichée mais ne peut pas être modifiée.",
+              ]
+            },
+            {
+              title: "Premium — 5 000 FCFA / mois",
+              color: G.or,
+              items: [
+                "Avantages : messages illimités, likes illimités, voir qui vous a liké, profil mis en avant.",
+                "Pour activer Premium : rendez-vous dans l'onglet Profil et appuyez sur Passer à Moyo Premium.",
+                "Le paiement se fait via MoMo ou WhatsApp. L'activation est effectuée manuellement par notre équipe sous 24h.",
+              ]
+            },
+            {
+              title: "Sécurité et confidentialité",
+              color: G.rouge,
+              items: [
+                "Pour signaler un profil suspect : ouvrez la fiche du profil et appuyez sur Signaler.",
+                "Pour supprimer votre compte : Profil puis Supprimer mon compte. Cette action est définitive et irréversible.",
+                "Moyo est réservé aux personnes majeures (18 ans et plus). Tout profil de mineur sera supprimé.",
+              ]
+            },
+          ].map((s, i) => (
+            <div key={i} style={{ marginBottom: 22 }}>
+              <div style={{ fontSize: "0.92rem", fontWeight: 700, color: s.color, marginBottom: 8, paddingBottom: 6, borderBottom: `2px solid ${s.color === G.or ? "rgba(212,168,67,0.25)" : "rgba(192,57,43,0.12)"}` }}>
+                {s.title}
+              </div>
+              {s.items.map((item, j) => (
+                <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, marginTop: 7, flexShrink: 0 }} />
+                  <p style={{ fontSize: "0.83rem", color: "#555", lineHeight: 1.7, fontWeight: 400 }}>{item}</p>
+                </div>
+              ))}
+            </div>
+          ))}
+          {/* Contact */}
+          <div style={{ background: "#f8f8f8", borderRadius: 14, padding: "16px", textAlign: "center", marginTop: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a1a", marginBottom: 4 }}>Un problème ou une question ?</div>
+            <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, lineHeight: 1.5, fontWeight: 400 }}>Notre équipe est disponible pour vous aider.</p>
+            <a href="https://www.facebook.com/share/1HssYavG19/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", background: G.rouge, color: G.blanc, borderRadius: 50, padding: "10px 24px", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none" }}>Contacter notre équipe</a>
           </div>
         </div>
       </div>
@@ -1351,7 +1414,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const p = profiles[current];
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: G.brunLight }}>⏳ Chargement...</div>;
 
-  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Découvrir 🔥</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les religions</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>{profiles.map(prof => <div key={prof.id} style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}><div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>{prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{prof.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{prof.name}, {prof.age} ans {prof.is_premium && "⭐"}</div><div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {prof.city}{prof.religion && <span style={{ marginLeft: 6, fontSize: "0.72rem", color: G.brunLight }}>· 🙏 {prof.religion}</span>}</div>{prof.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}</div><div onClick={() => handleLike(prof)} style={{ width: 44, height: 44, borderRadius: "50%", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(prof.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(prof.id) ? "0 4px 14px rgba(192,57,43,0.35)" : "0 2px 6px rgba(44,26,14,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", cursor: "pointer", flexShrink: 0 }}>{likedIds.has(prof.id) ? "❤️" : "🤍"}</div></div>)}</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "14px 16px" }}>
+  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les religions</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>{profiles.map(prof => <div key={prof.id} style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}><div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>{prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{prof.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{prof.name}, {prof.age} ans {prof.is_premium && "⭐"}</div><div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {prof.city}{prof.religion && <span style={{ marginLeft: 6, fontSize: "0.72rem", color: G.brunLight }}>· 🙏 {prof.religion}</span>}</div>{prof.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}</div><div onClick={() => handleLike(prof)} style={{ width: 44, height: 44, borderRadius: "50%", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(prof.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(prof.id) ? "0 4px 14px rgba(192,57,43,0.35)" : "0 2px 6px rgba(44,26,14,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", cursor: "pointer", flexShrink: 0 }}>{likedIds.has(prof.id) ? "❤️" : "🤍"}</div></div>)}</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "14px 16px" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{  fontSize: "1.25rem", fontWeight: 700, color: G.brun }}>{p.name}, {p.age} ans {p.is_premium && "⭐"}</div>
     <div onClick={() => setShowReport(true)} style={{ fontSize: "0.65rem", color: "#e74c3c", cursor: "pointer", background: "rgba(231,76,60,0.07)", padding: "3px 8px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0, marginLeft: 8 }}>🚨 Signaler</div>
@@ -1434,7 +1497,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
   const p = selectedMatch?.partner;
   return <div style={{ padding: "16px" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-      <h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Mes Matchs 💞</h2>
+      <h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Matchs</h2>
       <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div>
     </div>
     <LikesReceivedBanner auth={auth} onShowPremium={onShowPremium} />
@@ -1498,7 +1561,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
       {showDeleteConv && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}><div style={{ fontSize: "2rem", marginBottom: 12 }}>🗑️</div><h3 style={{  fontSize: "1.1rem", fontWeight: 700, marginBottom: 8, color: G.brun }}>Supprimer la conversation ?</h3><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 20, lineHeight: 1.5 }}>Tous les messages seront supprimés. Cette action est irréversible.</p><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setShowDeleteConv(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="danger" onClick={deleteConv} style={{ flex: 1 }}>Supprimer</Btn></div></div></div>}
     </div>
   );
-  return <div style={{ padding: "16px" }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages 💬</h2>{loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : convs.length === 0 ? <div style={{ textAlign: "center", padding: "50px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>💬</div><p style={{ fontSize: "0.85rem" }}>Fais des matchs pour commencer à discuter !</p></div> : convs.map(c => <div key={c.id} onClick={() => setOpen(c)} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px", background: G.blanc, borderRadius: 14, marginBottom: 8, cursor: "pointer" }}><Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, marginBottom: 3, fontSize: "0.92rem" }}>{c.partner?.name}</div><div style={{ fontSize: "0.82rem", color: G.brunLight, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.lastMsg?.content || "Dis bonjour ! 👋"}</div></div></div>)}</div>;
+  return <div style={{ padding: "16px" }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>{loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : convs.length === 0 ? <div style={{ textAlign: "center", padding: "50px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>💬</div><p style={{ fontSize: "0.85rem" }}>Fais des matchs pour commencer à discuter !</p></div> : convs.map(c => <div key={c.id} onClick={() => setOpen(c)} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px", background: G.blanc, borderRadius: 14, marginBottom: 8, cursor: "pointer" }}><Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, marginBottom: 3, fontSize: "0.92rem" }}>{c.partner?.name}</div><div style={{ fontSize: "0.82rem", color: G.brunLight, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.lastMsg?.content || "Dis bonjour ! 👋"}</div></div></div>)}</div>;
 }
 
 function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void }) {
