@@ -2157,15 +2157,12 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
           return (
             <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}>
               {isImg ? (
-                <div style={{ position: "relative" }}>
-                  <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ maxWidth: "65%", borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
-                  {isMine && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: "flex-end" }}>
-                      <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
-                      <TickIcon read={m.is_read} isPremium={auth.isPremium} />
-                    </div>
-                  )}
-                  {!isMine && <span style={{ fontSize: "0.62rem", color: "#aaa", marginTop: 3 }}>{time}</span>}
+                <div style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}>
+                  <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                    <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
+                    {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} />}
+                  </div>
                 </div>
               ) : (
                 <div style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", maxWidth: "72%", fontSize: "0.88rem", lineHeight: 1.5 }}>
