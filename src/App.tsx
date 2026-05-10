@@ -24,7 +24,7 @@ const CONTACT_PATTERNS = [
   /(mon num|mon numero|mon numéro|appelle.?moi|contacte.?moi)/i,
 ];
 const hasContactInfo = (text: string): boolean => CONTACT_PATTERNS.some(p => p.test(text));
-const FREE_LIMITS = { likes: 5, messages: 5 };
+const FREE_LIMITS = { likes: 5, messages: 3 };
 
 const G = {
   rouge: "#C0392B", rougeDark: "#922B21", or: "#D4A843",
@@ -932,11 +932,11 @@ function About({ onBack }: { onBack: () => void }) {
           {[
             {
               q: "Moyo est-il gratuit ?",
-              a: "Oui, l'inscription et la découverte de profils sont entièrement gratuites. En compte gratuit, vous avez droit à 5 likes par jour et 5 messages par match. Un abonnement Premium à 3 500 FCFA/mois débloque les likes illimités, les messages illimités et la possibilité de voir qui vous a liké."
+              a: "Oui, l'inscription et la découverte de profils sont entièrement gratuites. En compte gratuit, vous avez droit à 5 likes par jour et 3 messages par match. Un abonnement Premium à 3 500 FCFA/mois débloque les likes illimités, les messages illimités et la possibilité de voir qui vous a liké."
             },
             {
               q: "Comment fonctionne le système de match ?",
-              a: "Lorsque deux personnes se likent mutuellement, un match est créé automatiquement. Vous pouvez alors commencer à échanger des messages. En compte gratuit, vous avez droit à 5 messages par match."
+              a: "Lorsque deux personnes se likent mutuellement, un match est créé automatiquement. Vous pouvez alors commencer à échanger des messages. En compte gratuit, vous avez droit à 3 messages par match."
             },
             {
               q: "Comment passer à Premium ?",
@@ -1367,7 +1367,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               title: "Messages",
               color: G.rouge,
               items: [
-                "Compte gratuit : 5 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique un nouveau message non lu. Pour supprimer une conversation, ouvrez-la puis appuyez sur l'icône corbeille en haut à droite.",
+                "Compte gratuit : 3 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique un nouveau message non lu. Pour supprimer une conversation, ouvrez-la puis appuyez sur l'icône corbeille en haut à droite.",
                 "Premium : envoi de photos directement dans la conversation via l'icône caméra. Les confirmations de lecture (✓✓ Lu) sont également disponibles pour les membres Premium.",
               ]
             },
@@ -1579,7 +1579,26 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const p = profiles[current];
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: G.brunLight }}>⏳ Chargement...</div>;
 
-  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les religions</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>
+  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
+  <select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
+    <option value="">Toutes les villes</option>
+    {VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}
+  </select>
+  <select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
+    <option value="">Tous les genres</option>
+    <option value="Homme">Homme</option>
+    <option value="Femme">Femme</option>
+  </select>
+  <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+    <input type="number" value={filters.ageMin} onChange={e => setFilters(prev => ({ ...prev, ageMin: e.target.value }))} placeholder="Âge min" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${G.gris}`, fontSize: "0.9rem" }} />
+    <input type="number" value={filters.ageMax} onChange={e => setFilters(prev => ({ ...prev, ageMax: e.target.value }))} placeholder="Âge max" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${G.gris}`, fontSize: "0.9rem" }} />
+  </div>
+  <select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
+    <option value="">Toutes les religions</option>
+    {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+  </select>
+  <Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn>
+</div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>
   {profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} />)}
   {hasMore && <div onClick={loadMore} style={{ textAlign: "center", padding: "14px", background: G.blanc, borderRadius: 14, marginTop: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", color: G.rouge, border: `1px solid ${G.gris}` }}>{loadingMore ? "⏳ Chargement..." : "Voir plus de profils"}</div>}
 </div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "14px 16px" }}>
@@ -1792,6 +1811,9 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
     setMsgs(res);
     setMsgCount(res.filter(m => m.sender_id === auth.userId).length);
     await sb.markMessagesRead(auth.token, conv.id, auth.userId);
+    // Recharger après marquage lu pour mettre à jour is_read
+    const res2 = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
+    setMsgs(res2);
     loadConvs();
   };
 
@@ -1813,14 +1835,22 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
     const file = e.target.files?.[0];
     if (!file || !open) return;
     if (!auth.isPremium) { onShowPremium("📸 L'envoi de photos est réservé aux membres Premium !"); return; }
-    if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as atteint ta limite de messages. Passe Premium ! 💛`); return; }
     setImgLoading(true);
-    const url = await sb.uploadPhoto(auth.token, auth.userId + "_msg_" + Date.now(), file);
-    if (url) {
-      const content = `[img]${url}[/img]`;
-      const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
-      if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
-    }
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${auth.userId}/${Date.now()}.${ext}`;
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/messages/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${auth.token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
+        body: file,
+      });
+      if (r.ok) {
+        const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
+        const content = `[img]${url}[/img]`;
+        const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
+        if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
+      }
+    } catch {}
     setImgLoading(false);
     e.target.value = "";
   };
@@ -2250,17 +2280,6 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
           <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.blanc }}>Se déconnecter</div>
         </div>
 
-        {/* Supprimer mon compte */}
-        <div onClick={() => setShowDelete(true)} className="action-card" style={{
-          background: G.blanc, borderRadius: 16, padding: "16px 20px",
-          display: "flex", alignItems: "center", gap: 14, cursor: "pointer",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #FFE0E0`,
-        }}>
-          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🗑️</div>
-          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#e74c3c" }}>Supprimer mon compte</div>
-          <div style={{ marginLeft: "auto", color: "#ffb3b3", fontSize: "1rem", fontWeight: 400 }}>›</div>
-        </div>
-
         {/* Demande de vérification */}
         {!profile?.is_verified ? (
           <a href="https://wa.me/33753356471?text=Bonjour%2C%20je%20souhaite%20faire%20vérifier%20mon%20compte%20Moyo.%20Mon%20email%20%3A%20" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
@@ -2290,6 +2309,17 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
             <div style={{ fontSize: "0.88rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "—"}</div>
           </div>
           <div style={{ fontSize: "0.65rem", color: "#ccc", background: "#F5F5F5", padding: "3px 10px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>Non modifiable</div>
+        </div>
+
+        {/* Supprimer mon compte — tout en bas */}
+        <div onClick={() => setShowDelete(true)} className="action-card" style={{
+          background: G.blanc, borderRadius: 16, padding: "16px 20px",
+          display: "flex", alignItems: "center", gap: 14, cursor: "pointer",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #FFE0E0`,
+        }}>
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🗑️</div>
+          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#e74c3c" }}>Supprimer mon compte</div>
+          <div style={{ marginLeft: "auto", color: "#ffb3b3", fontSize: "1rem", fontWeight: 400 }}>›</div>
         </div>
 
       </div>{/* fin actions */}
@@ -2380,14 +2410,22 @@ export default function App() {
 
   // PWA — écouter l'événement d'installation
   useEffect(() => {
-    const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e); setShowInstall(true); };
+    // Ne pas afficher si déjà installé ou déjà dismissé
+    const dismissed = localStorage.getItem("moyo_install_dismissed");
+    const isInStandaloneMode = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (dismissed || isInStandaloneMode) return;
+
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstall(true);
+    };
     window.addEventListener("beforeinstallprompt", handler);
 
-    // iOS — détecter Safari iPhone/iPad et afficher le message manuel
+    // iOS — détecter Safari iPhone/iPad
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isInStandaloneMode = (window.navigator as any).standalone;
     if (isIos && !isInStandaloneMode) {
-      setTimeout(() => setShowInstall(true), 3000);
+      setTimeout(() => setShowInstall(true), 5000);
     }
 
     return () => window.removeEventListener("beforeinstallprompt", handler);
@@ -2427,7 +2465,7 @@ export default function App() {
   }, []);
 
   const handleAuth = (a: Auth) => {
-    setAuth(a); setPage("app");
+    setAuth(a); setPage("app"); setTab("discover");
     try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch {}
   };
   const handleLogout = () => {
@@ -2504,7 +2542,7 @@ export default function App() {
         )}
       </div>
       {!isIos && <div onClick={handleInstall} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "7px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Installer</div>}
-      <div onClick={() => setShowInstall(false)} style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: "1rem", flexShrink: 0 }}>✕</div>
+      <div onClick={() => { setShowInstall(false); localStorage.setItem("moyo_install_dismissed", "1"); }} style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: "1rem", flexShrink: 0 }}>✕</div>
     </div>
   ) : null;
 
