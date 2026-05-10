@@ -1175,8 +1175,9 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
       id: "discover",
       label: "Découvrir",
       icon: (active: boolean) => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 3.379 4.068 1 7.5 1c1.867 0 3.674.785 5 2.032C13.826 1.785 15.633 1 17.5 1 20.932 1 24 3.379 24 7.191c0 4.105-5.37 8.863-11 14.402z" fill={active ? G.rouge : "none"}/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
       ),
     },
@@ -1184,8 +1185,8 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
       id: "matches",
       label: "Matchs",
       icon: (active: boolean) => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={active ? "rgba(192,57,43,0.15)" : "none"}/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
         </svg>
       ),
     },
@@ -1193,8 +1194,8 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
       id: "messages",
       label: "Messages",
       icon: (active: boolean) => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" fill={active ? "rgba(192,57,43,0.15)" : "none"}/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
       ),
     },
@@ -1202,9 +1203,9 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
       id: "profile",
       label: "Profil",
       icon: (active: boolean) => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
+          <circle cx="12" cy="7" r="4" fill={active ? G.rouge : "none"}/>
         </svg>
       ),
     },
