@@ -1771,20 +1771,34 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
   const [msgCount, setMsgCount] = useState(0);
   const [showDeleteConv, setShowDeleteConv] = useState(false);
   const [imgLoading, setImgLoading] = useState(false);
+  const [previewImg, setPreviewImg] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
+  const openRef = useRef<Match | null>(null);
 
+  useEffect(() => { openRef.current = open; }, [open]);
   useEffect(() => { loadConvs(); }, []);
   useEffect(() => { if (open) loadMsgs(open); }, [open]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  // Realtime — écoute les nouveaux messages dans la conversation ouverte
+  // Realtime — écoute INSERT et UPDATE sur les messages (pour lu/non lu instantané)
   useEffect(() => {
     if (!open) return;
-    const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, () => {
-      loadMsgs(open);
+    const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, async () => {
+      // Recharger les messages pour avoir le is_read à jour
+      const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
+      setMsgs(res);
     });
-    return () => { try { ws?.close(); } catch {} };
+    // Polling léger toutes les 3s pour is_read (fallback si Realtime UPDATE ne fire pas)
+    const readInterval = setInterval(async () => {
+      if (!openRef.current) return;
+      const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${openRef.current.id}&order=created_at.asc`);
+      setMsgs(res);
+    }, 3000);
+    return () => {
+      try { ws?.close(); } catch {}
+      clearInterval(readInterval);
+    };
   }, [open?.id]);
 
   const loadConvs = async () => {
@@ -1887,7 +1901,12 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
           return (
             <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}>
               {isImg ? (
-                <img src={getImageUrl(m.content)} alt="img" style={{ maxWidth: "65%", borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }} />
+                <img
+                  src={getImageUrl(m.content)}
+                  alt="img"
+                  onClick={() => setPreviewImg(getImageUrl(m.content))}
+                  style={{ maxWidth: "65%", borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }}
+                />
               ) : (
                 <div style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", maxWidth: "72%", fontSize: "0.88rem", lineHeight: 1.5 }}>
                   {m.content}
@@ -1927,6 +1946,14 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
         <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Écris un message..." style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "16px", outline: "none", background: G.creme }} />
         <div onClick={send} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0 }}>➤</div>
       </div>
+
+      {/* Modal aperçu image */}
+      {previewImg && (
+        <div onClick={() => setPreviewImg(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={() => setPreviewImg(null)} style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff" }}>✕</div>
+          <img src={previewImg} alt="aperçu" onClick={e => e.stopPropagation()} style={{ maxWidth: "95%", maxHeight: "90vh", borderRadius: 12, objectFit: "contain" }} />
+        </div>
+      )}
 
       {/* Modal suppression */}
       {showDeleteConv && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -2496,7 +2523,12 @@ export default function App() {
     // Chargement initial des messages non lus
     const checkUnread = async () => {
       try {
-        const res = await sb.query<object>(auth.token, "messages", `?sender_id=neq.${auth.userId}&is_read=eq.false&select=id`);
+        // Récupérer les matchs de l'utilisateur
+        const matches = await sb.query<{ id: string }>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
+        if (!matches.length) { setUnreadCount(0); return; }
+        const matchIds = matches.map(m => m.id).join(",");
+        // Compter les messages non lus dans ces matchs (envoyés par quelqu'un d'autre)
+        const res = await sb.query<object>(auth.token, "messages", `?match_id=in.(${matchIds})&sender_id=neq.${auth.userId}&is_read=eq.false&select=id`);
         setUnreadCount(Array.isArray(res) ? res.length : 0);
       } catch {}
     };
@@ -2512,15 +2544,21 @@ export default function App() {
       loadLikesReceived();
     });
 
-    // Fallback polling léger toutes les 30s (au cas où WebSocket échoue)
+    // ── REALTIME : écoute les nouveaux matchs ──
+    const wsMatches = sb.subscribeRealtime(auth.token, "matches", `user2=eq.${auth.userId}`, () => {
+      loadLikesReceived();
+    });
+
+    // Fallback polling toutes les 10s pour garantir la fraîcheur
     const fallbackInterval = setInterval(() => {
       checkUnread();
       loadLikesReceived();
-    }, 30000);
+    }, 3000);
 
     return () => {
       try { wsMessages?.close(); } catch {}
       try { wsLikes?.close(); } catch {}
+      try { wsMatches?.close(); } catch {}
       clearInterval(fallbackInterval);
     };
   }, [auth?.userId]);
