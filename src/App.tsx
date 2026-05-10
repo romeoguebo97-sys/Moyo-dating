@@ -1734,6 +1734,8 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
   const [showLogout, setShowLogout] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<Array<{ id: string; blocked_id: string; profile?: Profile }>>([]);
   const [showBlocked, setShowBlocked] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"card" | "list">("card");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadProfile(); loadBlocked(); }, []);
@@ -1852,21 +1854,21 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
           {profile?.bio && <div style={{ color: "#333", fontSize: "0.88rem", fontWeight: 600, lineHeight: 1.6, maxWidth: 260, margin: "8px auto 0" }}>"{profile.bio}"</div>}
         </div>
 
-        {/* 3 Boutons : Modifier profil, Modifier photo, Liste noire */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingBottom: 0, paddingLeft: 12, paddingRight: 12 }}>
+        {/* 4 Boutons : Modifier profil, Modifier photo, Liste noire, Voir mon profil */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, paddingBottom: 0, paddingLeft: 8, paddingRight: 8 }}>
           {/* Modifier mon profil */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, cursor: "pointer", flex: 1 }} onClick={() => setEditing(true)}>
-            <div style={{ width: 60, height: 60, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer", flex: 1 }} onClick={() => setEditing(true)}>
+            <div style={{ width: 54, height: 54, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
             </div>
-            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier mon<br/>profil</div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier mon<br/>profil</div>
           </div>
 
           {/* Modifier ma photo */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, cursor: "pointer", flex: 1 }} onClick={() => fileRef.current?.click()}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer", flex: 1 }} onClick={() => fileRef.current?.click()}>
             <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(192,57,43,0.4)", position: "relative" }}>
               {uploadLoading ? <span style={{ fontSize: "1.3rem" }}>⏳</span> : (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1878,7 +1880,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
                 <span style={{ fontSize: "0.65rem", color: G.rouge, fontWeight: 900, lineHeight: 1 }}>+</span>
               </div>
             </div>
-            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier ma<br/>photo</div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier ma<br/>photo</div>
           </div>
 
           {/* Liste noire */}
@@ -1893,12 +1895,91 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
                 <div style={{ position: "absolute", top: -2, right: -2, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", fontWeight: 700, border: `2px solid ${G.blanc}` }}>{blockedUsers.length}</div>
               )}
             </div>
-            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Liste<br/>noire</div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Liste<br/>noire</div>
+          </div>
+
+          {/* Voir mon profil */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, cursor: "pointer", flex: 1 }} onClick={() => setShowPreview(true)}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg,${G.vert},#0D4020)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(26,92,58,0.35)" }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Voir mon<br/>profil</div>
           </div>
         </div>
       </div>
 
-      {/* ── VAGUE : zone grise avec vague blanche qui descend du haut ── */}
+      {/* ── MODAL APERÇU PROFIL ── */}
+      {showPreview && profile && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: "#EEEEF2", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ background: G.blanc, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1a1a1a" }}>Aperçu de mon profil</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {/* Toggle carte / liste */}
+                <div style={{ display: "flex", background: G.gris, borderRadius: 50, padding: 3, gap: 2 }}>
+                  {(["card","list"] as const).map(m => (
+                    <div key={m} onClick={() => setPreviewMode(m)} style={{ padding: "5px 14px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", background: previewMode === m ? G.blanc : "transparent", color: previewMode === m ? G.rouge : "#888", boxShadow: previewMode === m ? "0 2px 6px rgba(0,0,0,0.1)" : "none", transition: "all 0.2s" }}>
+                      {m === "card" ? "Carte" : "Liste"}
+                    </div>
+                  ))}
+                </div>
+                <div onClick={() => setShowPreview(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
+              </div>
+            </div>
+
+            {/* Contenu aperçu */}
+            <div style={{ overflowY: "auto", flex: 1, padding: "20px 16px" }}>
+              {previewMode === "card" ? (
+                /* VUE CARTE */
+                <div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden" }}>
+                  <div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                    {profile.photo_url ? <img src={profile.photo_url} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{profile.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}
+                  </div>
+                  <div style={{ padding: "16px" }}>
+                    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>{profile.name}, {profile.age} ans {profile.is_premium && "⭐"}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                      <span style={{ fontSize: "0.82rem", color: G.brunLight }}>📍 {profile.city}</span>
+                      {profile.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.75rem", color: G.brunLight }}>🙏 {profile.religion}</span>}
+                    </div>
+                    {profile.bio && <p style={{ fontSize: "0.85rem", color: G.brunLight, lineHeight: 1.5 }}>{profile.bio}</p>}
+                  </div>
+                  {/* Boutons nav factices */}
+                  <div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", padding: "12px 16px 20px" }}>
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4 }}>←</div>
+                    <div style={{ width: 68, height: 68, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", opacity: 0.4 }}>🤍</div>
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4 }}>→</div>
+                  </div>
+                </div>
+              ) : (
+                /* VUE LISTE */
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "12px", boxShadow: "0 2px 12px rgba(44,26,14,0.07)", display: "flex", gap: 12, alignItems: "center" }}>
+                  <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>
+                    {profile.photo_url ? <img src={profile.photo_url} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{profile.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{profile.name}, {profile.age} ans {profile.is_premium && "⭐"}</div>
+                    <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {profile.city}{profile.religion && <span style={{ marginLeft: 6 }}>· 🙏 {profile.religion}</span>}</div>
+                    {profile.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.bio}</div>}
+                  </div>
+                  <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(192,57,43,0.06)", border: `1.5px solid rgba(192,57,43,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4, flexShrink: 0 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(192,57,43,0.4)" stroke={G.rouge} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  </div>
+                </div>
+              )}
+              <p style={{ textAlign: "center", fontSize: "0.78rem", color: "#aaa", marginTop: 16, fontStyle: "italic" }}>C'est ainsi que les autres voient votre profil</p>
+            </div>
+
+            {/* Bouton modifier */}
+            <div style={{ padding: "12px 16px 24px", background: "#EEEEF2", flexShrink: 0 }}>
+              <Btn variant="primary" onClick={() => { setShowPreview(false); setEditing(true); }} style={{ width: "100%" }}>✏️ Modifier mon profil</Btn>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ background: "#EEEEF2", position: "relative" }}>
         <svg viewBox="0 0 500 40" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 40, marginTop: -1 }}>
           <path d="M0,0 Q125,40 250,40 Q375,40 500,0 L500,0 L0,0 Z" fill={G.blanc}/>
