@@ -1254,8 +1254,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       {step === 3 && <>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <p style={{ fontSize: "0.9rem", color: G.brunLight, marginBottom: 20, lineHeight: 1.6 }}>
-            Ajoute une photo pour que les autres puissent te reconnaître 😊<br/>
-            <span style={{ fontSize: "0.78rem", color: "#bbb" }}>Tu pourras la modifier plus tard depuis ton profil</span>
+            Ajoute une photo pour que les autres puissent te reconnaître 😊
           </p>
           <input ref={fileRef} type="file" accept="image/*" onChange={e => {
             const file = e.target.files?.[0];
@@ -1265,7 +1264,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             reader.onload = () => setPhotoPreview(reader.result as string);
             reader.readAsDataURL(file);
           }} style={{ display: "none" }} />
-          <div onClick={() => fileRef.current?.click()} style={{ width: 140, height: 140, borderRadius: "50%", margin: "0 auto 16px", cursor: "pointer", border: `3px dashed ${photoPreview ? G.rouge : G.gris}`, overflow: "hidden", background: photoPreview ? "transparent" : G.creme, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+          <div onClick={() => fileRef.current?.click()} style={{ width: 140, height: 140, borderRadius: "50%", margin: "0 auto 16px", cursor: "pointer", border: `3px dashed ${photoPreview ? G.rouge : G.gris}`, overflow: "hidden", background: photoPreview ? "transparent" : G.creme, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {photoPreview ? (
               <img src={photoPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
@@ -1278,14 +1277,14 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           {photoPreview && (
             <div onClick={() => fileRef.current?.click()} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 600, marginBottom: 8 }}>Changer la photo</div>
           )}
+          {!photoPreview && (
+            <p style={{ fontSize: "0.78rem", color: "#e74c3c", fontWeight: 600, marginTop: 4 }}>Une photo est obligatoire pour créer ton compte</p>
+          )}
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(2)} style={{ flex: 1 }}>← Retour</Btn>
-          <Btn variant="primary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }}>
-            {photoPreview ? "Créer mon compte 🎉" : "Passer cette étape →"}
-          </Btn>
+          <Btn variant="primary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }} disabled={!photoPreview}>Créer mon compte 🎉</Btn>
         </div>
-        {!photoPreview && <p style={{ textAlign: "center", fontSize: "0.78rem", color: "#bbb", marginTop: 12 }}>La photo est optionnelle mais recommandée</p>}
       </>}
 
       <p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>
