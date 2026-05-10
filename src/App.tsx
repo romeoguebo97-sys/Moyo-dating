@@ -1515,7 +1515,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
 
       {/* ── ZONE BLANCHE : photo + nom + boutons ── */}
-      <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 32 }}>
+      <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 8 }}>
 
         {/* Photo ronde */}
         <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
