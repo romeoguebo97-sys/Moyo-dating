@@ -932,15 +932,23 @@ function About({ onBack }: { onBack: () => void }) {
           {[
             {
               q: "Moyo est-il gratuit ?",
-              a: "Oui, l'inscription et la découverte de profils sont entièrement gratuites. En compte gratuit, vous avez droit à 5 likes par jour et 3 messages par match. Un abonnement Premium à 3 500 FCFA/mois débloque les likes illimités, les messages illimités et la possibilité de voir qui vous a liké."
+              a: "Oui, l'inscription et la découverte de profils sont entièrement gratuites. En compte gratuit, vous avez droit à 5 likes par jour et 3 messages par match. Un abonnement Premium à 3 500 FCFA/mois débloque les likes illimités, les messages illimités, l'envoi de photos, les confirmations de lecture et la possibilité de voir qui vous a liké."
             },
             {
               q: "Comment fonctionne le système de match ?",
-              a: "Lorsque deux personnes se likent mutuellement, un match est créé automatiquement. Vous pouvez alors commencer à échanger des messages. En compte gratuit, vous avez droit à 3 messages par match."
+              a: "Lorsque deux personnes se likent mutuellement, un match est créé automatiquement. Vous pouvez alors commencer à échanger des messages. En compte gratuit, vous avez droit à 3 messages par match. Moyo est réservé aux rencontres hétérosexuelles uniquement."
+            },
+            {
+              q: "Comment annuler un match ?",
+              a: "Dans l'onglet Matchs, appuyez sur les 3 traits à droite d'un match puis choisissez Annuler le match. L'annulation est silencieuse — l'autre personne ne reçoit aucune notification. Le match, la conversation et les messages sont supprimés définitivement."
+            },
+            {
+              q: "Comment offrir le Premium à quelqu'un ?",
+              a: "Dans une conversation, appuyez sur le bouton 🎁 dans le header. Un modal s'ouvre avec les détails. Vous serez redirigé vers notre service client WhatsApp pour finaliser le paiement via MTN MoMo ou Airtel MoMo."
             },
             {
               q: "Comment passer à Premium ?",
-              a: "Le Premium est disponible à 3 500 FCFA/mois. Avantages : messages illimités, likes illimités, envoi de photos dans les conversations, confirmations de lecture, voir qui vous a liké. Paiement uniquement via MTN MoMo ou Airtel MoMo. Contactez notre service client via WhatsApp ou Facebook. Activation sous 24h maximum."
+              a: "Le Premium est disponible à 3 500 FCFA/mois. Avantages : messages illimités, likes illimités, envoi de photos dans les conversations, confirmations de lecture ✓✓, voir qui vous a liké. Paiement uniquement via MTN MoMo ou Airtel MoMo. Contactez notre service client via WhatsApp ou Facebook. Activation sous 24h maximum."
             },
             {
               q: "Comment bloquer un utilisateur ?",
@@ -1353,22 +1361,26 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               color: G.rouge,
               items: [
                 "L'onglet Découvrir affiche les profils en mode carte ou en liste. En vue carte, utilisez les flèches pour naviguer et le cœur pour liker. En vue liste, le cœur est directement visible sur chaque profil.",
-                "Compte gratuit : 5 likes par jour. Premium : likes illimités. Utilisez les filtres pour affiner par genre, ville, âge ou religion.",
+                "Compte gratuit : 5 likes par jour. Premium : likes illimités. Utilisez les filtres pour affiner par genre, ville, tranche d'âge (18-99) ou religion.",
+                "Moyo est réservé aux rencontres hétérosexuelles. Un homme ne peut pas liker un homme, et une femme ne peut pas liker une femme.",
               ]
             },
             {
               title: "Matchs",
               color: G.rouge,
               items: [
-                "Un match se crée automatiquement quand deux personnes se likent mutuellement. Une fois le match créé, vous pouvez vous envoyer des messages. Le badge sur l'onglet Matchs indique le nombre de personnes qui ont liké votre profil. Avec Premium, vous pouvez voir exactement qui vous a liké.",
+                "Un match se crée automatiquement quand deux personnes se likent mutuellement. Une fois le match créé, vous pouvez vous envoyer des messages.",
+                "Sur chaque match, appuyez sur les 3 traits pour voir le profil ou annuler le match. L'annulation est silencieuse — l'autre personne n'est pas notifiée. Le match, la conversation et les messages sont supprimés.",
+                "Avec Premium, vous pouvez voir exactement qui vous a liké.",
               ]
             },
             {
               title: "Messages",
               color: G.rouge,
               items: [
-                "Compte gratuit : 3 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique un nouveau message non lu. Pour supprimer une conversation, ouvrez-la puis appuyez sur l'icône corbeille en haut à droite.",
-                "Premium : envoi de photos directement dans la conversation via l'icône caméra. Les confirmations de lecture (✓✓ Lu) sont également disponibles pour les membres Premium.",
+                "Compte gratuit : 3 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique un nouveau message non lu.",
+                "Premium : envoi de photos via l'icône caméra. Cliquez sur une photo reçue pour l'agrandir. Les confirmations de lecture ✓✓ sont disponibles pour les membres Premium.",
+                "Vous pouvez offrir le Premium à votre partenaire via le bouton 🎁 dans le header de la conversation. Pour supprimer une conversation, appuyez sur l'icône corbeille.",
               ]
             },
             {
@@ -1385,22 +1397,24 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               title: "Bloquer et Signaler",
               color: G.rouge,
               items: [
-                "Sur chaque profil, appuyez sur les 3 traits pour accéder aux options. Bloquer fait disparaître définitivement le profil de vos résultats. Signaler envoie un rapport à notre équipe qui examine le cas sous 24h. Les profils bloqués sont gérables depuis votre Liste noire.",
+                "Sur chaque profil dans Découvrir, appuyez sur les 3 traits pour accéder aux options. Bloquer fait disparaître définitivement le profil de vos résultats. Signaler envoie un rapport à notre équipe qui examine le cas sous 24h.",
+                "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.",
               ]
             },
             {
               title: "Premium — 3 500 FCFA / mois",
               color: G.or,
               items: [
-                "Avantages : messages illimités, likes illimités, voir qui vous a liké, profil mis en avant.",
+                "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké, profil mis en avant.",
                 "Paiement uniquement via MTN MoMo ou Airtel MoMo. Contactez notre service client via WhatsApp ou Facebook pour payer. L'activation est effectuée sous 24h maximum.",
+                "Vous pouvez offrir le Premium à quelqu'un via le bouton 🎁 dans une conversation.",
               ]
             },
             {
               title: "Sécurité et confidentialité",
               color: G.rouge,
               items: [
-                "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible. Moyo est réservé aux personnes majeures de 18 ans et plus.",
+                "Moyo est réservé aux personnes majeures de 18 ans et plus. Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible.",
               ]
             },
           ].map((s, i) => (
@@ -1601,9 +1615,12 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     <option value="Femme">Femme</option>
   </select>
   <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-    <input type="number" value={filters.ageMin} onChange={e => { const v = e.target.value; if (!v || (parseInt(v) >= 18 && parseInt(v) <= 99)) setFilters(prev => ({ ...prev, ageMin: v })); }} placeholder="Âge min (18)" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${filters.ageMin && parseInt(filters.ageMin) < 18 ? "#e74c3c" : G.gris}`, fontSize: "0.9rem" }} />
-    <input type="number" value={filters.ageMax} onChange={e => { const v = e.target.value; if (!v || (parseInt(v) >= 18 && parseInt(v) <= 99)) setFilters(prev => ({ ...prev, ageMax: v })); }} placeholder="Âge max (99)" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${filters.ageMax && parseInt(filters.ageMax) > 99 ? "#e74c3c" : G.gris}`, fontSize: "0.9rem" }} />
+    <input type="number" value={filters.ageMin} onChange={e => setFilters(prev => ({ ...prev, ageMin: e.target.value }))} placeholder="Âge min (18)" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${filters.ageMin && parseInt(filters.ageMin) < 18 ? "#e74c3c" : G.gris}`, fontSize: "0.9rem" }} />
+    <input type="number" value={filters.ageMax} onChange={e => setFilters(prev => ({ ...prev, ageMax: e.target.value }))} placeholder="Âge max (99)" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${filters.ageMax && parseInt(filters.ageMax) > 99 ? "#e74c3c" : G.gris}`, fontSize: "0.9rem" }} />
   </div>
+  {filters.ageMin && parseInt(filters.ageMin) < 18 && <p style={{ fontSize: "0.75rem", color: "#e74c3c", marginBottom: 6, marginTop: -4 }}>Âge minimum : 18 ans</p>}
+  {filters.ageMax && parseInt(filters.ageMax) > 99 && <p style={{ fontSize: "0.75rem", color: "#e74c3c", marginBottom: 6, marginTop: -4 }}>Âge maximum : 99 ans</p>}
+  {filters.ageMin && filters.ageMax && parseInt(filters.ageMin) > parseInt(filters.ageMax) && <p style={{ fontSize: "0.75rem", color: "#e74c3c", marginBottom: 6, marginTop: -4 }}>L'âge min doit être inférieur à l'âge max</p>}
   <select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
     <option value="">Toutes les religions</option>
     {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
@@ -1760,16 +1777,129 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
+  const [menuMatchId, setMenuMatchId] = useState<string | null>(null);
+  const [confirmUnmatch, setConfirmUnmatch] = useState<Match | null>(null);
+
   useEffect(() => { loadMatches(); }, []);
-  const loadMatches = async () => { setLoading(true); const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&order=created_at.desc`); const enriched = await Promise.all(res.map(async m => { const pid = m.user1 === auth.userId ? m.user2 : m.user1; const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${pid}`); return { ...m, partner: profiles[0] }; })); const valid = enriched.filter(m => m.partner); setMatches(valid); onNotifCount(valid.length); setLoading(false); };
+
+  const loadMatches = async () => {
+    setLoading(true);
+    const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&order=created_at.desc`);
+    const enriched = await Promise.all(res.map(async m => {
+      const pid = m.user1 === auth.userId ? m.user2 : m.user1;
+      const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${pid}`);
+      return { ...m, partner: profiles[0] };
+    }));
+    const seen = new Set<string>();
+    const valid = enriched.filter(m => {
+      if (!m.partner) return false;
+      if (seen.has(m.partner.id)) return false;
+      seen.add(m.partner.id);
+      return true;
+    });
+    setMatches(valid);
+    onNotifCount(valid.length);
+    setLoading(false);
+  };
+
+  const handleUnmatch = async (m: Match) => {
+    // Supprimer match, likes mutuels et messages — silencieux
+    await Promise.all([
+      sb.delete(auth.token, "matches", `?id=eq.${m.id}`),
+      sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${m.partner?.id}`),
+      sb.delete(auth.token, "likes", `?from_user=eq.${m.partner?.id}&to_user=eq.${auth.userId}`),
+      sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`),
+    ]);
+    setMatches(prev => prev.filter(x => x.id !== m.id));
+    setConfirmUnmatch(null);
+    setMenuMatchId(null);
+  };
+
   const p = selectedMatch?.partner;
   return <div style={{ padding: "16px" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-      <h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Matchs</h2>
+      <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>Matchs</h2>
       <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div>
     </div>
     <LikesReceivedBanner auth={auth} onShowPremium={onShowPremium} />
-    {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>💘</div><p>Continue à liker des profils pour avoir des matchs !</p></div> : viewMode === "list" ? <div>{matches.map(m => <div key={m.id} onClick={() => setSelectedMatch(m)} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", cursor: "pointer" }}><div style={{ width: 58, height: 58, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>{m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{m.partner?.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{m.partner?.name}, {m.partner?.age} ans</div><div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {m.partner?.city}{m.partner?.religion && <span style={{ marginLeft: 6 }}>· 🙏 {m.partner.religion}</span>}</div><div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600, marginTop: 2 }}>💞 Match !</div></div><div style={{ fontSize: "0.72rem", color: G.rouge, fontWeight: 600 }}>Voir →</div></div>)}</div> : <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>{matches.map(m => <div key={m.id} onClick={() => setSelectedMatch(m)} className="card-hover" style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 3px 16px rgba(44,26,14,0.08)", cursor: "pointer" }}><div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden" }}>{m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "3rem" }}>{m.partner?.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "10px" }}><div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{m.partner?.name}, {m.partner?.age} ans</div><div style={{ fontSize: "0.72rem", color: G.brunLight }}>📍 {m.partner?.city}</div><div style={{ fontSize: "0.68rem", color: "#27ae60", fontWeight: 600, marginTop: 3 }}>💞 Match !</div></div></div>)}</div>}
+
+    {/* Overlay fermeture menu */}
+    {menuMatchId && <div style={{ position: "fixed", inset: 0, zIndex: 49 }} onClick={() => setMenuMatchId(null)} />}
+
+    {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div>
+    : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>💘</div><p>Continue à liker des profils pour avoir des matchs !</p></div>
+    : viewMode === "list" ? (
+      <div>
+        {matches.map(m => (
+          <div key={m.id} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
+            <div onClick={() => setSelectedMatch(m)} style={{ width: 58, height: 58, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", cursor: "pointer" }}>
+              {m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{m.partner?.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}
+            </div>
+            <div onClick={() => setSelectedMatch(m)} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{m.partner?.name}, {m.partner?.age} ans</div>
+              <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {m.partner?.city}{m.partner?.religion && <span style={{ marginLeft: 6 }}>· 🙏 {m.partner.religion}</span>}</div>
+              <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600, marginTop: 2 }}>💞 Match !</div>
+            </div>
+            {/* 3 traits */}
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <div onClick={() => setMenuMatchId(menuMatchId === m.id ? null : m.id)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", padding: 4 }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2, borderRadius: 2, background: "#555" }} />)}
+              </div>
+              {menuMatchId === m.id && (
+                <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>👁️ Voir le profil</div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>💔 Annuler le match</div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
+        {matches.map(m => (
+          <div key={m.id} className="card-hover" style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 3px 16px rgba(44,26,14,0.08)", position: "relative" }}>
+            <div onClick={() => setSelectedMatch(m)} style={{ cursor: "pointer" }}>
+              <div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden" }}>
+                {m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "3rem" }}>{m.partner?.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}
+              </div>
+              <div style={{ padding: "10px 10px 6px" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{m.partner?.name}, {m.partner?.age} ans</div>
+                <div style={{ fontSize: "0.72rem", color: G.brunLight }}>📍 {m.partner?.city}</div>
+                <div style={{ fontSize: "0.68rem", color: "#27ae60", fontWeight: 600, marginTop: 3 }}>💞 Match !</div>
+              </div>
+            </div>
+            {/* 3 traits en bas */}
+            <div style={{ position: "relative", padding: "4px 10px 10px", display: "flex", justifyContent: "flex-end" }}>
+              <div onClick={() => setMenuMatchId(menuMatchId === m.id ? null : m.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", padding: 4 }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 16, height: 2, borderRadius: 2, background: "#aaa" }} />)}
+              </div>
+              {menuMatchId === m.id && (
+                <div style={{ position: "absolute", right: 10, bottom: 36, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>👁️ Voir le profil</div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>💔 Annuler le match</div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {/* Modal confirmation annulation */}
+    {confirmUnmatch && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+          <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>💔</div>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Annuler le match avec {confirmUnmatch.partner?.name} ?</h3>
+          <p style={{ fontSize: "0.85rem", color: "#666", marginBottom: 24, lineHeight: 1.6 }}>La conversation et les messages seront supprimés. L'autre personne ne sera pas notifiée.</p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setConfirmUnmatch(null)} style={{ flex: 1 }}>Annuler</Btn>
+            <Btn variant="danger" onClick={() => handleUnmatch(confirmUnmatch)} style={{ flex: 1 }}>Confirmer</Btn>
+          </div>
+        </div>
+      </div>
+    )}
     {selectedMatch && p && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedMatch(null)}>
       <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
@@ -1853,8 +1983,15 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
       return { ...m, partner: profiles[0], lastMsg: lastMsgs[0], unreadCount: unread.length };
     }));
     const filtered = enriched.filter(c => c.partner);
-    setConvs(filtered);
-    onUnreadCount(filtered.reduce((s, c) => s + (c.unreadCount || 0), 0));
+    // Dédupliquer par partner id
+    const seenPartners = new Set<string>();
+    const deduped = filtered.filter(c => {
+      if (seenPartners.has(c.partner!.id)) return false;
+      seenPartners.add(c.partner!.id);
+      return true;
+    });
+    setConvs(deduped);
+    onUnreadCount(deduped.reduce((s, c) => s + (c.unreadCount || 0), 0));
     setLoading(false);
   };
 
