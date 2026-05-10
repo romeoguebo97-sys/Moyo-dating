@@ -971,6 +971,14 @@ function About({ onBack }: { onBack: () => void }) {
               a: "La vérification est gratuite et optionnelle. Elle permet d'afficher un badge bleu ✅ sur votre profil pour inspirer confiance. Depuis votre Profil, appuyez sur Faire vérifier mon compte. Vous serez redirigé vers WhatsApp pour envoyer une photo de votre pièce d'identité. Notre équipe vérifie sous 24h."
             },
             {
+              q: "Comment savoir si quelqu'un est en ligne ?",
+              a: "Un point vert 🟢 apparaît à côté du nom dans la liste des conversations quand la personne est active. Dans une conversation ouverte, vous voyez En ligne (moins de 2 minutes), Vu il y a X min, ou Vu il y a Xh selon la dernière activité."
+            },
+            {
+              q: "Que signifient les coches sur les messages ?",
+              a: "✓ une coche grise = message envoyé. Avec Premium : ✓✓ deux coches grises = message reçu par l'autre personne, ✓✓ deux coches bleues = message lu. L'heure d'envoi est affichée sur chaque message."
+            },
+            {
               q: "Comment supprimer mon compte ?",
               a: "Vous pouvez supprimer votre compte à tout moment depuis votre profil. Toutes vos données sont effacées définitivement. Cette action est irréversible."
             },
@@ -1380,8 +1388,9 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               color: G.rouge,
               items: [
                 "Compte gratuit : 3 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique le total de messages non lus. Dans la liste des conversations, chaque conversation affiche son propre badge avec le nombre de messages non lus — le badge disparaît dès que vous ouvrez la conversation.",
-                "Premium : envoi de photos via l'icône caméra. Cliquez sur une photo reçue pour l'agrandir. Les confirmations de lecture ✓✓ sont disponibles pour les membres Premium.",
-                "Vous pouvez offrir le Premium à votre partenaire via le bouton 🎁 dans le header de la conversation. Pour supprimer une conversation, appuyez sur l'icône corbeille.",
+                "Chaque message affiche l'heure d'envoi. Une coche ✓ indique que le message est envoyé. Avec Premium, deux coches ✓✓ grises = reçu, deux coches ✓✓ bleues = lu.",
+                "Un point vert 🟢 à côté du nom indique que la personne est en ligne. Dans la conversation, vous voyez En ligne, Vu il y a X min, ou Vu il y a Xh.",
+                "Premium : envoi de photos via l'icône caméra. Cliquez sur une photo reçue pour l'agrandir. Vous pouvez offrir le Premium à votre partenaire via le bouton 🎁. Pour supprimer une conversation, appuyez sur l'icône corbeille.",
               ]
             },
             {
