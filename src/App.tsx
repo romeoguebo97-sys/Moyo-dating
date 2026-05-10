@@ -33,7 +33,7 @@ const G = {
 };
 
 type Auth = { token: string; userId: string; name: string; email: string; isPremium: boolean; isAdmin: boolean };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; created_at?: string };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
@@ -208,6 +208,9 @@ const GLOBAL_CSS = `
   .icon-btn{transition:transform 0.15s ease,opacity 0.15s ease!important}
   .icon-btn:hover{transform:scale(1.08)!important;opacity:0.9!important}
   .icon-btn:active{transform:scale(0.93)!important}
+  .nav-tab{transition:all 0.2s ease!important}
+  .nav-tab-active{background:rgba(192,57,43,0.12)!important;border-radius:14px!important}
+  .verified-badge{display:inline-flex;align-items:center;justify-content:center;background:#1d9bf0;border-radius:50%;width:18px;height:18px;flex-shrink:0}
   @media(min-width:768px){
     .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
     .landing-hero-text{text-align:left!important}
@@ -291,6 +294,16 @@ function ErrorModal({ msg, onClose }: { msg: string; onClose: () => void }) {
         <p style={{ fontSize: "0.88rem", color: G.brun, lineHeight: 1.6, marginBottom: 22, fontWeight: 500 }}>{msg}</p>
         <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>OK</Btn>
       </div>
+    </div>
+  );
+}
+
+function VerifiedBadge({ size = 16 }: { size?: number }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#1d9bf0", borderRadius: "50%", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
     </div>
   );
 }
@@ -946,6 +959,10 @@ function About({ onBack }: { onBack: () => void }) {
               a: "Oui ! Moyo est conçu pour connecter les Congolais du pays et de toute la diaspora. Vous pouvez filtrer les profils par ville ou par zone diaspora."
             },
             {
+              q: "Comment obtenir le badge de vérification ?",
+              a: "La vérification est gratuite et optionnelle. Elle permet d'afficher un badge bleu ✅ sur votre profil pour inspirer confiance. Depuis votre Profil, appuyez sur Faire vérifier mon compte. Vous serez redirigé vers WhatsApp pour envoyer une photo de votre pièce d'identité. Notre équipe vérifie sous 24h."
+            },
+            {
               q: "Comment supprimer mon compte ?",
               a: "Vous pouvez supprimer votre compte à tout moment depuis votre profil. Toutes vos données sont effacées définitivement. Cette action est irréversible."
             },
@@ -1359,7 +1376,9 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               color: G.rouge,
               items: [
                 "Modifiez votre photo, prénom, âge, ville, religion et bio en appuyant sur l'engrenage. Le bouton visible/invisible vous permet d'apparaître ou non dans Découvrir sans supprimer votre compte.",
+                "Utilisez Voir mon profil pour voir exactement comment les autres vous voient, en mode carte et en mode liste.",
                 "La Liste noire vous permet de gérer les utilisateurs bloqués et de les débloquer à tout moment.",
+                "Demandez la vérification de votre compte pour obtenir le badge bleu ✅. Appuyez sur Faire vérifier mon compte et suivez les instructions via WhatsApp. La vérification est gratuite.",
               ]
             },
             {
@@ -1415,7 +1434,7 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport }: { prof: Pro
         {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{prof.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{prof.name}, {prof.age} ans {prof.is_premium && "⭐"}</div>
+        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && "⭐"} {prof.is_verified && <VerifiedBadge size={15} />}</div>
         <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {prof.city}{prof.religion && <span style={{ marginLeft: 6, fontSize: "0.72rem" }}>· 🙏 {prof.religion}</span>}</div>
         {prof.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}
       </div>
@@ -1468,6 +1487,10 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const [current, setCurrent] = useState(0);
   const [matchPop, setMatchPop] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 15;
   const [likesToday, setLikesToday] = useState(0);
   const [showReport, setShowReport] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
@@ -1478,10 +1501,11 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   useEffect(() => { loadProfiles(); }, []);
   useEffect(() => { if (profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
 
-  const loadProfiles = async () => {
-    setLoading(true);
+  const loadProfiles = async (pageNum = 0, append = false) => {
+    if (pageNum === 0) setLoading(true); else setLoadingMore(true);
     try {
-      let params = `?id=neq.${auth.userId}&is_visible=neq.false&order=is_premium.desc,created_at.desc&limit=50`;
+      const offset = pageNum * PAGE_SIZE;
+      let params = `?id=neq.${auth.userId}&is_visible=neq.false&order=is_premium.desc,created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
       if (filters.city && !filters.city.startsWith("──")) params += `&city=eq.${encodeURIComponent(filters.city)}`;
       if (filters.gender) params += `&gender=eq.${filters.gender}`;
       if (filters.ageMin) params += `&age=gte.${filters.ageMin}`;
@@ -1489,24 +1513,37 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       if (filters.religion) params += `&religion=eq.${encodeURIComponent(filters.religion)}`;
       const [all, liked, blocked] = await Promise.all([
         sb.query<Profile>(auth.token, "profiles", params),
-        sb.query<{ to_user: string }>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user`),
-        sb.query<{ blocked_id: string }>(auth.token, "blocks", `?blocker_id=eq.${auth.userId}&select=blocked_id`),
+        pageNum === 0 ? sb.query<{ to_user: string }>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user`) : Promise.resolve([] as { to_user: string }[]),
+        pageNum === 0 ? sb.query<{ blocked_id: string }>(auth.token, "blocks", `?blocker_id=eq.${auth.userId}&select=blocked_id`) : Promise.resolve([] as { blocked_id: string }[]),
       ]);
-      setLikedIds(new Set(liked.map(l => l.to_user)));
-      const bIds = new Set(blocked.map(b => b.blocked_id));
-      setBlockedIds(bIds);
-      const seen = new Set<string>();
+      if (pageNum === 0) {
+        setLikedIds(new Set(liked.map(l => l.to_user)));
+        const bIds = new Set(blocked.map(b => b.blocked_id));
+        setBlockedIds(bIds);
+      }
+      const bIds = pageNum === 0 ? new Set(blocked.map(b => b.blocked_id)) : blockedIds;
+      const seen = new Set<string>(append ? profiles.map(p => p.id) : []);
       const unique = (Array.isArray(all) ? all : []).filter(p => {
         if (seen.has(p.id) || bIds.has(p.id)) return false;
         seen.add(p.id); return true;
       });
-      setProfiles(unique);
-      const today = new Date().toISOString().split("T")[0];
-      const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`);
-      setLikesToday(Array.isArray(tl) ? tl.length : 0);
-      setCurrent(0);
-    } catch { setProfiles([]); }
-    setLoading(false);
+      setHasMore(all.length === PAGE_SIZE);
+      if (append) setProfiles(prev => [...prev, ...unique]);
+      else { setProfiles(unique); setCurrent(0); }
+      if (pageNum === 0) {
+        const today = new Date().toISOString().split("T")[0];
+        const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`);
+        setLikesToday(Array.isArray(tl) ? tl.length : 0);
+      }
+    } catch { if (!append) setProfiles([]); }
+    if (pageNum === 0) setLoading(false); else setLoadingMore(false);
+  };
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    await loadProfiles(nextPage, true);
   };
 
   const handleBlock = async () => {
@@ -1542,9 +1579,12 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const p = profiles[current];
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: G.brunLight }}>⏳ Chargement...</div>;
 
-  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les religions</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>{profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} />)}</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "14px 16px" }}>
+  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les religions</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>
+  {profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} />)}
+  {hasMore && <div onClick={loadMore} style={{ textAlign: "center", padding: "14px", background: G.blanc, borderRadius: 14, marginTop: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", color: G.rouge, border: `1px solid ${G.gris}` }}>{loadingMore ? "⏳ Chargement..." : "Voir plus de profils"}</div>}
+</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "14px 16px" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: G.brun }}>{p.name}, {p.age} ans {p.is_premium && "⭐"}</div>
+    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: G.brun }}>{p.name}, {p.age} ans {p.is_premium && "⭐"} {p.is_verified && <VerifiedBadge size={18} />}</div>
     {/* 3 traits menu */}
     <div style={{ position: "relative" }}>
       <div onClick={() => setShowReport(v => !v)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", padding: 4 }}>
@@ -2221,6 +2261,27 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
           <div style={{ marginLeft: "auto", color: "#ffb3b3", fontSize: "1rem", fontWeight: 400 }}>›</div>
         </div>
 
+        {/* Demande de vérification */}
+        {!profile?.is_verified ? (
+          <a href="https://wa.me/33753356471?text=Bonjour%2C%20je%20souhaite%20faire%20vérifier%20mon%20compte%20Moyo.%20Mon%20email%20%3A%20" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+            <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
+              <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(29,155,240,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <VerifiedBadge size={22} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Faire vérifier mon compte</div>
+                <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Obtenir le badge ✅ de confiance</div>
+              </div>
+              <div style={{ color: "#ccc", fontSize: "1rem" }}>›</div>
+            </div>
+          </a>
+        ) : (
+          <div style={{ background: "rgba(29,155,240,0.06)", borderRadius: 16, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, border: `1px solid rgba(29,155,240,0.2)` }}>
+            <VerifiedBadge size={22} />
+            <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1d9bf0" }}>Compte vérifié ✅</div>
+          </div>
+        )}
+
         {/* Email de connexion — grisé, non modifiable */}
         <div style={{ marginTop: 4, background: G.blanc, borderRadius: 16, padding: "14px 18px", border: `1px solid #E8E8E8`, display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>✉️</div>
@@ -2314,6 +2375,31 @@ export default function App() {
   const [notifCount, setNotifCount] = useState(0);
   const [likesReceived, setLikesReceived] = useState(0);
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstall, setShowInstall] = useState(false);
+
+  // PWA — écouter l'événement d'installation
+  useEffect(() => {
+    const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e); setShowInstall(true); };
+    window.addEventListener("beforeinstallprompt", handler);
+
+    // iOS — détecter Safari iPhone/iPad et afficher le message manuel
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isInStandaloneMode = (window.navigator as any).standalone;
+    if (isIos && !isInStandaloneMode) {
+      setTimeout(() => setShowInstall(true), 3000);
+    }
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") setShowInstall(false);
+    setDeferredPrompt(null);
+  };
   // Restaurer session au chargement
   useEffect(() => {
     // Vérifier si c'est un lien de reset password ou confirmation email
@@ -2401,11 +2487,42 @@ export default function App() {
     };
   }, [auth?.userId]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
-  if (page === "landing") return <Landing onNav={setPage} />;
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  const InstallBanner = showInstall ? (
+    <div style={{ position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 32px)", maxWidth: 468, background: G.brun, borderRadius: 16, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, zIndex: 999, boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>
+      <div style={{ fontSize: "1.5rem" }}>📱</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.blanc }}>Installer l'app Moyo</div>
+        {isIos ? (
+          <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.65)", marginTop: 2 }}>
+            Appuie sur <strong style={{ color: G.or }}>Partager</strong> puis <strong style={{ color: G.or }}>Sur l'écran d'accueil</strong>
+          </div>
+        ) : (
+          <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.65)", marginTop: 2 }}>Accès rapide depuis ton écran d'accueil</div>
+        )}
+      </div>
+      {!isIos && <div onClick={handleInstall} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "7px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Installer</div>}
+      <div onClick={() => setShowInstall(false)} style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: "1rem", flexShrink: 0 }}>✕</div>
+    </div>
+  ) : null;
+
+  if (page === "landing") return <>{<Landing onNav={setPage} />}{InstallBanner}</>;
   if (page === "about") return <About onBack={() => setPage("landing")} />;
   if (page === "signup") return <SignUp onNav={setPage} />;
   if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
   if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
-  return <><AppShell tab={tab} setTab={setTab} unreadCount={unreadCount} notifCount={likesReceived} auth={auth}>{tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}{tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={() => setTab("messages")} />}{tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}{tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} />}{tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}</AppShell>{premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}</>;
+  return <>
+    <AppShell tab={tab} setTab={setTab} unreadCount={unreadCount} notifCount={likesReceived} auth={auth}>
+      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
+      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={() => setTab("messages")} />}
+      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}
+      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} />}
+      {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}
+    </AppShell>
+    {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}
+    {InstallBanner}
+  </>;
 }
