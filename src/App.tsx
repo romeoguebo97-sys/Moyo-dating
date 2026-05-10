@@ -138,6 +138,24 @@ const sb = {
       body: JSON.stringify({ visitor_id: visitorId, visited_id: visitedId }),
     });
   },
+  subscribeRealtime(token: string, table: string, filter: string, callback: () => void): WebSocket | null {
+    try {
+      const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
+      const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
+        ws.send(JSON.stringify({ topic: `realtime:public:${table}:${filter}`, event: "phx_join", payload: { access_token: token }, ref: "2" }));
+      };
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") callback();
+        } catch {}
+      };
+      ws.onerror = () => {};
+      return ws;
+    } catch { return null; }
+  },
 };
 
 const GLOBAL_CSS = `
@@ -909,7 +927,7 @@ function About({ onBack }: { onBack: () => void }) {
             },
             {
               q: "Comment passer à Premium ?",
-              a: "Le Premium est disponible à 3 500 FCFA/mois. Le paiement se fait uniquement via MTN MoMo ou Airtel MoMo. Contactez notre service client via WhatsApp ou Facebook pour procéder au paiement. L'activation est effectuée sous 24h maximum."
+              a: "Le Premium est disponible à 3 500 FCFA/mois. Avantages : messages illimités, likes illimités, envoi de photos dans les conversations, confirmations de lecture, voir qui vous a liké. Paiement uniquement via MTN MoMo ou Airtel MoMo. Contactez notre service client via WhatsApp ou Facebook. Activation sous 24h maximum."
             },
             {
               q: "Comment bloquer un utilisateur ?",
@@ -1333,6 +1351,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               color: G.rouge,
               items: [
                 "Compte gratuit : 5 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique un nouveau message non lu. Pour supprimer une conversation, ouvrez-la puis appuyez sur l'icône corbeille en haut à droite.",
+                "Premium : envoi de photos directement dans la conversation via l'icône caméra. Les confirmations de lecture (✓✓ Lu) sont également disponibles pour les membres Premium.",
               ]
             },
             {
@@ -1685,17 +1704,100 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
 }
 
 function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void }) {
-  const [convs, setConvs] = useState<Match[]>([]); const [open, setOpen] = useState<Match | null>(null); const [msgs, setMsgs] = useState<Message[]>([]); const [text, setText] = useState(""); const [loading, setLoading] = useState(true); const [msgCount, setMsgCount] = useState(0); const [showDeleteConv, setShowDeleteConv] = useState(false); const bottomRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { loadConvs(); }, []); useEffect(() => { if (open) loadMsgs(open); }, [open]); useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
-  const loadConvs = async () => { setLoading(true); const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})`); if (!res.length) { setConvs([]); onUnreadCount(0); setLoading(false); return; } const enriched = await Promise.all(res.map(async m => { const pid = m.user1 === auth.userId ? m.user2 : m.user1; const [profiles, lastMsgs, unread] = await Promise.all([sb.query<Profile>(auth.token, "profiles", `?id=eq.${pid}`), sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&order=created_at.desc&limit=1`), sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&sender_id=neq.${auth.userId}&is_read=eq.false`)]); return { ...m, partner: profiles[0], lastMsg: lastMsgs[0], unreadCount: unread.length }; })); const filtered = enriched.filter(c => c.partner); setConvs(filtered); onUnreadCount(filtered.reduce((s, c) => s + (c.unreadCount || 0), 0)); setLoading(false); };
-  const loadMsgs = async (conv: Match) => { const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`); setMsgs(res); setMsgCount(res.filter(m => m.sender_id === auth.userId).length); await sb.markMessagesRead(auth.token, conv.id, auth.userId); loadConvs(); };
-  const deleteConv = async () => { if (!open) return; await sb.delete(auth.token, "messages", `?match_id=eq.${open.id}`); setShowDeleteConv(false); setOpen(null); loadConvs(); };
-  const send = async () => { if (!text.trim() || !open) return; if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("💌 Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; } if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium ! 💛`); return; } const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: text, is_read: false }); if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); } };
+  const [convs, setConvs] = useState<Match[]>([]);
+  const [open, setOpen] = useState<Match | null>(null);
+  const [msgs, setMsgs] = useState<Message[]>([]);
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [msgCount, setMsgCount] = useState(0);
+  const [showDeleteConv, setShowDeleteConv] = useState(false);
+  const [imgLoading, setImgLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { loadConvs(); }, []);
+  useEffect(() => { if (open) loadMsgs(open); }, [open]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  // Realtime — écoute les nouveaux messages dans la conversation ouverte
+  useEffect(() => {
+    if (!open) return;
+    const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, () => {
+      loadMsgs(open);
+    });
+    return () => { try { ws?.close(); } catch {} };
+  }, [open?.id]);
+
+  const loadConvs = async () => {
+    setLoading(true);
+    const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})`);
+    if (!res.length) { setConvs([]); onUnreadCount(0); setLoading(false); return; }
+    const enriched = await Promise.all(res.map(async m => {
+      const pid = m.user1 === auth.userId ? m.user2 : m.user1;
+      const [profiles, lastMsgs, unread] = await Promise.all([
+        sb.query<Profile>(auth.token, "profiles", `?id=eq.${pid}`),
+        sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&order=created_at.desc&limit=1`),
+        sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&sender_id=neq.${auth.userId}&is_read=eq.false`),
+      ]);
+      return { ...m, partner: profiles[0], lastMsg: lastMsgs[0], unreadCount: unread.length };
+    }));
+    const filtered = enriched.filter(c => c.partner);
+    setConvs(filtered);
+    onUnreadCount(filtered.reduce((s, c) => s + (c.unreadCount || 0), 0));
+    setLoading(false);
+  };
+
+  const loadMsgs = async (conv: Match) => {
+    const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
+    setMsgs(res);
+    setMsgCount(res.filter(m => m.sender_id === auth.userId).length);
+    await sb.markMessagesRead(auth.token, conv.id, auth.userId);
+    loadConvs();
+  };
+
+  const deleteConv = async () => {
+    if (!open) return;
+    await sb.delete(auth.token, "messages", `?match_id=eq.${open.id}`);
+    setShowDeleteConv(false); setOpen(null); loadConvs();
+  };
+
+  const send = async () => {
+    if (!text.trim() || !open) return;
+    if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("💌 Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
+    if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium ! 💛`); return; }
+    const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: text, is_read: false });
+    if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); }
+  };
+
+  const sendImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !open) return;
+    if (!auth.isPremium) { onShowPremium("📸 L'envoi de photos est réservé aux membres Premium !"); return; }
+    if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as atteint ta limite de messages. Passe Premium ! 💛`); return; }
+    setImgLoading(true);
+    const url = await sb.uploadPhoto(auth.token, auth.userId + "_msg_" + Date.now(), file);
+    if (url) {
+      const content = `[img]${url}[/img]`;
+      const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
+      if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
+    }
+    setImgLoading(false);
+    e.target.value = "";
+  };
+
+  const isImage = (content: string) => content.startsWith("[img]") && content.endsWith("[/img]");
+  const getImageUrl = (content: string) => content.slice(5, -6);
+
   if (open) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: 100, maxWidth: 500, margin: "0 auto" }}>
       {/* Header fixe */}
-      <div style={{ padding: "12px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
-        <div onClick={() => { setOpen(null); loadConvs(); }} style={{ cursor: "pointer", fontSize: "1.1rem", color: G.brunLight, padding: "4px 8px" }}>←</div>
+      <div style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
+        {/* Bouton retour cercle rouge */}
+        <div onClick={() => { setOpen(null); loadConvs(); }} style={{ width: 38, height: 38, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 3px 10px rgba(192,57,43,0.35)", flexShrink: 0 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </div>
         <Avatar url={open.partner?.photo_url} gender={open.partner?.gender} size={38} premium={open.partner?.is_premium} />
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>{open.partner?.name}</div>
@@ -1704,22 +1806,91 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: G.brunLight, background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
         <div onClick={() => setShowDeleteConv(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, color: "#e74c3c", fontSize: "1rem", opacity: 0.7 }}>🗑️</div>
       </div>
-      {/* Zone messages scrollable */}
+
+      {/* Zone messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: 10 }}>
         {msgs.length === 0 && <div style={{ textAlign: "center", color: G.brunLight, padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour ! 👋</div>}
-        {msgs.map((m, i) => <div key={i} style={{ display: "flex", justifyContent: m.sender_id === auth.userId ? "flex-end" : "flex-start" }}><div style={{ background: m.sender_id === auth.userId ? G.rouge : G.blanc, color: m.sender_id === auth.userId ? G.blanc : G.brun, padding: "10px 14px", borderRadius: m.sender_id === auth.userId ? "18px 18px 4px 18px" : "18px 18px 18px 4px", maxWidth: "72%", fontSize: "0.88rem", lineHeight: 1.5 }}>{m.content}</div></div>)}
+        {msgs.map((m, i) => {
+          const isMine = m.sender_id === auth.userId;
+          const isImg = isImage(m.content);
+          const isLast = i === msgs.length - 1;
+          return (
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}>
+              {isImg ? (
+                <img src={getImageUrl(m.content)} alt="img" style={{ maxWidth: "65%", borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }} />
+              ) : (
+                <div style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", maxWidth: "72%", fontSize: "0.88rem", lineHeight: 1.5 }}>
+                  {m.content}
+                </div>
+              )}
+              {/* Lu / Non lu — Premium uniquement, seulement sur le dernier message envoyé */}
+              {isMine && isLast && auth.isPremium && (
+                <div style={{ fontSize: "0.65rem", color: m.is_read ? "#27ae60" : "#aaa", marginTop: 3, display: "flex", alignItems: "center", gap: 2 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={m.is_read ? "#27ae60" : "#aaa"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={m.is_read ? "#27ae60" : "#aaa"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: -6 }}>
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  {m.is_read ? "Lu" : "Envoyé"}
+                </div>
+              )}
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
-      {/* Barre envoi fixe */}
+
+      {/* Barre envoi */}
       <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
+        {/* Bouton image — Premium */}
+        <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
+        <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("📸 L'envoi de photos est réservé aux membres Premium !")}
+          style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          {imgLoading ? <span style={{ fontSize: "0.8rem" }}>⏳</span> : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          )}
+        </div>
         <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Écris un message..." style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "16px", outline: "none", background: G.creme }} />
-        <div onClick={send} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.95rem", color: G.blanc, flexShrink: 0, flexGrow: 0 }}>➤</div>
+        <div onClick={send} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0 }}>➤</div>
       </div>
+
       {/* Modal suppression */}
-      {showDeleteConv && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}><div style={{ fontSize: "2rem", marginBottom: 12 }}>🗑️</div><h3 style={{  fontSize: "1.1rem", fontWeight: 700, marginBottom: 8, color: G.brun }}>Supprimer la conversation ?</h3><p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 20, lineHeight: 1.5 }}>Tous les messages seront supprimés. Cette action est irréversible.</p><div style={{ display: "flex", gap: 10 }}><Btn variant="ghost" onClick={() => setShowDeleteConv(false)} style={{ flex: 1 }}>Annuler</Btn><Btn variant="danger" onClick={deleteConv} style={{ flex: 1 }}>Supprimer</Btn></div></div></div>}
+      {showDeleteConv && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+          <div style={{ fontSize: "2rem", marginBottom: 12 }}>🗑️</div>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 8, color: "#1a1a1a" }}>Supprimer la conversation ?</h3>
+          <p style={{ fontSize: "0.88rem", color: "#666", marginBottom: 20, lineHeight: 1.6 }}>Tous les messages seront supprimés. Cette action est irréversible.</p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowDeleteConv(false)} style={{ flex: 1 }}>Annuler</Btn>
+            <Btn variant="danger" onClick={deleteConv} style={{ flex: 1 }}>Supprimer</Btn>
+          </div>
+        </div>
+      </div>}
     </div>
   );
-  return <div style={{ padding: "16px" }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>{loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : convs.length === 0 ? <div style={{ textAlign: "center", padding: "50px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>💬</div><p style={{ fontSize: "0.85rem" }}>Fais des matchs pour commencer à discuter !</p></div> : convs.map(c => <div key={c.id} onClick={() => setOpen(c)} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px", background: G.blanc, borderRadius: 14, marginBottom: 8, cursor: "pointer" }}><Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, marginBottom: 3, fontSize: "0.92rem" }}>{c.partner?.name}</div><div style={{ fontSize: "0.82rem", color: G.brunLight, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.lastMsg?.content || "Dis bonjour ! 👋"}</div></div></div>)}</div>;
+
+  return <div style={{ padding: "16px" }}>
+    <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>
+    {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : convs.length === 0
+      ? <div style={{ textAlign: "center", padding: "50px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 12 }}>💬</div><p style={{ fontSize: "0.85rem" }}>Fais des matchs pour commencer à discuter !</p></div>
+      : convs.map(c => (
+        <div key={c.id} onClick={() => setOpen(c)} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px", background: G.blanc, borderRadius: 14, marginBottom: 8, cursor: "pointer" }}>
+          <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, marginBottom: 3, fontSize: "0.92rem" }}>{c.partner?.name}</div>
+            <div style={{ fontSize: "0.82rem", color: G.brunLight, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {c.lastMsg?.content?.startsWith("[img]") ? "📷 Photo" : c.lastMsg?.content || "Dis bonjour ! 👋"}
+            </div>
+          </div>
+          {(c.unreadCount || 0) > 0 && <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>{c.unreadCount}</div>}
+        </div>
+      ))
+    }
+  </div>;
 }
 
 function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void }) {
@@ -2180,7 +2351,7 @@ export default function App() {
   useEffect(() => {
     if (!auth) return;
 
-    // Rafraîchir le statut premium
+    // Rafraîchir le statut premium au chargement
     const refreshPremium = async () => {
       const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`);
       if (profiles[0] && profiles[0].is_premium !== auth.isPremium) {
@@ -2191,29 +2362,42 @@ export default function App() {
     };
     refreshPremium();
 
-    // Likes reçus
+    // Chargement initial des likes reçus
     const loadLikesReceived = async () => {
       const res = await sb.query<object>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
       setLikesReceived(Array.isArray(res) ? res.length : 0);
     };
     loadLikesReceived();
-    const likesInterval = setInterval(loadLikesReceived, 30000);
 
-    // Polling 5s pour les messages non lus
+    // Chargement initial des messages non lus
     const checkUnread = async () => {
       try {
-        const res = await sb.query<object>(auth.token, "messages",
-          `?sender_id=neq.${auth.userId}&is_read=eq.false&select=id`
-        );
+        const res = await sb.query<object>(auth.token, "messages", `?sender_id=neq.${auth.userId}&is_read=eq.false&select=id`);
         setUnreadCount(Array.isArray(res) ? res.length : 0);
       } catch {}
     };
     checkUnread();
-    const msgInterval = setInterval(checkUnread, 5000);
+
+    // ── REALTIME : écoute les nouveaux messages en temps réel ──
+    const wsMessages = sb.subscribeRealtime(auth.token, "messages", `match_id=neq.null`, () => {
+      checkUnread();
+    });
+
+    // ── REALTIME : écoute les nouveaux likes en temps réel ──
+    const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => {
+      loadLikesReceived();
+    });
+
+    // Fallback polling léger toutes les 30s (au cas où WebSocket échoue)
+    const fallbackInterval = setInterval(() => {
+      checkUnread();
+      loadLikesReceived();
+    }, 30000);
 
     return () => {
-      clearInterval(likesInterval);
-      clearInterval(msgInterval);
+      try { wsMessages?.close(); } catch {}
+      try { wsLikes?.close(); } catch {}
+      clearInterval(fallbackInterval);
     };
   }, [auth?.userId]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
