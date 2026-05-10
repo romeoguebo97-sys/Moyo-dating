@@ -1116,6 +1116,9 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const checkEmailAndContinue = async () => {
@@ -1123,100 +1126,93 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     setLoading(true);
     try {
       const emailClean = form.email.trim().toLowerCase();
-      // Vérifier si l'email existe déjà dans la table profiles
-      const existing = await sb.query<Profile>(
-        SUPABASE_KEY,
-        "profiles",
-        `?email=eq.${encodeURIComponent(emailClean)}&select=id`
-      );
-      if (existing.length > 0) {
-        setErrorMsg("Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt.");
-        setLoading(false);
-        return;
-      }
-      // Email libre → passer à l'étape 2
+      const existing = await sb.query<Profile>(SUPABASE_KEY, "profiles", `?email=eq.${encodeURIComponent(emailClean)}&select=id`);
+      if (existing.length > 0) { setErrorMsg("Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt."); setLoading(false); return; }
       setStep(2);
-    } catch {
-      setStep(2);
-    }
+    } catch { setStep(2); }
     setLoading(false);
   };
 
   const handleSubmit = async () => {
     setLoading(true);
-    // Vérification âge
     const ageNum = parseInt(form.age);
     if (!form.age || isNaN(ageNum) || ageNum < 18 || ageNum > 99) {
       setErrorMsg("Vous êtes mineur(e). Votre inscription a échoué. Moyo est réservé aux personnes majeures.");
-      setLoading(false);
-      return;
+      setLoading(false); return;
     }
     try {
       const emailClean = form.email.trim().toLowerCase();
-
-      // Vérifier si email déjà utilisé via identities
-      const metadata = {
-        name: form.name.trim(),
-        age: form.age,
-        city: form.city,
-        gender: form.gender,
-        bio: form.bio.trim(),
-        religion: form.religion,
-        photo_url: null,
-      };
-
+      const metadata = { name: form.name.trim(), age: form.age, city: form.city, gender: form.gender, bio: form.bio.trim(), religion: form.religion, photo_url: null };
       const authRes = await sb.signUp(emailClean, form.password, metadata);
-
       if (authRes?.error) {
         const code = authRes.error.message || "";
         let msg = "Impossible de créer le compte. Veuillez réessayer.";
-        if (code.includes("already registered") || code.includes("already been registered") || code.includes("User already registered")) {
-          msg = "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt à votre compte.";
-        } else if (code.includes("password") || code.includes("characters")) {
-          msg = "Le mot de passe doit contenir au moins 6 caractères.";
-        } else if (code.includes("invalid") || code.includes("email")) {
-          msg = "Adresse e-mail invalide.";
-        }
-        setErrorMsg(msg);
-        setLoading(false);
-        return;
+        if (code.includes("already registered") || code.includes("User already registered")) msg = "Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt à votre compte.";
+        else if (code.includes("password") || code.includes("characters")) msg = "Le mot de passe doit contenir au moins 6 caractères.";
+        else if (code.includes("invalid") || code.includes("email")) msg = "Adresse e-mail invalide.";
+        setErrorMsg(msg); setLoading(false); return;
       }
-
       if (authRes.user?.identities && authRes.user.identities.length === 0) {
         setErrorMsg("Cette adresse e-mail possède déjà un compte. Connectez-vous directement.");
-        setLoading(false);
-        return;
+        setLoading(false); return;
       }
-
+      // Upload photo si sélectionnée
+      if (photoFile && authRes.user?.id) {
+        try {
+          const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
+          const path = `${authRes.user.id}/avatar.${ext}`;
+          const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": photoFile.type || "image/jpeg", "x-upsert": "true" },
+            body: photoFile,
+          });
+          if (uploadRes.ok) {
+            const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
+            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${authRes.user.id}`, {
+              method: "PATCH",
+              headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+              body: JSON.stringify({ photo_url: photoUrl }),
+            });
+          }
+        } catch {}
+      }
       setLoading(false);
-      setSuccessMsg("Compte créé avec succès ! 🎉\nVeuillez maintenant vous connecter.");
+      setSuccessMsg("Compte créé avec succès ! 🎉");
       setTimeout(() => { onNav("login"); }, 3000);
-
     } catch (e) {
-      console.error("Signup error:", e);
       setErrorMsg("Erreur technique pendant la création du compte. Veuillez réessayer.");
       setLoading(false);
     }
   };
 
   return (
-    <AuthLayout onBack={() => onNav("landing")}>
+    <AuthLayout onBack={() => step === 1 ? onNav("landing") : setStep(s => s - 1)}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
-      {successMsg && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}><div style={{ fontSize: "3rem", marginBottom: 14 }}>🎉</div><h3 style={{  fontSize: "1.3rem", fontWeight: 700, color: G.brun, marginBottom: 10 }}>COMPTE CRÉÉ AVEC SUCCÈS !</h3><p style={{ fontSize: "0.92rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 20 }}>Veuillez maintenant vous connecter.</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge, animation: "fadeIn 1s infinite alternate" }} />Redirection en cours...</div></div></div>}
+      {successMsg && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ fontSize: "3rem", marginBottom: 14 }}>🎉</div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: G.brun, marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 20 }}>Veuillez maintenant vous connecter.</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
-        <h2 style={{  fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
-        <p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Étape {step}/2</p>
+        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
+        <p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Étape {step}/3</p>
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-        {[1, 2].map(s => <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? G.rouge : G.gris }} />)}
+
+      {/* Barre de progression */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
+        {[1, 2, 3].map(s => (
+          <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? G.rouge : G.gris, transition: "background 0.3s" }} />
+        ))}
       </div>
+
+      {/* ÉTAPE 1 — Email + mot de passe */}
       {step === 1 && <>
         <Input label="Email" type="email" value={form.email} onChange={e => upd("email", e.target.value)} placeholder="ton@email.com" icon="✉️" />
         <Input label="Mot de passe" type="password" value={form.password} onChange={e => upd("password", e.target.value)} placeholder="Minimum 6 caractères" icon="🔒" hint="Au moins 6 caractères" />
         <Btn variant="primary" onClick={checkEmailAndContinue} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn>
       </>}
+
+      {/* ÉTAPE 2 — Infos profil */}
       {step === 2 && <>
         <Input label="Prénom" value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="👤" />
         <div style={{ marginBottom: 18 }}>
@@ -1229,7 +1225,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             ))}
           </div>
         </div>
-        <Input label="Âge" type="number" value={form.age} onChange={e => { const v = e.target.value.slice(0,2); upd("age", v); }} placeholder="Ex: 25" icon="🎂" hint="Entre 18 et 99 ans" error={form.age && parseInt(form.age) < 18 ? "Vous devez avoir au moins 18 ans pour vous inscrire." : undefined} />
+        <Input label="Âge" type="number" value={form.age} onChange={e => { const v = e.target.value.slice(0,2); upd("age", v); }} placeholder="Ex: 25" icon="🎂" hint="Entre 18 et 99 ans" error={form.age && parseInt(form.age) < 18 ? "Vous devez avoir au moins 18 ans." : undefined} />
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: G.brunLight }}>Ville</label>
           <select value={form.city} onChange={e => upd("city", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }}>
@@ -1250,9 +1246,48 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Retour</Btn>
-          <Btn variant="primary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }} disabled={!form.name || !form.gender || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city}>Créer mon compte 🎉</Btn>
+          <Btn variant="primary" onClick={() => setStep(3)} style={{ flex: 2 }} disabled={!form.name || !form.gender || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city}>Suivant →</Btn>
         </div>
       </>}
+
+      {/* ÉTAPE 3 — Photo */}
+      {step === 3 && <>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <p style={{ fontSize: "0.9rem", color: G.brunLight, marginBottom: 20, lineHeight: 1.6 }}>
+            Ajoute une photo pour que les autres puissent te reconnaître 😊<br/>
+            <span style={{ fontSize: "0.78rem", color: "#bbb" }}>Tu pourras la modifier plus tard depuis ton profil</span>
+          </p>
+          <input ref={fileRef} type="file" accept="image/*" onChange={e => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setPhotoFile(file);
+            const reader = new FileReader();
+            reader.onload = () => setPhotoPreview(reader.result as string);
+            reader.readAsDataURL(file);
+          }} style={{ display: "none" }} />
+          <div onClick={() => fileRef.current?.click()} style={{ width: 140, height: 140, borderRadius: "50%", margin: "0 auto 16px", cursor: "pointer", border: `3px dashed ${photoPreview ? G.rouge : G.gris}`, overflow: "hidden", background: photoPreview ? "transparent" : G.creme, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+            {photoPreview ? (
+              <img src={photoPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "2.5rem" }}>📷</div>
+                <div style={{ fontSize: "0.72rem", color: G.brunLight, marginTop: 4, fontWeight: 600 }}>Ajouter une photo</div>
+              </div>
+            )}
+          </div>
+          {photoPreview && (
+            <div onClick={() => fileRef.current?.click()} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 600, marginBottom: 8 }}>Changer la photo</div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn variant="ghost" onClick={() => setStep(2)} style={{ flex: 1 }}>← Retour</Btn>
+          <Btn variant="primary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }}>
+            {photoPreview ? "Créer mon compte 🎉" : "Passer cette étape →"}
+          </Btn>
+        </div>
+        {!photoPreview && <p style={{ textAlign: "center", fontSize: "0.78rem", color: "#bbb", marginTop: 12 }}>La photo est optionnelle mais recommandée</p>}
+      </>}
+
       <p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: G.brunLight }}>
         Déjà un compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("login")}>Se connecter</span>
       </p>
@@ -2747,7 +2782,12 @@ export default function App() {
       const saved = localStorage.getItem("moyo_session");
       if (saved) {
         const a: Auth = JSON.parse(saved);
-        if (a?.token && a?.userId) { setAuth(a); setPage("app"); }
+        if (a?.token && a?.userId) {
+          // Vérifier rapidement que le token est encore valide
+          setAuth(a);
+          setPage("app");
+          setTab("discover");
+        }
       }
     } catch { localStorage.removeItem("moyo_session"); }
   }, []);
@@ -2763,18 +2803,36 @@ export default function App() {
   useEffect(() => {
     if (!auth) return;
 
-    // Rafraîchir le statut premium au chargement
-    const refreshPremium = async () => {
-      const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`);
-      if (profiles[0] && profiles[0].is_premium !== auth.isPremium) {
-        const updated = { ...auth, isPremium: profiles[0].is_premium, isAdmin: profiles[0].is_admin || false };
-        setAuth(updated);
-        try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+    // Vérifier que la session est toujours valide (compte pas supprimé)
+    const validateSession = async () => {
+      try {
+        const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`);
+        // Si le profil n'existe plus → compte supprimé → déconnecter
+        if (!profiles || profiles.length === 0) {
+          localStorage.removeItem("moyo_session");
+          setAuth(null);
+          setPage("landing");
+          return false;
+        }
+        // Mettre à jour Premium si changé
+        if (profiles[0].is_premium !== auth.isPremium) {
+          const updated = { ...auth, isPremium: profiles[0].is_premium, isAdmin: profiles[0].is_admin || false };
+          setAuth(updated);
+          try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+        }
+        return true;
+      } catch {
+        // Erreur d'auth → session expirée → déconnecter
+        localStorage.removeItem("moyo_session");
+        setAuth(null);
+        setPage("landing");
+        return false;
       }
     };
-    refreshPremium();
+    validateSession();
 
-    // Mettre à jour last_seen toutes les 30s
+    // Vérifier la session toutes les 60s (compte supprimé par admin, token expiré)
+    const sessionCheck = setInterval(validateSession, 60000);
     const updateLastSeen = () => sb.update(auth.token, "profiles", auth.userId, { last_seen: new Date().toISOString() });
     updateLastSeen();
     const lastSeenInterval = setInterval(updateLastSeen, 30000);
@@ -2830,6 +2888,7 @@ export default function App() {
       try { wsMatches?.close(); } catch {}
       clearInterval(fallbackInterval);
       clearInterval(lastSeenInterval);
+      clearInterval(sessionCheck);
     };
   }, [auth?.userId]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
