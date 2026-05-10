@@ -33,9 +33,9 @@ const G = {
 };
 
 type Auth = { token: string; userId: string; name: string; email: string; isPremium: boolean; isAdmin: boolean };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
-type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; created_at?: string };
+type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
 const sb = {
@@ -1930,6 +1930,39 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
   </div>;
 }
 
+function getOnlineStatus(lastSeen?: string): { label: string; color: string } {
+  if (!lastSeen) return { label: "Hors ligne", color: "#bbb" };
+  const diff = (Date.now() - new Date(lastSeen).getTime()) / 1000 / 60; // en minutes
+  if (diff < 2) return { label: "En ligne", color: "#27ae60" };
+  if (diff < 10) return { label: `Vu il y a ${Math.floor(diff)} min`, color: "#f39c12" };
+  if (diff < 60) return { label: `Vu il y a ${Math.floor(diff)} min`, color: "#bbb" };
+  if (diff < 1440) return { label: `Vu il y a ${Math.floor(diff / 60)}h`, color: "#bbb" };
+  return { label: `Vu il y a ${Math.floor(diff / 1440)}j`, color: "#bbb" };
+}
+
+function TickIcon({ read, isPremium, white = false }: { read: boolean; isPremium: boolean; white?: boolean }) {
+  if (!isPremium) {
+    // Gratuit : juste une coche grise
+    return (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={white ? "rgba(255,255,255,0.6)" : "#bbb"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    );
+  }
+  // Premium : double coche — grise si pas lu, bleue si lu
+  const color = read ? "#4fc3f7" : (white ? "rgba(255,255,255,0.6)" : "#bbb");
+  return (
+    <div style={{ display: "flex", alignItems: "center" }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: -5 }}>
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+  );
+}
+
 function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
@@ -2005,8 +2038,9 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
     const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
     setMsgs(res);
     setMsgCount(res.filter(m => m.sender_id === auth.userId).length);
+    // Marquer comme lu ET livré
     await sb.markMessagesRead(auth.token, conv.id, auth.userId);
-    // Recharger après marquage lu pour mettre à jour is_read
+    // Recharger après marquage lu
     const res2 = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
     setMsgs(res2);
     loadConvs();
@@ -2068,7 +2102,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
         <Avatar url={open.partner?.photo_url} gender={open.partner?.gender} size={38} premium={open.partner?.is_premium} />
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>{open.partner?.name}</div>
-          <div style={{ fontSize: "0.7rem", color: "#27ae60" }}>● Actif</div>
+          {(() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: G.brunLight, background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
         {/* Bouton cadeau — offrir Premium */}
@@ -2110,31 +2144,27 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
           const isImg = isImage(m.content);
-          const isLast = i === msgs.length - 1;
+          const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
           return (
             <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}>
               {isImg ? (
-                <img
-                  src={getImageUrl(m.content)}
-                  alt="img"
-                  onClick={() => setPreviewImg(getImageUrl(m.content))}
-                  style={{ maxWidth: "65%", borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }}
-                />
+                <div style={{ position: "relative" }}>
+                  <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ maxWidth: "65%", borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
+                  {isMine && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: "flex-end" }}>
+                      <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
+                      <TickIcon read={m.is_read} isPremium={auth.isPremium} />
+                    </div>
+                  )}
+                  {!isMine && <span style={{ fontSize: "0.62rem", color: "#aaa", marginTop: 3 }}>{time}</span>}
+                </div>
               ) : (
                 <div style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", maxWidth: "72%", fontSize: "0.88rem", lineHeight: 1.5 }}>
-                  {m.content}
-                </div>
-              )}
-              {/* Lu / Non lu — Premium uniquement, seulement sur le dernier message envoyé */}
-              {isMine && isLast && auth.isPremium && (
-                <div style={{ fontSize: "0.65rem", color: m.is_read ? "#27ae60" : "#aaa", marginTop: 3, display: "flex", alignItems: "center", gap: 2 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={m.is_read ? "#27ae60" : "#aaa"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={m.is_read ? "#27ae60" : "#aaa"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: -6 }}>
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  {m.is_read ? "Lu" : "Envoyé"}
+                  <span>{m.content}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                    <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
+                    {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} white />}
+                  </div>
                 </div>
               )}
             </div>
@@ -2196,7 +2226,10 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
         }} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px", background: (c.unreadCount || 0) > 0 ? "rgba(192,57,43,0.03)" : G.blanc, borderRadius: 14, marginBottom: 8, cursor: "pointer", border: (c.unreadCount || 0) > 0 ? `1px solid rgba(192,57,43,0.1)` : "1px solid transparent" }}>
           <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, marginBottom: 3, fontSize: "0.92rem", color: (c.unreadCount || 0) > 0 ? "#1a1a1a" : G.brun }}>{c.partner?.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+              <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, fontSize: "0.92rem", color: (c.unreadCount || 0) > 0 ? "#1a1a1a" : G.brun }}>{c.partner?.name}</div>
+              {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
+            </div>
             <div style={{ fontSize: "0.82rem", color: (c.unreadCount || 0) > 0 ? G.rouge : G.brunLight, fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {c.lastMsg?.content?.startsWith("[img]") ? "📷 Photo" : c.lastMsg?.content || "Dis bonjour ! 👋"}
             </div>
@@ -2735,6 +2768,11 @@ export default function App() {
     };
     refreshPremium();
 
+    // Mettre à jour last_seen toutes les 30s
+    const updateLastSeen = () => sb.update(auth.token, "profiles", auth.userId, { last_seen: new Date().toISOString() });
+    updateLastSeen();
+    const lastSeenInterval = setInterval(updateLastSeen, 30000);
+
     // Chargement initial des likes reçus
     const loadLikesReceived = async () => {
       const res = await sb.query<object>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
@@ -2785,6 +2823,7 @@ export default function App() {
       try { wsLikes?.close(); } catch {}
       try { wsMatches?.close(); } catch {}
       clearInterval(fallbackInterval);
+      clearInterval(lastSeenInterval);
     };
   }, [auth?.userId]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
