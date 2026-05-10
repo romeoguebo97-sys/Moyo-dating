@@ -150,6 +150,7 @@ const GLOBAL_CSS = `
   @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
   .fu1{animation:fadeUp 0.7s 0.1s both ease-out}
   .fu2{animation:fadeUp 0.7s 0.25s both ease-out}
   .fu3{animation:fadeUp 0.7s 0.4s both ease-out}
@@ -157,8 +158,12 @@ const GLOBAL_CSS = `
   .fu5{animation:fadeUp 0.7s 0.7s both ease-out}
   .fu6{animation:fadeUp 0.7s 0.85s both ease-out}
   .heart{animation:float 3s ease-in-out infinite;display:inline-block}
+  .btn-p{transition:all 0.2s ease!important}
   .btn-p:hover{transform:translateY(-3px)!important;box-shadow:0 14px 36px rgba(192,57,43,0.5)!important}
-  .btn-o:hover{background:#2C1A0E!important;color:#F0F1F5!important;transform:translateY(-3px)!important}
+  .btn-p:active{transform:translateY(0) scale(0.97)!important}
+  .btn-o{transition:all 0.2s ease!important;border:2px solid #1a1a1a!important}
+  .btn-o:hover{background:#1a1a1a!important;color:#ffffff!important;transform:translateY(-2px)!important}
+  .btn-o:active{transform:scale(0.97)!important}
   .stat:hover{transform:translateY(-5px) scale(1.04)!important;box-shadow:0 10px 28px rgba(44,26,14,0.14)!important}
   .stat{transition:all 0.25s ease!important}
   .store:hover{transform:translateY(-3px);opacity:0.92}
@@ -167,14 +172,24 @@ const GLOBAL_CSS = `
   .fb{transition:all 0.2s!important}
   .nav-link:hover{color:#C0392B!important}
   .nav-link{transition:color 0.2s!important}
-  .card-hover:hover{transform:translateX(4px)}
-  .card-hover{transition:transform 0.2s!important}
+  .card-hover{transition:transform 0.18s ease,box-shadow 0.18s ease!important}
+  .card-hover:hover{transform:translateY(-2px)!important;box-shadow:0 8px 24px rgba(44,26,14,0.12)!important}
+  .card-hover:active{transform:scale(0.98)!important}
   .trust-card{transition:transform 0.22s ease,box-shadow 0.22s ease!important}
   .trust-card:hover{transform:translateY(-6px)!important;box-shadow:0 16px 40px rgba(44,26,14,0.13)!important}
   .testi-card{transition:transform 0.22s ease,box-shadow 0.22s ease!important}
   .testi-card:hover{transform:translateY(-5px)!important;box-shadow:0 14px 36px rgba(44,26,14,0.12)!important}
   .social-icon{transition:transform 0.18s ease,opacity 0.18s ease!important}
   .social-icon:hover{transform:translateY(-3px) scale(1.12)!important;opacity:0.85!important}
+  .profile-card{transition:transform 0.18s ease,box-shadow 0.18s ease!important}
+  .profile-card:hover{transform:translateY(-2px)!important;box-shadow:0 8px 28px rgba(44,26,14,0.13)!important}
+  .profile-card:active{transform:scale(0.99)!important}
+  .action-card{transition:transform 0.15s ease,box-shadow 0.15s ease,background 0.15s ease!important}
+  .action-card:hover{transform:translateX(3px)!important;box-shadow:0 4px 16px rgba(0,0,0,0.08)!important}
+  .action-card:active{transform:scale(0.98)!important}
+  .icon-btn{transition:transform 0.15s ease,opacity 0.15s ease!important}
+  .icon-btn:hover{transform:scale(1.08)!important;opacity:0.9!important}
+  .icon-btn:active{transform:scale(0.93)!important}
   @media(min-width:768px){
     .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
     .landing-hero-text{text-align:left!important}
@@ -197,7 +212,8 @@ function Btn({ children, variant = "primary", onClick, style = {}, disabled = fa
     border: "none", borderRadius: 50, padding: "13px 28px", fontWeight: 600,
     fontSize: "0.93rem", cursor: disabled || loading ? "not-allowed" : "pointer",
     opacity: disabled || loading ? 0.65 : 1, display: "inline-flex",
-    alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s", ...style,
+    alignItems: "center", justifyContent: "center", gap: 8,
+    transition: "all 0.18s ease", ...style,
   };
   const v: Record<string, React.CSSProperties> = {
     primary: { background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.3)" },
@@ -384,7 +400,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>
                 Créer mon profil gratuit
               </button>
-              <button className="btn-o" onClick={() => onNav("login")} style={{ border: "1.5px solid rgba(44,26,14,0.25)", borderRadius: 50, padding: "13px 28px", fontWeight: 700, fontSize: "0.95rem", background: "rgba(255,255,255,0.35)", color: G.brunLight, cursor: "pointer", backdropFilter: "blur(4px)" }}>
+              <button className="btn-o" onClick={() => onNav("login")} style={{ border: "2px solid #1a1a1a", borderRadius: 50, padding: "13px 28px", fontWeight: 700, fontSize: "0.95rem", background: G.blanc, color: "#1a1a1a", cursor: "pointer" }}>
                 Me connecter
               </button>
             </div>
@@ -1375,7 +1391,7 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport }: { prof: Pro
   const [showMenu, setShowMenu] = useState(false);
   const [showSignalerMenu, setShowSignalerMenu] = useState(false);
   return (
-    <div style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
+    <div className="profile-card" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
       <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>
         {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{prof.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}
       </div>
@@ -1385,7 +1401,7 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport }: { prof: Pro
         {prof.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}
       </div>
       {/* Cœur */}
-      <div onClick={onLike} style={{ width: 42, height: 42, borderRadius: "50%", background: liked ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(192,57,43,0.06)", border: liked ? "none" : `1.5px solid rgba(192,57,43,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+      <div className="icon-btn" onClick={onLike} style={{ width: 42, height: 42, borderRadius: "50%", background: liked ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(192,57,43,0.06)", border: liked ? "none" : `1.5px solid rgba(192,57,43,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill={liked ? "white" : "rgba(192,57,43,0.4)"} stroke={liked ? "white" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
         </svg>
@@ -1934,7 +1950,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
         </div>
 
         {/* Se déconnecter */}
-        <div onClick={() => setShowLogout(true)} style={{
+        <div onClick={() => setShowLogout(true)} className="action-card" style={{
           background: G.rouge, borderRadius: 50, padding: "16px 20px",
           display: "flex", alignItems: "center", justifyContent: "center",
           cursor: "pointer", boxShadow: "0 4px 18px rgba(192,57,43,0.3)",
@@ -1943,7 +1959,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
         </div>
 
         {/* Supprimer mon compte */}
-        <div onClick={() => setShowDelete(true)} style={{
+        <div onClick={() => setShowDelete(true)} className="action-card" style={{
           background: G.blanc, borderRadius: 16, padding: "16px 20px",
           display: "flex", alignItems: "center", gap: 14, cursor: "pointer",
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #FFE0E0`,
