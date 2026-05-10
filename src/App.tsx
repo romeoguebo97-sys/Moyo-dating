@@ -28,7 +28,7 @@ const FREE_LIMITS = { likes: 5, messages: 2 };
 
 const G = {
   rouge: "#C0392B", rougeDark: "#922B21", or: "#D4A843",
-  vert: "#1A5C3A", creme: "#FAF3E8", cremeDark: "#F0E6D3",
+  vert: "#1A5C3A", creme: "#F0F1F5", cremeDark: "#E4E6ED",
   brun: "#2C1A0E", brunLight: "#5C3D2A", blanc: "#FFFFFF", gris: "#E8DDD0",
 };
 
@@ -141,9 +141,9 @@ const sb = {
 };
 
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html,body,#root{overflow-x:hidden;max-width:100vw;min-height:100vh;font-family:'Inter',sans-serif}
+  html,body,#root{overflow-x:hidden;max-width:100vw;min-height:100vh;font-family:'DM Sans',sans-serif}
   @media(min-width:520px){body{background-color:#EDE5D8;background-image:radial-gradient(circle,rgba(192,57,43,0.06) 1px,transparent 1px),radial-gradient(circle,rgba(212,168,67,0.05) 1px,transparent 1px);background-size:30px 30px,50px 50px}}
   input,select,textarea,button{font-family:inherit;box-sizing:border-box;max-width:100%}
   input,select,textarea{display:block}
@@ -159,7 +159,7 @@ const GLOBAL_CSS = `
   .fu6{animation:fadeUp 0.7s 0.85s both ease-out}
   .heart{animation:float 3s ease-in-out infinite;display:inline-block}
   .btn-p:hover{transform:translateY(-3px)!important;box-shadow:0 14px 36px rgba(192,57,43,0.5)!important}
-  .btn-o:hover{background:#2C1A0E!important;color:#FAF3E8!important;transform:translateY(-3px)!important}
+  .btn-o:hover{background:#2C1A0E!important;color:#F0F1F5!important;transform:translateY(-3px)!important}
   .stat:hover{transform:translateY(-5px) scale(1.04)!important;box-shadow:0 10px 28px rgba(44,26,14,0.14)!important}
   .stat{transition:all 0.25s ease!important}
   .store:hover{transform:translateY(-3px);opacity:0.92}
@@ -1558,23 +1558,44 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
         </div>
 
         {/* Boutons actions — style Tinder (icônes rondes) */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 32, marginTop: 22 }}>
-          {/* Modifier */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }} onClick={() => setEditing(true)}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem", boxShadow: "0 4px 14px rgba(44,26,14,0.1)", position: "relative" }}>
-              ✏️
+        <div style={{ display: "flex", justifyContent: "center", gap: 40, marginTop: 22, paddingBottom: 28 }}>
+          {/* Modifier mon profil — engrenage SVG */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => setEditing(true)}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(44,26,14,0.1)", position: "relative" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
               <div style={{ position: "absolute", top: -2, right: -2, width: 16, height: 16, borderRadius: "50%", background: G.rouge, border: `2px solid ${G.blanc}` }} />
             </div>
-            <div style={{ fontSize: "0.68rem", fontWeight: 600, color: G.brunLight }}>Modifier</div>
+            <div style={{ fontSize: "0.72rem", fontWeight: 600, color: G.brunLight }}>Modifier mon profil</div>
           </div>
-          {/* Changer la photo */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }} onClick={() => fileRef.current?.click()}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem", boxShadow: "0 4px 18px rgba(192,57,43,0.35)", position: "relative" }}>
-              {uploadLoading ? "⏳" : "📷"}
-              <div style={{ position: "absolute", bottom: -2, right: -2, width: 18, height: 18, borderRadius: "50%", background: G.or, border: `2px solid ${G.blanc}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.55rem", color: G.brun, fontWeight: 700 }}>+</div>
+
+          {/* Modifier ma photo — dégradé rouge style Instagram */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => fileRef.current?.click()}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg, ${G.rouge} 0%, ${G.rougeDark} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(192,57,43,0.45)", position: "relative" }}>
+              {uploadLoading ? (
+                <span style={{ fontSize: "1.4rem" }}>⏳</span>
+              ) : (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              )}
+              <div style={{ position: "absolute", bottom: 0, right: 0, width: 20, height: 20, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.blanc}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
+                <span style={{ fontSize: "0.65rem", color: G.rouge, fontWeight: 800, lineHeight: 1 }}>+</span>
+              </div>
             </div>
-            <div style={{ fontSize: "0.68rem", fontWeight: 600, color: G.brunLight }}>Ma photo</div>
+            <div style={{ fontSize: "0.72rem", fontWeight: 600, color: G.brunLight }}>Modifier ma photo</div>
           </div>
+        </div>
+
+        {/* Séparateur stylé rouge */}
+        <div style={{ position: "relative", height: 28, overflow: "visible" }}>
+          <svg viewBox="0 0 500 28" preserveAspectRatio="none" style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: "100%" }}>
+            <path d="M0,0 Q250,36 500,0 L500,28 L0,28 Z" fill="#F0F1F5"/>
+          </svg>
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "60%", height: 3, borderRadius: 3, background: `linear-gradient(90deg, transparent, ${G.rouge}, transparent)` }} />
         </div>
       </div>
 
@@ -1594,7 +1615,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
               <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1rem", fontWeight: 700, color: G.blanc, marginBottom: 3 }}>✨ Passer à Moyo Premium</div>
               <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.75)" }}>Messages illimités · Likes illimités · Voir qui vous like</div>
             </div>
-            <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1.2rem", fontWeight: 800, color: G.or, marginLeft: 12, flexShrink: 0 }}>5 000<br/><span style={{ fontSize: "0.65rem", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>FCFA/mois</span></div>
+            <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1.2rem", fontWeight: 800, color: G.or, marginLeft: 12, flexShrink: 0 }}>5 000<br/><span style={{ fontSize: "0.65rem", fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>FCFA/mois</span></div>
           </div>
         )}
 
