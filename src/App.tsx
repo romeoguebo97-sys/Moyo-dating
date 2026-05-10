@@ -885,19 +885,27 @@ function About({ onBack }: { onBack: () => void }) {
           {[
             {
               q: "Moyo est-il gratuit ?",
-              a: "Oui, l'inscription et la découverte de profils sont entièrement gratuites. Un abonnement Premium à 3 500 FCFA/mois est disponible pour accéder à des fonctionnalités avancées comme les messages illimités et les likes illimités."
+              a: "Oui, l'inscription et la découverte de profils sont entièrement gratuites. En compte gratuit, vous avez droit à 5 likes par jour et 5 messages par match. Un abonnement Premium à 3 500 FCFA/mois débloque les likes illimités, les messages illimités et la possibilité de voir qui vous a liké."
             },
             {
               q: "Comment fonctionne le système de match ?",
-              a: "Lorsque deux personnes se likent mutuellement, un match est créé automatiquement. Vous pouvez alors commencer à échanger des messages."
+              a: "Lorsque deux personnes se likent mutuellement, un match est créé automatiquement. Vous pouvez alors commencer à échanger des messages. En compte gratuit, vous avez droit à 5 messages par match."
             },
             {
-              q: "Mes données personnelles sont-elles protégées ?",
-              a: "Absolument. Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers. Seuls les membres connectés peuvent consulter votre profil."
+              q: "Comment passer à Premium ?",
+              a: "Le Premium est disponible à 3 500 FCFA/mois. Le paiement se fait uniquement via MTN MoMo ou Airtel MoMo. Contactez notre service client via WhatsApp ou Facebook pour procéder au paiement. L'activation est effectuée sous 24h maximum."
+            },
+            {
+              q: "Comment bloquer un utilisateur ?",
+              a: "Dans l'onglet Découvrir, appuyez sur les 3 traits à droite d'un profil puis choisissez Bloquer. Le profil disparaît immédiatement et n'apparaîtra plus dans vos résultats. Vous pouvez gérer votre liste noire depuis votre Profil."
             },
             {
               q: "Comment signaler un profil suspect ?",
-              a: "Chaque profil dispose d&apos;un bouton Signaler. Notre équipe examine chaque signalement sous 24h et prend les mesures nécessaires pour protéger la communauté."
+              a: "Appuyez sur les 3 traits à droite d'un profil et choisissez Signaler. Sélectionnez le motif approprié. Notre équipe examine chaque signalement sous 24h et prend les mesures nécessaires."
+            },
+            {
+              q: "Mes données personnelles sont-elles protégées ?",
+              a: "Absolument. Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers. Seuls les membres connectés peuvent consulter votre profil. Vous pouvez également rendre votre profil invisible depuis vos paramètres."
             },
             {
               q: "Puis-je utiliser Moyo depuis l'étranger ?",
@@ -905,7 +913,7 @@ function About({ onBack }: { onBack: () => void }) {
             },
             {
               q: "Comment supprimer mon compte ?",
-              a: "Vous pouvez supprimer votre compte à tout moment depuis votre profil. Toutes vos données sont effacées définitivement dans les 48 heures suivant la demande."
+              a: "Vous pouvez supprimer votre compte à tout moment depuis votre profil. Toutes vos données sont effacées définitivement. Cette action est irréversible."
             },
           ].map((item, i) => (
             <div key={i} style={{ borderBottom: `1px solid ${G.gris}`, paddingBottom: 14, marginBottom: 14 }}>
@@ -1293,8 +1301,8 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               title: "Découvrir des profils",
               color: G.rouge,
               items: [
-                "L'onglet Découvrir affiche les profils disponibles en mode carte ou en liste. Utilisez les flèches pour naviguer. Cliquez sur le cœur pour liker un profil, cliquez à nouveau pour retirer votre like.",
-                "Compte gratuit : 5 likes par jour. Passez Premium pour des likes illimités. Utilisez les filtres pour affiner par genre, ville, âge ou religion.",
+                "L'onglet Découvrir affiche les profils en mode carte ou en liste. En vue carte, utilisez les flèches pour naviguer et le cœur pour liker. En vue liste, le cœur est directement visible sur chaque profil.",
+                "Compte gratuit : 5 likes par jour. Premium : likes illimités. Utilisez les filtres pour affiner par genre, ville, âge ou religion.",
               ]
             },
             {
@@ -1315,7 +1323,15 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               title: "Mon Profil",
               color: G.rouge,
               items: [
-                "Modifiez votre photo, prénom, âge, ville, religion et bio depuis l'onglet Profil. Le bouton visible/invisible vous permet d'apparaître ou non dans Découvrir, sans supprimer votre compte. Votre adresse email de connexion est affichée mais ne peut pas être modifiée.",
+                "Modifiez votre photo, prénom, âge, ville, religion et bio en appuyant sur l'engrenage. Le bouton visible/invisible vous permet d'apparaître ou non dans Découvrir sans supprimer votre compte.",
+                "La Liste noire vous permet de gérer les utilisateurs bloqués et de les débloquer à tout moment.",
+              ]
+            },
+            {
+              title: "Bloquer et Signaler",
+              color: G.rouge,
+              items: [
+                "Sur chaque profil, appuyez sur les 3 traits pour accéder aux options. Bloquer fait disparaître définitivement le profil de vos résultats. Signaler envoie un rapport à notre équipe qui examine le cas sous 24h. Les profils bloqués sont gérables depuis votre Liste noire.",
               ]
             },
             {
@@ -1323,14 +1339,14 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
               color: G.or,
               items: [
                 "Avantages : messages illimités, likes illimités, voir qui vous a liké, profil mis en avant.",
-                "Paiement accepté via MTN MoMo et Airtel MoMo uniquement. Pour payer, contactez notre service client via WhatsApp ou Facebook. L'activation est effectuée sous 24h maximum.",
+                "Paiement uniquement via MTN MoMo ou Airtel MoMo. Contactez notre service client via WhatsApp ou Facebook pour payer. L'activation est effectuée sous 24h maximum.",
               ]
             },
             {
               title: "Sécurité et confidentialité",
               color: G.rouge,
               items: [
-                "Pour signaler un profil suspect, ouvrez la fiche du profil et appuyez sur Signaler. Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible. Moyo est réservé aux personnes majeures (18 ans et plus).",
+                "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible. Moyo est réservé aux personnes majeures de 18 ans et plus.",
               ]
             },
           ].map((s, i) => (
@@ -1353,6 +1369,57 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
       </div>
     </div>}
   </div>;
+}
+
+function ProfileListCard({ prof, liked, onLike, onBlock, onReport }: { prof: Profile; liked: boolean; onLike: () => void; onBlock: () => void; onReport: (r: string) => void }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [showSignalerMenu, setShowSignalerMenu] = useState(false);
+  return (
+    <div style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
+      <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>
+        {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{prof.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{prof.name}, {prof.age} ans {prof.is_premium && "⭐"}</div>
+        <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {prof.city}{prof.religion && <span style={{ marginLeft: 6, fontSize: "0.72rem" }}>· 🙏 {prof.religion}</span>}</div>
+        {prof.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}
+      </div>
+      {/* Cœur */}
+      <div onClick={onLike} style={{ width: 42, height: 42, borderRadius: "50%", background: liked ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(192,57,43,0.06)", border: liked ? "none" : `1.5px solid rgba(192,57,43,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill={liked ? "white" : "rgba(192,57,43,0.4)"} stroke={liked ? "white" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      </div>
+      {/* 3 traits */}
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <div onClick={() => setShowMenu(m => !m)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", padding: 4 }}>
+          {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2, borderRadius: 2, background: "#555" }} />)}
+        </div>
+        {showMenu && (
+          <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 150, overflow: "hidden" }}>
+            <div onClick={() => { setShowMenu(false); onBlock(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>🚫 Bloquer</div>
+            <div onClick={() => { setShowMenu(false); setShowSignalerMenu(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>🚨 Signaler</div>
+          </div>
+        )}
+      </div>
+      {/* Modal signaler */}
+      {showSignalerMenu && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden" }}>
+            <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#1a1a1a" }}>Signaler ce profil</h3>
+              <div onClick={() => setShowSignalerMenu(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
+            </div>
+            <div style={{ padding: "12px 16px 32px" }}>
+              {["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => (
+                <div key={r} onClick={() => { onReport(r); setShowSignalerMenu(false); }} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500, color: "#1a1a1a" }}>{r}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
@@ -1436,33 +1503,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const p = profiles[current];
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: G.brunLight }}>⏳ Chargement...</div>;
 
-  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les religions</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>{profiles.map(prof => {
-  const [showMenu, setShowMenu] = React.useState(false);
-  return <div key={prof.id} style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
-    <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>{prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{prof.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{prof.name}, {prof.age} ans {prof.is_premium && "⭐"}</div>
-      <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {prof.city}{prof.religion && <span style={{ marginLeft: 6, fontSize: "0.72rem" }}>· 🙏 {prof.religion}</span>}</div>
-      {prof.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}
-    </div>
-    {/* Cœur */}
-    <div onClick={() => handleLike(prof)} style={{ width: 42, height: 42, borderRadius: "50%", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(192,57,43,0.06)", border: likedIds.has(prof.id) ? "none" : `1.5px solid rgba(192,57,43,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "white" : "rgba(192,57,43,0.4)"} stroke={likedIds.has(prof.id) ? "white" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-      </svg>
-    </div>
-    {/* 3 traits */}
-    <div style={{ position: "relative", flexShrink: 0 }}>
-      <div onClick={() => setShowMenu(m => !m)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", padding: 4 }}>
-        {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2, borderRadius: 2, background: "#555" }} />)}
-      </div>
-      {showMenu && <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 140, overflow: "hidden" }}>
-        <div onClick={async () => { setShowMenu(false); await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} style={{ padding: "12px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>🚫 Bloquer</div>
-        <div onClick={() => { setShowMenu(false); handleReport("Signalement depuis liste"); }} style={{ padding: "12px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>🚨 Signaler</div>
-      </div>}
-    </div>
-  </div>;
-})}</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "14px 16px" }}>
+  return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les religions</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>{profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} />)}</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "14px 16px" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{ fontSize: "1.25rem", fontWeight: 700, color: G.brun }}>{p.name}, {p.age} ans {p.is_premium && "⭐"}</div>
     {/* 3 traits menu */}
