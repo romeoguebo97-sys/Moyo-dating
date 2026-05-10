@@ -1169,23 +1169,95 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
 function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; auth: Auth; }) {
   const [showGuide, setShowGuide] = useState(false);
-  const tabs = [{ id: "discover", icon: "🔥", label: "Découvrir" }, { id: "matches", icon: "💞", label: "Matchs" }, { id: "messages", icon: "💬", label: "Messages" }, { id: "profile", icon: "👤", label: "Profil" }];
+
+  const tabs = [
+    {
+      id: "discover",
+      label: "Découvrir",
+      icon: (active: boolean) => (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 3.379 4.068 1 7.5 1c1.867 0 3.674.785 5 2.032C13.826 1.785 15.633 1 17.5 1 20.932 1 24 3.379 24 7.191c0 4.105-5.37 8.863-11 14.402z" fill={active ? G.rouge : "none"}/>
+        </svg>
+      ),
+    },
+    {
+      id: "matches",
+      label: "Matchs",
+      icon: (active: boolean) => (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={active ? "rgba(192,57,43,0.15)" : "none"}/>
+        </svg>
+      ),
+    },
+    {
+      id: "messages",
+      label: "Messages",
+      icon: (active: boolean) => (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" fill={active ? "rgba(192,57,43,0.15)" : "none"}/>
+        </svg>
+      ),
+    },
+    {
+      id: "profile",
+      label: "Profil",
+      icon: (active: boolean) => (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      ),
+    },
+  ];
+
   return <div style={{ maxWidth: 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme, boxShadow: "0 0 60px rgba(44,26,14,0.12)" }}>
     <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "sticky", top: 0, zIndex: 50 }}>
-      <div style={{  fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
+      <div style={{ fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {auth.isAdmin && <div onClick={() => setTab("admin")} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>⚙️ Admin</div>}
         <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.blanc, background: G.rouge, borderRadius: 50, padding: "5px 14px", cursor: "pointer", letterSpacing: "0.02em" }}>Guide</div>
       </div>
     </div>
     <div style={{ flex: 1, overflowY: "auto", paddingBottom: 75 }}>{children}</div>
-    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", justifyContent: "space-around", padding: "10px 0 14px", zIndex: 50 }}>
-      {tabs.map(t => <div key={t.id} onClick={() => setTab(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", color: tab === t.id ? G.rouge : "#bbb", position: "relative", minWidth: 60 }}>
-        <div style={{ fontSize: "1.3rem" }}>{t.icon}</div>
-        {t.id === "messages" && unreadCount > 0 && <div style={{ position: "absolute", top: -4, right: 8, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 700 }}>{unreadCount > 9 ? "9+" : unreadCount}</div>}
-        {t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: 8, background: G.or, color: G.brun, borderRadius: "50%", width: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 700 }}>{notifCount}</div>}
-        <div style={{ fontSize: "0.6rem", fontWeight: tab === t.id ? 700 : 400 }}>{t.label}</div>
-      </div>)}
+
+    {/* ── NAVBAR BAS STYLE TINDER ── */}
+    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "8px 8px 16px", zIndex: 50 }}>
+      {tabs.map(t => {
+        const active = tab === t.id;
+        return (
+          <div key={t.id} onClick={() => setTab(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", position: "relative", flex: 1 }}>
+            {/* Fond arrondi sur l'onglet actif */}
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+              padding: "6px 16px", borderRadius: 14,
+              background: active ? "rgba(192,57,43,0.1)" : "transparent",
+              transition: "background 0.2s",
+              minWidth: 64,
+            }}>
+              {/* Icône SVG */}
+              <div style={{ position: "relative" }}>
+                {t.icon(active)}
+                {/* Badge messages */}
+                {t.id === "messages" && unreadCount > 0 && (
+                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.52rem", fontWeight: 700 }}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </div>
+                )}
+                {/* Badge matchs */}
+                {t.id === "matches" && notifCount > 0 && (
+                  <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: G.brun, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.52rem", fontWeight: 700 }}>
+                    {notifCount}
+                  </div>
+                )}
+              </div>
+              {/* Label */}
+              <div style={{ fontSize: "0.62rem", fontWeight: active ? 700 : 400, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>
+                {t.label}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
     {showGuide && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
       <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
