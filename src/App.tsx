@@ -768,7 +768,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer style={{ background: G.brun, padding: "28px 24px" }}>
+      <footer style={{ background: G.vert, padding: "28px 24px" }}>
         <div className="landing-sections" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             <a href={NEW_FB} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Facebook">{svgFb}</a>
@@ -783,6 +783,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               >{l}</span>
             ))}
           </div>
+          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.72rem" }}>📍 6 rue Paul Valéry, 77000 Melun, France</p>
           <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>© 2026 Moyo Congo · Tous droits réservés</p>
         </div>
       </footer>
@@ -795,7 +796,14 @@ function About({ onBack }: { onBack: () => void }) {
   return (
     <div style={{ minHeight: "100vh", background: G.creme }}>
       <div style={{ background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, padding: "24px 24px 40px" }}>
-        <div onClick={onBack} style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.88rem", cursor: "pointer", marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}>← Retour</div>
+        <div onClick={onBack} style={{ cursor: "pointer", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(192,57,43,0.4)", flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </div>
+          <span style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.88rem", fontWeight: 600 }}>Retour</span>
+        </div>
         <div style={{ textAlign: "center" }}>
           <div style={{  fontSize: "2.5rem", color: G.blanc, fontWeight: 700, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
           <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.9rem" }}>Le premier site de rencontres congolais</p>
@@ -975,7 +983,17 @@ function About({ onBack }: { onBack: () => void }) {
 }
 
 function AuthLayout({ children, onBack }: { children: React.ReactNode; onBack: () => void }) {
-  return <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: `linear-gradient(160deg,${G.creme},${G.cremeDark})`, padding: 0, overflowX: "hidden" }}><div onClick={onBack} style={{ padding: "16px 20px", cursor: "pointer", color: G.brunLight, fontWeight: 600, fontSize: "0.9rem" }}>← Accueil</div><div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px 40px" }}><div style={{ background: G.blanc, borderRadius: 24, padding: "36px 24px", width: "100%", maxWidth: 420, boxShadow: "0 20px 70px rgba(44,26,14,0.12)", overflowX: "hidden" }}>{children}</div></div></div>;
+  return <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: `linear-gradient(160deg,${G.creme},${G.cremeDark})`, padding: 0, overflowX: "hidden" }}>
+    <div onClick={onBack} style={{ padding: "16px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ width: 42, height: 42, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(192,57,43,0.35)", flexShrink: 0 }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </div>
+      <span style={{ color: G.brunLight, fontWeight: 600, fontSize: "0.9rem" }}>Accueil</span>
+    </div>
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px 40px" }}><div style={{ background: G.blanc, borderRadius: 24, padding: "36px 24px", width: "100%", maxWidth: 420, boxShadow: "0 20px 70px rgba(44,26,14,0.12)", overflowX: "hidden" }}>{children}</div></div>
+  </div>;
 }
 
 function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth) => void }) {
@@ -1340,11 +1358,13 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
 function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [likedIds, setLikedIds] = useState(new Set<string>());
+  const [blockedIds, setBlockedIds] = useState(new Set<string>());
   const [current, setCurrent] = useState(0);
   const [matchPop, setMatchPop] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [likesToday, setLikesToday] = useState(0);
   const [showReport, setShowReport] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "", religion: "" });
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
@@ -1360,11 +1380,19 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       if (filters.ageMin) params += `&age=gte.${filters.ageMin}`;
       if (filters.ageMax) params += `&age=lte.${filters.ageMax}`;
       if (filters.religion) params += `&religion=eq.${encodeURIComponent(filters.religion)}`;
-      const [all, liked] = await Promise.all([sb.query<Profile>(auth.token, "profiles", params), sb.query<{ to_user: string }>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user`)]);
+      const [all, liked, blocked] = await Promise.all([
+        sb.query<Profile>(auth.token, "profiles", params),
+        sb.query<{ to_user: string }>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user`),
+        sb.query<{ blocked_id: string }>(auth.token, "blocks", `?blocker_id=eq.${auth.userId}&select=blocked_id`),
+      ]);
       setLikedIds(new Set(liked.map(l => l.to_user)));
-      // Dédoublonner par ID pour éviter les doublons Supabase
+      const bIds = new Set(blocked.map(b => b.blocked_id));
+      setBlockedIds(bIds);
       const seen = new Set<string>();
-      const unique = (Array.isArray(all) ? all : []).filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+      const unique = (Array.isArray(all) ? all : []).filter(p => {
+        if (seen.has(p.id) || bIds.has(p.id)) return false;
+        seen.add(p.id); return true;
+      });
       setProfiles(unique);
       const today = new Date().toISOString().split("T")[0];
       const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`);
@@ -1372,6 +1400,15 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       setCurrent(0);
     } catch { setProfiles([]); }
     setLoading(false);
+  };
+
+  const handleBlock = async () => {
+    const target = profiles[current];
+    if (!target) return;
+    await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: target.id });
+    setShowBlockConfirm(false);
+    setProfiles(prev => prev.filter(p => p.id !== target.id));
+    setCurrent(c => Math.max(0, c - 1));
   };
 
   const handleLike = async (p: Profile) => {
@@ -1401,14 +1438,28 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   return <div style={{ padding: "16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 8 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: G.brunLight }}>❤️ {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "☰ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>🎯 Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}><select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les villes</option>{VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Tous les genres</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select><select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}><option value="">Toutes les religions</option>{RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select><Btn variant="primary" onClick={() => { loadProfiles(); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn></div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>{profiles.map(prof => <div key={prof.id} style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}><div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>{prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{prof.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{prof.name}, {prof.age} ans {prof.is_premium && "⭐"}</div><div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {prof.city}{prof.religion && <span style={{ marginLeft: 6, fontSize: "0.72rem", color: G.brunLight }}>· 🙏 {prof.religion}</span>}</div>{prof.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}</div><div onClick={() => handleLike(prof)} style={{ width: 44, height: 44, borderRadius: "50%", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(prof.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(prof.id) ? "0 4px 14px rgba(192,57,43,0.35)" : "0 2px 6px rgba(44,26,14,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", cursor: "pointer", flexShrink: 0 }}>{likedIds.has(prof.id) ? "❤️" : "🤍"}</div></div>)}</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={loadProfiles}>🔄 Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{p.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}</div><div style={{ padding: "14px 16px" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{  fontSize: "1.25rem", fontWeight: 700, color: G.brun }}>{p.name}, {p.age} ans {p.is_premium && "⭐"}</div>
-    <div onClick={() => setShowReport(true)} style={{ fontSize: "0.65rem", color: "#e74c3c", cursor: "pointer", background: "rgba(231,76,60,0.07)", padding: "3px 8px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0, marginLeft: 8 }}>🚨 Signaler</div>
+    <div style={{ display: "flex", gap: 6 }}>
+      <div onClick={() => setShowBlockConfirm(true)} style={{ fontSize: "0.65rem", color: "#888", cursor: "pointer", background: "rgba(0,0,0,0.05)", padding: "3px 8px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap" }}>🚫 Bloquer</div>
+      <div onClick={() => setShowReport(true)} style={{ fontSize: "0.65rem", color: "#e74c3c", cursor: "pointer", background: "rgba(231,76,60,0.07)", padding: "3px 8px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap" }}>🚨 Signaler</div>
+    </div>
   </div>
   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
     <span style={{ fontSize: "0.78rem", color: G.brunLight }}>📍 {p.city}</span>
     {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: G.brunLight, fontWeight: 500 }}>🙏 {p.religion}</span>}
   </div>
   {p.bio && <p style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.5, marginTop: 6, marginBottom: 0 }}>{p.bio}</p>}
-</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => setCurrent(c => Math.max(0, c - 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => setCurrent(c => Math.min(profiles.length - 1, c + 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{showReport && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "28px 20px 40px" }}><h3 style={{  fontSize: "1.2rem", fontWeight: 700, marginBottom: 16 }}>🚨 Signaler le profil</h3>{["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => <div key={r} onClick={() => handleReport(r)} style={{ padding: "14px 16px", background: G.creme, borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500 }}>{r}</div>)}<Btn variant="ghost" onClick={() => setShowReport(false)} style={{ width: "100%", marginTop: 8 }}>Annuler</Btn></div></div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}</div>;
+</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => setCurrent(c => Math.max(0, c - 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => setCurrent(c => Math.min(profiles.length - 1, c + 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{showBlockConfirm && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+  <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+    <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🚫</div>
+    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Bloquer {p?.name} ?</h3>
+    <p style={{ fontSize: "0.88rem", color: "#666", marginBottom: 24, lineHeight: 1.6 }}>Ce profil disparaîtra de Découvrir. Vous pourrez débloquer depuis votre profil.</p>
+    <div style={{ display: "flex", gap: 10 }}>
+      <Btn variant="ghost" onClick={() => setShowBlockConfirm(false)} style={{ flex: 1 }}>Annuler</Btn>
+      <Btn variant="danger" onClick={handleBlock} style={{ flex: 1 }}>Bloquer</Btn>
+    </div>
+  </div>
+</div>}
+{showReport && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}><div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "28px 20px 40px" }}><h3 style={{  fontSize: "1.2rem", fontWeight: 700, marginBottom: 16 }}>🚨 Signaler le profil</h3>{["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => <div key={r} onClick={() => handleReport(r)} style={{ padding: "14px 16px", background: G.creme, borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500 }}>{r}</div>)}<Btn variant="ghost" onClick={() => setShowReport(false)} style={{ width: "100%", marginTop: 8 }}>Annuler</Btn></div></div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}</div>;
 }
 
 function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
@@ -1558,13 +1609,29 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
   const [uploadLoading, setUploadLoading] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState<Array<{ id: string; blocked_id: string; profile?: Profile }>>([]);
+  const [showBlocked, setShowBlocked] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadProfile(); }, []);
+  useEffect(() => { loadProfile(); loadBlocked(); }, []);
   const loadProfile = async () => {
     const res = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`);
     if (res[0]) { setProfile(res[0]); setForm(res[0]); }
     setLoading(false);
+  };
+  const loadBlocked = async () => {
+    const blocks = await sb.query<{ id: string; blocked_id: string }>(auth.token, "blocks", `?blocker_id=eq.${auth.userId}`);
+    if (!blocks.length) { setBlockedUsers([]); return; }
+    const enriched = await Promise.all(blocks.map(async b => {
+      const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${b.blocked_id}`);
+      return { ...b, profile: profiles[0] };
+    }));
+    setBlockedUsers(enriched);
+  };
+  const handleUnblock = async (blockId: string) => {
+    await sb.delete(auth.token, "blocks", `?id=eq.${blockId}`);
+    setBlockedUsers(prev => prev.filter(b => b.id !== blockId));
+    setToast({ msg: "Utilisateur débloqué ✅" });
   };
   const saveProfile = async () => {
     if (form.age && (form.age < 18 || form.age > 99)) { setErrorMsg("Vous devez avoir entre 18 et 99 ans. Modification refusée."); return; }
@@ -1713,7 +1780,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
               <div style={{  fontSize: "1rem", fontWeight: 700, color: G.blanc, marginBottom: 3 }}>✨ Passer à Moyo Premium</div>
               <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.75)" }}>Messages illimités · Likes illimités · Voir qui vous like</div>
             </div>
-            <div style={{  fontSize: "1.2rem", fontWeight: 800, color: G.or, marginLeft: 12, flexShrink: 0 }}>5 000<br/><span style={{ fontSize: "0.65rem",  fontWeight: 600 }}>FCFA/mois</span></div>
+            <div style={{  fontSize: "1.2rem", fontWeight: 800, color: G.or, marginLeft: 12, flexShrink: 0 }}>3 500<br/><span style={{ fontSize: "0.65rem",  fontWeight: 600 }}>FCFA/mois</span></div>
           </div>
         )}
 
@@ -1761,6 +1828,34 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
           <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#e74c3c" }}>Supprimer mon compte</div>
           <div style={{ marginLeft: "auto", color: "#ffb3b3", fontSize: "1rem", fontWeight: 400 }}>›</div>
         </div>
+
+        {/* Utilisateurs bloqués */}
+        {blockedUsers.length > 0 && (
+          <div>
+            <div onClick={() => setShowBlocked(v => !v)} style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
+              <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🚫</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Utilisateurs bloqués</div>
+              <div style={{ marginLeft: "auto", background: G.rouge, color: G.blanc, borderRadius: 50, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700 }}>{blockedUsers.length}</div>
+              <div style={{ color: "#ccc", fontSize: "1rem" }}>{showBlocked ? "∧" : "›"}</div>
+            </div>
+            {showBlocked && (
+              <div style={{ background: G.blanc, borderRadius: "0 0 16px 16px", border: `1px solid #E8E8E8`, borderTop: "none", overflow: "hidden" }}>
+                {blockedUsers.map(b => (
+                  <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderTop: `1px solid #F5F5F5` }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.gris, overflow: "hidden", flexShrink: 0 }}>
+                      {b.profile?.photo_url ? <img src={b.profile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem" }}>{b.profile?.gender === "Femme" ? "👩🏿" : "👨🏿"}</div>}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.88rem", color: "#1a1a1a" }}>{b.profile?.name || "Utilisateur"}</div>
+                      <div style={{ fontSize: "0.75rem", color: "#888" }}>{b.profile?.city || ""}</div>
+                    </div>
+                    <div onClick={() => handleUnblock(b.id)} style={{ background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.rouge, cursor: "pointer" }}>Débloquer</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Email de connexion — grisé, non modifiable */}
         <div style={{ marginTop: 4, background: G.blanc, borderRadius: 16, padding: "14px 18px", border: `1px solid #E8E8E8`, display: "flex", alignItems: "center", gap: 14 }}>
