@@ -1495,10 +1495,17 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const [showReport, setShowReport] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
+  const [showSameGender, setShowSameGender] = useState(false);
+  const [myGender, setMyGender] = useState("");
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "", religion: "" });
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
-  useEffect(() => { loadProfiles(); }, []);
+  useEffect(() => {
+    loadProfiles();
+    // Charger le genre de l'utilisateur connecté
+    sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
+      .then(res => { if (res[0]) setMyGender(res[0].gender); });
+  }, []);
   useEffect(() => { if (profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
 
   const loadProfiles = async (pageNum = 0, append = false) => {
@@ -1556,8 +1563,12 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   };
 
   const handleLike = async (p: Profile) => {
+    // Bloquer le like si même genre
+    if (myGender && p.gender && myGender === p.gender) {
+      setShowSameGender(true);
+      return;
+    }
     if (likedIds.has(p.id)) {
-      // DÉLIKE : supprimer le like
       setLikedIds(s => { const n = new Set(s); n.delete(p.id); return n; });
       setLikesToday(l => Math.max(0, l - 1));
       await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${p.id}`);
@@ -1590,14 +1601,21 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     <option value="Femme">Femme</option>
   </select>
   <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-    <input type="number" value={filters.ageMin} onChange={e => setFilters(prev => ({ ...prev, ageMin: e.target.value }))} placeholder="Âge min" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${G.gris}`, fontSize: "0.9rem" }} />
-    <input type="number" value={filters.ageMax} onChange={e => setFilters(prev => ({ ...prev, ageMax: e.target.value }))} placeholder="Âge max" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${G.gris}`, fontSize: "0.9rem" }} />
+    <input type="number" value={filters.ageMin} onChange={e => { const v = e.target.value; if (!v || (parseInt(v) >= 18 && parseInt(v) <= 99)) setFilters(prev => ({ ...prev, ageMin: v })); }} placeholder="Âge min (18)" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${filters.ageMin && parseInt(filters.ageMin) < 18 ? "#e74c3c" : G.gris}`, fontSize: "0.9rem" }} />
+    <input type="number" value={filters.ageMax} onChange={e => { const v = e.target.value; if (!v || (parseInt(v) >= 18 && parseInt(v) <= 99)) setFilters(prev => ({ ...prev, ageMax: v })); }} placeholder="Âge max (99)" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${filters.ageMax && parseInt(filters.ageMax) > 99 ? "#e74c3c" : G.gris}`, fontSize: "0.9rem" }} />
   </div>
   <select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
     <option value="">Toutes les religions</option>
     {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
   </select>
-  <Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); setShowFilters(false); }} style={{ width: "100%" }}>Appliquer</Btn>
+  <Btn variant="primary" onClick={() => {
+    const min = parseInt(filters.ageMin);
+    const max = parseInt(filters.ageMax);
+    if (filters.ageMin && (min < 18 || min > 99)) return;
+    if (filters.ageMax && (max < 18 || max > 99)) return;
+    if (filters.ageMin && filters.ageMax && min > max) return;
+    setPage(0); loadProfiles(0); setShowFilters(false);
+  }} style={{ width: "100%" }}>Appliquer</Btn>
 </div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: G.brunLight }}><div style={{ fontSize: "3rem", marginBottom: 16 }}>😊</div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>🔄 Actualiser</Btn></div> : viewMode === "list" ? <div>
   {profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} />)}
   {hasMore && <div onClick={loadMore} style={{ textAlign: "center", padding: "14px", background: G.blanc, borderRadius: 14, marginTop: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", color: G.rouge, border: `1px solid ${G.gris}` }}>{loadingMore ? "⏳ Chargement..." : "Voir plus de profils"}</div>}
@@ -1637,7 +1655,21 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: G.brunLight, fontWeight: 500 }}>🙏 {p.religion}</span>}
   </div>
   {p.bio && <p style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.5, marginTop: 6, marginBottom: 0 }}>{p.bio}</p>}
-</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => setCurrent(c => Math.max(0, c - 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => setCurrent(c => Math.min(profiles.length - 1, c + 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{showBlockConfirm && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => setCurrent(c => Math.max(0, c - 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => setCurrent(c => Math.min(profiles.length - 1, c + 1))} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{showSameGender && (
+  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+    <div style={{ background: G.blanc, borderRadius: 20, padding: "32px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+      <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGender === "Homme" ? "🕺" : "💃"}</div>
+      <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>
+        {myGender === "Homme" ? "Eh frère, reste du bon côté ! 😂" : "Eh sœur, reste du bon côté ! 😂"}
+      </h3>
+      <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20, lineHeight: 1.5 }}>
+        Moyo c'est pour les rencontres hétérosexuelles 😄
+      </p>
+      <Btn variant="primary" onClick={() => setShowSameGender(false)} style={{ width: "100%" }}>J'ai compris 😄</Btn>
+    </div>
+  </div>
+)}
+{showBlockConfirm && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
   <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
     <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🚫</div>
     <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Bloquer {p?.name} ?</h3>
@@ -1781,24 +1813,30 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
   useEffect(() => { if (open) loadMsgs(open); }, [open]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  // Realtime — écoute INSERT et UPDATE sur les messages (pour lu/non lu instantané)
+  // Realtime — écoute INSERT sur les messages (nouveaux messages)
   useEffect(() => {
     if (!open) return;
     const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, async () => {
-      // Recharger les messages pour avoir le is_read à jour
       const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
       setMsgs(res);
     });
-    // Polling léger toutes les 3s pour is_read (fallback si Realtime UPDATE ne fire pas)
+    return () => { try { ws?.close(); } catch {} };
+  }, [open?.id]);
+
+  // Polling dédié toutes les 2s pour détecter les changements de is_read
+  useEffect(() => {
+    if (!open) return;
     const readInterval = setInterval(async () => {
-      if (!openRef.current) return;
-      const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${openRef.current.id}&order=created_at.asc`);
-      setMsgs(res);
-    }, 3000);
-    return () => {
-      try { ws?.close(); } catch {}
-      clearInterval(readInterval);
-    };
+      try {
+        const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
+        setMsgs(prev => {
+          // Mettre à jour seulement si is_read a changé pour éviter re-render inutile
+          const hasChange = res.some((m, i) => prev[i]?.is_read !== m.is_read || prev[i]?.id !== m.id);
+          return hasChange ? res : prev;
+        });
+      } catch {}
+    }, 2000);
+    return () => clearInterval(readInterval);
   }, [open?.id]);
 
   const loadConvs = async () => {
@@ -1872,6 +1910,8 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
   const isImage = (content: string) => content.startsWith("[img]") && content.endsWith("[/img]");
   const getImageUrl = (content: string) => content.slice(5, -6);
 
+  const [showGift, setShowGift] = useState(false);
+
   if (open) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: 100, maxWidth: 500, margin: "0 auto" }}>
       {/* Header fixe */}
@@ -1888,8 +1928,38 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
           <div style={{ fontSize: "0.7rem", color: "#27ae60" }}>● Actif</div>
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: G.brunLight, background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
+        {/* Bouton cadeau — offrir Premium */}
+        {!open.partner?.is_premium && (
+          <div onClick={() => setShowGift(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, fontSize: "1.1rem", opacity: 0.85 }} title="Offrir Premium">🎁</div>
+        )}
         <div onClick={() => setShowDeleteConv(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, color: "#e74c3c", fontSize: "1rem", opacity: 0.7 }}>🗑️</div>
       </div>
+
+      {/* Modal Offrir Premium */}
+      {showGift && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🎁</div>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Offrir Premium à {open.partner?.name}</h3>
+            <p style={{ fontSize: "0.85rem", color: "#666", marginBottom: 6, lineHeight: 1.6 }}>
+              Offre 1 mois de Premium à <strong>{open.partner?.name}</strong> pour <strong style={{ color: G.rouge }}>3 500 FCFA</strong>.
+            </p>
+            <p style={{ fontSize: "0.78rem", color: "#aaa", marginBottom: 20, lineHeight: 1.5 }}>
+              Tu seras redirigé vers notre service client pour finaliser le paiement via MTN MoMo ou Airtel MoMo.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn variant="ghost" onClick={() => setShowGift(false)} style={{ flex: 1 }}>Annuler</Btn>
+              <a
+                href={`https://wa.me/33753356471?text=Bonjour%2C%20je%20souhaite%20offrir%201%20mois%20de%20Premium%20%C3%A0%20${encodeURIComponent(open.partner?.name || "")}%20sur%20Moyo.%20Mon%20email%20%3A%20${encodeURIComponent(auth.email)}`}
+                target="_blank" rel="noopener noreferrer" style={{ flex: 1, textDecoration: "none" }}
+                onClick={() => setShowGift(false)}
+              >
+                <Btn variant="gold" style={{ width: "100%" }}>Offrir 🎁</Btn>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Zone messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: 10 }}>
