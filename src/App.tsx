@@ -1515,91 +1515,73 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
 
-      {/* ── ZONE PHOTO + NOM (style Tinder) ── */}
-      <div style={{ background: G.blanc, paddingBottom: 0, textAlign: "center" }}>
+      {/* ── ZONE BLANCHE : photo + nom + boutons ── */}
+      <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 32 }}>
 
-        {/* Photo ronde + progression */}
-        <div style={{ position: "relative", display: "inline-block", marginTop: 28, marginBottom: 16 }}>
-          {/* Cercle décoratif autour de la photo */}
-          <div style={{
-            width: 120, height: 120, borderRadius: "50%",
-            background: `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: `0 8px 32px rgba(192,57,43,0.25)`,
-          }}>
+        {/* Photo ronde */}
+        <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
+          <div style={{ width: 120, height: 120, borderRadius: "50%", background: `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 8px 32px rgba(192,57,43,0.25)` }}>
             <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
               <Avatar url={profile?.photo_url} gender={profile?.gender} size={108} premium={profile?.is_premium} />
             </div>
           </div>
-          {/* Badge premium ou complétion */}
           {profile?.is_premium ? (
-            <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.brun, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>
-              ⭐ Premium
-            </div>
+            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.brun, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>⭐ Premium</div>
           ) : (
-            <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.blanc, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(192,57,43,0.35)" }}>
-              Gratuit
-            </div>
+            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.blanc, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(192,57,43,0.35)" }}>Gratuit</div>
           )}
         </div>
 
-        {/* Nom + âge */}
-        <div style={{ marginTop: 14, paddingBottom: 28 }}>
-          <div style={{ fontSize: "1.5rem", fontWeight: 800, color: G.brun, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        {/* Nom + infos */}
+        <div style={{ marginTop: 16, paddingBottom: 24, paddingLeft: 16, paddingRight: 16 }}>
+          <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8 }}>
             {profile?.name}
             {profile?.is_premium && <span style={{ fontSize: "1rem", color: G.or }}>✦</span>}
           </div>
-          <div style={{ color: "#444", fontSize: "0.92rem", fontWeight: 600, marginTop: 6 }}>
-            {profile?.age} ans · {profile?.gender}
-          </div>
-          {profile?.religion && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginTop: 4 }}>🙏 {profile.religion}</div>}
-          {profile?.city && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginTop: 4 }}>📍 {profile.city}</div>}
-          {profile?.bio && <div style={{ color: "#333", fontSize: "0.88rem", fontWeight: 600, lineHeight: 1.6, maxWidth: 260, margin: "10px auto 0" }}>"{profile.bio}"</div>}
+          <div style={{ color: "#444", fontSize: "0.92rem", fontWeight: 600, marginBottom: 4 }}>{profile?.age} ans · {profile?.gender}</div>
+          {profile?.religion && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginBottom: 3 }}>🙏 {profile.religion}</div>}
+          {profile?.city && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginBottom: 3 }}>📍 {profile.city}</div>}
+          {profile?.bio && <div style={{ color: "#333", fontSize: "0.88rem", fontWeight: 600, lineHeight: 1.6, maxWidth: 260, margin: "8px auto 0" }}>"{profile.bio}"</div>}
         </div>
 
-        {/* Boutons actions — style Tinder (icônes rondes) */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 40, marginTop: 22, paddingBottom: 32 }}>
-          {/* Modifier mon profil — engrenage SVG */}
+        {/* Boutons Modifier */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 48, paddingBottom: 8 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setEditing(true)}>
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(44,26,14,0.1)", position: "relative" }}>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", position: "relative" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
-              <div style={{ position: "absolute", top: -2, right: -2, width: 16, height: 16, borderRadius: "50%", background: G.rouge, border: `2px solid ${G.blanc}` }} />
+              <div style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: G.rouge, border: `2px solid ${G.blanc}` }} />
             </div>
-            <div style={{ fontSize: "0.82rem", fontWeight: 800, color: G.brun, textAlign: "center", lineHeight: 1.3 }}>Modifier mon<br/>profil</div>
+            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier mon<br/>profil</div>
           </div>
 
-          {/* Modifier ma photo — dégradé rouge style Instagram */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => fileRef.current?.click()}>
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg, ${G.rouge} 0%, ${G.rougeDark} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(192,57,43,0.45)", position: "relative" }}>
-              {uploadLoading ? (
-                <span style={{ fontSize: "1.4rem" }}>⏳</span>
-              ) : (
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(192,57,43,0.4)", position: "relative" }}>
+              {uploadLoading ? <span style={{ fontSize: "1.4rem" }}>⏳</span> : (
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                   <circle cx="12" cy="13" r="4"/>
                 </svg>
               )}
-              <div style={{ position: "absolute", bottom: 0, right: 0, width: 20, height: 20, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.blanc}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
-                <span style={{ fontSize: "0.65rem", color: G.rouge, fontWeight: 800, lineHeight: 1 }}>+</span>
+              <div style={{ position: "absolute", bottom: 0, right: 0, width: 20, height: 20, borderRadius: "50%", background: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
+                <span style={{ fontSize: "0.7rem", color: G.rouge, fontWeight: 900, lineHeight: 1 }}>+</span>
               </div>
             </div>
-            <div style={{ fontSize: "0.82rem", fontWeight: 800, color: G.brun, textAlign: "center", lineHeight: 1.3 }}>Modifier ma<br/>photo</div>
+            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier ma<br/>photo</div>
           </div>
-        </div>
-
-        {/* Séparateur vague style Tinder — propre et naturel */}
-        <div style={{ position: "relative", height: 50, marginTop: -10, overflow: "hidden" }}>
-          <svg viewBox="0 0 500 50" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
-            <path d="M0,0 L500,0 L500,20 Q420,50 250,50 Q80,50 0,20 Z" fill={G.blanc}/>
-          </svg>
         </div>
       </div>
 
-      {/* ── ACTIONS (style cartes empilées) ── */}
-      <div style={{ padding: "0 16px 20px", display: "flex", flexDirection: "column", gap: 10, background: "#EEEEF2" }}>
+      {/* ── VAGUE : zone grise avec vague blanche qui descend du haut ── */}
+      <div style={{ background: "#EEEEF2", position: "relative" }}>
+        <svg viewBox="0 0 500 40" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 40, marginTop: -1 }}>
+          <path d="M0,0 Q125,40 250,40 Q375,40 500,0 L500,0 L0,0 Z" fill={G.blanc}/>
+        </svg>
+
+        {/* ── ACTIONS (cartes empilées) ── */}
+        <div style={{ padding: "8px 16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
 
         {/* Passer à Premium — visible seulement si gratuit */}
         {!auth.isPremium && (
@@ -1620,17 +1602,17 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
 
         {/* Toggle Visible / Invisible */}
         <div style={{
-          background: G.blanc, borderRadius: 18, padding: "16px 20px",
+          background: G.blanc, borderRadius: 16, padding: "16px 20px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          boxShadow: "0 2px 12px rgba(44,26,14,0.07)", border: `1px solid ${G.gris}`,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8`,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: isVisible ? "rgba(39,174,96,0.1)" : "rgba(231,76,60,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: isVisible ? "rgba(39,174,96,0.1)" : "rgba(231,76,60,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>
               {isVisible ? "👁️" : "🔒"}
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>Profil {isVisible ? "visible" : "invisible"}</div>
-              <div style={{ fontSize: "0.72rem", color: G.brunLight, marginTop: 2 }}>{isVisible ? "Tu apparais dans Découvrir" : "Tu n'apparais plus dans Découvrir"}</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Profil {isVisible ? "visible" : "invisible"}</div>
+              <div style={{ fontSize: "0.82rem", color: "#888", fontWeight: 400, marginTop: 2 }}>{isVisible ? "Tu apparais dans Découvrir" : "Tu n'apparais plus dans Découvrir"}</div>
             </div>
           </div>
           <div onClick={async () => {
@@ -1645,45 +1627,46 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
 
         {/* Se déconnecter */}
         <div onClick={() => setShowLogout(true)} style={{
-          background: G.blanc, borderRadius: 18, padding: "16px 20px",
-          display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
-          boxShadow: "0 2px 12px rgba(44,26,14,0.07)", border: `1px solid ${G.gris}`,
+          background: G.blanc, borderRadius: 16, padding: "16px 20px",
+          display: "flex", alignItems: "center", gap: 14, cursor: "pointer",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8`,
         }}>
-          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🚪</div>
-          <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>Se déconnecter</div>
-          <div style={{ marginLeft: "auto", color: G.brunLight, fontSize: "0.9rem" }}>›</div>
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🚪</div>
+          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Se déconnecter</div>
+          <div style={{ marginLeft: "auto", color: "#ccc", fontSize: "1rem", fontWeight: 400 }}>›</div>
         </div>
 
         {/* Supprimer mon compte */}
         <div onClick={() => setShowDelete(true)} style={{
-          background: G.blanc, borderRadius: 18, padding: "16px 20px",
-          display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
-          boxShadow: "0 2px 12px rgba(231,76,60,0.08)", border: `1px solid rgba(231,76,60,0.18)`,
+          background: G.blanc, borderRadius: 16, padding: "16px 20px",
+          display: "flex", alignItems: "center", gap: 14, cursor: "pointer",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #FFE0E0`,
         }}>
-          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(231,76,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🗑️</div>
-          <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#e74c3c" }}>Supprimer mon compte</div>
-          <div style={{ marginLeft: "auto", color: "#e74c3c", fontSize: "0.9rem", opacity: 0.5 }}>›</div>
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🗑️</div>
+          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#e74c3c" }}>Supprimer mon compte</div>
+          <div style={{ marginLeft: "auto", color: "#ffb3b3", fontSize: "1rem", fontWeight: 400 }}>›</div>
         </div>
 
         {/* Email de connexion — grisé, non modifiable */}
-        <div style={{ marginTop: 8, background: "rgba(44,26,14,0.03)", borderRadius: 14, padding: "14px 18px", border: `1px dashed ${G.gris}`, display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: G.gris, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", flexShrink: 0 }}>✉️</div>
+        <div style={{ marginTop: 4, background: G.blanc, borderRadius: 16, padding: "14px 18px", border: `1px solid #E8E8E8`, display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>✉️</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "0.68rem", color: "#bbb", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Email de connexion</div>
-            <div style={{ fontSize: "0.84rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "—"}</div>
+            <div style={{ fontSize: "0.72rem", color: "#bbb", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>Email de connexion</div>
+            <div style={{ fontSize: "0.88rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "—"}</div>
           </div>
-          <div style={{ fontSize: "0.62rem", color: "#ccc", background: G.gris, padding: "3px 9px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>Non modifiable</div>
+          <div style={{ fontSize: "0.65rem", color: "#ccc", background: "#F5F5F5", padding: "3px 10px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>Non modifiable</div>
         </div>
 
-      </div>
+      </div>{/* fin actions */}
+      </div>{/* fin zone grise */}
 
       {/* ── MODAL DÉCONNEXION ── */}
       {showLogout && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 24, padding: "32px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 24px 60px rgba(44,26,14,0.2)" }}>
-            <div style={{ fontSize: "2.8rem", marginBottom: 14 }}>👋</div>
-            <h3 style={{ fontFamily: "'Inter',sans-serif", fontSize: "1.2rem", fontWeight: 700, marginBottom: 10, color: G.brun }}>Se déconnecter ?</h3>
-            <p style={{ fontSize: "0.83rem", color: G.brunLight, marginBottom: 24, lineHeight: 1.6 }}>Tu seras redirigé vers la page d'accueil. À bientôt sur Moyo !</p>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>👋</div>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Se déconnecter ?</h3>
+            <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 24, lineHeight: 1.6 }}>Tu seras redirigé vers la page d'accueil. À bientôt sur Moyo !</p>
             <div style={{ display: "flex", gap: 10 }}>
               <Btn variant="ghost" onClick={() => setShowLogout(false)} style={{ flex: 1 }}>Annuler</Btn>
               <Btn variant="danger" onClick={() => { sb.signOut(auth.token); onLogout(); }} style={{ flex: 1 }}>Se déconnecter</Btn>
@@ -1694,12 +1677,12 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
 
       {/* ── MODAL SUPPRESSION ── */}
       {showDelete && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 24, padding: "32px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 24px 60px rgba(44,26,14,0.2)" }}>
-            <div style={{ fontSize: "2.8rem", marginBottom: 14 }}>⚠️</div>
-            <h3 style={{ fontFamily: "'Inter',sans-serif", fontSize: "1.2rem", fontWeight: 700, marginBottom: 10, color: G.brun }}>Supprimer mon compte ?</h3>
-            <p style={{ fontSize: "0.83rem", color: G.brunLight, marginBottom: 8, lineHeight: 1.6 }}>Ton profil, tes likes et tes messages seront <strong>définitivement supprimés</strong>.</p>
-            <p style={{ fontSize: "0.8rem", color: "#e74c3c", marginBottom: 24, fontWeight: 600 }}>Cette action est irréversible.</p>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>⚠️</div>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Supprimer mon compte ?</h3>
+            <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 6, lineHeight: 1.6 }}>Ton profil, tes likes et tes messages seront <strong style={{ color: "#1a1a1a" }}>définitivement supprimés</strong>.</p>
+            <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#e74c3c", marginBottom: 24 }}>Cette action est irréversible.</p>
             <div style={{ display: "flex", gap: 10 }}>
               <Btn variant="ghost" onClick={() => setShowDelete(false)} style={{ flex: 1 }}>Non, garder</Btn>
               <Btn variant="danger" onClick={handleDelete} style={{ flex: 1 }}>Oui, supprimer</Btn>
