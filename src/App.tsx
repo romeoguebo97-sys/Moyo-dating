@@ -1511,14 +1511,29 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       <div onClick={() => setShowReport(v => !v)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", padding: 4 }}>
         {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2, borderRadius: 2, background: "#555" }} />)}
       </div>
-      {showReport && (
-        <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
-          <div onClick={() => { setShowReport(false); setShowBlockConfirm(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>🚫 Bloquer</div>
-          <div onClick={() => { setShowReport(false); setShowSignaler(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>🚨 Signaler</div>
-        </div>
-      )}
     </div>
   </div>
+  {/* Bottom sheet options — en dehors de la carte */}
+  {showReport && (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowReport(false)}>
+      <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
+          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1a1a1a" }}>{p.name}</div>
+          <div onClick={() => setShowReport(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
+        </div>
+        <div style={{ padding: "8px 16px 32px" }}>
+          <div onClick={() => { setShowReport(false); setShowBlockConfirm(true); }} style={{ padding: "16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🚫</div>
+            <div style={{ fontWeight: 600, fontSize: "0.92rem", color: "#1a1a1a" }}>Bloquer</div>
+          </div>
+          <div onClick={() => { setShowReport(false); setShowSignaler(true); }} style={{ padding: "16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(231,76,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🚨</div>
+            <div style={{ fontWeight: 600, fontSize: "0.92rem", color: "#e74c3c" }}>Signaler</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
     <span style={{ fontSize: "0.78rem", color: G.brunLight }}>📍 {p.city}</span>
     {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: G.brunLight, fontWeight: 500 }}>🙏 {p.religion}</span>}
