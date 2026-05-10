@@ -1510,7 +1510,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
   const isVisible = profile?.is_visible !== false;
 
   return (
-    <div style={{ paddingBottom: 30, background: G.creme, minHeight: "100%" }}>
+    <div style={{ paddingBottom: 30, background: "#EEEEF2", minHeight: "100%" }}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
@@ -1544,17 +1544,17 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
         </div>
 
         {/* Nom + âge */}
-        <div style={{ marginTop: 14 }}>
-          <div style={{ fontFamily: "'Inter',sans-serif", fontSize: "1.5rem", fontWeight: 700, color: G.brun, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        <div style={{ marginTop: 14, paddingBottom: 28 }}>
+          <div style={{ fontSize: "1.5rem", fontWeight: 800, color: G.brun, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             {profile?.name}
             {profile?.is_premium && <span style={{ fontSize: "1rem", color: G.or }}>✦</span>}
           </div>
-          <div style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>
+          <div style={{ color: "#444", fontSize: "0.92rem", fontWeight: 600, marginTop: 6 }}>
             {profile?.age} ans · {profile?.gender}
           </div>
-          {profile?.religion && <div style={{ color: G.brunLight, fontSize: "0.78rem", marginTop: 3 }}>🙏 {profile.religion}</div>}
-          {profile?.city && <div style={{ color: G.brunLight, fontSize: "0.78rem", marginTop: 3 }}>📍 {profile.city}</div>}
-          {profile?.bio && <div style={{ color: G.brunLight, fontSize: "0.82rem", lineHeight: 1.6, maxWidth: 260, margin: "10px auto 0", fontStyle: "italic" }}>"{profile.bio}"</div>}
+          {profile?.religion && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginTop: 4 }}>🙏 {profile.religion}</div>}
+          {profile?.city && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginTop: 4 }}>📍 {profile.city}</div>}
+          {profile?.bio && <div style={{ color: "#333", fontSize: "0.88rem", fontWeight: 600, lineHeight: 1.6, maxWidth: 260, margin: "10px auto 0" }}>"{profile.bio}"</div>}
         </div>
 
         {/* Boutons actions — style Tinder (icônes rondes) */}
@@ -1599,7 +1599,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
       </div>
 
       {/* ── ACTIONS (style cartes empilées) ── */}
-      <div style={{ padding: "16px 16px 20px", display: "flex", flexDirection: "column", gap: 10, background: G.creme }}>
+      <div style={{ padding: "0 16px 20px", display: "flex", flexDirection: "column", gap: 10, background: "#EEEEF2" }}>
 
         {/* Passer à Premium — visible seulement si gratuit */}
         {!auth.isPremium && (
