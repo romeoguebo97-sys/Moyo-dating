@@ -1616,14 +1616,14 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
   ];
 
   return <div style={{ maxWidth: 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme, boxShadow: "0 0 60px rgba(44,26,14,0.12)" }}>
-    <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100 }}>
-      <div style={{ fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+    <div style={{ padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100 }}>
+      <div style={{ paddingLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", paddingRight: 4 }}>
         {auth.isAdmin && <div onClick={() => setTab("admin")} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>⚙️ Admin</div>}
         <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.blanc, background: G.rouge, borderRadius: 50, padding: "5px 14px", cursor: "pointer", letterSpacing: "0.02em" }}>Guide</div>
       </div>
     </div>
-    <div style={{ flex: 1, overflowY: "auto", paddingBottom: 75, paddingTop: 56 }}>{children}</div>
+    <div style={{ flex: 1, overflowY: "auto", paddingBottom: 75, paddingTop: 48 }}>{children}</div>
 
     {/* ── NAVBAR BAS STYLE TINDER ── */}
     <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "8px 8px 16px", zIndex: 50 }}>
