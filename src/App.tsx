@@ -1348,6 +1348,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
 function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; auth: Auth; }) {
   const [showGuide, setShowGuide] = useState(false);
+  const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
 
   const tabs = [
     {
@@ -1443,90 +1444,51 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
       <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
         {/* Header */}
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px", position: "relative" }}>
-          <div onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 14, right: 16, color: G.blanc, fontSize: "1.2rem", cursor: "pointer", opacity: 0.8 }}>✕</div>
+          <div onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 14, right: 16, cursor: "pointer", opacity: 0.8 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
           <div style={{ fontSize: "1.6rem", color: G.blanc, fontWeight: 800 }}>Guide <span style={{ color: G.or }}>Moyo</span></div>
-          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem", marginTop: 4, fontWeight: 400 }}>Tout ce que vous devez savoir pour bien utiliser Moyo</div>
+          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem", marginTop: 4 }}>Tout ce que vous devez savoir</div>
         </div>
-        {/* Contenu */}
-        <div style={{ padding: "20px" }}>
+        {/* Accordéon */}
+        <div style={{ padding: "8px 0" }}>
           {[
-            {
-              title: "Découvrir des profils",
-              color: G.rouge,
-              items: [
-                "L'onglet Découvrir affiche les profils en mode carte ou en liste. En vue carte, utilisez les flèches pour naviguer et le cœur pour liker. En vue liste, le cœur est directement visible sur chaque profil.",
-                "Chaque profil affiche automatiquement un badge 👩 Femme ou 👨 Homme pour identifier clairement le genre, même si la photo ne le montre pas.",
-                "Compte gratuit : 5 likes par jour. Premium : likes illimités. Utilisez les filtres pour affiner par genre, ville, tranche d'âge (18-99) ou religion.",
-                "Moyo est réservé aux rencontres hétérosexuelles. Un homme ne peut pas liker un homme, et une femme ne peut pas liker une femme.",
-              ]
-            },
-            {
-              title: "Matchs",
-              color: G.rouge,
-              items: [
-                "Un match se crée automatiquement quand deux personnes se likent mutuellement. Une fois le match créé, vous pouvez vous envoyer des messages.",
-                "Sur chaque match, appuyez sur les 3 traits pour voir le profil ou annuler le match. L'annulation est silencieuse — l'autre personne n'est pas notifiée. Le match, la conversation et les messages sont supprimés.",
-                "Avec Premium, vous pouvez voir exactement qui vous a liké.",
-              ]
-            },
-            {
-              title: "Messages",
-              color: G.rouge,
-              items: [
-                "Compte gratuit : 3 messages par match. Premium : messages illimités. Le badge rouge sur l'onglet Messages indique le total de messages non lus. Dans la liste des conversations, chaque conversation affiche son propre badge avec le nombre de messages non lus — le badge disparaît dès que vous ouvrez la conversation.",
-                "Chaque message affiche l'heure d'envoi. Une coche ✓ indique que le message est envoyé. Avec Premium, deux coches ✓✓ grises = reçu, deux coches ✓✓ bleues = lu.",
-                "Un point vert 🟢 à côté du nom indique que la personne est en ligne. Dans la conversation, vous voyez En ligne, Vu il y a X min, ou Vu il y a Xh.",
-                "Premium : envoi de photos via l'icône caméra. Cliquez sur une photo reçue pour l'agrandir. Vous pouvez offrir le Premium à votre partenaire via le bouton 🎁. Pour supprimer une conversation, appuyez sur l'icône corbeille.",
-              ]
-            },
-            {
-              title: "Mon Profil",
-              color: G.rouge,
-              items: [
-                "Modifiez votre photo, prénom, âge, ville, religion et bio en appuyant sur l'engrenage. Le bouton visible/invisible vous permet d'apparaître ou non dans Découvrir sans supprimer votre compte.",
-                "Utilisez Voir mon profil pour voir exactement comment les autres vous voient, en mode carte et en mode liste.",
-                "La Liste noire vous permet de gérer les utilisateurs bloqués et de les débloquer à tout moment.",
-                "Demandez la vérification de votre compte pour obtenir le badge bleu ✅. Appuyez sur Faire vérifier mon compte et suivez les instructions via WhatsApp. La vérification est gratuite.",
-              ]
-            },
-            {
-              title: "Bloquer et Signaler",
-              color: G.rouge,
-              items: [
-                "Sur chaque profil dans Découvrir, appuyez sur les 3 traits pour accéder aux options. Bloquer fait disparaître définitivement le profil de vos résultats. Signaler envoie un rapport à notre équipe qui examine le cas sous 24h.",
-                "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.",
-              ]
-            },
-            {
-              title: "Premium — 3 500 FCFA / mois",
-              color: G.or,
-              items: [
-                "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké, profil mis en avant.",
-                "Paiement uniquement via MTN MoMo ou Airtel MoMo. Contactez notre service client via WhatsApp ou Facebook pour payer. L'activation est effectuée sous 24h maximum.",
-                "Vous pouvez offrir le Premium à quelqu'un via le bouton 🎁 dans une conversation.",
-              ]
-            },
-            {
-              title: "Sécurité et confidentialité",
-              color: G.rouge,
-              items: [
-                "Moyo est réservé aux personnes majeures de 18 ans et plus. Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible.",
-              ]
-            },
+            { title: "Découvrir des profils", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>, items: ["L'onglet Découvrir affiche les profils en mode carte ou en liste. En vue carte, utilisez les flèches pour naviguer et le cœur pour liker.", "Chaque profil affiche un badge Femme ou Homme pour identifier clairement le genre.", "Compte gratuit : 5 likes par jour. Premium : likes illimités. Filtres disponibles : genre, ville, âge (18-99), religion.", "Moyo est réservé aux rencontres hétérosexuelles uniquement."] },
+            { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour voir le profil ou annuler le match. L'annulation est silencieuse.", "Avec Premium, vous pouvez voir exactement qui vous a liké."] },
+            { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: ["Compte gratuit : 3 messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.", "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau."] },
+            { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
+            { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil."] },
+            { title: "Premium — 3 500 FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: ["Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké.", "Paiement via MTN MoMo ou Airtel MoMo uniquement. Activation sous 24h. Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation."] },
+            { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo est réservé aux personnes majeures de 18 ans et plus.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
           ].map((s, i) => (
-            <div key={i} style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: "0.92rem", fontWeight: 700, color: s.color, marginBottom: 6, paddingBottom: 5, borderBottom: `2px solid ${s.color === G.or ? "rgba(212,168,67,0.25)" : "rgba(192,57,43,0.12)"}` }}>
-                {s.title}
+            <div key={i} style={{ borderBottom: `1px solid ${G.gris}` }}>
+              <div onClick={() => setOpenGuideSection(openGuideSection === i ? null : i)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", cursor: "pointer", background: openGuideSection === i ? "rgba(192,57,43,0.03)" : "transparent" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: openGuideSection === i ? G.rouge : G.gris, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: openGuideSection === i ? G.blanc : G.brunLight }}>
+                    {s.icon}
+                  </div>
+                  <span style={{ fontWeight: 600, fontSize: "0.92rem", color: openGuideSection === i ? G.rouge : G.brun }}>{s.title}</span>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openGuideSection === i ? G.rouge : "#bbb"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "transform 0.2s", transform: openGuideSection === i ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
               </div>
-              {s.items.map((item, j) => (
-                <p key={j} style={{ fontSize: "0.83rem", color: "#555", lineHeight: 1.6, fontWeight: 400, marginBottom: 3 }}>{item}</p>
-              ))}
+              {openGuideSection === i && (
+                <div style={{ padding: "4px 20px 16px" }}>
+                  {s.items.map((item, j) => (
+                    <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: j < s.items.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: G.rouge, flexShrink: 0, marginTop: 6 }} />
+                      <p style={{ fontSize: "0.83rem", color: "#555", lineHeight: 1.6, margin: 0 }}>{item}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {/* Contact */}
-          <div style={{ background: "#f8f8f8", borderRadius: 14, padding: "16px", textAlign: "center", marginTop: 8 }}>
+          <div style={{ background: "#f8f8f8", borderRadius: 14, padding: "16px", textAlign: "center", margin: "12px 16px 16px" }}>
             <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a1a", marginBottom: 4 }}>Un problème ou une question ?</div>
-            <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, lineHeight: 1.5, fontWeight: 400 }}>Notre équipe est disponible pour vous aider.</p>
+            <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, lineHeight: 1.5 }}>Notre équipe est disponible pour vous aider.</p>
             <a href="https://www.facebook.com/share/1HssYavG19/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", background: G.rouge, color: G.blanc, borderRadius: 50, padding: "10px 24px", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none" }}>Contacter notre équipe</a>
           </div>
         </div>
