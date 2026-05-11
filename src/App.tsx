@@ -217,6 +217,7 @@ const GLOBAL_CSS = `
   @media(min-width:768px){
     .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
     .landing-hero-text{text-align:left!important}
+  @media(max-width:767px){.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important}}
     .landing-hero-btns{justify-content:flex-start!important}
     .landing-stats{max-width:900px!important;margin:0 auto!important;padding:0 40px 0!important;grid-template-columns:repeat(3,1fr)!important}
     .landing-sections{max-width:1100px!important;margin:0 auto!important;padding:0 40px!important}
@@ -381,7 +382,7 @@ function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string
           <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.75)", marginTop: 8 }}>MTN MoMo · Airtel Money · Orange Money</div>
         </div>
 
-        {/* Liste avantages — style Guide */}
+        {/* Liste avantages - style Guide */}
         <div style={{ padding: "8px 0", flex: 1 }}>
           {avantages.map((a, i) => (
             <div key={a.titre} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", borderBottom: `1px solid ${G.gris}` }}>
@@ -400,7 +401,7 @@ function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string
         {/* Boutons */}
         <div style={{ padding: "16px 20px 32px", flexShrink: 0 }}>
           <Btn variant="gold" onClick={() => {}} style={{ width: "100%", padding: "16px", fontSize: "1rem", marginBottom: 10 }}>
-            Activer Premium — 3 500 FCFA/mois
+            Activer Premium - 3 500 FCFA/mois
           </Btn>
           <button onClick={onClose} style={{ width: "100%", fontSize: "0.88rem", color: "#555", cursor: "pointer", fontWeight: 600, padding: "13px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, transition: "all 0.2s" }}
             onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#999"; }}
@@ -516,6 +517,10 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const svgTk = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.75a4.85 4.85 0 01-1.01-.06z"/></svg>;
   const [showLandingMenu, setShowLandingMenu] = useState(false);
   const [openMenuSection, setOpenMenuSection] = useState<string | null>(null);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [ratingComment, setRatingComment] = useState("");
   const toggleSection = (s: string) => setOpenMenuSection(prev => prev === s ? null : s);
 
   const landingMenuSections = [
@@ -540,9 +545,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "✓", titre: "Accompagnement pour les couples diaspora/Congo", desc: "" },
     ]},
     { id: "temoignages", title: "Témoignages", emoji: "💬", items: [
-      { icon: "couple", titre: "Fatou & Rodrigue — Paris · Brazza", desc: "On s'est rencontrés sur Moyo en janvier. Aujourd'hui on est fiancés ! Merci Moyo 💕" },
-      { icon: "star3", titre: "Céleste — Diaspora Belgique", desc: "Enfin une appli faite pour nous ! J'ai trouvé quelqu'un de sérieux en 2 semaines." },
-      { icon: "thumbup", titre: "Patrick — Pointe-Noire", desc: "Simple, propre, efficace. Exactement ce qu'il fallait pour la diaspora congolaise." },
+      { icon: "couple", titre: "Fatou & Rodrigue - Paris · Brazza", desc: "On s'est rencontrés sur Moyo en janvier. Aujourd'hui on est fiancés ! Merci Moyo 💕" },
+      { icon: "star3", titre: "Céleste - Diaspora Belgique", desc: "Enfin une appli faite pour nous ! J'ai trouvé quelqu'un de sérieux en 2 semaines." },
+      { icon: "thumbup", titre: "Patrick - Pointe-Noire", desc: "Simple, propre, efficace. Exactement ce qu'il fallait pour la diaspora congolaise." },
     ]},
     { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
       { icon: "Q", titre: "Moyo est-il gratuit ?", desc: "Oui, l'inscription est gratuite. 5 likes/jour et 3 messages/match. Premium à 3 500 FCFA/mois." },
@@ -557,20 +562,21 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "adult", titre: "Majorité requise", desc: "Moyo est strictement réservé aux personnes de 18 ans et plus." },
     ]},
     { id: "confidentialite", title: "Confidentialité & CGU", emoji: "📋", items: [
-      { icon: "shield", titre: "Responsable du traitement", desc: "Romeo GUEBO — contact : romeoguebo97@gmail.com" },
+      { icon: "shield", titre: "Responsable du traitement", desc: "Romeo GUEBO - contact : romeoguebo97@gmail.com" },
       { icon: "lock2", titre: "Données collectées", desc: "Nom, e-mail, photos, messages, données de connexion et abonnement. Utilisées uniquement pour le fonctionnement de Moyo." },
       { icon: "lock2", titre: "Conservation & sécurité", desc: "Données conservées le temps nécessaire au service. Aucune revente. Prestataires techniques liés à l'hébergement uniquement." },
       { icon: "verified", titre: "Vos droits (RGPD)", desc: "Accès, modification et suppression de vos données sur demande à romeoguebo97@gmail.com" },
-      { icon: "chat", titre: "CGU — Utilisation", desc: "Moyo est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
+      { icon: "chat", titre: "CGU - Utilisation", desc: "Moyo est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
       { icon: "alert", titre: "Contenus interdits", desc: "Faux profils, harcèlement, contenus illégaux, tentatives d'arnaque ou usurpation d'identité sont strictement interdits." },
       { icon: "star2", titre: "Premium & paiement", desc: "Certaines fonctionnalités sont accessibles via abonnement. Paiements via prestataires sécurisés (MTN MoMo, Airtel Money)." },
     ]},
     { id: "mentions", title: "Mentions légales", emoji: "⚖️", items: [
-      { icon: "user", titre: "Éditeur du site", desc: "Romeo GUEBO — romeoguebo97@gmail.com" },
+      { icon: "user", titre: "Éditeur du site", desc: "Romeo GUEBO - romeoguebo97@gmail.com" },
       { icon: "shield", titre: "Propriété intellectuelle", desc: "Tous les contenus, visuels et logos de Moyo sont protégés. Toute reproduction sans autorisation est interdite." },
       { icon: "verified", titre: "Droit applicable", desc: "Les présentes conditions sont régies par le droit français. Tout litige relève des tribunaux compétents." },
       { icon: "chat", titre: "Contact", desc: "Pour toute question légale : romeoguebo97@gmail.com" },
     ]},
+    { id: "notation", title: "Noter Moyo", emoji: "⭐", items: [] },
   ];
 
   return (
@@ -631,6 +637,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                         {s.id === "securite" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
                         {s.id === "confidentialite" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>}
                         {s.id === "mentions" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
+                        {s.id === "notation" && <svg width="16" height="16" viewBox="0 0 24 24" fill={openMenuSection === s.id ? "white" : "#555"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
                       </div>
                       <span style={{ fontWeight: 600, fontSize: "0.92rem", color: openMenuSection === s.id ? G.vert : G.brun }}>{s.title}</span>
                     </div>
@@ -640,7 +647,54 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   </div>
                   {openMenuSection === s.id && (
                     <div style={{ padding: "4px 20px 16px" }}>
-                      {s.id === "faq" ? (
+                      {s.id === "notation" ? (
+                        <div style={{ textAlign: "center", padding: "8px 0" }}>
+                          {ratingSubmitted ? (
+                            <div>
+                              <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>🎉</div>
+                              <div style={{ fontWeight: 700, fontSize: "1rem", color: "#111", marginBottom: 4 }}>Merci pour ton avis !</div>
+                              <div style={{ fontSize: "0.82rem", color: "#555" }}>Tu as noté Moyo {userRating}/5 étoiles</div>
+                              <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 8 }}>
+                                {[1,2,3,4,5].map(s => (
+                                  <svg key={s} width="24" height="24" viewBox="0 0 24 24" fill={s <= userRating ? G.or : "#ddd"} stroke="none">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                  </svg>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111", marginBottom: 4 }}>Comment tu trouves Moyo ?</div>
+                              <div style={{ fontSize: "0.8rem", color: "#555", marginBottom: 16 }}>Ton avis nous aide à améliorer la plateforme</div>
+                              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 16 }}>
+                                {[1,2,3,4,5].map(star => (
+                                  <div key={star}
+                                    onMouseEnter={() => setHoverRating(star)}
+                                    onMouseLeave={() => setHoverRating(0)}
+                                    onClick={() => setUserRating(star)}
+                                    style={{ cursor: "pointer", transform: (hoverRating || userRating) >= star ? "scale(1.2)" : "scale(1)", transition: "transform 0.15s" }}>
+                                    <svg width="36" height="36" viewBox="0 0 24 24" fill={(hoverRating || userRating) >= star ? G.or : "#ddd"} stroke="none">
+                                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                    </svg>
+                                  </div>
+                                ))}
+                              </div>
+                              {userRating > 0 && <>
+                                <textarea
+                                  value={ratingComment}
+                                  onChange={e => setRatingComment(e.target.value)}
+                                  placeholder="Laisse un commentaire (optionnel)..."
+                                  rows={3}
+                                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid #ddd`, fontSize: "0.82rem", resize: "none", outline: "none", boxSizing: "border-box", marginBottom: 10 }}
+                                />
+                                <button onClick={() => setRatingSubmitted(true)} style={{ width: "100%", background: G.rouge, color: G.blanc, border: "none", borderRadius: 50, padding: "11px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
+                                  Envoyer mon avis
+                                </button>
+                              </>}
+                            </div>
+                          )}
+                        </div>
+                      ) : s.id === "faq" ? (
                         s.items.map((item, i) => (
                           <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${G.gris}` }}>
                             <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
@@ -738,11 +792,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               <span className="heart" style={{ color: G.rouge, fontStyle: "italic" }}>âme sœur</span>
               <br />au Congo
             </h1>
-            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440 }}>
+            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440, textAlign: "center" }}>
               Moyo connecte les Congolais à la recherche d'une relation sincère et durable.
               Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.
             </p>
-            <div className="fu4 landing-hero-btns" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 32 }}>
+            <div className="fu4 landing-hero-btns" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 20 }}>
               <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>
                 Créer mon profil gratuit
               </button>
@@ -752,10 +806,10 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             </div>
 
             {/* ── Téléphones visibles sur MOBILE ── */}
-            <div className="fu5" style={{ display: "block", position: "relative", margin: "0 auto", maxWidth: 280 }} id="hero-img-mobile">
-              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 12, height: 230 }}>
+            <div className="fu5" style={{ display: "block", position: "relative", margin: "0 auto", maxWidth: 340 }} id="hero-img-mobile">
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 10, height: 280 }}>
                 {/* Téléphone gauche */}
-                <div style={{ width: 72, height: 148, borderRadius: 14, background: "linear-gradient(160deg,#2C1A0E,#5C3A1E)", border: "3px solid rgba(255,255,255,0.15)", overflow: "hidden", boxShadow: "0 12px 32px rgba(44,26,14,0.25)", flexShrink: 0, transform: "rotate(-8deg) translateY(20px)" }}>
+                <div style={{ width: 90, height: 180, borderRadius: 16, background: "linear-gradient(160deg,#2C1A0E,#5C3A1E)", border: "3px solid rgba(255,255,255,0.15)", overflow: "hidden", boxShadow: "0 12px 32px rgba(44,26,14,0.25)", flexShrink: 0, transform: "rotate(-8deg) translateY(20px)" }}>
                   <div style={{ background: G.rouge, padding: "4px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ color: G.blanc, fontWeight: 700, fontSize: "0.45rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
                   </div>
@@ -769,7 +823,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   </div>
                 </div>
                 {/* Téléphone central */}
-                <div style={{ width: 90, height: 178, borderRadius: 16, background: "linear-gradient(160deg,#1a1a2e,#16213e)", border: "3px solid rgba(255,255,255,0.2)", overflow: "hidden", boxShadow: "0 20px 50px rgba(0,0,0,0.35)", flexShrink: 0, zIndex: 2 }}>
+                <div style={{ width: 112, height: 220, borderRadius: 18, background: "linear-gradient(160deg,#1a1a2e,#16213e)", border: "3px solid rgba(255,255,255,0.2)", overflow: "hidden", boxShadow: "0 20px 50px rgba(0,0,0,0.35)", flexShrink: 0, zIndex: 2 }}>
                   <div style={{ background: `linear-gradient(135deg,${G.vert},#0D4020)`, padding: "5px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ color: G.blanc, fontWeight: 700, fontSize: "0.55rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
                     <div style={{ width: 16, height: 16, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: G.blanc }}>CG</div>
@@ -789,7 +843,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   </div>
                 </div>
                 {/* Téléphone droit */}
-                <div style={{ width: 72, height: 148, borderRadius: 14, background: "linear-gradient(160deg,#1a1a2e,#2d2d44)", border: "3px solid rgba(255,255,255,0.15)", overflow: "hidden", boxShadow: "0 12px 32px rgba(0,0,0,0.25)", flexShrink: 0, transform: "rotate(8deg) translateY(20px)" }}>
+                <div style={{ width: 90, height: 180, borderRadius: 16, background: "linear-gradient(160deg,#1a1a2e,#2d2d44)", border: "3px solid rgba(255,255,255,0.15)", overflow: "hidden", boxShadow: "0 12px 32px rgba(0,0,0,0.25)", flexShrink: 0, transform: "rotate(8deg) translateY(20px)" }}>
                   <div style={{ background: G.brun, padding: "4px 6px" }}>
                     <span style={{ color: G.blanc, fontWeight: 700, fontSize: "0.45rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
                   </div>
@@ -842,7 +896,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             {/* Mockup téléphone principal */}
             <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 20, height: 500 }}>
 
-              {/* Téléphone gauche — légèrement incliné */}
+              {/* Téléphone gauche - légèrement incliné */}
               <div style={{
                 transform: "rotate(-6deg) translateY(20px)",
                 width: 160, flexShrink: 0,
@@ -856,7 +910,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 }}>
                   {/* Encoche */}
                   <div style={{ width: 40, height: 8, background: "#0D0B1A", borderRadius: 8, margin: "0 auto 10px" }} />
-                  {/* Écran — profil Moyo */}
+                  {/* Écran - profil Moyo */}
                   <div style={{ background: G.creme, borderRadius: 20, overflow: "hidden", height: 310 }}>
                     {/* Header app */}
                     <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "14px 12px 10px", display: "flex", alignItems: "center", gap: 8 }}>
@@ -878,7 +932,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 </div>
               </div>
 
-              {/* Téléphone central — principal, droit */}
+              {/* Téléphone central - principal, droit */}
               <div style={{ transform: "translateY(-10px)", width: 175, flexShrink: 0, zIndex: 3 }}>
                 <div style={{
                   background: "#0D0B1A",
@@ -924,7 +978,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 </div>
               </div>
 
-              {/* Téléphone droit — incliné */}
+              {/* Téléphone droit - incliné */}
               <div style={{ transform: "rotate(6deg) translateY(20px)", width: 155, flexShrink: 0 }}>
                 <div style={{
                   background: "#1C1A2E",
@@ -1270,7 +1324,7 @@ function About({ onBack }: { onBack: () => void }) {
             </div>
             <div>
               <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem", fontWeight: 500 }}>Rejoins-nous sur</div>
-              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>Facebook — Page Moyo Congo</div>
+              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>Facebook - Page Moyo Congo</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -1492,14 +1546,14 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         ))}
       </div>
 
-      {/* ÉTAPE 1 — Email + mot de passe */}
+      {/* ÉTAPE 1 - Email + mot de passe */}
       {step === 1 && <>
         <Input label="Email" type="email" value={form.email} onChange={e => upd("email", e.target.value)} placeholder="ton@email.com" icon="email" />
         <Input label="Veuillez définir votre mot de passe" type="password" value={form.password} onChange={e => upd("password", e.target.value)} placeholder="Minimum 6 caractères" icon="lock" hint="Au moins 6 caractères" />
         <Btn variant="primary" onClick={checkEmailAndContinue} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn>
       </>}
 
-      {/* ÉTAPE 2 — Photo */}
+      {/* ÉTAPE 2 - Photo */}
       {step === 2 && <>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <p style={{ fontSize: "0.9rem", color: "#555", marginBottom: 24, lineHeight: 1.6 }}>
@@ -1541,7 +1595,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         </div>
       </>}
 
-      {/* ÉTAPE 3 — Infos personnelles */}
+      {/* ÉTAPE 3 - Infos personnelles */}
       {step === 3 && <>
         {photoPreview && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(26,92,58,0.06)", borderRadius: 12, padding: "8px 14px", marginBottom: 16 }}>
@@ -1707,7 +1761,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: ["Compte gratuit : 3 messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.", "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil."] },
-            { title: "Premium — 3 500 FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: ["Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké.", "Paiement via MTN MoMo ou Airtel MoMo uniquement. Activation sous 24h. Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation."] },
+            { title: "Premium - 3 500 FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: ["Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké.", "Paiement via MTN MoMo ou Airtel MoMo uniquement. Activation sous 24h. Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation."] },
             { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo est réservé aux personnes majeures de 18 ans et plus.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
           ].map((s, i) => (
             <div key={i} style={{ borderBottom: `1px solid ${G.gris}` }}>
@@ -1962,7 +2016,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       </div>
     </div>
   </div>
-  {/* Bottom sheet options — en dehors de la carte */}
+  {/* Bottom sheet options - en dehors de la carte */}
   {showReport && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowReport(false)}>
       <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
@@ -2265,7 +2319,7 @@ function TickIcon({ read, isPremium, white = false }: { read: boolean; isPremium
       </svg>
     );
   }
-  // Premium : double coche — grise si pas lu, bleue si lu
+  // Premium : double coche - grise si pas lu, bleue si lu
   const color = read ? "#4fc3f7" : (white ? "rgba(255,255,255,0.6)" : "#bbb");
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
@@ -2298,7 +2352,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
   useEffect(() => { if (open) loadMsgs(open); }, [open]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  // Realtime — écoute INSERT sur les messages (nouveaux messages)
+  // Realtime - écoute INSERT sur les messages (nouveaux messages)
   useEffect(() => {
     if (!open) return;
     const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, async () => {
@@ -2421,7 +2475,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
           {(() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
-        {/* Bouton cadeau — offrir Premium */}
+        {/* Bouton cadeau - offrir Premium */}
         {!open.partner?.is_premium && (
           <div onClick={() => setShowGift(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, fontSize: "1.1rem", opacity: 0.85 }} title="Offrir Premium">🎁</div>
         )}
@@ -2488,7 +2542,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
 
       {/* Barre envoi */}
       <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
-        {/* Bouton image — Premium */}
+        {/* Bouton image - Premium */}
         <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
         <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("📸 L'envoi de photos est réservé aux membres Premium !")}
           style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
@@ -2845,7 +2899,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
         {/* ── ACTIONS (cartes empilées) ── */}
         <div style={{ padding: "32px 16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
 
-        {/* Passer à Premium — visible seulement si gratuit */}
+        {/* Passer à Premium - visible seulement si gratuit */}
         {!auth.isPremium && (
           <div onClick={() => onShowPremium("")} style={{
             background: `linear-gradient(135deg,${G.rouge} 0%,${G.rougeDark} 100%)`,
@@ -2887,6 +2941,25 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
           </div>
         </div>
 
+        {/* Inviter un ami */}
+        <div onClick={() => {
+          const msg = encodeURIComponent("Rejoins-moi sur Moyo, le site de rencontres congolais ! Inscris-toi ici : https://moyo-congo.com");
+          if (navigator.share) {
+            navigator.share({ title: "Moyo Congo", text: "Rejoins-moi sur Moyo, le site de rencontres congolais !", url: "https://moyo-congo.com" });
+          } else {
+            window.open(`https://wa.me/?text=${msg}`, "_blank");
+          }
+        }} style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8`, cursor: "pointer" }}>
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Inviter un ami</div>
+            <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>Partage Moyo avec tes proches</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+
         {/* Se déconnecter */}
         <div onClick={() => setShowLogout(true)} className="action-card" style={{
           background: G.rouge, borderRadius: 50, padding: "16px 20px",
@@ -2917,17 +2990,17 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
           </div>
         )}
 
-        {/* Email de connexion — grisé, non modifiable */}
+        {/* Email de connexion - grisé, non modifiable */}
         <div style={{ marginTop: 4, background: G.blanc, borderRadius: 16, padding: "14px 18px", border: `1px solid #E8E8E8`, display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>✉️</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: "0.72rem", color: "#bbb", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>Email de connexion</div>
-            <div style={{ fontSize: "0.88rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "—"}</div>
+            <div style={{ fontSize: "0.88rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "-"}</div>
           </div>
           <div style={{ fontSize: "0.65rem", color: "#ccc", background: "#F5F5F5", padding: "3px 10px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>Non modifiable</div>
         </div>
 
-        {/* Supprimer mon compte — tout en bas */}
+        {/* Supprimer mon compte - tout en bas */}
         <div onClick={() => setShowDelete(true)} className="action-card" style={{
           background: G.blanc, borderRadius: 16, padding: "16px 20px",
           display: "flex", alignItems: "center", gap: 14, cursor: "pointer",
@@ -2962,7 +3035,7 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a1a" }}>{b.profile?.name || "Utilisateur"}</div>
-                    <div style={{ fontSize: "0.75rem", color: "#888" }}>📍 {b.profile?.city || "—"}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#888" }}>📍 {b.profile?.city || "-"}</div>
                   </div>
                   <div onClick={() => handleUnblock(b.id)} style={{ background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, color: G.rouge, cursor: "pointer", flexShrink: 0 }}>Débloquer</div>
                 </div>
@@ -3024,7 +3097,7 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
 
-  // PWA — écouter l'événement d'installation
+  // PWA - écouter l'événement d'installation
   useEffect(() => {
     // Enregistrer le Service Worker
     if ('serviceWorker' in navigator) {
@@ -3043,7 +3116,7 @@ export default function App() {
     };
     window.addEventListener("beforeinstallprompt", handler);
 
-    // iOS — détecter Safari iPhone/iPad
+    // iOS - détecter Safari iPhone/iPad
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
     if (isIos && !isInStandaloneMode) {
       setTimeout(() => setShowInstall(true), 5000);
@@ -3070,7 +3143,7 @@ export default function App() {
       setPage("reset-password");
       return;
     }
-    // Confirmation email — rediriger vers login (Supabase valide le token automatiquement via l'URL)
+    // Confirmation email - rediriger vers login (Supabase valide le token automatiquement via l'URL)
     if ((type === "signup" || type === "email_confirmation") && accessToken) {
       window.location.hash = "";
       setPage("login");
@@ -3098,7 +3171,7 @@ export default function App() {
       setTimeout(() => {
         Notification.requestPermission().then(permission => {
           if (permission === 'granted') {
-            new Notification('Moyo — Notifications activées !', {
+            new Notification('Moyo - Notifications activées !', {
               body: 'Vous recevrez des alertes pour vos nouveaux messages.',
               icon: '/favicon.png',
             });
@@ -3172,7 +3245,7 @@ export default function App() {
         const count = Array.isArray(res) ? res.length : 0;
         setUnreadCount(prev => {
           if (count > prev && prev >= 0 && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('Moyo — Nouveau message', {
+            new Notification('Moyo - Nouveau message', {
               body: 'Vous avez reçu un nouveau message !',
               icon: '/favicon.png',
             });
@@ -3193,7 +3266,7 @@ export default function App() {
       loadLikesReceived();
     });
 
-    // ── REALTIME matchs — badge mis à jour instantanément ──
+    // ── REALTIME matchs - badge mis à jour instantanément ──
     const wsMatches = sb.subscribeRealtime(auth.token, "matches", `user2=eq.${auth.userId}`, () => {
       loadMatchCount();
       loadLikesReceived();
@@ -3243,7 +3316,7 @@ export default function App() {
             </p>
           ) : (
             <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>
-              Accède rapidement à Moyo depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !
+              Accède rapidement à Moyo depuis ton écran d'accueil - rapide, pratique et sans passer par le navigateur !
             </p>
           )}
           {!isIos && (
