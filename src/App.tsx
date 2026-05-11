@@ -685,18 +685,18 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         {/* ── PHOTOS ARRIÈRE-PLAN style Tinder ── */}
         <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap: 4, opacity: 0.35, zIndex: 0, pointerEvents: "none" }}>
           {[
-            "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/5N49axPQGXU?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/eXclz2FOr0M?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/kUsf1h50ONw?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/nZ89VaOkxWA?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/kUGwR0S8qXo?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/19WqPjcVaNc?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/oA8hN1V1dE0?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/MYmWkQsup-I?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/iTFwVwgl3eQ?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/kw2lg3GB4NQ?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?w=300&h=400&fit=crop&auto=format",
+            "/bj (1).webp",
+            "/bj (2).webp",
+            "/bj (3).webp",
+            "/bj (4).webp",
+            "/bj (5).webp",
+            "/bj (6).webp",
+            "/bj (7).webp",
+            "/bj (8).webp",
+            "/bj (9).webp",
+            "/bj (10).webp",
+            "/bj (11).webp",
+            "/bj (12).webp",
           ].map((url, i) => (
             <div key={i} style={{ overflow: "hidden" }}>
               <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -743,7 +743,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     <span style={{ color: G.blanc, fontWeight: 700, fontSize: "0.45rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
                   </div>
                   <div style={{ height: 100, overflow: "hidden", position: "relative" }}>
-                    <img src="https://images.unsplash.com/5N49axPQGXU?w=200&h=100&fit=crop&crop=top&auto=format" alt="Sandrine" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                    <img src="/phone-femme.webp" alt="Sandrine" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                   </div>
                   <div style={{ padding: "4px 6px" }}>
                     <div style={{ fontSize: "0.42rem", fontWeight: 700, color: "#111" }}>Sandrine, 27</div>
@@ -758,7 +758,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     <div style={{ width: 16, height: 16, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: G.blanc }}>CG</div>
                   </div>
                   <div style={{ height: 128, overflow: "hidden", position: "relative" }}>
-                    <img src="https://images.unsplash.com/eXclz2FOr0M?w=200&h=130&fit=crop&crop=top&auto=format" alt="Faïda" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                    <img src="/phone-homme.webp" alt="Faïda" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                     <div style={{ position: "absolute", top: 6, right: 6, background: G.rouge, borderRadius: 50, padding: "2px 6px", fontSize: "0.35rem", color: G.blanc, fontWeight: 700 }}>Premium</div>
                   </div>
                   <div style={{ padding: "5px 8px" }}>
@@ -849,7 +849,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     {/* Profil card */}
                     <div style={{ padding: "12px 10px" }}>
                       <div style={{ width: "100%", height: 110, borderRadius: 14, overflow: "hidden", marginBottom: 10, position: "relative" }}>
-                        <img src="https://images.unsplash.com/kUsf1h50ONw?w=200&h=110&fit=crop&crop=top&auto=format" alt="Sandrine" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                        <img src="/phone-femme.webp" alt="Sandrine" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                         <div style={{ position: "absolute", top: 8, right: 8, background: G.or, borderRadius: 6, padding: "2px 6px", fontSize: "0.45rem", fontWeight: 700, color: "#111" }}>⭐ Premium</div>
                       </div>
                       <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#111", marginBottom: 2 }}>Sandrine, 27</div>
@@ -890,7 +890,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     {/* Profil principal */}
                     <div style={{ padding: "8px 10px" }}>
                       <div style={{ width: "100%", height: 120, borderRadius: 14, overflow: "hidden", position: "relative" }}>
-                        <img src="https://images.unsplash.com/kUGwR0S8qXo?w=200&h=120&fit=crop&crop=top&auto=format" alt="Faïda" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                        <img src="/phone-homme.webp" alt="Faïda" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.6))", padding: "8px 8px 6px" }}>
                           <div style={{ fontWeight: 700, fontSize: "0.68rem", color: G.blanc }}>Faïda, 25</div>
                           <div style={{ fontSize: "0.56rem", color: "rgba(255,255,255,0.8)" }}>📍 Pointe-Noire</div>
