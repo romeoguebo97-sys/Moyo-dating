@@ -217,7 +217,7 @@ const GLOBAL_CSS = `
   @media(min-width:768px){
     .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
     .landing-hero-text{text-align:left!important}
-  @media(max-width:767px){.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important}}
+  @media(max-width:767px){.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important;margin-bottom:16px!important}}
     .landing-hero-btns{justify-content:flex-start!important}
     .landing-stats{max-width:900px!important;margin:0 auto!important;padding:0 40px 0!important;grid-template-columns:repeat(3,1fr)!important}
     .landing-sections{max-width:1100px!important;margin:0 auto!important;padding:0 40px!important}
@@ -792,7 +792,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               <span className="heart" style={{ color: G.rouge, fontStyle: "italic" }}>âme sœur</span>
               <br />au Congo
             </h1>
-            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440, textAlign: "center" }}>
+            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440 }}>
               Moyo connecte les Congolais à la recherche d'une relation sincère et durable.
               Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.
             </p>
@@ -2943,9 +2943,9 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
 
         {/* Inviter un ami */}
         <div onClick={() => {
-          const msg = encodeURIComponent("Rejoins-moi sur Moyo, le site de rencontres congolais ! Inscris-toi ici : https://moyo-congo.com");
+          const msg = encodeURIComponent("Salut 😊\nLes célibataires congolais sont déjà sur MOYO...\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ? ❤️\nCrée ton compte gratuitement ici 👇\nhttps://moyo-congo.com");
           if (navigator.share) {
-            navigator.share({ title: "Moyo Congo", text: "Rejoins-moi sur Moyo, le site de rencontres congolais !", url: "https://moyo-congo.com" });
+            navigator.share({ title: "Moyo Congo", text: "Salut 😊\nLes célibataires congolais sont déjà sur MOYO...\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ? ❤️\nCrée ton compte gratuitement ici 👇", url: "https://moyo-congo.com" });
           } else {
             window.open(`https://wa.me/?text=${msg}`, "_blank");
           }
