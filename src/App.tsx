@@ -1575,6 +1575,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           bio: form.bio.trim(),
           religion: form.religion,
           photo_url: photoUrl,
+          is_complete: true,
         }),
       });
       setLoading(false);
@@ -1961,7 +1962,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     if (pageNum === 0) setLoading(true); else setLoadingMore(true);
     try {
       const offset = pageNum * PAGE_SIZE;
-      let params = `?id=neq.${auth.userId}&is_visible=neq.false&order=is_premium.desc,created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
+      let params = `?id=neq.${auth.userId}&is_visible=neq.false&is_complete=eq.true&order=is_premium.desc,created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
       if (filters.city && !filters.city.startsWith("──")) params += `&city=eq.${encodeURIComponent(filters.city)}`;
       if (filters.gender) params += `&gender=eq.${filters.gender}`;
       if (filters.ageMin) params += `&age=gte.${filters.ageMin}`;
