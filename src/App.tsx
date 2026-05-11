@@ -390,6 +390,49 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const svgFb = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>;
   const svgIg = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>;
   const svgTk = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.75a4.85 4.85 0 01-1.01-.06z"/></svg>;
+  const [showLandingMenu, setShowLandingMenu] = useState(false);
+  const [openMenuSection, setOpenMenuSection] = useState<string | null>(null);
+  const toggleSection = (s: string) => setOpenMenuSection(prev => prev === s ? null : s);
+
+  const landingMenuSections = [
+    { id: "conseils", title: "Conseils pour bien rencontrer", emoji: "💡", items: [
+      { icon: "📸", titre: "Mets une vraie photo", desc: "Les profils avec une photo reçoivent 5x plus de messages. Utilise une photo récente et souriante." },
+      { icon: "✍️", titre: "Remplis bien ta bio", desc: "Parle de tes passions, tes valeurs. Une bio sincère attire les bonnes personnes." },
+      { icon: "💬", titre: "Prends le temps de discuter", desc: "Ne te précipite pas. Apprends à connaître la personne avant de proposer une rencontre." },
+      { icon: "🔒", titre: "Protège tes informations", desc: "Ne partage pas ton numéro trop vite. Vérifie que la personne est sérieuse." },
+      { icon: "🚨", titre: "Signale les faux profils", desc: "Si tu suspectes une arnaque, utilise le bouton Signaler. Tu protèges toute la communauté." },
+      { icon: "🤝", titre: "Sois respectueux(se)", desc: "Traite les autres comme tu voudrais être traité(e)." },
+    ]},
+    { id: "services", title: "Nos services", emoji: "🌟", items: [
+      { icon: "💞", titre: "Rencontres en ligne", desc: "Trouve ton âme sœur parmi des profils vérifiés.", badge: "Gratuit" },
+      { icon: "⭐", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké.", badge: "3 500 FCFA/mois" },
+      { icon: "💍", titre: "Accompagnement mariage", desc: "Nous t'accompagnons dans l'organisation de ta cérémonie congolaise.", badge: "Sur demande" },
+      { icon: "🤵", titre: "Mise en relation VIP", desc: "Service personnalisé et discret dans ta recherche de l'âme sœur.", badge: "Premium" },
+    ]},
+    { id: "mariage", title: "Accompagnement mariage", emoji: "💍", items: [
+      { icon: "✓", titre: "Organisation du mariage traditionnel et civil", desc: "Possibilité de préfinancement" },
+      { icon: "✓", titre: "Coordination de la cérémonie traditionnelle", desc: "" },
+      { icon: "✓", titre: "Mise en relation avec des prestataires congolais", desc: "" },
+      { icon: "✓", titre: "Accompagnement pour les couples diaspora/Congo", desc: "" },
+    ]},
+    { id: "temoignages", title: "Témoignages", emoji: "💬", items: [
+      { icon: "👩🏿‍❤️‍👨🏿", titre: "Fatou & Rodrigue — Paris · Brazza", desc: "On s'est rencontrés sur Moyo en janvier. Aujourd'hui on est fiancés ! Merci Moyo 💕" },
+      { icon: "🌟", titre: "Céleste — Diaspora Belgique", desc: "Enfin une appli faite pour nous ! J'ai trouvé quelqu'un de sérieux en 2 semaines." },
+      { icon: "👍🏿", titre: "Patrick — Pointe-Noire", desc: "Simple, propre, efficace. Exactement ce qu'il fallait pour la diaspora congolaise." },
+    ]},
+    { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
+      { icon: "Q", titre: "Moyo est-il gratuit ?", desc: "Oui, l'inscription est gratuite. 5 likes/jour et 3 messages/match. Premium à 3 500 FCFA/mois." },
+      { icon: "Q", titre: "Comment annuler un match ?", desc: "Dans Matchs, appuyez sur les 3 traits → Annuler le match. L'autre personne n'est pas notifiée." },
+      { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, appuyez sur le bouton 🎁 pour offrir le Premium à votre partenaire." },
+      { icon: "Q", titre: "Comment obtenir le badge vérifié ?", desc: "Profil → Faire vérifier mon compte → WhatsApp. Gratuit, vérification sous 24h." },
+    ]},
+    { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
+      { icon: "🛡️", titre: "Données sécurisées", desc: "Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers." },
+      { icon: "👁️", titre: "Profil invisible", desc: "Rendez votre profil invisible depuis vos paramètres sans supprimer votre compte." },
+      { icon: "🚫", titre: "Blocage utilisateur", desc: "Bloquez n'importe quel utilisateur d'un simple clic." },
+      { icon: "🔞", titre: "Majorité requise", desc: "Moyo est strictement réservé aux personnes de 18 ans et plus." },
+    ]},
+  ];
 
   return (
     <div style={{ minHeight: "100vh", background: G.creme, overflow: "hidden" }}>
@@ -398,12 +441,100 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       {/* ── NAV ── */}
       <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0 }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px" }}>
-          <div style={{  fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
+          <div style={{ fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
             <span>Mo</span><span style={{ color: G.or }}>yo</span>
           </div>
-          <span onClick={() => onNav("about")} style={{ fontSize: "0.85rem", fontWeight: 600, color: G.blanc, cursor: "pointer", padding: "9px 22px", borderRadius: 50, background: G.rouge, boxShadow: "0 4px 14px rgba(192,57,43,0.3)", transition: "all 0.2s", display: "inline-block", letterSpacing: "0.01em" }} onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.rougeDark; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 18px rgba(192,57,43,0.4)"; }} onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.rouge; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 14px rgba(192,57,43,0.3)"; }}>À propos</span>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <span onClick={() => onNav("about")}
+              style={{ fontSize: "0.6rem", fontWeight: 700, color: G.brun, cursor: "pointer", width: 80, height: 46, borderRadius: 10, border: `2px solid ${G.brun}`, background: "transparent", transition: "all 0.2s", display: "inline-flex", alignItems: "center", justifyContent: "center", letterSpacing: "0.05em" }}
+              onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.background = G.vert; el.style.color = G.blanc; el.style.transform = "translateY(-2px)"; el.style.boxShadow = "0 6px 16px rgba(44,26,14,0.2)"; }}
+              onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = G.brun; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; }}
+              onMouseDown={e => { (e.currentTarget as HTMLElement).style.transform = "scale(0.96)"; }}
+              onMouseUp={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+            >À PROPOS</span>
+            {/* Bouton MENU */}
+            <div onClick={() => setShowLandingMenu(true)}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", background: "transparent", border: `2px solid ${G.brun}`, borderRadius: 10, width: 80, height: 46, transition: "all 0.2s" }}
+              onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.background = G.vert; el.style.transform = "translateY(-2px)"; el.style.boxShadow = "0 6px 18px rgba(26,92,58,0.4)"; const lines = el.querySelectorAll(".menu-line"); lines.forEach((l: any) => l.style.background = G.blanc); const label = el.querySelector(".menu-label") as HTMLElement; if(label) label.style.color = G.blanc; }}
+              onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; const lines = el.querySelectorAll(".menu-line"); lines.forEach((l: any) => l.style.background = G.brun); const label = el.querySelector(".menu-label") as HTMLElement; if(label) label.style.color = G.brun; }}
+              onMouseDown={e => { (e.currentTarget as HTMLElement).style.transform = "scale(0.96)"; }}
+              onMouseUp={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+            >
+              {[0,1,2].map(i => <div key={i} className="menu-line" style={{ width: 18, height: 2, borderRadius: 2, background: G.brun }} />)}
+              <span className="menu-label" style={{ color: G.brun, fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.05em", marginTop: 1 }}>MENU</span>
+            </div>
+          </div>
         </div>
       </nav>
+
+      {/* ── MENU PANEL ACCORDÉON ── */}
+      {showLandingMenu && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex" }}>
+          <div onClick={() => setShowLandingMenu(false)} style={{ flex: 1, background: "rgba(0,0,0,0.5)" }} />
+          <div style={{ width: "85%", maxWidth: 360, background: G.blanc, height: "100%", overflowY: "auto", boxShadow: "-8px 0 32px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column" }}>
+            {/* Header vert */}
+            <div style={{ background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, padding: "24px 20px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ color: G.blanc, fontSize: "1.1rem", fontWeight: 700 }}>Menu</div>
+              <div onClick={() => setShowLandingMenu(false)} style={{ color: "rgba(255,255,255,0.7)", fontSize: "1.5rem", cursor: "pointer", lineHeight: 1 }}>✕</div>
+            </div>
+            <div style={{ padding: "8px 0", flex: 1 }}>
+              {landingMenuSections.map(s => (
+                <div key={s.id} style={{ borderBottom: `1px solid ${G.gris}` }}>
+                  <div onClick={() => toggleSection(s.id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", cursor: "pointer", background: openMenuSection === s.id ? "rgba(26,92,58,0.05)" : "transparent" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      {/* Icône SVG par section */}
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: openMenuSection === s.id ? `linear-gradient(135deg,${G.vert},#0D4020)` : G.gris, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {s.id === "conseils" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4l3 3"/></svg>}
+                        {s.id === "services" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
+                        {s.id === "mariage" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
+                        {s.id === "temoignages" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
+                        {s.id === "faq" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+                        {s.id === "securite" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
+                      </div>
+                      <span style={{ fontWeight: 600, fontSize: "0.92rem", color: openMenuSection === s.id ? G.vert : G.brun }}>{s.title}</span>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? G.vert : "#bbb"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "transform 0.2s", transform: openMenuSection === s.id ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </div>
+                  {openMenuSection === s.id && (
+                    <div style={{ padding: "4px 20px 16px" }}>
+                      {s.id === "faq" ? (
+                        s.items.map((item, i) => (
+                          <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${G.gris}` }}>
+                            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
+                              <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>Q</div>
+                              <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>{item.titre}</div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                              <div style={{ background: G.or, color: G.brun, borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>R</div>
+                              <div style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.6 }}>{item.desc}</div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        s.items.map((item, i) => (
+                          <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
+                            <div style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(26,92,58,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                              </svg>
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: 2, color: G.brun }}>{item.titre}</div>
+                              {item.desc && <div style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.5 }}>{item.desc}</div>}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <div style={{ background: `linear-gradient(150deg,${G.creme} 0%,#F0E8D8 60%,rgba(26,92,58,0.12) 100%)`, overflow: "hidden", position: "relative" }}>
@@ -842,24 +973,29 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 function About({ onBack }: { onBack: () => void }) {
   return (
     <div style={{ minHeight: "100vh", background: G.creme }}>
+      {/* Header vert */}
       <div style={{ background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, padding: "24px 24px 40px" }}>
-        <div onClick={onBack} style={{ cursor: "pointer", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 42, height: 42, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(192,57,43,0.4)", flexShrink: 0 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 20 }}>
+          <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(192,57,43,0.4)", flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </div>
+            <span style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.88rem", fontWeight: 600 }}>Retour</span>
           </div>
-          <span style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.88rem", fontWeight: 600 }}>Retour</span>
         </div>
         <div style={{ textAlign: "center" }}>
-          <div style={{  fontSize: "2.5rem", color: G.blanc, fontWeight: 700, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+          <div style={{ fontSize: "2.5rem", color: G.blanc, fontWeight: 700, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
           <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.9rem" }}>Le premier site de rencontres congolais</p>
         </div>
       </div>
+
       <div style={{ padding: "0 20px 60px", maxWidth: 600, margin: "0 auto" }}>
+        {/* Notre mission */}
         <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginTop: -20, boxShadow: "0 8px 32px rgba(44,26,14,0.1)", marginBottom: 16 }}>
           <div style={{ fontSize: "2rem", marginBottom: 10 }}>❤️</div>
-          <h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginBottom: 10 }}>Notre mission</h2>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 10 }}>Notre mission</h2>
           <p style={{ fontSize: "0.88rem", lineHeight: 1.8, color: G.brunLight }}>
             <strong>Moyo</strong> (qui signifie "cœur" en swahili) est le premier site de rencontres dédié aux Congolais. Notre mission est simple : créer des rencontres sincères et durables entre Congolais, qu'ils soient au pays ou dans la diaspora.
           </p>
@@ -867,162 +1003,14 @@ function About({ onBack }: { onBack: () => void }) {
             Nous croyons que chaque Congolais mérite de trouver l'amour dans un espace sûr, respectueux et adapté à notre culture et nos valeurs.
           </p>
         </div>
+
+        {/* Nous contacter */}
         <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}>
-          <div style={{ fontSize: "2rem", marginBottom: 10 }}>💡</div>
-          <h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Conseils pour bien rencontrer</h2>
-          {[
-            { icon: "📸", titre: "Mets une vraie photo", desc: "Les profils avec une photo reçoivent 5x plus de messages. Utilise une photo récente et souriante." },
-            { icon: "✍️", titre: "Remplis bien ta bio", desc: "Parle de tes passions, tes valeurs. Une bio sincère attire les bonnes personnes." },
-            { icon: "💬", titre: "Prends le temps de discuter", desc: "Ne te précipite pas. Apprends à connaître la personne avant de proposer une rencontre." },
-            { icon: "🔒", titre: "Protège tes informations", desc: "Ne partage pas ton numéro trop vite. Vérifie que la personne est sérieuse." },
-            { icon: "🚨", titre: "Signale les faux profils", desc: "Si tu suspectes une arnaque, utilise le bouton Signaler le profil. Tu protèges toute la communauté." },
-            { icon: "🤝", titre: "Sois respectueux(se)", desc: "Traite les autres comme tu voudrais être traité(e)." },
-          ].map(c => (
-            <div key={c.titre} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 0", borderBottom: `1px solid ${G.gris}` }}>
-              <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>{c.icon}</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 3 }}>{c.titre}</div>
-                <div style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.6 }}>{c.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}>
-          <div style={{ fontSize: "2rem", marginBottom: 10 }}>🌟</div>
-          <h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Nos services</h2>
-          {[
-            { icon: "💞", titre: "Rencontres en ligne", desc: "Trouve ton âme sœur parmi des profils vérifiés.", badge: "Gratuit" },
-            { icon: "⭐", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké et bien plus.", badge: "3 500 FCFA/mois" },
-            { icon: "💍", titre: "Accompagnement mariage", desc: "Nous t'accompagnons dans l'organisation de ta cérémonie congolaise.", badge: "Sur demande" },
-            { icon: "🤵", titre: "Mise en relation VIP", desc: "Service personnalisé et discret dans ta recherche de l'âme sœur.", badge: "Premium" },
-            { icon: "📋", titre: "Conseil relationnel", desc: "Nos conseillers t'aident à rédiger ton profil et te guident.", badge: "Bientôt" },
-          ].map(s => (
-            <div key={s.titre} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "14px 0", borderBottom: `1px solid ${G.gris}` }}>
-              <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>{s.icon}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{s.titre}</div>
-                  <div style={{ background: "rgba(212,168,67,0.15)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "2px 8px", fontSize: "0.68rem", fontWeight: 600, color: G.brunLight, marginLeft: 8 }}>{s.badge}</div>
-                </div>
-                <div style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.6 }}>{s.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 20, padding: "24px", marginBottom: 16, color: G.blanc }}>
-          <div style={{ fontSize: "2rem", marginBottom: 10 }}>💍</div>
-          <h2 style={{  fontSize: "1.3rem", fontWeight: 700, marginBottom: 10 }}>Accompagnement mariage congolais</h2>
-          {["Organisation du mariage traditionnel et civil (Possibilité de préfinancement)", "Coordination de la cérémonie traditionnelle", "Mise en relation avec des prestataires congolais", "Accompagnement pour les couples diaspora/Congo", "Accompagnement administratif (mariage civil)"].map(s => (
-            <div key={s} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "6px 0", fontSize: "0.82rem", opacity: 0.9 }}>
-              <span style={{ color: G.or, fontWeight: 700, flexShrink: 0 }}>✓</span> {s}
-            </div>
-          ))}
-          <div style={{ marginTop: 16, background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "12px 16px", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: 8 }}>
-            <span>📱</span>
-            <div><div style={{ fontWeight: 700 }}>SR Event — Agence événementielle</div><div style={{ opacity: 0.85 }}>Mariages · Dots · Conférences · Anniversaires · Brazzaville</div></div>
-          </div>
-          <div style={{ marginTop: 10, background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "12px 16px", fontSize: "0.82rem" }}>
-            📘 <a href="https://www.facebook.com/share/1Cvwa61SKv/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" style={{ color: G.blanc, fontWeight: 700, textDecoration: "none" }}>Contacter SR Event sur Facebook</a>
-          </div>
-        </div>
-        <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}>
-          <div style={{ fontSize: "2rem", marginBottom: 10 }}>💬</div>
-          <h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginBottom: 6 }}>Questions fréquentes</h2>
-          <p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 20 }}>Tout ce que vous devez savoir avant de vous lancer</p>
-          {[
-            {
-              q: "Moyo est-il gratuit ?",
-              a: "Oui, l'inscription et la découverte de profils sont entièrement gratuites. En compte gratuit, vous avez droit à 5 likes par jour et 3 messages par match. Un abonnement Premium à 3 500 FCFA/mois débloque les likes illimités, les messages illimités, l'envoi de photos, les confirmations de lecture et la possibilité de voir qui vous a liké."
-            },
-            {
-              q: "Comment fonctionne le système de match ?",
-              a: "Lorsque deux personnes se likent mutuellement, un match est créé automatiquement. Vous pouvez alors commencer à échanger des messages. En compte gratuit, vous avez droit à 3 messages par match. Moyo est réservé aux rencontres hétérosexuelles uniquement — un homme ne peut pas liker un autre homme, et une femme ne peut pas liker une autre femme."
-            },
-            {
-              q: "Comment annuler un match ?",
-              a: "Dans l'onglet Matchs, appuyez sur les 3 traits à droite d'un match puis choisissez Annuler le match. L'annulation est silencieuse — l'autre personne ne reçoit aucune notification. Le match, la conversation et les messages sont supprimés définitivement."
-            },
-            {
-              q: "Comment offrir le Premium à quelqu'un ?",
-              a: "Dans une conversation, appuyez sur le bouton 🎁 dans le header. Un modal s'ouvre avec les détails. Vous serez redirigé vers notre service client WhatsApp pour finaliser le paiement via MTN MoMo ou Airtel MoMo."
-            },
-            {
-              q: "Comment passer à Premium ?",
-              a: "Le Premium est disponible à 3 500 FCFA/mois. Avantages : messages illimités, likes illimités, envoi de photos dans les conversations, confirmations de lecture ✓✓, voir qui vous a liké. Paiement uniquement via MTN MoMo ou Airtel MoMo. Contactez notre service client via WhatsApp ou Facebook. Activation sous 24h maximum."
-            },
-            {
-              q: "Comment bloquer un utilisateur ?",
-              a: "Dans l'onglet Découvrir, appuyez sur les 3 traits à droite d'un profil puis choisissez Bloquer. Le profil disparaît immédiatement et n'apparaîtra plus dans vos résultats. Vous pouvez gérer votre liste noire depuis votre Profil."
-            },
-            {
-              q: "Comment signaler un profil suspect ?",
-              a: "Appuyez sur les 3 traits à droite d'un profil et choisissez Signaler. Sélectionnez le motif approprié. Notre équipe examine chaque signalement sous 24h et prend les mesures nécessaires."
-            },
-            {
-              q: "Mes données personnelles sont-elles protégées ?",
-              a: "Absolument. Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers. Seuls les membres connectés peuvent consulter votre profil. Vous pouvez également rendre votre profil invisible depuis vos paramètres."
-            },
-            {
-              q: "Puis-je utiliser Moyo depuis l'étranger ?",
-              a: "Oui ! Moyo est conçu pour connecter les Congolais du pays et de toute la diaspora. Vous pouvez filtrer les profils par ville ou par zone diaspora."
-            },
-            {
-              q: "Comment obtenir le badge de vérification ?",
-              a: "La vérification est gratuite et optionnelle. Elle permet d'afficher un badge bleu ✅ sur votre profil pour inspirer confiance. Depuis votre Profil, appuyez sur Faire vérifier mon compte. Vous serez redirigé vers WhatsApp pour envoyer une photo de votre pièce d'identité. Notre équipe vérifie sous 24h."
-            },
-            {
-              q: "Comment savoir si quelqu'un est en ligne ?",
-              a: "Un point vert 🟢 apparaît à côté du nom dans la liste des conversations quand la personne est active. Dans une conversation ouverte, vous voyez En ligne (moins de 2 minutes), Vu il y a X min, ou Vu il y a Xh selon la dernière activité."
-            },
-            {
-              q: "Que signifient les coches sur les messages ?",
-              a: "✓ une coche grise = message envoyé. Avec Premium : ✓✓ deux coches grises = message reçu par l'autre personne, ✓✓ deux coches bleues = message lu. L'heure d'envoi est affichée sur chaque message."
-            },
-            {
-              q: "Comment supprimer mon compte ?",
-              a: "Vous pouvez supprimer votre compte à tout moment depuis votre profil. Toutes vos données sont effacées définitivement. Cette action est irréversible."
-            },
-          ].map((item, i) => (
-            <div key={i} style={{ borderBottom: `1px solid ${G.gris}`, paddingBottom: 14, marginBottom: 14 }}>
-              <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 6 }}>
-                <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>Q</div>
-                <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>{item.q}</div>
-              </div>
-              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <div style={{ background: G.or, color: G.brun, borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>R</div>
-                <div style={{ fontSize: "0.83rem", color: G.brunLight, lineHeight: 1.7 }}>{item.a}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ background: G.blanc, borderRadius: 20, padding: "24px", marginBottom: 16, boxShadow: "0 4px 16px rgba(44,26,14,0.07)" }}>
-          <div style={{ fontSize: "2rem", marginBottom: 10 }}>💑</div>
-          <h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginBottom: 6 }}>Conseils pour les couples</h2>
-          <p style={{ fontSize: "0.82rem", color: G.brunLight, marginBottom: 20 }}>Pour construire une relation solide et épanouie</p>
-          {[
-            { icon: "🗣️", titre: "Communiquer avec sincérité", desc: "Une relation saine repose sur une communication ouverte et honnête. Exprimez vos attentes, vos besoins et vos limites dès le départ pour éviter les malentendus." },
-            { icon: "⏳", titre: "Prendre le temps de se découvrir", desc: "Ne brûlez pas les étapes. Apprenez à connaître votre partenaire progressivement — ses valeurs, sa famille, ses projets de vie. La confiance se construit dans la durée." },
-            { icon: "🌍", titre: "Naviguer la distance diaspora/Congo", desc: "Les couples entre diaspora et Congo font face à des défis spécifiques : décalage culturel, distance géographique, projets de vie différents. Discutez-en ouvertement et très tôt." },
-            { icon: "👨‍👩‍👧", titre: "Impliquer les familles au bon moment", desc: "Dans la culture congolaise, la famille joue un rôle central. Présentez votre partenaire à votre famille lorsque la relation est sérieuse et que vous êtes tous les deux prêts." },
-            { icon: "💍", titre: "Préparer le mariage traditionnel", desc: "Dans la culture congolaise, la dot est une étape incontournable : elle symbolise le respect et la reconnaissance envers la famille de la future épouse. Prévoyez suffisamment de temps pour la préparer avec les deux familles." },
-            { icon: "🔄", titre: "Surmonter les désaccords", desc: "Tout couple traverse des difficultés. L'important est de ne pas laisser les conflits s'envenimer. Cherchez le dialogue, respectez-vous mutuellement et cherchez des compromis." },
-          ].map(c => (
-            <div key={c.titre} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 0", borderBottom: `1px solid ${G.gris}` }}>
-              <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>{c.icon}</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 4, color: G.brun }}>{c.titre}</div>
-                <div style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.7 }}>{c.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ borderRadius: 20, marginBottom: 16 }}>
-          <h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Nous contacter</h2>
-          <a href="https://www.facebook.com/share/1HssYavG19/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer"
+          <div style={{ fontSize: "2rem", marginBottom: 10 }}>📞</div>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Nous contacter</h2>
+          <a href="https://www.facebook.com/profile.php?id=61576092648690" target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#1877F2", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
-            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-            </div>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.3rem" }}>📘</div>
             <div>
               <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem", fontWeight: 500 }}>Rejoins-nous sur</div>
               <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>Facebook — Page Moyo Congo</div>
@@ -1048,11 +1036,13 @@ function About({ onBack }: { onBack: () => void }) {
             <div style={{ marginLeft: "auto", color: "rgba(255,255,255,0.7)", fontSize: "1.2rem" }}>→</div>
           </a>
         </div>
+
         <div style={{ textAlign: "center", color: G.brunLight }}>
           <p style={{ fontSize: "0.75rem" }}>© 2026 Moyo Congo · Tous droits réservés</p>
           <p style={{ fontSize: "0.72rem", marginTop: 4 }}>Confidentialité · CGU · Contact</p>
         </div>
       </div>
+
     </div>
   );
 }
@@ -1195,7 +1185,16 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       <div style={{ textAlign: "center", marginBottom: 20 }}>
         <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
         <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
-        <p style={{ color: G.brunLight, fontSize: "0.85rem", marginTop: 4 }}>Étape {step}/3</p>
+        {/* Badge étape bien visible */}
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 16px" }}>
+          <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: G.blanc }}>{step}</div>
+          <span style={{ fontSize: "0.88rem", fontWeight: 700, color: G.rouge }}>
+            {step === 1 && "Identifiant et mot de passe"}
+            {step === 2 && "Informations personnelles"}
+            {step === 3 && "Photo de profil"}
+          </span>
+          <span style={{ fontSize: "0.75rem", color: G.brunLight, fontWeight: 500 }}>{step}/3</span>
+        </div>
       </div>
 
       {/* Barre de progression */}
@@ -1253,7 +1252,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       {/* ÉTAPE 3 — Photo */}
       {step === 3 && <>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <p style={{ fontSize: "0.9rem", color: G.brunLight, marginBottom: 20, lineHeight: 1.6 }}>
+          <p style={{ fontSize: "0.9rem", color: G.brunLight, marginBottom: 24, lineHeight: 1.6 }}>
             Ajoute une photo pour que les autres puissent te reconnaître 😊
           </p>
           <input ref={fileRef} type="file" accept="image/*" onChange={e => {
@@ -1264,22 +1263,27 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             reader.onload = () => setPhotoPreview(reader.result as string);
             reader.readAsDataURL(file);
           }} style={{ display: "none" }} />
-          <div onClick={() => fileRef.current?.click()} style={{ width: 140, height: 140, borderRadius: "50%", margin: "0 auto 16px", cursor: "pointer", border: `3px dashed ${photoPreview ? G.rouge : G.gris}`, overflow: "hidden", background: photoPreview ? "transparent" : G.creme, display: "flex", alignItems: "center", justifyContent: "center" }}>
+
+          <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 16px" }} onClick={() => fileRef.current?.click()}>
             {photoPreview ? (
-              <img src={photoPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: `3px solid ${G.rouge}`, cursor: "pointer" }}>
+                <img src={photoPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
             ) : (
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "2.5rem" }}>📷</div>
-                <div style={{ fontSize: "0.72rem", color: G.brunLight, marginTop: 4, fontWeight: 600 }}>Ajouter une photo</div>
+              <div style={{ width: 80, height: 80, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 18px rgba(192,57,43,0.4)", cursor: "pointer" }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
               </div>
             )}
+            <div style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", color: G.rouge, fontWeight: 900, lineHeight: 1, pointerEvents: "none" }}>+</div>
           </div>
-          {photoPreview && (
-            <div onClick={() => fileRef.current?.click()} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 600, marginBottom: 8 }}>Changer la photo</div>
-          )}
-          {!photoPreview && (
-            <p style={{ fontSize: "0.78rem", color: "#e74c3c", fontWeight: 600, marginTop: 4 }}>Une photo est obligatoire pour créer ton compte</p>
-          )}
+
+          {photoPreview
+            ? <div onClick={() => fileRef.current?.click()} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 600 }}>Changer la photo</div>
+            : <p style={{ fontSize: "0.78rem", color: "#e74c3c", fontWeight: 600, marginTop: 4 }}>Une photo est obligatoire pour créer ton compte</p>
+          }
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(2)} style={{ flex: 1 }}>← Retour</Btn>
