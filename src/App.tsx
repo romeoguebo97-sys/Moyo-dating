@@ -3705,8 +3705,12 @@ export default function App() {
 
     // Chargement initial des matchs
     const loadMatchCount = async () => {
-      const res = await sb.query<object>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
-      setNotifCount(Array.isArray(res) ? res.length : 0);
+      const res = await sb.query<{id: string}>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
+      if (Array.isArray(res)) {
+        // Dédupliquer par ID pour éviter tout doublon
+        const unique = new Set(res.map(r => r.id));
+        setNotifCount(unique.size);
+      }
     };
     loadMatchCount();
 
