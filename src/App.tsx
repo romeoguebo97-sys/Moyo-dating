@@ -716,7 +716,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             "/bg12.webp",
           ].map((url, i) => (
             <div key={i} style={{ overflow: "hidden" }}>
-              <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "grayscale(100%)" }} />
             </div>
           ))}
         </div>
@@ -730,7 +730,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
           {/* ── Texte gauche ── */}
           <div className="landing-hero-text fu1" style={{ paddingBottom: 52 }}>
-            <div style={{ display: "inline-block", background: "rgba(212,168,67,0.15)", border: `1px solid ${G.or}`, padding: "6px 16px", borderRadius: 50, fontSize: "0.73rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 22, color: "#555" }}>
+            <div style={{ display: "inline-block", background: G.blanc, border: `2px solid #111`, padding: "7px 20px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 22, color: "#111", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
               Site de rencontres Congolais
             </div>
             <h1 className="fu2" style={{ fontSize: "clamp(2.4rem,5.5vw,3.8rem)", lineHeight: 1.08, fontWeight: 700, marginBottom: 20, color: "#111" }}>
