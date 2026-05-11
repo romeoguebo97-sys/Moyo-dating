@@ -685,18 +685,18 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         {/* ── PHOTOS ARRIÈRE-PLAN style Tinder ── */}
         <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap: 4, opacity: 0.35, zIndex: 0, pointerEvents: "none" }}>
           {[
-            "/bj (1).webp",
-            "/bj (2).webp",
-            "/bj (3).webp",
-            "/bj (4).webp",
-            "/bj (5).webp",
-            "/bj (6).webp",
-            "/bj (7).webp",
-            "/bj (8).webp",
-            "/bj (9).webp",
-            "/bj (10).webp",
-            "/bj (11).webp",
-            "/bj (12).webp",
+            "/bj%20%281%29.webp",
+            "/bj%20%282%29.webp",
+            "/bj%20%283%29.webp",
+            "/bj%20%284%29.webp",
+            "/bj%20%285%29.webp",
+            "/bj%20%286%29.webp",
+            "/bj%20%287%29.webp",
+            "/bj%20%288%29.webp",
+            "/bj%20%289%29.webp",
+            "/bj%20%2810%29.webp",
+            "/bj%20%2811%29.webp",
+            "/bj%20%2812%29.webp",
           ].map((url, i) => (
             <div key={i} style={{ overflow: "hidden" }}>
               <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
