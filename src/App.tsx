@@ -217,7 +217,7 @@ const GLOBAL_CSS = `
   @media(min-width:768px){
     .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
     .landing-hero-text{text-align:left!important}
-  @media(max-width:767px){.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important;margin-bottom:16px!important}}
+  @media(max-width:767px){#hero-text-block{padding-bottom:20px!important}.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important;margin-bottom:12px!important}.fu4{margin-bottom:12px!important}.landing-hero-btns{margin-bottom:12px!important}#hero-img-mobile{margin-top:-10px!important}}
     .landing-hero-btns{justify-content:flex-start!important}
     .landing-stats{max-width:900px!important;margin:0 auto!important;padding:0 40px 0!important;grid-template-columns:repeat(3,1fr)!important}
     .landing-sections{max-width:1100px!important;margin:0 auto!important;padding:0 40px!important}
@@ -783,7 +783,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         <div className="landing-hero" style={{ padding: "52px 24px 0", textAlign: "center", alignItems: "flex-end", position: "relative", zIndex: 2 }}>
 
           {/* ── Texte gauche ── */}
-          <div className="landing-hero-text fu1" style={{ paddingBottom: 52 }}>
+          <div className="landing-hero-text fu1" style={{ paddingBottom: 52 }} id="hero-text-block">
             <div style={{ display: "inline-block", background: G.blanc, border: `2px solid #111`, padding: "7px 20px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 22, color: "#111", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
               Site de rencontres Congolais
             </div>
