@@ -1194,21 +1194,34 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         setErrorMsg("Cette adresse e-mail possède déjà un compte. Connectez-vous directement.");
         setLoading(false); return;
       }
-      // Upload photo si sélectionnée
+
+      // Upload photo avec le token de session
+      const sessionToken = authRes.session?.access_token || SUPABASE_KEY;
       if (photoFile && authRes.user?.id) {
         try {
           const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
           const path = `${authRes.user.id}/avatar.${ext}`;
           const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
             method: "POST",
-            headers: { "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": photoFile.type || "image/jpeg", "x-upsert": "true" },
+            headers: {
+              "Authorization": `Bearer ${sessionToken}`,
+              "Content-Type": photoFile.type || "image/jpeg",
+              "x-upsert": "true"
+            },
             body: photoFile,
           });
           if (uploadRes.ok) {
             const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
+            // Attendre que le profil soit créé puis mettre à jour la photo
+            await new Promise(r => setTimeout(r, 1500));
             await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${authRes.user.id}`, {
               method: "PATCH",
-              headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+              headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": `Bearer ${sessionToken}`,
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal"
+              },
               body: JSON.stringify({ photo_url: photoUrl }),
             });
           }
@@ -2511,35 +2524,64 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
             {/* Contenu aperçu */}
             <div style={{ overflowY: "auto", flex: 1, padding: "20px 16px" }}>
               {previewMode === "card" ? (
-                /* VUE CARTE */
+                /* VUE CARTE — exactement comme dans Découvrir */
                 <div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden" }}>
                   <div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                    {profile.photo_url ? <img src={profile.photo_url} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}>{profile.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}
+                    {profile.photo_url
+                      ? <img src={profile.photo_url} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    }
                   </div>
-                  <div style={{ padding: "16px" }}>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>{profile.name}, {profile.age} ans {profile.is_premium && "⭐"}</div>
+                  <div style={{ padding: "14px 16px" }}>
+                    {/* Nom + badges */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "1.25rem", fontWeight: 700, color: G.brun }}>
+                        {profile.name}, {profile.age} ans
+                        {profile.is_premium && <svg width="16" height="16" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
+                        {profile.is_verified && <VerifiedBadge size={18} />}
+                      </div>
+                    </div>
+                    {/* Genre + ville + religion */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                      <span style={{ fontSize: "0.82rem", color: G.brunLight }}>📍 {profile.city}</span>
-                      {profile.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.75rem", color: G.brunLight }}>🙏 {profile.religion}</span>}
+                      <span style={{ background: profile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: profile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600 }}>{profile.gender === "Femme" ? "Femme" : "Homme"}</span>
+                      <span style={{ fontSize: "0.78rem", color: G.brunLight }}>📍 {profile.city}</span>
+                      {profile.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: G.brunLight }}>🙏 {profile.religion}</span>}
                     </div>
                     {profile.bio && <p style={{ fontSize: "0.85rem", color: G.brunLight, lineHeight: 1.5 }}>{profile.bio}</p>}
-                  </div>
-                  {/* Boutons nav factices */}
-                  <div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", padding: "12px 16px 20px" }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4 }}>←</div>
-                    <div style={{ width: 68, height: 68, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", opacity: 0.4 }}>🤍</div>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4 }}>→</div>
+                    {/* Boutons nav factices */}
+                    <div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", paddingTop: 12 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.35 }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                      </div>
+                      <div style={{ width: 68, height: 68, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.35 }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      </div>
+                      <div style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.35 }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
-                /* VUE LISTE */
+                /* VUE LISTE — exactement comme dans Découvrir */
                 <div style={{ background: G.blanc, borderRadius: 16, padding: "12px", boxShadow: "0 2px 12px rgba(44,26,14,0.07)", display: "flex", gap: 12, alignItems: "center" }}>
-                  <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>
-                    {profile.photo_url ? <img src={profile.photo_url} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{profile.gender === "Femme" ? "👩🏿" : "👨🏿"}</span>}
+                  <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {profile.photo_url
+                      ? <img src={profile.photo_url} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    }
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{profile.name}, {profile.age} ans {profile.is_premium && "⭐"}</div>
-                    <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>📍 {profile.city}{profile.religion && <span style={{ marginLeft: 6 }}>· 🙏 {profile.religion}</span>}</div>
+                    <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>
+                      {profile.name}, {profile.age} ans
+                      {profile.is_premium && <svg width="14" height="14" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
+                      {profile.is_verified && <VerifiedBadge size={15} />}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
+                      <span style={{ background: profile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: profile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{profile.gender === "Femme" ? "Femme" : "Homme"}</span>
+                      <span style={{ fontSize: "0.78rem", color: G.brunLight }}>📍 {profile.city}</span>
+                      {profile.religion && <span style={{ fontSize: "0.72rem", color: G.brunLight }}>· 🙏 {profile.religion}</span>}
+                    </div>
                     {profile.bio && <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.bio}</div>}
                   </div>
                   <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(192,57,43,0.06)", border: `1.5px solid rgba(192,57,43,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4, flexShrink: 0 }}>
@@ -2746,6 +2788,11 @@ export default function App() {
 
   // PWA — écouter l'événement d'installation
   useEffect(() => {
+    // Enregistrer le Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
     // Ne pas afficher si déjà installé ou déjà dismissé
     const dismissed = localStorage.getItem("moyo_install_dismissed");
     const isInStandaloneMode = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
@@ -2808,6 +2855,19 @@ export default function App() {
   const handleAuth = (a: Auth) => {
     setAuth(a); setPage("app"); setTab("discover");
     try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch {}
+    // Demander permission notifications push
+    if ('Notification' in window && Notification.permission === 'default') {
+      setTimeout(() => {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            new Notification('Moyo — Notifications activées !', {
+              body: 'Vous recevrez des alertes pour vos nouveaux messages.',
+              icon: '/favicon.png',
+            });
+          }
+        });
+      }, 3000);
+    }
   };
   const handleLogout = () => {
     setAuth(null); setPage("landing"); setUnreadCount(0); setNotifCount(0); setLikesReceived(0);
@@ -2860,13 +2920,22 @@ export default function App() {
     // Chargement initial des messages non lus
     const checkUnread = async () => {
       try {
-        // Récupérer les matchs de l'utilisateur
         const matches = await sb.query<{ id: string }>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
         if (!matches.length) { setUnreadCount(0); return; }
         const matchIds = matches.map(m => m.id).join(",");
-        // Compter les messages non lus dans ces matchs (envoyés par quelqu'un d'autre)
         const res = await sb.query<object>(auth.token, "messages", `?match_id=in.(${matchIds})&sender_id=neq.${auth.userId}&is_read=eq.false&select=id`);
-        setUnreadCount(Array.isArray(res) ? res.length : 0);
+        const count = Array.isArray(res) ? res.length : 0;
+        setUnreadCount(prev => {
+          // Si nouveau message → notification push
+          if (count > prev && prev >= 0 && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification('Moyo — Nouveau message 💬', {
+              body: 'Vous avez reçu un nouveau message !',
+              icon: '/favicon.png',
+              badge: '/favicon.png',
+            });
+          }
+          return count;
+        });
       } catch {}
     };
     checkUnread();
