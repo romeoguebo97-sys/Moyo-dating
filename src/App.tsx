@@ -864,6 +864,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
           </div>
       </div>
+      </div>
       <style>{`
         @media(min-width:768px){
           #hero-img-desktop{display:flex!important}
