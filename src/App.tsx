@@ -2410,12 +2410,9 @@ function LikesPage({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: str
     const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => {
       loadData();
     });
-    // Fallback polling 3s
-    const poll = setInterval(() => { loadData(); }, 3000);
     return () => {
       try { wsLikes?.close(); } catch {}
       try { wsViews?.close(); } catch {}
-      clearInterval(poll);
     };
   }, []);
 
@@ -3683,8 +3680,8 @@ export default function App() {
 
     // Chargement initial des likes reçus
     const loadLikesReceived = async () => {
-      const res = await sb.query<object>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
-      setLikesReceived(Array.isArray(res) ? res.length : 0);
+      const res = await sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
+      if (Array.isArray(res)) setLikesReceived(res.length);
     };
     loadLikesReceived();
 
