@@ -1721,7 +1721,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 }
 
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; auth: Auth; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; auth: Auth; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
 
@@ -1813,10 +1813,16 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </div>
                 )}
-                {/* Badge matchs */}
-                {t.id === "likes" && notifCount > 0 && (
+                {/* Badge likes reçus */}
+                {t.id === "likes" && likesReceived > 0 && (
                   <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: "#111", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.52rem", fontWeight: 700 }}>
-                    {notifCount}
+                    {likesReceived > 9 ? "9+" : likesReceived}
+                  </div>
+                )}
+                {/* Badge matchs */}
+                {t.id === "matches" && notifCount > 0 && (
+                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.52rem", fontWeight: 700 }}>
+                    {notifCount > 9 ? "9+" : notifCount}
                   </div>
                 )}
               </div>
@@ -2130,11 +2136,11 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
             <div style={{ fontWeight: 600, fontSize: "0.92rem", color: G.vert }}>Voir le profil</div>
           </div>}
           <div onClick={() => { setShowReport(false); setShowBlockConfirm(true); }} style={{ padding: "16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>
-            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🚫</div>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
             <div style={{ fontWeight: 600, fontSize: "0.92rem", color: "#1a1a1a" }}>Bloquer</div>
           </div>
           <div onClick={() => { setShowReport(false); setShowSignaler(true); }} style={{ padding: "16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(231,76,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🚨</div>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(231,76,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
             <div style={{ fontWeight: 600, fontSize: "0.92rem", color: "#e74c3c" }}>Signaler</div>
           </div>
         </div>
@@ -2494,10 +2500,17 @@ function LikesPage({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: str
           </div>
 
           {loading ? (
-            <div style={{ textAlign: "center", padding: 40, color: "#555" }}>⏳</div>
+            <div style={{ textAlign: "center", padding: 40 }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+          </div>
           ) : (activeTab === "likes" ? likers : visitors).length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>{activeTab === "likes" ? "💔" : "👁"}</div>
+              <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
+              {activeTab === "likes"
+                ? <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                : <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              }
+            </div>
               <p style={{ fontSize: "0.88rem" }}>{activeTab === "likes" ? "Personne n'a encore liké ton profil" : "Personne n'a encore visité ton profil"}</p>
             </div>
           ) : viewMode === "list" ? (
@@ -3680,8 +3693,13 @@ export default function App() {
 
     // Chargement initial des likes reçus
     const loadLikesReceived = async () => {
-      const res = await sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
-      if (Array.isArray(res)) setLikesReceived(res.length);
+      const [likes, views] = await Promise.all([
+        sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`),
+        sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id`),
+      ]);
+      const likesCount = Array.isArray(likes) ? likes.length : 0;
+      const viewsCount = Array.isArray(views) ? views.length : 0;
+      setLikesReceived(likesCount + viewsCount);
     };
     loadLikesReceived();
 
@@ -3815,7 +3833,7 @@ export default function App() {
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
       if (t === "messages") setUnreadCount(0);
-    }} unreadCount={unreadCount} notifCount={notifCount} auth={auth}>
+    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} auth={auth}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={() => setTab("messages")} />}
