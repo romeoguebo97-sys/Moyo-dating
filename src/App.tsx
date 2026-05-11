@@ -1902,14 +1902,19 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
   };
 
   const handleUnmatch = async (m: Match) => {
-    // Supprimer match, likes mutuels et messages — silencieux
+    // Supprimer TOUS les matchs entre ces deux personnes (dans les deux sens)
     await Promise.all([
       sb.delete(auth.token, "matches", `?id=eq.${m.id}`),
+      sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${m.partner?.id}`),
+      sb.delete(auth.token, "matches", `?user1=eq.${m.partner?.id}&user2=eq.${auth.userId}`),
       sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${m.partner?.id}`),
       sb.delete(auth.token, "likes", `?from_user=eq.${m.partner?.id}&to_user=eq.${auth.userId}`),
       sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`),
     ]);
-    setMatches(prev => prev.filter(x => x.id !== m.id));
+    // Mettre à jour la liste ET le badge instantanément
+    const updated = matches.filter(x => x.id !== m.id);
+    setMatches(updated);
+    onNotifCount(updated.length);
     setConfirmUnmatch(null);
     setMenuMatchId(null);
   };
