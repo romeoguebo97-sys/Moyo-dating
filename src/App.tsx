@@ -160,11 +160,14 @@ const sb = {
 
 const GLOBAL_CSS = `
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
-  html,body,#root{overflow-x:hidden;max-width:100vw;min-height:100vh}
+  html{overflow-x:hidden;width:100%;max-width:100vw}
+  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%}
+  #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh}
   @media(min-width:520px){body{background-color:#EDE5D8;background-image:radial-gradient(circle,rgba(192,57,43,0.06) 1px,transparent 1px),radial-gradient(circle,rgba(212,168,67,0.05) 1px,transparent 1px);background-size:30px 30px,50px 50px}}
-  input,select,textarea,button{font-family:inherit;box-sizing:border-box;max-width:100%}
-  input,select,textarea{display:block}
-  img{max-width:100%;height:auto}
+  input,select,textarea,button{font-family:inherit;box-sizing:border-box;max-width:100%;-webkit-appearance:none}
+  input,select,textarea{display:block;width:100%}
+  img{max-width:100%;height:auto;display:block}
+  div,section,nav,header,footer{max-width:100%;box-sizing:border-box}
   @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
