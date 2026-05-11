@@ -217,7 +217,7 @@ const GLOBAL_CSS = `
   @media(min-width:768px){
     .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
     .landing-hero-text{text-align:left!important}
-  @media(max-width:767px){#hero-text-block{padding-bottom:20px!important}.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important;margin-bottom:16px!important}.fu4{margin-bottom:4px!important}.landing-hero-btns{margin-bottom:4px!important}.btn-o{margin-top:8px!important}#hero-img-mobile{margin-top:0!important}.landing-hero{padding:24px 16px 0!important}}
+  @media(max-width:767px){.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important}}
     .landing-hero-btns{justify-content:flex-start!important}
     .landing-stats{max-width:900px!important;margin:0 auto!important;padding:0 40px 0!important;grid-template-columns:repeat(3,1fr)!important}
     .landing-sections{max-width:1100px!important;margin:0 auto!important;padding:0 40px!important}
