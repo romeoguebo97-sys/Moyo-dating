@@ -498,8 +498,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <style>{GLOBAL_CSS}</style>
 
       {/* ── NAV ── */}
-      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "sticky", top: 0, zIndex: 100 }}>
-        <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px" }}>
+      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100 }}>
+        <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
             <span>Mo</span><span style={{ color: G.or }}>yo</span>
           </div>
@@ -615,7 +615,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       )}
 
       {/* ── HERO ── */}
-      <div style={{ background: `linear-gradient(150deg,${G.creme} 0%,#F0E8D8 60%,rgba(26,92,58,0.12) 100%)`, overflow: "hidden", position: "relative" }}>
+      <div style={{ background: `linear-gradient(150deg,${G.creme} 0%,#F0E8D8 60%,rgba(26,92,58,0.12) 100%)`, overflow: "hidden", position: "relative", paddingTop: 72 }}>
 
         {/* ── PHOTOS ARRIÈRE-PLAN style Tinder ── */}
         <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap: 4, opacity: 0.35, zIndex: 0, pointerEvents: "none" }}>
@@ -1554,7 +1554,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, auth }: { ch
   ];
 
   return <div style={{ maxWidth: 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme, boxShadow: "0 0 60px rgba(44,26,14,0.12)" }}>
-    <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "sticky", top: 0, zIndex: 100 }}>
+    <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, maxWidth: 500, margin: "0 auto" }}>
       <div style={{ fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {auth.isAdmin && <div onClick={() => setTab("admin")} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>⚙️ Admin</div>}
