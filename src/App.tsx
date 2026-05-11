@@ -510,6 +510,17 @@ function StatCounter({ target, suffix, label, svg }: { target: number; suffix: s
   );
 }
 
+// Hook pour détecter la largeur d'écran
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 768);
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return width;
+}
+
 function Landing({ onNav }: { onNav: (p: string) => void }) {
   const NEW_FB = "https://www.facebook.com/share/1HssYavG19/?mibextid=wwXIfr";
   const svgFb = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>;
@@ -521,6 +532,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [ratingComment, setRatingComment] = useState("");
+  const isMobile = useWindowWidth() < 768;
   const toggleSection = (s: string) => setOpenMenuSection(prev => prev === s ? null : s);
 
   const landingMenuSections = [
@@ -786,7 +798,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         <div className="landing-hero" style={{ padding: "52px 24px 0", textAlign: "center", alignItems: "flex-end", position: "relative", zIndex: 2 }}>
 
           {/* ── Texte gauche ── */}
-          <div className="landing-hero-text fu1" style={{ paddingBottom: 52 }} id="hero-text-block">
+          <div className="landing-hero-text fu1" style={{ paddingBottom: isMobile ? 4 : 52 }} id="hero-text-block">
             <div style={{ display: "inline-block", background: G.blanc, border: `2px solid #111`, padding: "7px 20px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 22, color: "#111", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
               Site de rencontres Congolais
             </div>
@@ -795,11 +807,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               <span className="heart" style={{ color: G.rouge, fontStyle: "italic" }}>âme sœur</span>
               <br />au Congo
             </h1>
-            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440 }}>
+            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: isMobile ? 6 : 36, maxWidth: 440 }}>
               Moyo connecte les Congolais à la recherche d'une relation sincère et durable.
               Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.
             </p>
-            <div className="fu4 landing-hero-btns" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 20 }}>
+            <div className="fu4 landing-hero-btns" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: isMobile ? 4 : 32 }}>
               <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>
                 Créer mon profil gratuit
               </button>
@@ -3370,7 +3382,11 @@ export default function App() {
       img, video { filter: invert(100%) hue-rotate(180deg) !important; }
       .no-invert { filter: invert(100%) hue-rotate(180deg) !important; }
       [style*="background: #C0392B"], [style*="background: rgb(192, 57, 43)"],
-      [style*="background-color: #C0392B"] { filter: invert(100%) hue-rotate(180deg) !important; }
+      [style*="background-color: #C0392B"], [style*="background: linear-gradient(135deg, rgb(192"],
+      [style*="color: #C0392B"], [style*="color: rgb(192, 57, 43)"],
+      [style*="stroke: #C0392B"], [style*="fill: #C0392B"] {
+        filter: invert(100%) hue-rotate(180deg) !important;
+      }
     `}</style>}
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
