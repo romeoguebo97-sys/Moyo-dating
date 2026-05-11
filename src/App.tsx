@@ -217,7 +217,7 @@ const GLOBAL_CSS = `
   @media(min-width:768px){
     .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
     .landing-hero-text{text-align:left!important}
-  @media(max-width:767px){#hero-text-block{padding-bottom:20px!important}.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important;margin-bottom:12px!important}.fu4{margin-bottom:12px!important}.landing-hero-btns{margin-bottom:12px!important}#hero-img-mobile{margin-top:-10px!important}}
+  @media(max-width:767px){#hero-text-block{padding-bottom:8px!important}.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important;margin-bottom:8px!important}.fu4{margin-bottom:8px!important}.landing-hero-btns{margin-bottom:8px!important}#hero-img-mobile{margin-top:0px!important}.landing-hero{padding:24px 16px 0!important}}
     .landing-hero-btns{justify-content:flex-start!important}
     .landing-stats{max-width:900px!important;margin:0 auto!important;padding:0 40px 0!important;grid-template-columns:repeat(3,1fr)!important}
     .landing-sections{max-width:1100px!important;margin:0 auto!important;padding:0 40px!important}
@@ -2612,7 +2612,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
   </div>;
 }
 
-function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void }) {
+function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<Profile>>({});
@@ -2941,6 +2941,27 @@ function Profile({ auth, onLogout, onShowPremium }: { auth: Auth; onLogout: () =
           </div>
         </div>
 
+        {/* Mode sombre */}
+        <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: darkMode ? "rgba(44,26,14,0.1)" : "rgba(212,168,67,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={darkMode ? "#2C1A0E" : G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {darkMode
+                  ? <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  : <><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>
+                }
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Mode {darkMode ? "sombre" : "clair"}</div>
+              <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{darkMode ? "Thème sombre activé" : "Thème clair activé"}</div>
+            </div>
+          </div>
+          <div onClick={onToggleDark} style={{ width: 52, height: 28, borderRadius: 50, background: darkMode ? "#2C1A0E" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+            <div style={{ position: "absolute", top: 3, left: darkMode ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
+          </div>
+        </div>
+
         {/* Inviter un ami */}
         <div onClick={() => {
           const msg = encodeURIComponent("Salut 😊\nLes célibataires congolais sont déjà sur MOYO...\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ? ❤️\nCrée ton compte gratuitement ici 👇\nhttps://moyo-congo.com");
@@ -3088,6 +3109,7 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
 
 export default function App() {
   const [page, setPage] = useState("landing");
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("moyo_dark") === "1");
   const [tab, setTab] = useState("discover");
   const [auth, setAuth] = useState<Auth | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -3332,13 +3354,14 @@ export default function App() {
     </div>
   ) : null;
 
-  if (page === "landing") return <>{<Landing onNav={setPage} />}{InstallBanner}</>;
+  if (page === "landing") return <><div style={darkMode ? { filter: "invert(93%) hue-rotate(180deg)", minHeight: "100vh" } : {}}><style>{darkMode ? "img,video,.no-invert{filter:invert(100%) hue-rotate(180deg)}" : ""}</style><Landing onNav={setPage} /></div>{InstallBanner}</>;
   if (page === "about") return <About onBack={() => setPage("landing")} />;
   if (page === "signup") return <SignUp onNav={setPage} />;
   if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
   if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
-  return <>
+  return <div style={darkMode ? { filter: "invert(93%) hue-rotate(180deg)", minHeight: "100vh" } : {}}>
+    {darkMode && <style>{"img,video,.no-invert{filter:invert(100%) hue-rotate(180deg)}"}</style>}
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
       if (t === "messages") setUnreadCount(0);
@@ -3346,10 +3369,10 @@ export default function App() {
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={() => setTab("messages")} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}
-      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} />}
+      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
       {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}
     {InstallBanner}
-  </>;
+  </div>;
 }
