@@ -1448,9 +1448,62 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   // Étape 1 → vérifier email et créer le compte, puis passer à l'étape 2 (photo)
   const checkEmailAndContinue = async () => {
     if (!form.email || form.password.length < 6) return;
+
+    const emailClean = form.email.trim().toLowerCase();
+
+    // Validation format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(emailClean)) {
+      setErrorMsg("Veuillez entrer une adresse e-mail valide.");
+      return;
+    }
+
+    // Bloquer les domaines jetables
+    const BLOCKED_DOMAINS = [
+      "guerrillamail.com","guerrillamail.net","guerrillamail.org","guerrillamail.biz","guerrillamail.de","guerrillamail.info",
+      "tempmail.com","temp-mail.org","tempmail.net","tempmail.io","temp-mail.io","tempr.email",
+      "mailinator.com","maildrop.cc","mailnull.com","mailnesia.com","mailnull.com",
+      "yopmail.com","yopmail.fr","cool.fr.nf","jetable.fr.nf","nospam.ze.tc",
+      "throwam.com","throwam.net","throwaway.email","dispostable.com","disposablemail.com",
+      "spamgourmet.com","spamgourmet.net","spamgourmet.org","spamgourmet.com",
+      "trashmail.com","trashmail.at","trashmail.io","trashmail.me","trashmail.net",
+      "fakeinbox.com","fakeinbox.net","fakemail.fr","fakemail.net","filzmail.com",
+      "getnada.com","getairmail.com","getairmail.net","givmail.com","grr.la",
+      "10minutemail.com","10minutemail.net","10minutemail.org","10mail.org",
+      "20minutemail.com","20minutemail.it","tempemail.net","tempemail.org",
+      "sharklasers.com","guerrillamailblock.com","grr.la","guerrillamail.info",
+      "spam4.me","spamfree24.org","spamgob.com","spamherelots.com",
+      "maildrop.cc","mailexpire.com","mailfall.com","mailfreeonline.com",
+      "mohmal.com","mt2009.com","mt2014.com","mytrashmail.com",
+      "nwldx.com","objectmail.com","obobbo.com","odnorazovoe.ru",
+      "proxymail.eu","rcpt.at","recode.me","recursor.net",
+      "s0ny.net","safe-mail.net","safetymail.info","safetypost.de",
+      "sendspamhere.com","sharedmailbox.org","sharklasers.com",
+      "spamavert.com","spambox.info","spambox.irishspringrealty.com",
+      "spamcannon.com","spamcannon.net","spamcero.com","spamcon.org",
+      "sogetthis.com","soodonims.com","stop-my-spam.com",
+      "supergreatmail.com","supermailer.jp","superrito.com","superstachel.de",
+      "suremail.info","tempalias.com","tempinbox.co.uk","tempinbox.com",
+      "throwam.com","throwam.net","thinltd.com","thrott.com",
+      "trbvm.com","trommlergroup.com","trshmail.com","ttirv.net",
+      "turual.com","uggsrock.com","uroid.com","veryrealemail.com",
+      "vidchart.com","viditag.com","viewcastmedia.com","viewcastmedia.net",
+      "wegwerfmail.de","wegwerfmail.net","wegwerfmail.org",
+      "wh4f.org","whyspam.me","willhackforfood.biz","willselfdestruct.com",
+      "wronghead.com","wuzupmail.net","xagloo.com","xemaps.com",
+      "xents.com","xmaily.com","xoxy.net","yepmail.net","yomail.info",
+      "yuurok.com","z1p.biz","za.com","zehnminutenmail.de","zetmail.com",
+      "zippymail.info","zoemail.com","zoemail.net","zoemail.org","zomg.info"
+    ];
+
+    const domain = emailClean.split("@")[1];
+    if (BLOCKED_DOMAINS.includes(domain)) {
+      setErrorMsg("Les adresses e-mail temporaires ne sont pas acceptées. Veuillez utiliser une vraie adresse e-mail.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const emailClean = form.email.trim().toLowerCase();
       const existing = await sb.query<Profile>(SUPABASE_KEY, "profiles", `?email=eq.${encodeURIComponent(emailClean)}&select=id`);
       if (existing.length > 0) { setErrorMsg("Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt."); setLoading(false); return; }
 
