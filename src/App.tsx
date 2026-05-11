@@ -705,7 +705,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         </div>
 
         {/* Overlay dégradé pour lisibilité */}
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(150deg,rgba(240,232,216,0.85) 0%,rgba(240,232,216,0.80) 50%,rgba(26,92,58,0.15) 100%)`, zIndex: 1, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(150deg,rgba(240,232,216,0.72) 0%,rgba(240,232,216,0.65) 50%,rgba(26,92,58,0.15) 100%)`, zIndex: 1, pointerEvents: "none" }} />
 
         {/* Cercles déco supprimés pour ne pas cacher les photos */}
 
@@ -758,11 +758,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     <div style={{ width: 16, height: 16, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: G.blanc }}>CG</div>
                   </div>
                   <div style={{ height: 128, overflow: "hidden", position: "relative" }}>
-                    <img src="/phone-homme.webp" alt="Faïda" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                    <img src="/phone-homme.webp" alt="Romaric" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                     <div style={{ position: "absolute", top: 6, right: 6, background: G.rouge, borderRadius: 50, padding: "2px 6px", fontSize: "0.35rem", color: G.blanc, fontWeight: 700 }}>Premium</div>
                   </div>
                   <div style={{ padding: "5px 8px" }}>
-                    <div style={{ fontSize: "0.52rem", fontWeight: 700, color: G.blanc }}>Faïda, 25</div>
+                    <div style={{ fontSize: "0.52rem", fontWeight: 700, color: G.blanc }}>Romaric, 30</div>
                     <div style={{ fontSize: "0.4rem", color: "rgba(255,255,255,0.6)" }}>📍 Pointe-Noire</div>
                     <div style={{ display: "flex", gap: 4, marginTop: 5, justifyContent: "center" }}>
                       <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem" }}>✕</div>
@@ -890,9 +890,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     {/* Profil principal */}
                     <div style={{ padding: "8px 10px" }}>
                       <div style={{ width: "100%", height: 120, borderRadius: 14, overflow: "hidden", position: "relative" }}>
-                        <img src="/phone-homme.webp" alt="Faïda" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                        <img src="/phone-homme.webp" alt="Romaric" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.6))", padding: "8px 8px 6px" }}>
-                          <div style={{ fontWeight: 700, fontSize: "0.68rem", color: G.blanc }}>Faïda, 25</div>
+                          <div style={{ fontWeight: 700, fontSize: "0.68rem", color: G.blanc }}>Romaric, 30</div>
                           <div style={{ fontSize: "0.56rem", color: "rgba(255,255,255,0.8)" }}>📍 Pointe-Noire</div>
                         </div>
                       </div>
