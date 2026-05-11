@@ -2123,6 +2123,12 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
           <div onClick={() => setShowReport(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
         </div>
         <div style={{ padding: "8px 16px 32px" }}>
+          {auth.isPremium && <div onClick={() => { setShowReport(false); setViewedProfile(p); recordView(p.id); }} style={{ padding: "16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(26,92,58,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div style={{ fontWeight: 600, fontSize: "0.92rem", color: G.vert }}>Voir le profil</div>
+          </div>}
           <div onClick={() => { setShowReport(false); setShowBlockConfirm(true); }} style={{ padding: "16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>
             <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>🚫</div>
             <div style={{ fontWeight: 600, fontSize: "0.92rem", color: "#1a1a1a" }}>Bloquer</div>
@@ -2394,7 +2400,24 @@ function LikesPage({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: str
   const [liking, setLiking] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    // Realtime instantané — likes reçus
+    const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => {
+      loadData();
+    });
+    // Realtime instantané — visiteurs
+    const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => {
+      loadData();
+    });
+    // Fallback polling 3s
+    const poll = setInterval(() => { loadData(); }, 3000);
+    return () => {
+      try { wsLikes?.close(); } catch {}
+      try { wsViews?.close(); } catch {}
+      clearInterval(poll);
+    };
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
