@@ -578,20 +578,20 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <div style={{ background: `linear-gradient(150deg,${G.creme} 0%,#F0E8D8 60%,rgba(26,92,58,0.12) 100%)`, overflow: "hidden", position: "relative", minHeight: "100vh" }}>
 
         {/* ── PHOTOS ARRIÈRE-PLAN style Tinder ── */}
-        <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap: 4, opacity: 0.28, zIndex: 0, pointerEvents: "none" }}>
+        <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap: 4, opacity: 0.35, zIndex: 0, pointerEvents: "none" }}>
           {[
             "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop&auto=format",
+            "https://images.unsplash.com/photo-1530268729831-4b0b9e170218?w=300&h=400&fit=crop&auto=format",
             "https://images.unsplash.com/photo-1507152832244-10d45c7eda57?w=300&h=400&fit=crop&auto=format",
             "https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=300&h=400&fit=crop&auto=format",
             "https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?w=300&h=400&fit=crop&auto=format",
+            "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=300&h=400&fit=crop&auto=format",
             "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=300&h=400&fit=crop&auto=format",
+            "https://images.unsplash.com/photo-1542596768-5d1d21f1cf98?w=300&h=400&fit=crop&auto=format",
             "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=300&h=400&fit=crop&auto=format",
             "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=300&h=400&fit=crop&auto=format",
             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop&auto=format",
-            "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=300&h=400&fit=crop&auto=format",
+            "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?w=300&h=400&fit=crop&auto=format",
           ].map((url, i) => (
             <div key={i} style={{ overflow: "hidden" }}>
               <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
