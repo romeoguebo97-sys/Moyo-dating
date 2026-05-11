@@ -575,7 +575,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       )}
 
       {/* ── HERO ── */}
-      <div style={{ background: `linear-gradient(150deg,${G.creme} 0%,#F0E8D8 60%,rgba(26,92,58,0.12) 100%)`, overflow: "hidden", position: "relative", minHeight: "100vh" }}>
+      <div style={{ background: `linear-gradient(150deg,${G.creme} 0%,#F0E8D8 60%,rgba(26,92,58,0.12) 100%)`, overflow: "hidden", position: "relative" }}>
 
         {/* ── PHOTOS ARRIÈRE-PLAN style Tinder ── */}
         <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap: 4, opacity: 0.35, zIndex: 0, pointerEvents: "none" }}>
@@ -602,9 +602,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         {/* Overlay dégradé pour lisibilité */}
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(150deg,rgba(240,232,216,0.85) 0%,rgba(240,232,216,0.80) 50%,rgba(26,92,58,0.15) 100%)`, zIndex: 1, pointerEvents: "none" }} />
 
-        {/* Cercle déco fond */}
-        <div style={{ position: "absolute", top: -60, right: -60, width: 520, height: 520, borderRadius: "50%", border: `2px solid rgba(212,168,67,0.25)`, pointerEvents: "none", zIndex: 1 }} />
-        <div style={{ position: "absolute", top: 20, right: -10, width: 420, height: 420, borderRadius: "50%", background: "rgba(212,168,67,0.08)", pointerEvents: "none", zIndex: 1 }} />
+        {/* Cercles déco supprimés pour ne pas cacher les photos */}
 
         <div className="landing-hero" style={{ padding: "52px 24px 0", textAlign: "center", alignItems: "flex-end", position: "relative", zIndex: 2 }}>
 
@@ -639,8 +637,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <div style={{ background: G.rouge, padding: "4px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ color: G.blanc, fontWeight: 700, fontSize: "0.45rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
                   </div>
-                  <div style={{ background: "linear-gradient(160deg,#C47A4A,#8B4513)", height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                  <div style={{ height: 100, overflow: "hidden", position: "relative" }}>
+                    <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=100&fit=crop&crop=top&auto=format" alt="Sandrine" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                   </div>
                   <div style={{ padding: "4px 6px" }}>
                     <div style={{ fontSize: "0.42rem", fontWeight: 700, color: G.brun }}>Sandrine, 27</div>
@@ -654,8 +652,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     <span style={{ color: G.blanc, fontWeight: 700, fontSize: "0.55rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
                     <div style={{ width: 16, height: 16, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: G.blanc }}>CG</div>
                   </div>
-                  <div style={{ background: "linear-gradient(160deg,#C47A4A,#8B4513)", height: 128, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                  <div style={{ height: 128, overflow: "hidden", position: "relative" }}>
+                    <img src="https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=200&h=130&fit=crop&crop=top&auto=format" alt="Faïda" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                     <div style={{ position: "absolute", top: 6, right: 6, background: G.rouge, borderRadius: 50, padding: "2px 6px", fontSize: "0.35rem", color: G.blanc, fontWeight: 700 }}>Premium</div>
                   </div>
                   <div style={{ padding: "5px 8px" }}>
@@ -745,11 +743,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     </div>
                     {/* Profil card */}
                     <div style={{ padding: "12px 10px" }}>
-                      <div style={{ width: "100%", height: 110, borderRadius: 14, background: `linear-gradient(160deg,#C47A4A,#8B4513)`, marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-                        {/* Silhouette abstraite — cercle + ovale */}
-                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)", marginBottom: 0, position: "absolute", top: 18 }} />
-                        <div style={{ width: 54, height: 32, borderRadius: "50% 50% 0 0", background: "rgba(255,255,255,0.18)", position: "absolute", bottom: 0 }} />
-                        {/* Badge premium */}
+                      <div style={{ width: "100%", height: 110, borderRadius: 14, overflow: "hidden", marginBottom: 10, position: "relative" }}>
+                        <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=110&fit=crop&crop=top&auto=format" alt="Sandrine" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                         <div style={{ position: "absolute", top: 8, right: 8, background: G.or, borderRadius: 6, padding: "2px 6px", fontSize: "0.45rem", fontWeight: 700, color: G.brun }}>⭐ Premium</div>
                       </div>
                       <div style={{ fontWeight: 700, fontSize: "0.72rem", color: G.brun, marginBottom: 2 }}>Sandrine, 27</div>
@@ -789,12 +784,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     </div>
                     {/* Profil principal */}
                     <div style={{ padding: "8px 10px" }}>
-                      <div style={{ width: "100%", height: 120, borderRadius: 14, background: `linear-gradient(160deg,#7A4A20,#3D1A05)`, position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.22)", position: "absolute", top: 16 }} />
-                        <div style={{ width: 64, height: 36, borderRadius: "50% 50% 0 0", background: "rgba(255,255,255,0.16)", position: "absolute", bottom: 0 }} />
-                        <div style={{ position: "absolute", bottom: 8, left: 8, right: 8 }}>
+                      <div style={{ width: "100%", height: 120, borderRadius: 14, overflow: "hidden", position: "relative" }}>
+                        <img src="https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=200&h=120&fit=crop&crop=top&auto=format" alt="Faïda" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.6))", padding: "8px 8px 6px" }}>
                           <div style={{ fontWeight: 700, fontSize: "0.68rem", color: G.blanc }}>Faïda, 25</div>
-                          <div style={{ fontSize: "0.56rem", color: "rgba(255,255,255,0.7)" }}>📍 Pointe-Noire</div>
+                          <div style={{ fontSize: "0.56rem", color: "rgba(255,255,255,0.8)" }}>📍 Pointe-Noire</div>
                         </div>
                       </div>
                       {/* Actions */}
