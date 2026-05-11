@@ -2940,6 +2940,13 @@ export default function App() {
     };
     loadLikesReceived();
 
+    // Chargement initial des matchs
+    const loadMatchCount = async () => {
+      const res = await sb.query<object>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
+      setNotifCount(Array.isArray(res) ? res.length : 0);
+    };
+    loadMatchCount();
+
     // Chargement initial des messages non lus
     const checkUnread = async () => {
       try {
@@ -2949,12 +2956,10 @@ export default function App() {
         const res = await sb.query<object>(auth.token, "messages", `?match_id=in.(${matchIds})&sender_id=neq.${auth.userId}&is_read=eq.false&select=id`);
         const count = Array.isArray(res) ? res.length : 0;
         setUnreadCount(prev => {
-          // Si nouveau message → notification push
           if (count > prev && prev >= 0 && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('Moyo — Nouveau message 💬', {
+            new Notification('Moyo — Nouveau message', {
               body: 'Vous avez reçu un nouveau message !',
               icon: '/favicon.png',
-              badge: '/favicon.png',
             });
           }
           return count;
@@ -2963,34 +2968,38 @@ export default function App() {
     };
     checkUnread();
 
-    // ── REALTIME : écoute les nouveaux messages en temps réel ──
+    // ── REALTIME messages ──
     const wsMessages = sb.subscribeRealtime(auth.token, "messages", `match_id=neq.null`, () => {
       checkUnread();
     });
 
-    // ── REALTIME : écoute les nouveaux likes en temps réel ──
+    // ── REALTIME likes ──
     const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => {
       loadLikesReceived();
     });
 
-    // ── REALTIME : écoute les nouveaux matchs ──
-    const wsMatches = sb.subscribeRealtime(auth.token, "matches", `user2=eq.${auth.userId}`, async () => {
-      // Compter les nouveaux matchs
-      const res = await sb.query<object>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
-      setNotifCount(Array.isArray(res) ? res.length : 0);
+    // ── REALTIME matchs — badge mis à jour instantanément ──
+    const wsMatches = sb.subscribeRealtime(auth.token, "matches", `user2=eq.${auth.userId}`, () => {
+      loadMatchCount();
       loadLikesReceived();
     });
+    // Écouter aussi quand user1 crée un match
+    const wsMatches2 = sb.subscribeRealtime(auth.token, "matches", `user1=eq.${auth.userId}`, () => {
+      loadMatchCount();
+    });
 
-    // Fallback polling toutes les 10s pour garantir la fraîcheur
+    // Fallback polling toutes les 3s
     const fallbackInterval = setInterval(() => {
       checkUnread();
       loadLikesReceived();
+      loadMatchCount();
     }, 3000);
 
     return () => {
       try { wsMessages?.close(); } catch {}
       try { wsLikes?.close(); } catch {}
       try { wsMatches?.close(); } catch {}
+      try { wsMatches2?.close(); } catch {}
       clearInterval(fallbackInterval);
       clearInterval(lastSeenInterval);
       clearInterval(sessionCheck);
