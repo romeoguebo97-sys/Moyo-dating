@@ -556,6 +556,21 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "block", titre: "Blocage utilisateur", desc: "Bloquez n'importe quel utilisateur d'un simple clic." },
       { icon: "adult", titre: "Majorité requise", desc: "Moyo est strictement réservé aux personnes de 18 ans et plus." },
     ]},
+    { id: "confidentialite", title: "Confidentialité & CGU", emoji: "📋", items: [
+      { icon: "shield", titre: "Responsable du traitement", desc: "Romeo GUEBO — contact : romeoguebo97@gmail.com" },
+      { icon: "lock2", titre: "Données collectées", desc: "Nom, e-mail, photos, messages, données de connexion et abonnement. Utilisées uniquement pour le fonctionnement de Moyo." },
+      { icon: "lock2", titre: "Conservation & sécurité", desc: "Données conservées le temps nécessaire au service. Aucune revente. Prestataires techniques liés à l'hébergement uniquement." },
+      { icon: "verified", titre: "Vos droits (RGPD)", desc: "Accès, modification et suppression de vos données sur demande à romeoguebo97@gmail.com" },
+      { icon: "chat", titre: "CGU — Utilisation", desc: "Moyo est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
+      { icon: "alert", titre: "Contenus interdits", desc: "Faux profils, harcèlement, contenus illégaux, tentatives d'arnaque ou usurpation d'identité sont strictement interdits." },
+      { icon: "star2", titre: "Premium & paiement", desc: "Certaines fonctionnalités sont accessibles via abonnement. Paiements via prestataires sécurisés (MTN MoMo, Airtel Money)." },
+    ]},
+    { id: "mentions", title: "Mentions légales", emoji: "⚖️", items: [
+      { icon: "user", titre: "Éditeur du site", desc: "Romeo GUEBO — romeoguebo97@gmail.com" },
+      { icon: "shield", titre: "Propriété intellectuelle", desc: "Tous les contenus, visuels et logos de Moyo sont protégés. Toute reproduction sans autorisation est interdite." },
+      { icon: "verified", titre: "Droit applicable", desc: "Les présentes conditions sont régies par le droit français. Tout litige relève des tribunaux compétents." },
+      { icon: "chat", titre: "Contact", desc: "Pour toute question légale : romeoguebo97@gmail.com" },
+    ]},
   ];
 
   return (
@@ -614,6 +629,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                         {s.id === "temoignages" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
                         {s.id === "faq" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
                         {s.id === "securite" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
+                        {s.id === "confidentialite" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>}
+                        {s.id === "mentions" && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={openMenuSection === s.id ? "white" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
                       </div>
                       <span style={{ fontWeight: 600, fontSize: "0.92rem", color: openMenuSection === s.id ? G.vert : G.brun }}>{s.title}</span>
                     </div>
@@ -680,7 +697,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       )}
 
       {/* ── HERO ── */}
-      <div style={{ background: `linear-gradient(150deg,${G.creme} 0%,#F0E8D8 60%,rgba(26,92,58,0.12) 100%)`, overflow: "hidden", position: "relative", paddingTop: 72 }}>
+      <div style={{ background: `linear-gradient(150deg,#F2F2F0 0%,#EEEEEC 60%,rgba(26,92,58,0.08) 100%)`, overflow: "hidden", position: "relative", paddingTop: 72 }}>
 
         {/* ── PHOTOS ARRIÈRE-PLAN style Tinder ── */}
         <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap: 4, opacity: 0.35, zIndex: 0, pointerEvents: "none" }}>
@@ -705,7 +722,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         </div>
 
         {/* Overlay dégradé pour lisibilité */}
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(150deg,rgba(240,232,216,0.72) 0%,rgba(240,232,216,0.65) 50%,rgba(26,92,58,0.15) 100%)`, zIndex: 1, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(150deg,rgba(242,242,240,0.82) 0%,rgba(238,238,236,0.75) 50%,rgba(26,92,58,0.15) 100%)`, zIndex: 1, pointerEvents: "none" }} />
 
         {/* Cercles déco supprimés pour ne pas cacher les photos */}
 
@@ -1109,7 +1126,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           <div style={{ textAlign: "center", marginTop: 40 }}>
             <p style={{ color: "#555", fontSize: "0.82rem", marginBottom: 16 }}>Rejoins des milliers de Congolais qui ont trouvé l'amour</p>
             <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 40px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 8px 28px rgba(192,57,43,0.4)", cursor: "pointer" }}>
-              Créer mon profil — c'est gratuit
+              Créer mon profil, c'est gratuit
             </button>
           </div>
         </div>
@@ -1183,11 +1200,16 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             <a href="javascript:void(0)" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="TikTok">{svgTk}</a>
           </div>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
-            {["À propos", "Confidentialité", "Conditions d'utilisation", "Contact"].map(l => (
-              <span key={l} onClick={l === "À propos" ? () => onNav("about") : undefined} style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.78rem", cursor: l === "À propos" ? "pointer" : "default" }}
-                onMouseOver={e => { if(l === "À propos") (e.target as HTMLElement).style.color = G.or; }}
-                onMouseOut={e => { if(l === "À propos") (e.target as HTMLElement).style.color = "rgba(255,255,255,0.55)"; }}
-              >{l}</span>
+            {[
+              { label: "À propos", action: () => onNav("about") },
+              { label: "Confidentialité & CGU", action: () => { setShowLandingMenu(true); setOpenMenuSection("confidentialite"); } },
+              { label: "Mentions légales", action: () => { setShowLandingMenu(true); setOpenMenuSection("mentions"); } },
+              { label: "Contact", action: () => onNav("about") },
+            ].map(l => (
+              <span key={l.label} onClick={l.action} style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.78rem", cursor: "pointer", transition: "color 0.2s" }}
+                onMouseOver={e => { (e.target as HTMLElement).style.color = G.or; }}
+                onMouseOut={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.65)"; }}
+              >{l.label}</span>
             ))}
           </div>
           <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.72rem" }}>6 rue Paul Valéry, 77000 Melun, France</p>
@@ -1278,7 +1300,7 @@ function About({ onBack }: { onBack: () => void }) {
 
         <div style={{ textAlign: "center", color: "#555" }}>
           <p style={{ fontSize: "0.75rem" }}>© 2026 Moyo Congo · Tous droits réservés</p>
-          <p style={{ fontSize: "0.72rem", marginTop: 4 }}>Confidentialité · CGU · Contact</p>
+          <p style={{ fontSize: "0.72rem", marginTop: 4, color: "#555" }}>Confidentialité & CGU · Mentions légales · Contact</p>
         </div>
       </div>
 
