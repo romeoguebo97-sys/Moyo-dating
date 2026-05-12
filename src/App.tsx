@@ -3592,10 +3592,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                         const replyMatch = m.content.match(/^\[↩ (.+?) : (.+?)\]\n([\s\S]*)$/);
                         if (replyMatch) {
                           const [, who, quoted, body] = replyMatch;
+                          const isPhoto = quoted === "Photo";
                           return <>
-                            <div style={{ background: isMine ? "rgba(0,0,0,0.15)" : "rgba(192,57,43,0.07)", borderLeft: `3px solid ${isMine ? "rgba(255,255,255,0.5)" : G.rouge}`, borderRadius: "0 6px 6px 0", padding: "4px 8px", marginBottom: 6, fontSize: "0.75rem" }}>
-                              <div style={{ fontWeight: 700, color: isMine ? "rgba(255,255,255,0.85)" : G.rouge, marginBottom: 2 }}>↩ {who}</div>
-                              <div style={{ opacity: 0.75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{quoted}</div>
+                            <div style={{ background: isMine ? "rgba(0,0,0,0.18)" : "rgba(192,57,43,0.07)", borderRadius: 8, marginBottom: 6, overflow: "hidden", display: "flex" }}>
+                              {/* Barre colorée gauche */}
+                              <div style={{ width: 3, flexShrink: 0, background: isMine ? "rgba(255,255,255,0.6)" : G.rouge }} />
+                              {/* Texte cité */}
+                              <div style={{ flex: 1, padding: "5px 8px", minWidth: 0 }}>
+                                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: isMine ? "rgba(255,255,255,0.9)" : G.rouge, marginBottom: 2 }}>{who}</div>
+                                <div style={{ fontSize: "0.75rem", color: isMine ? "rgba(255,255,255,0.7)" : "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+                                  {isPhoto && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>}
+                                  {quoted}
+                                </div>
+                              </div>
                             </div>
                             <span>{body}</span>
                           </>;
@@ -3645,13 +3654,33 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
       {/* Barre d'envoi */}
       <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", gap: 0, flexShrink: 0 }}>
-        {/* Bandeau répondre */}
+        {/* Bandeau répondre style WhatsApp */}
         {replyTo && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px 6px 12px", background: "rgba(192,57,43,0.06)", borderRadius: 10, marginBottom: 6, borderLeft: `3px solid ${G.rouge}` }}>
-            <div style={{ flex: 1, fontSize: "0.78rem", color: "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              ↩ <span style={{ fontWeight: 600, color: G.rouge }}>{replyTo.sender_id === auth.userId ? "Toi" : open?.partner?.name}</span> : {replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content}
+          <div style={{ display: "flex", alignItems: "stretch", background: G.creme, borderRadius: 12, marginBottom: 8, overflow: "hidden", border: `1px solid ${G.gris}` }}>
+            {/* Barre colorée gauche */}
+            <div style={{ width: 4, flexShrink: 0, background: G.rouge, borderRadius: "12px 0 0 12px" }} />
+            {/* Contenu */}
+            <div style={{ flex: 1, padding: "8px 10px", minWidth: 0 }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: G.rouge, marginBottom: 2 }}>
+                {replyTo.sender_id === auth.userId ? "Toi" : open?.partner?.name}
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "#777", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {replyTo.content.startsWith("[img]") ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Photo
+                  </span>
+                ) : replyTo.content.replace(/^\[↩.*?\]\n/, "")}
+              </div>
             </div>
-            <div onClick={() => setReplyTo(null)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1rem", lineHeight: 1, flexShrink: 0 }}>✕</div>
+            {/* Miniature si image */}
+            {replyTo.content.startsWith("[img]") && (
+              <img src={replyTo.content.slice(5, -6)} alt="" style={{ width: 44, height: 44, objectFit: "cover", flexShrink: 0 }} />
+            )}
+            {/* Bouton fermer */}
+            <div onClick={() => setReplyTo(null)} style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 10px", cursor: "pointer", flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
           </div>
         )}
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
