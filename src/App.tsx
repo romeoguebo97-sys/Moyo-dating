@@ -3291,17 +3291,55 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
     ctx.restore();
   };
 
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+
+  // Attacher touchmove en non-passif pour pouvoir appeler preventDefault
+  useEffect(() => {
+    const el = canvasContainerRef.current;
+    if (!el) return;
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault(); // bloque le scroll natif du navigateur
+      e.stopPropagation();
+      if (!draggingRef.current) return;
+      const pos = e.touches[0];
+      setOffset({ x: pos.clientX - dragStartRef.current.x, y: pos.clientY - dragStartRef.current.y });
+    };
+    el.addEventListener("touchmove", handleTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", handleTouchMove);
+  }, []);
+
   const onMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    draggingRef.current = true;
     setDragging(true);
     const pos = "touches" in e ? e.touches[0] : e;
+    dragStartRef.current = { x: pos.clientX - offset.x, y: pos.clientY - offset.y };
     setDragStart({ x: pos.clientX - offset.x, y: pos.clientY - offset.y });
   };
-  const onMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+  const onMouseMove = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!dragging) return;
-    const pos = "touches" in e ? e.touches[0] : e;
-    setOffset({ x: pos.clientX - dragStart.x, y: pos.clientY - dragStart.y });
+    setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
   };
-  const onMouseUp = () => setDragging(false);
+  const onMouseUp = (e?: React.MouseEvent | React.TouchEvent) => {
+    draggingRef.current = false;
+    setDragging(false);
+  };
+  const onTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    draggingRef.current = true;
+    setDragging(true);
+    const pos = e.touches[0];
+    dragStartRef.current = { x: pos.clientX - offset.x, y: pos.clientY - offset.y };
+    setDragStart({ x: pos.clientX - offset.x, y: pos.clientY - offset.y });
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    draggingRef.current = false;
+    setDragging(false);
+  };
 
   const handleConfirm = () => {
     const img = imgRef2.current; if (!img || !img.complete) return;
@@ -3319,9 +3357,9 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
       <div style={{ background: G.blanc, borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
         <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Zoom pour ajuster</div>
-        <div style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: "50%", overflow: "hidden", background: G.gris, cursor: dragging ? "grabbing" : "grab", border: `3px solid ${G.rouge}` }}
+        <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: "50%", overflow: "hidden", background: G.gris, cursor: dragging ? "grabbing" : "grab", border: `3px solid ${G.rouge}`, touchAction: "none", userSelect: "none" }}
           onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-          onTouchStart={onMouseDown} onTouchMove={onMouseMove} onTouchEnd={onMouseUp}
+          onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
         >
           <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
           <canvas ref={canvasRef} width={SIZE} height={SIZE} style={{ display: "block" }} />
