@@ -3386,7 +3386,7 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
         <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Zoom pour ajuster</div>
         {/* Zone de crop : cercle = aperçu avatar, rectangle = zone carte */}
-        <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: "50%", overflow: "hidden", background: G.gris, cursor: dragging ? "grabbing" : "grab", border: `3px solid ${G.rouge}`, touchAction: "none", userSelect: "none" }}
+        <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#1a1a1a", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
           onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
           onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
         >
