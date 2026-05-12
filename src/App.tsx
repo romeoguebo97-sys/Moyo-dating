@@ -2692,7 +2692,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   );
 }
 
-function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void; onGoMessages?: (partnerId?: string) => void }) {
+function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchStart, onUnmatchEnd }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void; onGoMessages?: (partnerId?: string) => void; onUnmatchStart?: () => void; onUnmatchEnd?: () => void }) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -2700,6 +2700,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
   const [menuMatchId, setMenuMatchId] = useState<string | null>(null);
   const [confirmUnmatch, setConfirmUnmatch] = useState<Match | null>(null);
   const [confirmBlockMatch, setConfirmBlockMatch] = useState<Match | null>(null);
+  const isUnmatching = useRef(false);
 
   useEffect(() => { loadMatches(); }, []);
 
@@ -2724,7 +2725,9 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
   };
 
   const handleUnmatch = async (m: Match) => {
-    // 1. Mise à jour optimiste IMMÉDIATE
+    isUnmatching.current = true;
+    if (onUnmatchStart) onUnmatchStart();
+
     const partnerId = m.partner?.id;
     const updated = matches.filter(x => x.id !== m.id && !(
       (x.user1 === auth.userId && x.user2 === partnerId) ||
@@ -2735,11 +2738,9 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
     setConfirmUnmatch(null);
     setMenuMatchId(null);
 
-    if (!partnerId) return;
+    if (!partnerId) { isUnmatching.current = false; if (onUnmatchEnd) onUnmatchEnd(); return; }
 
-    // 2. Suppression en cascade — séquentielle pour fiabilité
     try {
-      // a) Trouver TOUS les match IDs entre ces deux personnes (dans les deux sens)
       const [fwd, rev] = await Promise.all([
         sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${partnerId}&select=id`),
         sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${partnerId}&user2=eq.${auth.userId}&select=id`),
@@ -2747,26 +2748,26 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
       const allIds = [
         ...(Array.isArray(fwd) ? fwd.map(x => x.id) : []),
         ...(Array.isArray(rev) ? rev.map(x => x.id) : []),
-        m.id, // toujours inclure l'ID connu, même si la requête échoue
-      ].filter((id, i, arr) => id && arr.indexOf(id) === i); // dédupliquer
+        m.id,
+      ].filter((id, i, arr) => id && arr.indexOf(id) === i);
 
-      // b) Supprimer TOUS les messages de ces matchs
       for (const id of allIds) {
         await sb.delete(auth.token, "messages", `?match_id=eq.${id}`);
       }
-
-      // c) Supprimer les matchs
       await sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${partnerId}`);
       await sb.delete(auth.token, "matches", `?user1=eq.${partnerId}&user2=eq.${auth.userId}`);
-
-      // d) Supprimer les likes mutuels (pour que le badge likes diminue aussi)
       await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${partnerId}`);
       await sb.delete(auth.token, "likes", `?from_user=eq.${partnerId}&to_user=eq.${auth.userId}`);
-    } catch (err) {
+    } catch {
       try {
         await sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`);
         await sb.delete(auth.token, "matches", `?id=eq.${m.id}`);
       } catch {}
+    } finally {
+      setTimeout(() => {
+        isUnmatching.current = false;
+        if (onUnmatchEnd) onUnmatchEnd();
+      }, 2000);
     }
   };
 
@@ -2809,7 +2810,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
                 {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2, borderRadius: 2, background: "#555" }} />)}
               </div>
               {menuMatchId === m.id && (
-                <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 180, overflow: "hidden" }}>
+                <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
                   <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     Voir le profil
@@ -2818,8 +2819,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     Envoyer un message
                   </div>
-                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#888", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                     Bloquer
                   </div>
                   <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
@@ -2835,7 +2836,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
     ) : (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
         {matches.map(m => (
-          <div key={m.id} className="card-hover" style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 3px 16px rgba(44,26,14,0.08)", position: "relative" }}>
+          <div key={m.id} className="card-hover" style={{ background: G.blanc, borderRadius: 16, boxShadow: "0 3px 16px rgba(44,26,14,0.08)", position: "relative" }}>
             <div onClick={() => setSelectedMatch(m)} style={{ cursor: "pointer" }}>
               <div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden" }}>
                 {m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "3rem" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}
@@ -2852,7 +2853,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
                 {[0,1,2].map(i => <div key={i} style={{ width: 16, height: 2, borderRadius: 2, background: "#aaa" }} />)}
               </div>
               {menuMatchId === m.id && (
-                <div style={{ position: "absolute", right: 10, bottom: 36, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 180, overflow: "hidden" }}>
+                <div style={{ position: "absolute", right: 10, bottom: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
                   <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     Voir le profil
@@ -2861,8 +2862,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     Envoyer un message
                   </div>
-                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#888", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                     Bloquer
                   </div>
                   <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
@@ -3887,6 +3888,7 @@ export default function App() {
   const [showInstall, setShowInstall] = useState(false);
   const [openConvPartnerId, setOpenConvPartnerId] = useState<string | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+  const isUnmatchingRef = useRef(false);
   // Ref pour permettre à LikesPage de déclencher un refresh des badges
   const refreshBadgesRef = useRef<(() => void) | null>(null);
 
@@ -4128,11 +4130,12 @@ export default function App() {
 
     // ── REALTIME matchs - badge mis à jour instantanément ──
     const wsMatches = sb.subscribeRealtime(auth.token, "matches", `user2=eq.${auth.userId}`, () => {
+      if (isUnmatchingRef.current) return; // bloquer pendant unmatch
       loadMatchCount();
       loadLikesReceived();
     });
-    // Écouter aussi quand user1 crée un match
     const wsMatches2 = sb.subscribeRealtime(auth.token, "matches", `user1=eq.${auth.userId}`, () => {
+      if (isUnmatchingRef.current) return; // bloquer pendant unmatch
       loadMatchCount();
     });
 
@@ -4143,6 +4146,7 @@ export default function App() {
 
     // Fallback polling toutes les 3s
     const fallbackInterval = setInterval(() => {
+      if (isUnmatchingRef.current) return; // bloquer pendant unmatch
       checkUnread();
       loadLikesReceived();
       loadMatchCount();
@@ -4224,7 +4228,7 @@ export default function App() {
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
-      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
+      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
       {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}
