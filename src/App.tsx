@@ -574,6 +574,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment rendre mon profil invisible ?", desc: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
       { icon: "Q", titre: "Pourquoi je ne vois pas mon profil dans Découvrir ?", desc: "Votre profil doit être complet jusqu'à la dernière étape de l'inscription pour apparaître dans Découvrir. Vérifiez aussi que votre profil est bien visible dans les paramètres." },
       { icon: "Q", titre: "À quoi servent les onglets Likes et Vus ?", desc: "Deux onglets séparés : Likes (personnes qui vous ont liké) et Vus (personnes qui ont visité votre profil). Premium requis pour voir les cartes. Vous pouvez retirer une carte sans affecter les matchs." },
+      { icon: "Q", titre: "Qui apparaît dans mes Vus ?", desc: "Uniquement les membres Premium qui ont consulté votre profil. Les membres gratuits ne génèrent pas de vues et n'apparaissent pas dans votre liste Vus." },
       { icon: "Q", titre: "Si je unlike quelqu'un, que se passe-t-il ?", desc: "Le like disparait des deux côtés instantanément. Si vous aviez un match, la conversation et tous les messages sont supprimés." },
     ]},
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
@@ -1446,6 +1447,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [cropSrcSignup, setCropSrcSignup] = useState<string | null>(null);
   const [tempToken, setTempToken] = useState<string | null>(null);
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1630,6 +1632,20 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
       {/* ÉTAPE 2 - Photo */}
       {step === 2 && <>
+        {/* CropModal pour l'inscription */}
+        {cropSrcSignup && (
+          <CropModal
+            src={cropSrcSignup}
+            onConfirm={(blob) => {
+              setCropSrcSignup(null);
+              const croppedFile = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+              setPhotoFile(croppedFile);
+              setPhotoPreview(URL.createObjectURL(blob));
+              if (fileRef.current) fileRef.current.value = "";
+            }}
+            onCancel={() => { setCropSrcSignup(null); if (fileRef.current) fileRef.current.value = ""; }}
+          />
+        )}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <p style={{ fontSize: "0.9rem", color: "#555", marginBottom: 24, lineHeight: 1.6 }}>
             Ajoute une photo pour que les autres puissent te reconnaître 😊
@@ -1637,9 +1653,8 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           <input ref={fileRef} type="file" accept="image/*" onChange={e => {
             const file = e.target.files?.[0];
             if (!file) return;
-            setPhotoFile(file);
             const reader = new FileReader();
-            reader.onload = () => setPhotoPreview(reader.result as string);
+            reader.onload = () => setCropSrcSignup(reader.result as string);
             reader.readAsDataURL(file);
           }} style={{ display: "none" }} />
           <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 16px" }} onClick={() => fileRef.current?.click()}>
@@ -1862,13 +1877,13 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         {/* Accordéon */}
         <div style={{ padding: "8px 0" }}>
           {[
-            { title: "Découvrir des profils", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>, items: ["L'onglet Découvrir affiche les profils en mode carte ou en liste. En vue carte, utilisez les flèches pour naviguer et le cœur pour liker.", "Chaque profil affiche un badge Femme ou Homme pour identifier clairement le genre.", "Compte gratuit : 5 likes par jour. Premium : likes illimités. Filtres disponibles : genre, ville, âge (18-99), religion.", "Moyo est réservé aux rencontres hétérosexuelles uniquement."] },
+            { title: "Découvrir des profils", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>, items: ["L'onglet Découvrir affiche les profils en mode carte ou en liste. En vue carte, utilisez les flèches pour naviguer et le cœur pour liker.", "Chaque profil affiche un badge Femme ou Homme pour identifier clairement le genre.", "Compte gratuit : 5 likes par jour. Premium : likes illimités. Filtres disponibles : genre, ville, âge (18-99), religion.", "Moyo est réservé aux rencontres hétérosexuelles uniquement.", "Seuls les membres Premium génèrent des vues sur les profils qu'ils consultent. Les non-premium peuvent naviguer sans laisser de trace."] },
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: ["Compte gratuit : 3 messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.", "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau."] },
-            { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
+            { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil."] },
             { title: "Premium - 3 500 FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: ["Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.", "Paiement via MTN MoMo ou Airtel MoMo uniquement. Activation sous 24h. Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation."] },
-            { title: "Likes & Visiteurs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Deux onglets séparés dans la barre de navigation : Likes (coeur) et Vus (oeil). Les badges se mettent à jour instantanément.", "En Premium, tu vois les cartes complètes. Tu peux appuyer sur X pour retirer une carte de ta liste sans affecter les matchs ni les messages.", "Si tu unlikes un profil, ton like disparait aussi de sa liste à lui instantanément.", "Vue carte ou liste disponible en Premium via le bouton en haut à droite."] },
+            { title: "Likes & Visiteurs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Deux onglets séparés dans la barre de navigation : Likes (coeur) et Vus (oeil). Les badges se mettent à jour instantanément.", "En Premium, tu vois les cartes complètes des personnes qui t'ont liké ou visité. Tu peux retirer une carte sans affecter les matchs ni les messages.", "Important : seuls les membres Premium génèrent des vues. Un membre gratuit qui consulte ton profil n'apparaît pas dans tes Vus.", "Si tu unlikes un profil, ton like disparait aussi de sa liste à lui instantanément.", "Vue carte ou liste disponible via le bouton en haut à droite."] },
       { title: "Inviter un ami", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>, items: ["Dans Profil, appuyez sur Inviter un ami. Un message pré-rempli s'ouvre via WhatsApp ou le partage natif de votre téléphone.", "Le lien pointe directement vers moyo-congo.com pour que votre ami puisse s'inscrire facilement."] },
       { title: "Mode sombre", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>, items: ["Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes. Votre choix est mémorisé automatiquement.", "Le mode sombre s'applique à toutes les pages sauf la page d'accueil."] },
       { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo est réservé aux personnes majeures de 18 ans et plus.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
@@ -2056,10 +2071,12 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   };
 
   const recordView = async (profileId: string) => {
+    // La vue n'est enregistrée que si le visiteur est Premium
+    if (!auth.isPremium) return;
     if (profileId === auth.userId) return;
     try {
       await sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: profileId });
-    } catch {} // ignore si déjà enregistré (UNIQUE constraint)
+    } catch {}
   };
 
   const handleLike = async (p: Profile) => {
@@ -2456,31 +2473,42 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
 
   const loadData = async () => {
     setLoading(true);
+
+    // 1. Charger les IDs dismissés séparément — si ça échoue, continuer quand même
+    let dIds = new Set<string>();
     try {
-      // Charger les IDs dismissés
       const dismissed = await sb.query<{ dismissed_id: string }>(
         auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}&select=dismissed_id`
       );
-      const dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
+      dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
       setDismissedIds(dIds);
+    } catch {}
 
+    // 2. Charger les likes reçus — indépendant des dismissed
+    try {
       const res = await sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
-      // Le count brut (pour le bandeau), les dismissed n'affectent pas le vrai nombre de likes reçus
       setCount(Array.isArray(res) ? res.length : 0);
       if (auth.isPremium && Array.isArray(res) && res.length > 0) {
         const ids = res.map(r => r.from_user).join(",");
         const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids})&select=*`);
         setLikers(Array.isArray(profiles) ? profiles.filter(p => !dIds.has(p.id)) : []);
       }
-      if (auth.isPremium) {
-        const views = await sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id&order=created_at.desc&limit=20`);
-        if (Array.isArray(views) && views.length > 0) {
-          const vIds = [...new Set(views.map(v => v.viewer_id))].join(",");
-          const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=*`);
-          setVisitors(Array.isArray(vProfiles) ? vProfiles.filter(p => !dIds.has(p.id)) : []);
-        }
-      }
     } catch {}
+
+    // 3. Charger les visiteurs — indépendant
+    if (auth.isPremium) {
+      try {
+        const views = await sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id&order=created_at.desc&limit=50`);
+        if (Array.isArray(views) && views.length > 0) {
+          const vIds = [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).join(",");
+          if (vIds) {
+            const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=*`);
+            setVisitors(Array.isArray(vProfiles) ? vProfiles : []);
+          }
+        }
+      } catch {}
+    }
+
     setLoading(false);
   };
 
@@ -2811,7 +2839,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
               </div>
               {menuMatchId === m.id && (
                 <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
-                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     Voir le profil
                   </div>
@@ -2854,7 +2882,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
               </div>
               {menuMatchId === m.id && (
                 <div style={{ position: "absolute", right: 10, bottom: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
-                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     Voir le profil
                   </div>
@@ -3357,12 +3385,36 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
       <div style={{ background: G.blanc, borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
         <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Zoom pour ajuster</div>
+        {/* Zone de crop : cercle = aperçu avatar, rectangle = zone carte */}
         <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: "50%", overflow: "hidden", background: G.gris, cursor: dragging ? "grabbing" : "grab", border: `3px solid ${G.rouge}`, touchAction: "none", userSelect: "none" }}
           onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
           onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
         >
           <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
           <canvas ref={canvasRef} width={SIZE} height={SIZE} style={{ display: "block" }} />
+          {/* Overlay : rectangle (zone carte) + grille des tiers */}
+          <svg style={{ position: "absolute", inset: 0, pointerEvents: "none", width: "100%", height: "100%" }} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+            {/* Assombrissement hors rectangle */}
+            <rect x="0" y="0" width={SIZE} height={SIZE} fill="rgba(0,0,0,0.35)" />
+            {/* Rectangle de cadrage (ratio 3:4 centré) */}
+            <rect x={SIZE*0.08} y={SIZE*0.06} width={SIZE*0.84} height={SIZE*0.88} fill="transparent" stroke="white" strokeWidth="1.5" />
+            {/* Grille des tiers */}
+            <line x1={SIZE*0.08 + SIZE*0.84/3} y1={SIZE*0.06} x2={SIZE*0.08 + SIZE*0.84/3} y2={SIZE*0.06+SIZE*0.88} stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
+            <line x1={SIZE*0.08 + SIZE*0.84*2/3} y1={SIZE*0.06} x2={SIZE*0.08 + SIZE*0.84*2/3} y2={SIZE*0.06+SIZE*0.88} stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
+            <line x1={SIZE*0.08} y1={SIZE*0.06 + SIZE*0.88/3} x2={SIZE*0.08+SIZE*0.84} y2={SIZE*0.06 + SIZE*0.88/3} stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
+            <line x1={SIZE*0.08} y1={SIZE*0.06 + SIZE*0.88*2/3} x2={SIZE*0.08+SIZE*0.84} y2={SIZE*0.06 + SIZE*0.88*2/3} stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
+            {/* Coins du rectangle */}
+            <polyline points={`${SIZE*0.08},${SIZE*0.06+14} ${SIZE*0.08},${SIZE*0.06} ${SIZE*0.08+14},${SIZE*0.06}`} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <polyline points={`${SIZE*0.92-14},${SIZE*0.06} ${SIZE*0.92},${SIZE*0.06} ${SIZE*0.92},${SIZE*0.06+14}`} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <polyline points={`${SIZE*0.08},${SIZE*0.94-14} ${SIZE*0.08},${SIZE*0.94} ${SIZE*0.08+14},${SIZE*0.94}`} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <polyline points={`${SIZE*0.92-14},${SIZE*0.94} ${SIZE*0.92},${SIZE*0.94} ${SIZE*0.92},${SIZE*0.94-14}`} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            {/* Cercle central = zone avatar */}
+            <circle cx={SIZE/2} cy={SIZE/2} r={SIZE*0.32} fill="none" stroke={G.or} strokeWidth="1.5" strokeDasharray="4 3" />
+          </svg>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 12, fontSize: "0.7rem", color: "#888" }}>
+          <span><svg width="10" height="10" viewBox="0 0 10 10" style={{display:"inline",marginRight:4}}><rect x="1" y="1" width="8" height="8" fill="none" stroke="white" strokeWidth="1.5"/></svg>Zone carte</span>
+          <span><svg width="10" height="10" viewBox="0 0 10 10" style={{display:"inline",marginRight:4}}><circle cx="5" cy="5" r="4" fill="none" stroke="#D4A843" strokeWidth="1.5" strokeDasharray="2 2"/></svg>Avatar rond</span>
         </div>
         <input type="range" min={0.5} max={3} step={0.05} value={scale}
           onChange={e => setScale(parseFloat(e.target.value))}
@@ -4108,17 +4160,21 @@ export default function App() {
 
     // Chargement initial des likes reçus (badge séparé pour likes et vus)
     const loadLikesReceived = async () => {
-      const [likes, views, dismissed] = await Promise.all([
-        sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`),
-        sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id`),
-        sb.query<{ dismissed_id: string }>(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}&select=dismissed_id`),
-      ]);
-      const dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
-      // Compter en excluant les dismissed
-      const likesCount = Array.isArray(likes) ? likes.filter(l => !dIds.has(l.from_user)).length : 0;
-      const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
-      setLikesReceived(likesCount);
-      setViewsReceived(viewsCount);
+      let dIds = new Set<string>();
+      try {
+        const dismissed = await sb.query<{ dismissed_id: string }>(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}&select=dismissed_id`);
+        dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
+      } catch {}
+      try {
+        const [likes, views] = await Promise.all([
+          sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`),
+          sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id`),
+        ]);
+        const likesCount = Array.isArray(likes) ? likes.filter(l => !dIds.has(l.from_user)).length : 0;
+        const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
+        setLikesReceived(likesCount);
+        setViewsReceived(viewsCount);
+      } catch {}
     };
     loadLikesReceived();
     refreshBadgesRef.current = loadLikesReceived;
