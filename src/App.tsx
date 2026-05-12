@@ -215,7 +215,9 @@ const GLOBAL_CSS = `
     background-size: 200px 200px;
   }
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
-  .fu1{animation:fadeUp 0.7s 0.1s both ease-out}
+  .msg-arrow{opacity:0;transition:opacity 0.15s}
+  .msg-row:hover .msg-arrow{opacity:1}
+  @media(hover:none){.msg-arrow{opacity:1}}
   .fu2{animation:fadeUp 0.7s 0.25s both ease-out}
   .fu3{animation:fadeUp 0.7s 0.4s both ease-out}
   .fu4{animation:fadeUp 0.7s 0.55s both ease-out}
@@ -327,7 +329,12 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
             color: "#111", outline: "none", transition: "border-color 0.2s", display: "block",
           }}
         />
-        {isPwd && <span onClick={() => setShowPwd(s => !s)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", cursor: "pointer", opacity: 0.6, zIndex: 1 }}>{showPwd ? "🙈" : "👁️"}</span>}
+        {isPwd && <span onClick={() => setShowPwd(s => !s)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", cursor: "pointer", opacity: 0.6, zIndex: 1 }}>
+          {showPwd
+            ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          }
+        </span>}
       </div>
       {hint && !error && <p style={{ color: "#555", fontSize: "0.75rem", marginTop: 4 }}>{hint}</p>}
       {error && <p style={{ color: "#e74c3c", fontSize: "0.75rem", marginTop: 4 }}>{error}</p>}
@@ -3477,7 +3484,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           };
           const handleLongPressEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
           return (
-            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0 }}>
+            <div key={i} className="msg-row" style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0 }}>
               {isImg ? (
                 <div
                   style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
@@ -3490,49 +3497,55 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   </div>
                 </div>
               ) : (
-                <div style={{ position: "relative", maxWidth: "72%" }}>
-                  <div
-                    style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none" }}
-                    onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
-                  >
-                    {(() => {
-                      const replyMatch = m.content.match(/^\[↩ (.+?) : (.+?)\]\n([\s\S]*)$/);
-                      if (replyMatch) {
-                        const [, who, quoted, body] = replyMatch;
-                        return <>
-                          <div style={{ background: isMine ? "rgba(0,0,0,0.15)" : "rgba(192,57,43,0.07)", borderLeft: `3px solid ${isMine ? "rgba(255,255,255,0.5)" : G.rouge}`, borderRadius: "0 6px 6px 0", padding: "4px 8px", marginBottom: 6, fontSize: "0.75rem" }}>
-                            <div style={{ fontWeight: 700, color: isMine ? "rgba(255,255,255,0.85)" : G.rouge, marginBottom: 2 }}>↩ {who}</div>
-                            <div style={{ opacity: 0.75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{quoted}</div>
-                          </div>
-                          <span>{body}</span>
-                        </>;
-                      }
-                      return <span>{m.content}</span>;
-                    })()}
-                    <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
-                      <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
-                      {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} white />}
-                    </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row" }}>
+                  {/* Flèche */}
+                  <div className="msg-arrow" onClick={() => setContextMenu({ msg: m, x: 0, y: 0 })} style={{ marginTop: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
-                  {/* Badges réactions sous la bulle */}
-                  {reactionEntries.length > 0 && (
-                    <div style={{ position: "absolute", bottom: -18, [isMine ? "right" : "left"]: 4, display: "flex", gap: 3 }}>
-                      {reactionEntries.map(([emoji, users]) => (
-                        <div key={emoji} onClick={async () => {
-                          if (!m.id) return;
-                          const current = m.reactions || {};
-                          const users = current[emoji] || [];
-                          const hasReacted = users.includes(auth.userId);
-                          const updated = hasReacted ? users.filter((u: string) => u !== auth.userId) : [...users, auth.userId];
-                          const newReactions = { ...current, [emoji]: updated };
-                          await sb.update(auth.token, "messages", m.id, { reactions: newReactions });
-                          setMsgs(prev => prev.map(msg => msg.id === m.id ? { ...msg, reactions: newReactions } : msg));
-                        }} style={{ background: G.blanc, borderRadius: 50, padding: "2px 6px", fontSize: "0.75rem", boxShadow: "0 1px 4px rgba(0,0,0,0.15)", cursor: "pointer", display: "flex", alignItems: "center", gap: 2, border: `1px solid ${G.gris}` }}>
-                          {emoji}<span style={{ fontSize: "0.65rem", color: "#555", fontWeight: 600 }}>{users.length > 1 ? users.length : ""}</span>
-                        </div>
-                      ))}
+                  <div style={{ position: "relative", maxWidth: "72%" }}>
+                    <div
+                      style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none" }}
+                      onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
+                    >
+                      {(() => {
+                        const replyMatch = m.content.match(/^\[↩ (.+?) : (.+?)\]\n([\s\S]*)$/);
+                        if (replyMatch) {
+                          const [, who, quoted, body] = replyMatch;
+                          return <>
+                            <div style={{ background: isMine ? "rgba(0,0,0,0.15)" : "rgba(192,57,43,0.07)", borderLeft: `3px solid ${isMine ? "rgba(255,255,255,0.5)" : G.rouge}`, borderRadius: "0 6px 6px 0", padding: "4px 8px", marginBottom: 6, fontSize: "0.75rem" }}>
+                              <div style={{ fontWeight: 700, color: isMine ? "rgba(255,255,255,0.85)" : G.rouge, marginBottom: 2 }}>↩ {who}</div>
+                              <div style={{ opacity: 0.75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{quoted}</div>
+                            </div>
+                            <span>{body}</span>
+                          </>;
+                        }
+                        return <span>{m.content}</span>;
+                      })()}
+                      <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                        <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
+                        {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} white />}
+                      </div>
                     </div>
-                  )}
+                    {/* Badges réactions sous la bulle */}
+                    {reactionEntries.length > 0 && (
+                      <div style={{ position: "absolute", bottom: -18, [isMine ? "right" : "left"]: 4, display: "flex", gap: 3 }}>
+                        {reactionEntries.map(([emoji, users]) => (
+                          <div key={emoji} onClick={async () => {
+                            if (!m.id) return;
+                            const current = m.reactions || {};
+                            const users = current[emoji] || [];
+                            const hasReacted = users.includes(auth.userId);
+                            const updated = hasReacted ? users.filter((u: string) => u !== auth.userId) : [...users, auth.userId];
+                            const newReactions = { ...current, [emoji]: updated };
+                            await sb.update(auth.token, "messages", m.id, { reactions: newReactions });
+                            setMsgs(prev => prev.map(msg => msg.id === m.id ? { ...msg, reactions: newReactions } : msg));
+                          }} style={{ background: G.blanc, borderRadius: 50, padding: "2px 6px", fontSize: "0.75rem", boxShadow: "0 1px 4px rgba(0,0,0,0.15)", cursor: "pointer", display: "flex", alignItems: "center", gap: 2, border: `1px solid ${G.gris}` }}>
+                            {emoji}<span style={{ fontSize: "0.65rem", color: "#555", fontWeight: 600 }}>{users.length > 1 ? users.length : ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -4212,8 +4225,11 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8`,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: "50%", background: isVisible ? "rgba(39,174,96,0.1)" : "rgba(231,76,60,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>
-              {isVisible ? "👁️" : "🔒"}
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: isVisible ? "rgba(39,174,96,0.1)" : "rgba(231,76,60,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {isVisible
+                ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              }
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Profil {isVisible ? "visible" : "invisible"}</div>
@@ -4296,13 +4312,17 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         ) : (
           <div style={{ background: "rgba(29,155,240,0.06)", borderRadius: 16, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, border: `1px solid rgba(29,155,240,0.2)` }}>
             <VerifiedBadge size={22} />
-            <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1d9bf0" }}>Compte vérifié ✅</div>
+            <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1d9bf0", display: "flex", alignItems: "center", gap: 8 }}>Compte vérifié
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
           </div>
         )}
 
         {/* Email de connexion - grisé, non modifiable */}
         <div style={{ marginTop: 4, background: G.blanc, borderRadius: 16, padding: "14px 18px", border: `1px solid #E8E8E8`, display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>✉️</div>
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: "0.72rem", color: "#bbb", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>Email de connexion</div>
             <div style={{ fontSize: "0.88rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "-"}</div>
@@ -4335,7 +4355,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             <div style={{ overflowY: "auto", flex: 1, padding: "12px 0 20px" }}>
               {blockedUsers.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>
-                  <div style={{ fontSize: "2.5rem", marginBottom: 10 }}>✅</div>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(39,174,96,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
                   <p style={{ fontSize: "0.88rem" }}>Aucun utilisateur bloqué</p>
                 </div>
               ) : blockedUsers.map(b => (
@@ -4359,7 +4381,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
       {showLogout && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>👋</div>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
             <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Se déconnecter ?</h3>
             <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 24, lineHeight: 1.6 }}>Tu seras redirigé vers la page d'accueil. À bientôt sur Moyo !</p>
             <div style={{ display: "flex", gap: 10 }}>
