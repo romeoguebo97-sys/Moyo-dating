@@ -816,7 +816,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               Moyo connecte les Congolais à la recherche d'une relation sincère et durable.
               Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.
             </p>
-            <div className="fu4 landing-hero-btns" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 20 }}>
+            <div className="fu4 landing-hero-btns" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 4 }}>
               <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>
                 Créer mon profil gratuit
               </button>
@@ -827,7 +827,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
             {/* ── Téléphones visibles sur MOBILE ── */}
             <div className="fu5" style={{ display: "block", position: "relative", margin: "0 auto", maxWidth: 340 }} id="hero-img-mobile">
-              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 10, height: 280 }}>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 10, height: 240 }}>
                 {/* Téléphone gauche */}
                 <div style={{ width: 90, height: 180, borderRadius: 16, background: "linear-gradient(160deg,#2C1A0E,#5C3A1E)", border: "3px solid rgba(255,255,255,0.15)", overflow: "hidden", boxShadow: "0 12px 32px rgba(44,26,14,0.25)", flexShrink: 0, transform: "rotate(-8deg) translateY(20px)" }}>
                   <div style={{ background: G.rouge, padding: "4px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2409,11 +2409,12 @@ function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClos
   );
 }
 
-function LikesPage({ auth, onShowPremium, mode = "likes" }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors" }) {
+function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void }) {
   const [count, setCount] = useState(0);
   const [likers, setLikers] = useState<Profile[]>([]);
   const [visitors, setVisitors] = useState<Profile[]>([]);
   const [dismissedIds, setDismissedIds] = useState(new Set<string>());
+  const [confirmDismiss, setConfirmDismiss] = useState<Profile | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [liking, setLiking] = useState(false);
@@ -2440,6 +2441,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes" }: { auth: Auth; onShow
       setDismissedIds(dIds);
 
       const res = await sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
+      // Le count brut (pour le bandeau), les dismissed n'affectent pas le vrai nombre de likes reçus
       setCount(Array.isArray(res) ? res.length : 0);
       if (auth.isPremium && Array.isArray(res) && res.length > 0) {
         const ids = res.map(r => r.from_user).join(",");
@@ -2458,14 +2460,18 @@ function LikesPage({ auth, onShowPremium, mode = "likes" }: { auth: Auth; onShow
     setLoading(false);
   };
 
-  // Retirer une carte de la liste SANS affecter likes/matchs/messages
-  const handleDismiss = async (profileId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Mise à jour optimiste immédiate
+  // Confirmer la suppression d'une carte
+  const confirmAndDismiss = async (profileId: string) => {
+    setConfirmDismiss(null);
+    // Mise à jour optimiste immédiate des listes ET du count
     setDismissedIds(prev => new Set([...prev, profileId]));
-    setLikers(prev => prev.filter(p => p.id !== profileId));
+    setLikers(prev => {
+      const next = prev.filter(p => p.id !== profileId);
+      return next;
+    });
     setVisitors(prev => prev.filter(p => p.id !== profileId));
-    // Persister en base
+    setCount(prev => Math.max(0, prev - 1));
+    // Persister en base (upsert avec ignore duplicates)
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/dismissed_cards`, {
         method: "POST",
@@ -2473,6 +2479,13 @@ function LikesPage({ auth, onShowPremium, mode = "likes" }: { auth: Auth; onShow
         body: JSON.stringify({ user_id: auth.userId, dismissed_id: profileId }),
       });
     } catch {}
+    // Notifier App de mettre à jour les badges
+    if (onBadgeUpdate) onBadgeUpdate();
+  };
+
+  const handleDismiss = (p: Profile, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmDismiss(p);
   };
 
   const handleLike = async (p: Profile) => {
@@ -2624,8 +2637,29 @@ function LikesPage({ auth, onShowPremium, mode = "likes" }: { auth: Auth; onShow
               </div>
               {selectedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{selectedProfile.bio}</p>}
               <Btn variant="primary" onClick={() => handleLike(selectedProfile)} loading={liking} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
-                ❤️ Liker {selectedProfile.name}
+                Liker {selectedProfile.name}
               </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmation suppression carte */}
+      {confirmDismiss && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111", marginBottom: 8 }}>
+              Retirer {confirmDismiss.name} de la liste ?
+            </h3>
+            <p style={{ fontSize: "0.83rem", color: "#666", marginBottom: 22, lineHeight: 1.6 }}>
+              Cette carte disparaitra de ta liste. Cela n'affecte pas les likes, matchs ou messages.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn variant="ghost" onClick={() => setConfirmDismiss(null)} style={{ flex: 1 }}>Annuler</Btn>
+              <Btn variant="danger" onClick={() => confirmAndDismiss(confirmDismiss.id)} style={{ flex: 1 }}>Retirer</Btn>
             </div>
           </div>
         </div>
@@ -2665,41 +2699,51 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
   };
 
   const handleUnmatch = async (m: Match) => {
-    // 1. Mise à jour optimiste IMMÉDIATE avant toute requête
+    // 1. Mise à jour optimiste IMMÉDIATE
+    const partnerId = m.partner?.id;
     const updated = matches.filter(x => x.id !== m.id && !(
-      (x.user1 === auth.userId && x.user2 === m.partner?.id) ||
-      (x.user1 === m.partner?.id && x.user2 === auth.userId)
+      (x.user1 === auth.userId && x.user2 === partnerId) ||
+      (x.user1 === partnerId && x.user2 === auth.userId)
     ));
     setMatches(updated);
     onNotifCount(updated.length);
     setConfirmUnmatch(null);
     setMenuMatchId(null);
 
-    // 2. Suppression en cascade côté Supabase (tous les sens)
-    const partnerId = m.partner?.id;
     if (!partnerId) return;
+
+    // 2. Suppression en cascade — séquentielle pour fiabilité
     try {
-      // Chercher tous les match IDs entre ces deux personnes
-      const allMatchIds = await sb.query<{ id: string }>(
-        auth.token, "matches",
-        `?or=(and(user1.eq.${auth.userId},user2.eq.${partnerId}),and(user1.eq.${partnerId},user2.eq.${auth.userId}))&select=id`
-      );
-      const ids = Array.isArray(allMatchIds) ? allMatchIds.map(x => x.id) : [m.id];
-      // Supprimer messages de TOUS les matchs trouvés
-      await Promise.all(ids.map(id =>
-        sb.delete(auth.token, "messages", `?match_id=eq.${id}`)
-      ));
-      // Supprimer les matchs
-      await Promise.all([
-        sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${partnerId}`),
-        sb.delete(auth.token, "matches", `?user1=eq.${partnerId}&user2=eq.${auth.userId}`),
+      // a) Trouver TOUS les match IDs entre ces deux personnes (dans les deux sens)
+      const [fwd, rev] = await Promise.all([
+        sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${partnerId}&select=id`),
+        sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${partnerId}&user2=eq.${auth.userId}&select=id`),
       ]);
-      // Supprimer les likes mutuels
-      await Promise.all([
-        sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${partnerId}`),
-        sb.delete(auth.token, "likes", `?from_user=eq.${partnerId}&to_user=eq.${auth.userId}`),
-      ]);
-    } catch {}
+      const allIds = [
+        ...(Array.isArray(fwd) ? fwd.map(x => x.id) : []),
+        ...(Array.isArray(rev) ? rev.map(x => x.id) : []),
+        m.id, // toujours inclure l'ID connu, même si la requête échoue
+      ].filter((id, i, arr) => id && arr.indexOf(id) === i); // dédupliquer
+
+      // b) Supprimer TOUS les messages de ces matchs
+      for (const id of allIds) {
+        await sb.delete(auth.token, "messages", `?match_id=eq.${id}`);
+      }
+
+      // c) Supprimer les matchs
+      await sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${partnerId}`);
+      await sb.delete(auth.token, "matches", `?user1=eq.${partnerId}&user2=eq.${auth.userId}`);
+
+      // d) Supprimer les likes mutuels (pour que le badge likes diminue aussi)
+      await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${partnerId}`);
+      await sb.delete(auth.token, "likes", `?from_user=eq.${partnerId}&to_user=eq.${auth.userId}`);
+    } catch (err) {
+      // En cas d'erreur réseau, on force quand même la suppression par ID connu
+      try {
+        await sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`);
+        await sb.delete(auth.token, "matches", `?id=eq.${m.id}`);
+      } catch {}
+    }
   };
 
   const p = selectedMatch?.partner;
@@ -3728,6 +3772,8 @@ export default function App() {
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
+  // Ref pour permettre à LikesPage de déclencher un refresh des badges
+  const refreshBadgesRef = useRef<(() => void) | null>(null);
 
   // PWA - écouter l'événement d'installation
   useEffect(() => {
@@ -3881,18 +3927,20 @@ export default function App() {
 
     // Chargement initial des likes reçus (badge séparé pour likes et vus)
     const loadLikesReceived = async () => {
-      const [likes, views] = await Promise.all([
+      const [likes, views, dismissed] = await Promise.all([
         sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`),
         sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id`),
+        sb.query<{ dismissed_id: string }>(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}&select=dismissed_id`),
       ]);
-      const likesCount = Array.isArray(likes) ? likes.length : 0;
-      const viewsCount = Array.isArray(views) ? views.length : 0;
-      // likesReceived = likes seuls pour badge onglet Likes
-      // viewsReceived = vues seules pour badge onglet Vus
+      const dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
+      // Compter en excluant les dismissed
+      const likesCount = Array.isArray(likes) ? likes.filter(l => !dIds.has(l.from_user)).length : 0;
+      const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
       setLikesReceived(likesCount);
       setViewsReceived(viewsCount);
     };
     loadLikesReceived();
+    refreshBadgesRef.current = loadLikesReceived;
 
     // Chargement initial des matchs
     const loadMatchCount = async () => {
@@ -4039,8 +4087,8 @@ export default function App() {
       if (t === "messages") setUnreadCount(0);
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
-      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" />}
-      {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" />}
+      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
+      {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={() => setTab("messages")} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
