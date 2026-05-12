@@ -214,10 +214,14 @@ const GLOBAL_CSS = `
   .nav-tab{transition:all 0.2s ease!important}
   .nav-tab-active{background:rgba(192,57,43,0.12)!important;border-radius:14px!important}
   .verified-badge{display:inline-flex;align-items:center;justify-content:center;background:#1d9bf0;border-radius:50%;width:18px;height:18px;flex-shrink:0}
+  @media(max-width:767px){
+    .landing-hero-text{text-align:center!important}
+    .fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important}
+    .landing-hero-btns{justify-content:center!important}
+  }
   @media(min-width:768px){
     .landing-hero{display:grid!important;grid-template-columns:1fr 1fr!important;gap:48px!important;align-items:center!important;text-align:left!important;max-width:1100px!important;margin:0 auto!important;padding:60px 40px 40px!important}
     .landing-hero-text{text-align:left!important}
-  @media(max-width:767px){.landing-hero-text{text-align:center!important}.fu3{text-align:center!important;margin-left:auto!important;margin-right:auto!important}}
     .landing-hero-btns{justify-content:flex-start!important}
     .landing-stats{max-width:900px!important;margin:0 auto!important;padding:0 40px 0!important;grid-template-columns:repeat(3,1fr)!important}
     .landing-sections{max-width:1100px!important;margin:0 auto!important;padding:0 40px!important}
@@ -248,7 +252,7 @@ function Btn({ children, variant = "primary", onClick, style = {}, disabled = fa
     danger: { background: "#e74c3c", color: G.blanc },
     white: { background: G.blanc, color: G.rouge },
   };
-  return <button style={{ ...base, ...v[variant] }} onClick={onClick} disabled={disabled || loading}>{loading ? "⏳" : children}</button>;
+  return <button style={{ ...base, ...v[variant] }} onClick={onClick} disabled={disabled || loading}>{loading ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : children}</button>;
 }
 
 function Input({ label, type = "text", value, onChange, placeholder, icon, error, hint }: {
@@ -808,7 +812,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               <span className="heart" style={{ color: G.rouge, fontStyle: "italic" }}>âme sœur</span>
               <br />au Congo
             </h1>
-            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440 }}>
+            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440, textAlign: "center", width: "100%" }}>
               Moyo connecte les Congolais à la recherche d'une relation sincère et durable.
               Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.
             </p>
@@ -937,7 +941,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     <div style={{ padding: "12px 10px" }}>
                       <div style={{ width: "100%", height: 110, borderRadius: 14, overflow: "hidden", marginBottom: 10, position: "relative" }}>
                         <img src="/phone-femme.webp" alt="Sandrine" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
-                        <div style={{ position: "absolute", top: 8, right: 8, background: G.or, borderRadius: 6, padding: "2px 6px", fontSize: "0.45rem", fontWeight: 700, color: "#111" }}>⭐ Premium</div>
+                        <div style={{ position: "absolute", top: 8, right: 8, background: G.or, borderRadius: 6, padding: "2px 6px", fontSize: "0.45rem", fontWeight: 700, color: "#111" }}>Premium</div>
                       </div>
                       <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#111", marginBottom: 2 }}>Sandrine, 27</div>
                       <div style={{ fontSize: "0.6rem", color: "#555", marginBottom: 8 }}>📍 Brazzaville</div>
@@ -1185,7 +1189,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   </div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111" }}>{t.noms}</div>
-                    <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>📍 {t.lieu}</div>
+                    <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>{t.lieu}</div>
                     <div style={{ fontSize: "0.7rem", color: t.accent, fontWeight: 600, marginTop: 2 }}>{t.since}</div>
                   </div>
                 </div>
@@ -1719,7 +1723,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 }
 
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; auth: Auth; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
 
@@ -1728,7 +1732,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       id: "discover",
       label: "Découvrir",
       icon: (active: boolean) => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="8"/>
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
@@ -1738,10 +1742,18 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       id: "likes",
       label: "Likes",
       icon: (active: boolean) => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-          <line x1="12" y1="8" x2="12" y2="16" stroke={active ? G.rouge : "#bbb"} strokeWidth="2"/>
-          <line x1="8" y1="12" x2="16" y2="12" stroke={active ? G.rouge : "#bbb"} strokeWidth="2"/>
+        </svg>
+      ),
+    },
+    {
+      id: "visitors",
+      label: "Vus",
+      icon: (active: boolean) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3" fill={active ? G.rouge : "none"}/>
         </svg>
       ),
     },
@@ -1749,7 +1761,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       id: "matches",
       label: "Matchs",
       icon: (active: boolean) => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="none"/>
           <circle cx="9" cy="7" r="4" fill="none"/>
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -1761,7 +1773,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       id: "messages",
       label: "Messages",
       icon: (active: boolean) => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
       ),
@@ -1770,7 +1782,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       id: "profile",
       label: "Profil",
       icon: (active: boolean) => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? G.rouge : "none"} stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4" fill={active ? G.rouge : "none"}/>
         </svg>
@@ -1788,44 +1800,47 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     </div>
     <div style={{ flex: 1, overflowY: "auto", paddingBottom: 75, paddingTop: 48 }}>{children}</div>
 
-    {/* ── NAVBAR BAS STYLE TINDER ── */}
-    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "8px 8px 16px", zIndex: 50 }}>
+    {/* ── NAVBAR BAS STYLE TINDER (6 onglets) ── */}
+    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "6px 4px 14px", zIndex: 50 }}>
       {tabs.map(t => {
         const active = tab === t.id;
         return (
-          <div key={t.id} onClick={() => setTab(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", position: "relative", flex: 1 }}>
-            {/* Fond arrondi sur l'onglet actif */}
+          <div key={t.id} onClick={() => setTab(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", position: "relative", flex: 1 }}>
             <div style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-              padding: "6px 16px", borderRadius: 14,
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+              padding: "5px 8px", borderRadius: 12,
               background: active ? "rgba(192,57,43,0.1)" : "transparent",
               transition: "background 0.2s",
-              minWidth: 64,
+              minWidth: 48,
             }}>
-              {/* Icône SVG */}
               <div style={{ position: "relative" }}>
                 {t.icon(active)}
                 {/* Badge messages */}
                 {t.id === "messages" && unreadCount > 0 && (
-                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.52rem", fontWeight: 700 }}>
+                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </div>
                 )}
                 {/* Badge likes reçus */}
                 {t.id === "likes" && likesReceived > 0 && (
-                  <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: "#111", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.52rem", fontWeight: 700 }}>
+                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>
                     {likesReceived > 9 ? "9+" : likesReceived}
+                  </div>
+                )}
+                {/* Badge visiteurs */}
+                {t.id === "visitors" && viewsReceived > 0 && (
+                  <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: "#111", borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>
+                    {viewsReceived > 9 ? "9+" : viewsReceived}
                   </div>
                 )}
                 {/* Badge matchs */}
                 {t.id === "matches" && notifCount > 0 && (
-                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.52rem", fontWeight: 700 }}>
+                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>
                     {notifCount > 9 ? "9+" : notifCount}
                   </div>
                 )}
               </div>
-              {/* Label */}
-              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: "0.56rem", fontWeight: 700, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>
                 {t.label}
               </div>
             </div>
@@ -1902,11 +1917,11 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
         {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && "⭐"} {prof.is_verified && <VerifiedBadge size={15} />}</div>
+        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {prof.is_verified && <VerifiedBadge size={15} />}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-          <span style={{ background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{prof.gender === "Femme" ? "👩 Femme" : "👨 Homme"}</span>
-          <span style={{ fontSize: "0.78rem", color: "#555" }}>📍 {prof.city}</span>
-          {prof.religion && <span style={{ fontSize: "0.72rem", color: "#555" }}>· 🙏 {prof.religion}</span>}
+          <span style={{ background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{prof.gender === "Femme" ? "Femme" : "Homme"}</span>
+          <span style={{ fontSize: "0.78rem", color: "#555" }}>{prof.city}</span>
+          {prof.religion && <span style={{ fontSize: "0.72rem", color: "#555" }}>· {prof.religion}</span>}
         </div>
         {prof.bio && <div style={{ fontSize: "0.78rem", color: "#555", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}
       </div>
@@ -1926,9 +1941,9 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
             {/* Overlay transparent pour fermer au clic extérieur */}
             <div style={{ position: "fixed", inset: 0, zIndex: 49 }} onClick={() => setShowMenu(false)} />
             <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
-              {isPremium && onView && <div onClick={() => { setShowMenu(false); onView(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>👁 Voir le profil</div>}
-              <div onClick={() => { setShowMenu(false); onBlock(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>🚫 Bloquer</div>
-              <div onClick={() => { setShowMenu(false); setShowSignalerMenu(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>🚨 Signaler</div>
+              {isPremium && onView && <div onClick={() => { setShowMenu(false); onView(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>}
+              <div onClick={() => { setShowMenu(false); onBlock(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Bloquer</div>
+              <div onClick={() => { setShowMenu(false); setShowSignalerMenu(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Signaler</div>
             </div>
           </>
         )}
@@ -2074,7 +2089,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   };
 
   const p = profiles[current];
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>⏳ Chargement...</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
 
   return <div style={{ padding: "12px 16px 16px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 6 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: "#555" }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
   <select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
@@ -2107,10 +2122,10 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   }} style={{ width: "100%" }}>Appliquer</Btn>
 </div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>Actualiser</Btn></div> : viewMode === "list" ? <div>
   {profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} isPremium={auth.isPremium} onView={auth.isPremium ? () => { setViewedProfile(prof); recordView(prof.id); } : undefined} />)}
-  {hasMore && <div onClick={loadMore} style={{ textAlign: "center", padding: "14px", background: G.blanc, borderRadius: 14, marginTop: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", color: G.rouge, border: `1px solid ${G.gris}` }}>{loadingMore ? "⏳ Chargement..." : "Voir plus de profils"}</div>}
+  {hasMore && <div onClick={loadMore} style={{ textAlign: "center", padding: "14px", background: G.blanc, borderRadius: 14, marginTop: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", color: G.rouge, border: `1px solid ${G.gris}` }}>{loadingMore ? "Chargement..." : "Voir plus de profils"}</div>}
 </div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>Actualiser</Btn></div> : <><div style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 16, position: "relative" }}><div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "14px 16px" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && "⭐"} {p.is_verified && <VerifiedBadge size={18} />}</div>
+    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {p.is_verified && <VerifiedBadge size={18} />}</div>
     {/* 3 traits menu */}
     <div style={{ position: "relative" }}>
       <div onClick={() => setShowReport(v => !v)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", padding: 4 }}>
@@ -2146,9 +2161,9 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     </div>
   )}
   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-    <span style={{ background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600 }}>{p.gender === "Femme" ? "👩 Femme" : "👨 Homme"}</span>
-    <span style={{ fontSize: "0.78rem", color: "#555" }}>📍 {p.city}</span>
-    {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500 }}>🙏 {p.religion}</span>}
+    <span style={{ background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600 }}>{p.gender === "Femme" ? "Femme" : "Homme"}</span>
+    <span style={{ fontSize: "0.78rem", color: "#555" }}>{p.city}</span>
+    {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500 }}>{p.religion}</span>}
   </div>
   {p.bio && <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 6, marginBottom: 0 }}>{p.bio}</p>}
 </div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => { const prev = Math.max(0, current - 1); setCurrent(prev); if (profiles[prev]) recordView(profiles[prev].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => { const next = Math.min(profiles.length - 1, current + 1); setCurrent(next); if (profiles[next]) recordView(profiles[next].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{viewedProfile && (
@@ -2158,14 +2173,14 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
           {viewedProfile.photo_url ? <img src={viewedProfile.photo_url} alt={viewedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
           <div onClick={() => setViewedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{viewedProfile.name}, {viewedProfile.age} ans {viewedProfile.is_premium && "⭐"} {viewedProfile.is_verified && "✅"}</div>
-            <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>📍 {viewedProfile.city}</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{viewedProfile.name}, {viewedProfile.age} ans {viewedProfile.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}{viewedProfile.is_verified && <VerifiedBadge size={14} />}</div>
+            <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{viewedProfile.city}</div>
           </div>
         </div>
         <div style={{ padding: "18px 20px 32px" }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
             <span style={{ background: viewedProfile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: viewedProfile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>{viewedProfile.gender}</span>
-            {viewedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>🙏 {viewedProfile.religion}</span>}
+            {viewedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{viewedProfile.religion}</span>}
           </div>
           {viewedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{viewedProfile.bio}</p>}
           <Btn variant="primary" onClick={() => { handleLike(viewedProfile); setViewedProfile(null); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>❤️ Liker ce profil</Btn>
@@ -2321,7 +2336,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
               </div>
               <div style={{ padding: "8px 10px" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#111" }}>{p.name}, {p.age} ans</div>
-                <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>📍 {p.city}</div>
+                <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>{p.city}</div>
               </div>
             </div>
           ))}
@@ -2339,14 +2354,14 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
               }
               <div onClick={() => setSelectedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
               <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{selectedProfile.name}, {selectedProfile.age} ans {selectedProfile.is_premium && "⭐"} {selectedProfile.is_verified && "✅"}</div>
-                <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>📍 {selectedProfile.city}</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{selectedProfile.name}, {selectedProfile.age} ans {selectedProfile.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}{selectedProfile.is_verified && <VerifiedBadge size={14} />}</div>
+                <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{selectedProfile.city}</div>
               </div>
             </div>
             <div style={{ padding: "18px 20px 32px" }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
                 <span style={{ background: selectedProfile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: selectedProfile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>{selectedProfile.gender}</span>
-                {selectedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>🙏 {selectedProfile.religion}</span>}
+                {selectedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{selectedProfile.religion}</span>}
               </div>
               {selectedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{selectedProfile.bio}</p>}
               <Btn variant="primary" onClick={() => handleLikeFromBanner(selectedProfile)} loading={liking} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
@@ -2376,29 +2391,29 @@ function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClos
           <div onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
             <div style={{  fontSize: "1.6rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age} ans</div>
-            <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>📍 {p.city}</div>
+            <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{p.city}</div>
           </div>
         </div>
         {/* Infos */}
         <div style={{ padding: "20px 20px 32px" }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-            <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>💞 Match !</span>
+            <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#27ae60" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Match !</span>
             {p.is_premium && <span style={{ background: "rgba(212,168,67,0.12)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>⭐ Premium</span>}
-            {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>🙏 {p.religion}</span>}
+            {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{p.religion}</span>}
           </div>
           {p.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{p.bio}</p>}
-          <Btn variant="primary" onClick={onMessage} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>💬 Envoyer un message</Btn>
+          <Btn variant="primary" onClick={onMessage} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>Envoyer un message</Btn>
         </div>
       </div>
     </div>
   );
 }
 
-function LikesPage({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
+function LikesPage({ auth, onShowPremium, mode = "likes" }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors" }) {
   const [count, setCount] = useState(0);
   const [likers, setLikers] = useState<Profile[]>([]);
   const [visitors, setVisitors] = useState<Profile[]>([]);
-  const [activeTab, setActiveTab] = useState<"likes" | "visitors">("likes");
+  const [dismissedIds, setDismissedIds] = useState(new Set<string>());
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [liking, setLiking] = useState(false);
@@ -2406,14 +2421,8 @@ function LikesPage({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: str
 
   useEffect(() => {
     loadData();
-    // Realtime instantané — likes reçus
-    const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => {
-      loadData();
-    });
-    // Realtime instantané — visiteurs
-    const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => {
-      loadData();
-    });
+    const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => { loadData(); });
+    const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => { loadData(); });
     return () => {
       try { wsLikes?.close(); } catch {}
       try { wsViews?.close(); } catch {}
@@ -2423,23 +2432,47 @@ function LikesPage({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: str
   const loadData = async () => {
     setLoading(true);
     try {
+      // Charger les IDs dismissés
+      const dismissed = await sb.query<{ dismissed_id: string }>(
+        auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}&select=dismissed_id`
+      );
+      const dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
+      setDismissedIds(dIds);
+
       const res = await sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
       setCount(Array.isArray(res) ? res.length : 0);
       if (auth.isPremium && Array.isArray(res) && res.length > 0) {
         const ids = res.map(r => r.from_user).join(",");
         const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids})&select=*`);
-        setLikers(Array.isArray(profiles) ? profiles : []);
+        setLikers(Array.isArray(profiles) ? profiles.filter(p => !dIds.has(p.id)) : []);
       }
       if (auth.isPremium) {
         const views = await sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id&order=created_at.desc&limit=20`);
         if (Array.isArray(views) && views.length > 0) {
           const vIds = [...new Set(views.map(v => v.viewer_id))].join(",");
           const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=*`);
-          setVisitors(Array.isArray(vProfiles) ? vProfiles : []);
+          setVisitors(Array.isArray(vProfiles) ? vProfiles.filter(p => !dIds.has(p.id)) : []);
         }
       }
     } catch {}
     setLoading(false);
+  };
+
+  // Retirer une carte de la liste SANS affecter likes/matchs/messages
+  const handleDismiss = async (profileId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Mise à jour optimiste immédiate
+    setDismissedIds(prev => new Set([...prev, profileId]));
+    setLikers(prev => prev.filter(p => p.id !== profileId));
+    setVisitors(prev => prev.filter(p => p.id !== profileId));
+    // Persister en base
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/dismissed_cards`, {
+        method: "POST",
+        headers: { ...sb.h(auth.token), "Prefer": "return=minimal,resolution=ignore-duplicates" },
+        body: JSON.stringify({ user_id: auth.userId, dismissed_id: profileId }),
+      });
+    } catch {}
   };
 
   const handleLike = async (p: Profile) => {
@@ -2459,98 +2492,108 @@ function LikesPage({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: str
   return (
     <div style={{ padding: "12px 16px 16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Likes & Visiteurs</h2>
+        <h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>{mode === "likes" ? "Likes reçus" : "Visiteurs"}</h2>
         {auth.isPremium && <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>}
       </div>
 
       {/* Bandeau */}
-      <div onClick={() => !auth.isPremium && onShowPremium("Découvre qui a liké ton profil en passant Premium ! 👀")}
+      <div onClick={() => !auth.isPremium && onShowPremium("Découvre qui a liké ton profil en passant Premium !")}
         style={{ background: auth.isPremium ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "14px 18px", marginBottom: 16, color: auth.isPremium ? "#111" : G.blanc, cursor: auth.isPremium ? "default" : "pointer", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? "#111" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-          </svg>
+          {mode === "likes"
+            ? <svg width="18" height="18" viewBox="0 0 24 24" fill={auth.isPremium ? "#111" : "white"} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? "#111" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          }
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>
-            {count > 0 ? `${count} personne${count > 1 ? "s ont" : " a"} liké ton profil` : "Personne n'a encore liké ton profil"}
+            {mode === "likes"
+              ? (count > 0 ? `${count} personne${count > 1 ? "s ont" : " a"} liké ton profil` : "Personne n'a encore liké ton profil")
+              : (visitors.length > 0 ? `${visitors.length} personne${visitors.length > 1 ? "s ont" : " a"} visité ton profil` : "Personne n'a encore visité ton profil")
+            }
           </div>
           <div style={{ fontSize: "0.78rem", opacity: 0.85 }}>
-            {auth.isPremium ? "Accès Premium activé ✓" : "Passe Premium pour découvrir qui 👀"}
+            {auth.isPremium ? "Accès Premium activé" : "Passe Premium pour découvrir qui"}
           </div>
         </div>
-        {!auth.isPremium && count > 0 && (
+        {!auth.isPremium && count > 0 && mode === "likes" && (
           <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1rem" }}>
             {count > 9 ? "9+" : count}
           </div>
         )}
       </div>
 
-      {/* Onglets likes/visiteurs — Premium */}
+      {/* Contenu Premium */}
       {auth.isPremium && (
         <>
-          <div style={{ display: "flex", background: G.gris, borderRadius: 50, padding: 3, gap: 2, marginBottom: 12 }}>
-            {([{ id: "likes", label: `❤️ Likes (${likers.length})` }, { id: "visitors", label: `👁 Visiteurs (${visitors.length})` }] as const).map(t => (
-              <div key={t.id} onClick={() => setActiveTab(t.id)} style={{ flex: 1, padding: "6px 10px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", textAlign: "center", background: activeTab === t.id ? G.blanc : "transparent", color: activeTab === t.id ? G.rouge : "#888", boxShadow: activeTab === t.id ? "0 2px 6px rgba(0,0,0,0.1)" : "none", transition: "all 0.2s" }}>
-                {t.label}
-              </div>
-            ))}
-          </div>
-
           {loading ? (
             <div style={{ textAlign: "center", padding: 40 }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
-          </div>
-          ) : (activeTab === "likes" ? likers : visitors).length === 0 ? (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+            </div>
+          ) : (mode === "likes" ? likers : visitors).length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}>
               <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
-              {activeTab === "likes"
-                ? <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-                : <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              }
-            </div>
-              <p style={{ fontSize: "0.88rem" }}>{activeTab === "likes" ? "Personne n'a encore liké ton profil" : "Personne n'a encore visité ton profil"}</p>
+                {mode === "likes"
+                  ? <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                  : <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                }
+              </div>
+              <p style={{ fontSize: "0.88rem" }}>{mode === "likes" ? "Personne n'a encore liké ton profil" : "Personne n'a encore visité ton profil"}</p>
             </div>
           ) : viewMode === "list" ? (
             <div>
-              {(activeTab === "likes" ? likers : visitors).map(p => (
-                <div key={p.id} onClick={() => setSelectedProfile(p)} style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", cursor: "pointer" }}>
-                  <div style={{ width: 56, height: 56, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)" }}>
+              {(mode === "likes" ? likers : visitors).map(p => (
+                <div key={p.id} style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
+                  <div onClick={() => setSelectedProfile(p)} style={{ width: 56, height: 56, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", cursor: "pointer" }}>
                     {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && "⭐"}{p.is_verified && "✅"}</div>
-                    <div style={{ fontSize: "0.75rem", color: "#555", marginTop: 2 }}>📍 {p.city}</div>
+                  <div onClick={() => setSelectedProfile(p)} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#111" }}>{p.name}, {p.age} ans</div>
+                    <div style={{ fontSize: "0.75rem", color: "#555", marginTop: 2 }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {p.city}
+                    </div>
                     {p.bio && <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.bio}</div>}
                   </div>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: activeTab === "likes" ? G.rouge : "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    {activeTab === "likes"
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: mode === "likes" ? G.rouge : "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} onClick={() => setSelectedProfile(p)}>
+                    {mode === "likes"
                       ? <svg width="14" height="14" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                       : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     }
+                  </div>
+                  <div onClick={(e) => handleDismiss(p.id, e)} style={{ width: 28, height: 28, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }} title="Retirer de la liste">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
-              {(activeTab === "likes" ? likers : visitors).map(p => (
-                <div key={p.id} onClick={() => setSelectedProfile(p)} style={{ background: G.blanc, borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.07)", cursor: "pointer" }}>
-                  <div style={{ height: 130, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
-                    {p.photo_url
-                      ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-                    }
-                    <div style={{ position: "absolute", top: 6, right: 6, background: activeTab === "likes" ? G.rouge : "rgba(0,0,0,0.5)", borderRadius: "50%", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {activeTab === "likes"
-                        ? <svg width="13" height="13" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                        : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              {(mode === "likes" ? likers : visitors).map(p => (
+                <div key={p.id} style={{ background: G.blanc, borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.07)", position: "relative" }}>
+                  <div onClick={() => setSelectedProfile(p)} style={{ cursor: "pointer" }}>
+                    <div style={{ height: 130, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
+                      {p.photo_url
+                        ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
                       }
+                      <div style={{ position: "absolute", top: 6, right: 6, background: mode === "likes" ? G.rouge : "rgba(0,0,0,0.5)", borderRadius: "50%", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {mode === "likes"
+                          ? <svg width="13" height="13" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                          : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        }
+                      </div>
+                      <div onClick={(e) => handleDismiss(p.id, e)} style={{ position: "absolute", top: 6, left: 6, background: "rgba(0,0,0,0.45)", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Retirer de la liste">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </div>
                     </div>
-                  </div>
-                  <div style={{ padding: "9px 10px" }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#111" }}>{p.name}, {p.age} ans</div>
-                    <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>📍 {p.city}</div>
+                    <div style={{ padding: "9px 10px" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#111" }}>{p.name}, {p.age} ans</div>
+                      <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        {p.city}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2570,14 +2613,14 @@ function LikesPage({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: str
               }
               <div onClick={() => setSelectedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
               <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{selectedProfile.name}, {selectedProfile.age} ans {selectedProfile.is_premium && "⭐"} {selectedProfile.is_verified && "✅"}</div>
-                <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>📍 {selectedProfile.city}</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{selectedProfile.name}, {selectedProfile.age} ans {selectedProfile.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}{selectedProfile.is_verified && <VerifiedBadge size={14} />}</div>
+                <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{selectedProfile.city}</div>
               </div>
             </div>
             <div style={{ padding: "18px 20px 32px" }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
                 <span style={{ background: selectedProfile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: selectedProfile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>{selectedProfile.gender}</span>
-                {selectedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>🙏 {selectedProfile.religion}</span>}
+                {selectedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{selectedProfile.religion}</span>}
               </div>
               {selectedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{selectedProfile.bio}</p>}
               <Btn variant="primary" onClick={() => handleLike(selectedProfile)} loading={liking} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
@@ -2668,7 +2711,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
     {/* Overlay fermeture menu */}
     {menuMatchId && <div style={{ position: "fixed", inset: 0, zIndex: 49 }} onClick={() => setMenuMatchId(null)} />}
 
-    {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div>
+    {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div>
     : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><p>Continue à liker des profils pour avoir des matchs !</p></div>
     : viewMode === "list" ? (
       <div>
@@ -2679,8 +2722,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
             </div>
             <div onClick={() => setSelectedMatch(m)} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
               <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{m.partner?.name}, {m.partner?.age} ans</div>
-              <div style={{ fontSize: "0.78rem", color: "#555", marginTop: 2 }}>📍 {m.partner?.city}{m.partner?.religion && <span style={{ marginLeft: 6 }}>· 🙏 {m.partner.religion}</span>}</div>
-              <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600, marginTop: 2 }}>💞 Match !</div>
+              <div style={{ fontSize: "0.78rem", color: "#555", marginTop: 2 }}>{m.partner?.city}{m.partner?.religion && <span style={{ marginLeft: 6 }}>· {m.partner.religion}</span>}</div>
+              <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600, marginTop: 2 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#27ae60" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Match !</div>
             </div>
             {/* 3 traits */}
             <div style={{ position: "relative", flexShrink: 0 }}>
@@ -2689,8 +2732,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
               </div>
               {menuMatchId === m.id && (
                 <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
-                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>👁️ Voir le profil</div>
-                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>💔 Annuler le match</div>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Annuler le match</div>
                 </div>
               )}
             </div>
@@ -2707,8 +2750,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
               </div>
               <div style={{ padding: "10px 10px 6px" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{m.partner?.name}, {m.partner?.age} ans</div>
-                <div style={{ fontSize: "0.72rem", color: "#555" }}>📍 {m.partner?.city}</div>
-                <div style={{ fontSize: "0.68rem", color: "#27ae60", fontWeight: 600, marginTop: 3 }}>💞 Match !</div>
+                <div style={{ fontSize: "0.72rem", color: "#555" }}>📌 {m.partner?.city}</div>
+                <div style={{ fontSize: "0.68rem", color: "#27ae60", fontWeight: 600, marginTop: 3 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#27ae60" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Match !</div>
               </div>
             </div>
             {/* 3 traits en bas */}
@@ -2718,8 +2761,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
               </div>
               {menuMatchId === m.id && (
                 <div style={{ position: "absolute", right: 10, bottom: 36, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
-                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>👁️ Voir le profil</div>
-                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>💔 Annuler le match</div>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Annuler le match</div>
                 </div>
               )}
             </div>
@@ -2749,17 +2792,17 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
           <div onClick={() => setSelectedMatch(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
             <div style={{  fontSize: "1.5rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age} ans</div>
-            <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>📍 {p.city}</div>
+            <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{p.city}</div>
           </div>
         </div>
         <div style={{ padding: "20px 20px 32px" }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-            <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>💞 Match !</span>
+            <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#27ae60" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Match !</span>
             {p.is_premium && <span style={{ background: "rgba(212,168,67,0.12)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>⭐ Premium</span>}
-            {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: `1px solid rgba(212,168,67,0.3)`, color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>🙏 {p.religion}</span>}
+            {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: `1px solid rgba(212,168,67,0.3)`, color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{p.religion}</span>}
           </div>
           {p.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{p.bio}</p>}
-          <Btn variant="primary" onClick={() => { setSelectedMatch(null); if (onGoMessages) onGoMessages(); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>💬 Envoyer un message</Btn>
+          <Btn variant="primary" onClick={() => { setSelectedMatch(null); if (onGoMessages) onGoMessages(); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>Envoyer un message</Btn>
         </div>
       </div>
     </div>}
@@ -2890,7 +2933,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
 
   const send = async () => {
     if (!text.trim() || !open) return;
-    if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("💌 Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
+    if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
     if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium ! 💛`); return; }
     const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: text, is_read: false });
     if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); }
@@ -2899,7 +2942,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
   const sendImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !open) return;
-    if (!auth.isPremium) { onShowPremium("📸 L'envoi de photos est réservé aux membres Premium !"); return; }
+    if (!auth.isPremium) { onShowPremium("L'envoi de photos est réservé aux membres Premium !"); return; }
     setImgLoading(true);
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -2947,7 +2990,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
           </div>
         )}
-        <div onClick={() => setShowDeleteConv(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, color: "#e74c3c", fontSize: "1rem", opacity: 0.7 }}>🗑️</div>
+        <div onClick={() => setShowDeleteConv(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, color: "#e74c3c", fontSize: "1rem", opacity: 0.7 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
       </div>
 
       {/* Modal Offrir Premium */}
@@ -3012,7 +3055,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
       <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
         {/* Bouton image - Premium */}
         <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
-        <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("📸 L'envoi de photos est réservé aux membres Premium !")}
+        <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
           style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
           {imgLoading ? <span style={{ fontSize: "0.8rem" }}>⏳</span> : (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3050,7 +3093,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
 
   return <div style={{ padding: "12px 16px 16px" }}>
     <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>
-    {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : convs.length === 0
+    {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
       ? <div style={{ textAlign: "center", padding: "50px 20px", color: "#555" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><p style={{ fontSize: "0.85rem" }}>Fais des matchs pour commencer à discuter !</p></div>
       : convs.map(c => (
         <div key={c.id} onClick={() => {
@@ -3066,7 +3109,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
               {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
             </div>
             <div style={{ fontSize: "0.82rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#555", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {c.lastMsg?.content?.startsWith("[img]") ? "📷 Photo" : c.lastMsg?.content || "Dis bonjour ! 👋"}
+              {c.lastMsg?.content?.startsWith("[img]") ? "Photo" : c.lastMsg?.content || "Dis bonjour !"}
             </div>
           </div>
           {(c.unreadCount || 0) > 0 && (
@@ -3078,6 +3121,82 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
       ))
     }
   </div>;
+}
+
+function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef2 = useRef<HTMLImageElement>(null);
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const SIZE = 280;
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.max(SIZE / img.width, SIZE / img.height);
+      setScale(s);
+      setOffset({ x: (SIZE - img.width * s) / 2, y: (SIZE - img.height * s) / 2 });
+    };
+    img.src = src;
+  }, [src]);
+
+  useEffect(() => { draw(); }, [scale, offset, src]);
+
+  const draw = () => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    const img = imgRef2.current; if (!img || !img.complete) return;
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, offset.x, offset.y, img.naturalWidth * scale, img.naturalHeight * scale);
+    ctx.restore();
+  };
+
+  const onMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    setDragging(true);
+    const pos = "touches" in e ? e.touches[0] : e;
+    setDragStart({ x: pos.clientX - offset.x, y: pos.clientY - offset.y });
+  };
+  const onMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!dragging) return;
+    const pos = "touches" in e ? e.touches[0] : e;
+    setOffset({ x: pos.clientX - dragStart.x, y: pos.clientY - dragStart.y });
+  };
+  const onMouseUp = () => setDragging(false);
+
+  const handleConfirm = () => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    canvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.92);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: G.blanc, borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+        <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
+        <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Zoom pour ajuster</div>
+        <div style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: "50%", overflow: "hidden", background: G.gris, cursor: dragging ? "grabbing" : "grab", border: `3px solid ${G.rouge}` }}
+          onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+          onTouchStart={onMouseDown} onTouchMove={onMouseMove} onTouchEnd={onMouseUp}
+        >
+          <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
+          <canvas ref={canvasRef} width={SIZE} height={SIZE} style={{ display: "block" }} />
+        </div>
+        <input type="range" min={0.5} max={3} step={0.05} value={scale}
+          onChange={e => setScale(parseFloat(e.target.value))}
+          style={{ width: "100%", marginBottom: 18, accentColor: G.rouge }}
+        />
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn variant="ghost" onClick={onCancel} style={{ flex: 1 }}>Annuler</Btn>
+          <Btn variant="primary" onClick={handleConfirm} style={{ flex: 2 }}>Confirmer</Btn>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void }) {
@@ -3094,6 +3213,8 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const [showBlocked, setShowBlocked] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewMode, setPreviewMode] = useState<"card" | "list">("card");
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadProfile(); loadBlocked(); }, []);
@@ -3114,7 +3235,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const handleUnblock = async (blockId: string) => {
     await sb.delete(auth.token, "blocks", `?id=eq.${blockId}`);
     setBlockedUsers(prev => prev.filter(b => b.id !== blockId));
-    setToast({ msg: "Utilisateur débloqué ✅" });
+    setToast({ msg: "Utilisateur débloqué" });
   };
   const saveProfile = async () => {
     if (form.age && (form.age < 18 || form.age > 99)) { setErrorMsg("Vous devez avoir entre 18 et 99 ans. Modification refusée."); return; }
@@ -3123,13 +3244,28 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     setEditing(false);
     setToast({ msg: "Profil mis à jour !" });
   };
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  // Ouvrir le crop avant d'uploader
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
+    setPendingFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+    // Reset input pour permettre de re-sélectionner le même fichier
+    e.target.value = "";
+  };
+
+  const handleCropConfirm = async (blob: Blob) => {
+    setCropSrc(null);
     setUploadLoading(true);
-    const url = await sb.uploadPhoto(auth.token, auth.userId, file);
-    if (url) { await sb.update(auth.token, "profiles", auth.userId, { photo_url: url }); setProfile(p => p ? { ...p, photo_url: url } : null); setToast({ msg: "Photo mise à jour ! 📸" }); }
+    const ext = pendingFile?.name.split(".").pop()?.toLowerCase() || "jpg";
+    const croppedFile = new File([blob], `avatar.${ext}`, { type: "image/jpeg" });
+    const url = await sb.uploadPhoto(auth.token, auth.userId, croppedFile);
+    if (url) { await sb.update(auth.token, "profiles", auth.userId, { photo_url: url }); setProfile(p => p ? { ...p, photo_url: url } : null); setToast({ msg: "Photo mise à jour !" }); }
     else setErrorMsg("Erreur lors du téléchargement de la photo. Réessaie.");
     setUploadLoading(false);
+    setPendingFile(null);
   };
   const handleDelete = async () => {
     await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}`);
@@ -3139,7 +3275,12 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     onLogout();
   };
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>⏳</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+  </div>;
+
+  /* ── CROP MODAL ── */
+  if (cropSrc) return <CropModal src={cropSrc} onConfirm={handleCropConfirm} onCancel={() => { setCropSrc(null); setPendingFile(null); }} />;
 
   /* ── FORMULAIRE EDITION ── */
   if (editing) return (
@@ -3195,7 +3336,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             </div>
           </div>
           {profile?.is_premium ? (
-            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>⭐ Premium</div>
+            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>Premium</div>
           ) : (
             <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.blanc, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(192,57,43,0.35)" }}>Gratuit</div>
           )}
@@ -3207,8 +3348,8 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             {profile?.name}
           </div>
           <div style={{ color: "#444", fontSize: "0.92rem", fontWeight: 600, marginBottom: 4 }}>{profile?.age} ans · {profile?.gender}</div>
-          {profile?.religion && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginBottom: 3 }}>🙏 {profile.religion}</div>}
-          {profile?.city && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginBottom: 3 }}>📍 {profile.city}</div>}
+          {profile?.religion && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginBottom: 3 }}>{profile.religion}</div>}
+          {profile?.city && <div style={{ color: "#444", fontSize: "0.88rem", fontWeight: 500, marginBottom: 3 }}>{profile.city}</div>}
           {profile?.bio && <div style={{ color: "#333", fontSize: "0.88rem", fontWeight: 600, lineHeight: 1.6, maxWidth: 260, margin: "8px auto 0" }}>"{profile.bio}"</div>}
         </div>
 
@@ -3306,8 +3447,8 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
                       <span style={{ background: profile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: profile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{profile.gender === "Femme" ? "Femme" : "Homme"}</span>
-                      <span style={{ fontSize: "0.75rem", color: "#555" }}>📍 {profile.city}</span>
-                      {profile.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 7px", fontSize: "0.68rem", color: "#555" }}>🙏 {profile.religion}</span>}
+                      <span style={{ fontSize: "0.75rem", color: "#555" }}>{profile.city}</span>
+                      {profile.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 7px", fontSize: "0.68rem", color: "#555" }}>{profile.religion}</span>}
                     </div>
                     {profile.bio && <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.4 }}>{profile.bio}</p>}
                     <div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", paddingTop: 10 }}>
@@ -3339,8 +3480,8 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, flexWrap: "wrap" }}>
                       <span style={{ background: profile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: profile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 7px", fontSize: "0.65rem", fontWeight: 600 }}>{profile.gender === "Femme" ? "Femme" : "Homme"}</span>
-                      <span style={{ fontSize: "0.75rem", color: "#555" }}>📍 {profile.city}</span>
-                      {profile.religion && <span style={{ fontSize: "0.7rem", color: "#555" }}>· 🙏 {profile.religion}</span>}
+                      <span style={{ fontSize: "0.75rem", color: "#555" }}>{profile.city}</span>
+                      {profile.religion && <span style={{ fontSize: "0.7rem", color: "#555" }}>· {profile.religion}</span>}
                     </div>
                     {profile.bio && <div style={{ fontSize: "0.75rem", color: "#555", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.bio}</div>}
                   </div>
@@ -3467,7 +3608,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Faire vérifier mon compte</div>
-                <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Obtenir le badge ✅ de confiance</div>
+                <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Obtenir le badge de confiance</div>
               </div>
               <div style={{ color: "#ccc", fontSize: "1rem" }}>›</div>
             </div>
@@ -3524,7 +3665,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a1a" }}>{b.profile?.name || "Utilisateur"}</div>
-                    <div style={{ fontSize: "0.75rem", color: "#888" }}>📍 {b.profile?.city || "-"}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#888" }}>{b.profile?.city || "-"}</div>
                   </div>
                   <div onClick={() => handleUnblock(b.id)} style={{ background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, color: G.rouge, cursor: "pointer", flexShrink: 0 }}>Débloquer</div>
                 </div>
@@ -3572,7 +3713,7 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   const [stats, setStats] = useState({ users: 0, matches: 0, messages: 0, reports: 0 }); const [reports, setReports] = useState<Array<{ reason: string; reporter_id: string; status: string }>>([]); const [loading, setLoading] = useState(true);
   useEffect(() => { loadStats(); }, []);
   const loadStats = async () => { setLoading(true); const [users, matches, messages, reps] = await Promise.all([sb.query<Profile>(auth.token, "profiles", "?select=id"), sb.query<Match>(auth.token, "matches", "?select=id"), sb.query<Message>(auth.token, "messages", "?select=id"), sb.query<{ reason: string; reporter_id: string; status: string }>(auth.token, "reports", "?order=created_at.desc&limit=20")]); setStats({ users: users.length, matches: matches.length, messages: messages.length, reports: reps.length }); setReports(reps); setLoading(false); };
-  return <div style={{ padding: "12px 16px 16px" }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}><div onClick={onBack} style={{ cursor: "pointer", fontSize: "1.1rem", color: "#555" }}>←</div><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>⚙️ Admin Dashboard</h2></div>{loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> : <><div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>{[["Membres", stats.users, "👥"], ["Matchs", stats.matches, "💞"], ["Messages", stats.messages, "💬"], ["Signalements", stats.reports, "🚨"]].map(([label, value, icon]: any) => <div key={label} style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}><div style={{ fontSize: "1.8rem" }}>{icon}</div><div style={{  fontSize: "1.8rem", fontWeight: 700, color: G.rouge }}>{value}</div><div style={{ fontSize: "0.75rem", color: "#555" }}>{label}</div></div>)}</div><div style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}><h3 style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 12, color: "#555" }}>🚨 Signalements récents</h3>{reports.length === 0 ? <p style={{ color: "#555", fontSize: "0.85rem" }}>Aucun signalement</p> : reports.map((r, i) => <div key={i} style={{ padding: "10px 0", borderBottom: `1px solid ${G.gris}`, fontSize: "0.82rem" }}><div style={{ fontWeight: 600, color: G.rouge }}>Motif : {r.reason}</div><div style={{ color: "#555" }}>ID : {r.reporter_id?.slice(0, 12)}...</div></div>)}</div><Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12 }}>Actualiser</Btn></>}</div>;
+  return <div style={{ padding: "12px 16px 16px" }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}><div onClick={onBack} style={{ cursor: "pointer", fontSize: "1.1rem", color: "#555" }}>←</div><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>⚙️ Admin Dashboard</h2></div>{loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : <><div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>{[["Membres", stats.users, "👥"], ["Matchs", stats.matches, "💞"], ["Messages", stats.messages, "💬"], ["Signalements", stats.reports, "🚨"]].map(([label, value, icon]: any) => <div key={label} style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}><div style={{ fontSize: "1.8rem" }}>{icon}</div><div style={{  fontSize: "1.8rem", fontWeight: 700, color: G.rouge }}>{value}</div><div style={{ fontSize: "0.75rem", color: "#555" }}>{label}</div></div>)}</div><div style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}><h3 style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 12, color: "#555" }}>🚨 Signalements récents</h3>{reports.length === 0 ? <p style={{ color: "#555", fontSize: "0.85rem" }}>Aucun signalement</p> : reports.map((r, i) => <div key={i} style={{ padding: "10px 0", borderBottom: `1px solid ${G.gris}`, fontSize: "0.82rem" }}><div style={{ fontWeight: 600, color: G.rouge }}>Motif : {r.reason}</div><div style={{ color: "#555" }}>ID : {r.reporter_id?.slice(0, 12)}...</div></div>)}</div><Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12 }}>Actualiser</Btn></>}</div>;
 }
 
 export default function App() {
@@ -3583,6 +3724,7 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
   const [likesReceived, setLikesReceived] = useState(0);
+  const [viewsReceived, setViewsReceived] = useState(0);
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
@@ -3737,7 +3879,7 @@ export default function App() {
     updateLastSeen();
     const lastSeenInterval = setInterval(updateLastSeen, 30000);
 
-    // Chargement initial des likes reçus
+    // Chargement initial des likes reçus (badge séparé pour likes et vus)
     const loadLikesReceived = async () => {
       const [likes, views] = await Promise.all([
         sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`),
@@ -3745,7 +3887,10 @@ export default function App() {
       ]);
       const likesCount = Array.isArray(likes) ? likes.length : 0;
       const viewsCount = Array.isArray(views) ? views.length : 0;
-      setLikesReceived(likesCount + viewsCount);
+      // likesReceived = likes seuls pour badge onglet Likes
+      // viewsReceived = vues seules pour badge onglet Vus
+      setLikesReceived(likesCount);
+      setViewsReceived(viewsCount);
     };
     loadLikesReceived();
 
@@ -3892,9 +4037,10 @@ export default function App() {
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
       if (t === "messages") setUnreadCount(0);
-    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} auth={auth}>
+    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
-      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} />}
+      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" />}
+      {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={() => setTab("messages")} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
