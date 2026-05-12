@@ -328,7 +328,6 @@ function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string
     { icon: "heart", titre: "Likes illimités", desc: `Like sans limite (gratuit = ${FREE_LIMITS.likes}/jour)` },
     { icon: "eye", titre: "Voir qui t'a liké", desc: "Découvre tes admirateurs secrets" },
     { icon: "star2", titre: "Profil mis en avant", desc: "Apparais en premier dans Découvrir" },
-    { icon: "star", titre: "Super Like", desc: "Notifie spécialement quelqu'un" },
     { icon: "check2", titre: "Messages lus", desc: "Vois quand tes messages ont été lus" },
     { icon: "filter", titre: "Filtres avancés", desc: "Filtre par ville, âge, situation" },
     { icon: "visitors", titre: "Visiteurs du profil", desc: "Vois toutes les personnes qui t'ont consulté" },
@@ -547,7 +546,6 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     { id: "services", title: "Nos services", emoji: "🌟", items: [
       { icon: "hearts", titre: "Rencontres en ligne", desc: "Trouve ton âme sœur parmi des profils vérifiés.", badge: "Gratuit" },
       { icon: "star2", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké.", badge: "3 500 FCFA/mois" },
-      { icon: "star2", titre: "Super Like", desc: "Notifie spécialement quelqu'un" },
       { icon: "ring", titre: "Accompagnement mariage", desc: "Nous t'accompagnons dans l'organisation de ta cérémonie congolaise.", badge: "Sur demande" },
       { icon: "vip", titre: "Mise en relation VIP", desc: "Service personnalisé et discret dans ta recherche de l'âme sœur.", badge: "Premium" },
     ]},
@@ -2624,21 +2622,41 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
   };
 
   const handleUnmatch = async (m: Match) => {
-    // Supprimer TOUS les matchs entre ces deux personnes (dans les deux sens)
-    await Promise.all([
-      sb.delete(auth.token, "matches", `?id=eq.${m.id}`),
-      sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${m.partner?.id}`),
-      sb.delete(auth.token, "matches", `?user1=eq.${m.partner?.id}&user2=eq.${auth.userId}`),
-      sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${m.partner?.id}`),
-      sb.delete(auth.token, "likes", `?from_user=eq.${m.partner?.id}&to_user=eq.${auth.userId}`),
-      sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`),
-    ]);
-    // Mettre à jour la liste ET le badge instantanément
-    const updated = matches.filter(x => x.id !== m.id);
+    // 1. Mise à jour optimiste IMMÉDIATE avant toute requête
+    const updated = matches.filter(x => x.id !== m.id && !(
+      (x.user1 === auth.userId && x.user2 === m.partner?.id) ||
+      (x.user1 === m.partner?.id && x.user2 === auth.userId)
+    ));
     setMatches(updated);
     onNotifCount(updated.length);
     setConfirmUnmatch(null);
     setMenuMatchId(null);
+
+    // 2. Suppression en cascade côté Supabase (tous les sens)
+    const partnerId = m.partner?.id;
+    if (!partnerId) return;
+    try {
+      // Chercher tous les match IDs entre ces deux personnes
+      const allMatchIds = await sb.query<{ id: string }>(
+        auth.token, "matches",
+        `?or=(and(user1.eq.${auth.userId},user2.eq.${partnerId}),and(user1.eq.${partnerId},user2.eq.${auth.userId}))&select=id`
+      );
+      const ids = Array.isArray(allMatchIds) ? allMatchIds.map(x => x.id) : [m.id];
+      // Supprimer messages de TOUS les matchs trouvés
+      await Promise.all(ids.map(id =>
+        sb.delete(auth.token, "messages", `?match_id=eq.${id}`)
+      ));
+      // Supprimer les matchs
+      await Promise.all([
+        sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${partnerId}`),
+        sb.delete(auth.token, "matches", `?user1=eq.${partnerId}&user2=eq.${auth.userId}`),
+      ]);
+      // Supprimer les likes mutuels
+      await Promise.all([
+        sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${partnerId}`),
+        sb.delete(auth.token, "likes", `?from_user=eq.${partnerId}&to_user=eq.${auth.userId}`),
+      ]);
+    } catch {}
   };
 
   const p = selectedMatch?.partner;
@@ -2923,9 +2941,11 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
           {(() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
-        {/* Bouton cadeau - offrir Premium */}
-        {!open.partner?.is_premium && (
-          <div onClick={() => setShowGift(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, fontSize: "1.1rem", opacity: 0.85 }} title="Offrir Premium">🎁</div>
+        {/* Bouton cadeau - offrir Premium : visible UNIQUEMENT aux utilisateurs Premium */}
+        {auth.isPremium && !open.partner?.is_premium && (
+          <div onClick={() => setShowGift(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, opacity: 0.85 }} title="Offrir Premium">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          </div>
         )}
         <div onClick={() => setShowDeleteConv(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, color: "#e74c3c", fontSize: "1rem", opacity: 0.7 }}>🗑️</div>
       </div>
@@ -3687,6 +3707,32 @@ export default function App() {
 
     // Vérifier la session toutes les 60s (compte supprimé par admin, token expiré)
     const sessionCheck = setInterval(validateSession, 60000);
+
+    // Quand le téléphone se réveille (visibilitychange), revalider silencieusement
+    // sans éjecter si c'est juste un timeout réseau
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        // Revalider la session de façon non-bloquante
+        sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=id,is_premium,is_admin`)
+          .then(profiles => {
+            if (!profiles || profiles.length === 0) {
+              // Compte réellement supprimé → déconnecter
+              localStorage.removeItem("moyo_session");
+              setAuth(null);
+              setPage("landing");
+            } else if (profiles[0].is_premium !== auth.isPremium) {
+              const updated = { ...auth, isPremium: profiles[0].is_premium, isAdmin: profiles[0].is_admin || false };
+              setAuth(updated);
+              try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+            }
+          })
+          .catch(() => {
+            // Erreur réseau (timeout, hors ligne) : NE PAS éjecter
+            // L'utilisateur est juste de retour d'une veille sans connexion
+          });
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
     const updateLastSeen = () => sb.update(auth.token, "profiles", auth.userId, { last_seen: new Date().toISOString() });
     updateLastSeen();
     const lastSeenInterval = setInterval(updateLastSeen, 30000);
@@ -3705,11 +3751,19 @@ export default function App() {
 
     // Chargement initial des matchs
     const loadMatchCount = async () => {
-      const res = await sb.query<{id: string}>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
+      const res = await sb.query<{ id: string; user1: string; user2: string }>(
+        auth.token, "matches",
+        `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id,user1,user2`
+      );
       if (Array.isArray(res)) {
-        // Dédupliquer par ID pour éviter tout doublon
-        const unique = new Set(res.map(r => r.id));
-        setNotifCount(unique.size);
+        // Dédupliquer par paire de partenaires (pas juste par ID)
+        // pour éviter le doublon quand user1/user2 ont chacun un enregistrement
+        const seenPartners = new Set<string>();
+        for (const r of res) {
+          const partnerId = r.user1 === auth.userId ? r.user2 : r.user1;
+          seenPartners.add(partnerId);
+        }
+        setNotifCount(seenPartners.size);
       }
     };
     loadMatchCount();
@@ -3776,6 +3830,7 @@ export default function App() {
       clearInterval(fallbackInterval);
       clearInterval(lastSeenInterval);
       clearInterval(sessionCheck);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [auth?.userId]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
