@@ -566,14 +566,15 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     ]},
     { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
       { icon: "Q", titre: "Moyo est-il gratuit ?", desc: "Oui, l'inscription est gratuite. 5 likes/jour et 3 messages/match. Premium à 3 500 FCFA/mois." },
-      { icon: "Q", titre: "Comment annuler un match ?", desc: "Dans Matchs, appuyez sur les 3 traits → Annuler le match. L'autre personne n'est pas notifiée." },
-      { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, appuyez sur le bouton cadeau pour offrir le Premium à votre partenaire." },
+      { icon: "Q", titre: "Comment annuler un match ?", desc: "Dans Matchs, appuyez sur les 3 traits → Annuler le match. La conversation, les likes et les vues sont supprimés. L'autre personne n'est pas notifiée." },
+      { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, le bouton cadeau apparait uniquement si vous êtes Premium. Vous pouvez offrir le Premium à votre partenaire non-premium." },
       { icon: "Q", titre: "Comment obtenir le badge vérifié ?", desc: "Profil → Faire vérifier mon compte → WhatsApp. Gratuit, vérification sous 24h." },
       { icon: "Q", titre: "Comment inviter un ami ?", desc: "Dans Profil, appuyez sur Inviter un ami. Un message pré-rempli s'ouvre sur WhatsApp ou le partage natif." },
       { icon: "Q", titre: "Comment activer le mode sombre ?", desc: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
       { icon: "Q", titre: "Comment rendre mon profil invisible ?", desc: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
       { icon: "Q", titre: "Pourquoi je ne vois pas mon profil dans Découvrir ?", desc: "Votre profil doit être complet jusqu'à la dernière étape de l'inscription pour apparaître dans Découvrir. Vérifiez aussi que votre profil est bien visible dans les paramètres." },
-      { icon: "Q", titre: "À quoi sert l'onglet Likes ?", desc: "L'onglet Likes affiche les personnes qui ont liké ou visité votre profil. Les membres Premium voient les cartes et peuvent liker en retour pour créer un match. Les notifications sont instantanées." },
+      { icon: "Q", titre: "À quoi servent les onglets Likes et Vus ?", desc: "Deux onglets séparés : Likes (personnes qui vous ont liké) et Vus (personnes qui ont visité votre profil). Premium requis pour voir les cartes. Vous pouvez retirer une carte sans affecter les matchs." },
+      { icon: "Q", titre: "Si je unlike quelqu'un, que se passe-t-il ?", desc: "Le like disparait des deux côtés instantanément. Si vous aviez un match, la conversation et tous les messages sont supprimés." },
     ]},
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
       { icon: "shield", titre: "Données sécurisées", desc: "Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers." },
@@ -812,7 +813,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               <span className="heart" style={{ color: G.rouge, fontStyle: "italic" }}>âme sœur</span>
               <br />au Congo
             </h1>
-            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440, textAlign: "center", width: "100%" }}>
+            <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440, width: "100%" }}>
               Moyo connecte les Congolais à la recherche d'une relation sincère et durable.
               Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.
             </p>
@@ -1862,12 +1863,12 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         <div style={{ padding: "8px 0" }}>
           {[
             { title: "Découvrir des profils", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>, items: ["L'onglet Découvrir affiche les profils en mode carte ou en liste. En vue carte, utilisez les flèches pour naviguer et le cœur pour liker.", "Chaque profil affiche un badge Femme ou Homme pour identifier clairement le genre.", "Compte gratuit : 5 likes par jour. Premium : likes illimités. Filtres disponibles : genre, ville, âge (18-99), religion.", "Moyo est réservé aux rencontres hétérosexuelles uniquement."] },
-            { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour voir le profil ou annuler le match. L'annulation est silencieuse.", "Avec Premium, vous pouvez voir exactement qui vous a liké."] },
+            { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: ["Compte gratuit : 3 messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.", "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil."] },
-            { title: "Premium - 3 500 FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: ["Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké.", "Paiement via MTN MoMo ou Airtel MoMo uniquement. Activation sous 24h. Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation."] },
-            { title: "Likes & Visiteurs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["L'onglet Likes affiche en temps réel les personnes qui ont liké ou visité ton profil. Le badge rouge sur l'icône se met à jour instantanément.", "En compte Premium, tu vois les cartes des personnes avec deux onglets : Likes et Visiteurs. Tu peux liker directement depuis cet onglet pour créer un match.", "Vue carte ou liste disponible en Premium via le bouton en haut à droite."] },
+            { title: "Premium - 3 500 FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: ["Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.", "Paiement via MTN MoMo ou Airtel MoMo uniquement. Activation sous 24h. Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation."] },
+            { title: "Likes & Visiteurs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Deux onglets séparés dans la barre de navigation : Likes (coeur) et Vus (oeil). Les badges se mettent à jour instantanément.", "En Premium, tu vois les cartes complètes. Tu peux appuyer sur X pour retirer une carte de ta liste sans affecter les matchs ni les messages.", "Si tu unlikes un profil, ton like disparait aussi de sa liste à lui instantanément.", "Vue carte ou liste disponible en Premium via le bouton en haut à droite."] },
       { title: "Inviter un ami", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>, items: ["Dans Profil, appuyez sur Inviter un ami. Un message pré-rempli s'ouvre via WhatsApp ou le partage natif de votre téléphone.", "Le lien pointe directement vers moyo-congo.com pour que votre ami puisse s'inscrire facilement."] },
       { title: "Mode sombre", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>, items: ["Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes. Votre choix est mémorisé automatiquement.", "Le mode sombre s'applique à toutes les pages sauf la page d'accueil."] },
       { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo est réservé aux personnes majeures de 18 ans et plus.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
@@ -1913,8 +1914,11 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
   const [showSignalerMenu, setShowSignalerMenu] = useState(false);
   return (
     <div className="profile-card" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
-      <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>
-        {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}
+      <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)" }}>
+        {prof.photo_url
+          ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        }
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {prof.is_verified && <VerifiedBadge size={15} />}</div>
@@ -2059,27 +2063,47 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   };
 
   const handleLike = async (p: Profile) => {
-    // Bloquer le like si même genre
-    if (myGender && p.gender && myGender === p.gender) {
-      setShowSameGender(true);
-      return;
-    }
+    if (myGender && p.gender && myGender === p.gender) { setShowSameGender(true); return; }
     if (likedIds.has(p.id)) {
+      // Unlike — mise à jour optimiste immédiate
       setLikedIds(s => { const n = new Set(s); n.delete(p.id); return n; });
       setLikesToday(l => Math.max(0, l - 1));
-      // Supprimer le like ET le match associé
-      await Promise.all([
-        sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${p.id}`),
-        sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}`),
-        sb.delete(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}`),
-      ]);
+      // Suppression en cascade : like + match + messages + vues
+      try {
+        const [fwd, rev] = await Promise.all([
+          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}&select=id`),
+          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}&select=id`),
+        ]);
+        const matchIds = [
+          ...(Array.isArray(fwd) ? fwd.map(x => x.id) : []),
+          ...(Array.isArray(rev) ? rev.map(x => x.id) : []),
+        ];
+        // Supprimer messages de tous les matchs
+        for (const id of matchIds) {
+          await sb.delete(auth.token, "messages", `?match_id=eq.${id}`);
+        }
+        await Promise.all([
+          sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}`),
+          sb.delete(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}`),
+          sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${p.id}`),
+          // Supprimer aussi mon profil de ses likes (retrait symétrique)
+          sb.delete(auth.token, "likes", `?from_user=eq.${p.id}&to_user=eq.${auth.userId}`),
+          // Supprimer les vues mutuelles
+          sb.delete(auth.token, "profile_views", `?viewer_id=eq.${auth.userId}&viewed_id=eq.${p.id}`),
+        ]);
+      } catch {}
       return;
     }
-    if (!auth.isPremium && likesToday >= FREE_LIMITS.likes) { onShowPremium(`Tu as utilisé tes ${FREE_LIMITS.likes} likes gratuits aujourd'hui. Passe Premium pour liker sans limite ! ❤️`); return; }
-    setLikedIds(s => new Set([...s, p.id])); setLikesToday(l => l + 1);
+    if (!auth.isPremium && likesToday >= FREE_LIMITS.likes) { onShowPremium(`Tu as utilisé tes ${FREE_LIMITS.likes} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !`); return; }
+    // Like — mise à jour optimiste immédiate
+    setLikedIds(s => new Set([...s, p.id]));
+    setLikesToday(l => l + 1);
     await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
     const mutual = await sb.query<object>(auth.token, "likes", `?from_user=eq.${p.id}&to_user=eq.${auth.userId}`);
-    if (mutual.length > 0) { await sb.insert(auth.token, "matches", { user1: auth.userId, user2: p.id }); setMatchPop(p); }
+    if (mutual.length > 0) {
+      await sb.insert(auth.token, "matches", { user1: auth.userId, user2: p.id });
+      setMatchPop(p);
+    }
   };
 
   const handleReport = async (reason: string) => {
@@ -2668,13 +2692,14 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   );
 }
 
-function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void; onGoMessages?: () => void }) {
+function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void; onGoMessages?: (partnerId?: string) => void }) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const [menuMatchId, setMenuMatchId] = useState<string | null>(null);
   const [confirmUnmatch, setConfirmUnmatch] = useState<Match | null>(null);
+  const [confirmBlockMatch, setConfirmBlockMatch] = useState<Match | null>(null);
 
   useEffect(() => { loadMatches(); }, []);
 
@@ -2738,11 +2763,20 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
       await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${partnerId}`);
       await sb.delete(auth.token, "likes", `?from_user=eq.${partnerId}&to_user=eq.${auth.userId}`);
     } catch (err) {
-      // En cas d'erreur réseau, on force quand même la suppression par ID connu
       try {
         await sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`);
         await sb.delete(auth.token, "matches", `?id=eq.${m.id}`);
       } catch {}
+    }
+  };
+
+  const handleBlockMatch = async (m: Match) => {
+    setConfirmBlockMatch(null);
+    // Annuler le match d'abord (cascade complète)
+    await handleUnmatch(m);
+    // Bloquer la personne
+    if (m.partner?.id) {
+      try { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: m.partner.id }); } catch {}
     }
   };
 
@@ -2775,9 +2809,23 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
                 {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2, borderRadius: 2, background: "#555" }} />)}
               </div>
               {menuMatchId === m.id && (
-                <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
-                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>
-                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Annuler le match</div>
+                <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 180, overflow: "hidden" }}>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Voir le profil
+                  </div>
+                  <div onClick={() => { setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Envoyer un message
+                  </div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#888", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    Bloquer
+                  </div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Annuler le match
+                  </div>
                 </div>
               )}
             </div>
@@ -2804,9 +2852,23 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
                 {[0,1,2].map(i => <div key={i} style={{ width: 16, height: 2, borderRadius: 2, background: "#aaa" }} />)}
               </div>
               {menuMatchId === m.id && (
-                <div style={{ position: "absolute", right: 10, bottom: 36, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
-                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>
-                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Annuler le match</div>
+                <div style={{ position: "absolute", right: 10, bottom: 36, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 180, overflow: "hidden" }}>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Voir le profil
+                  </div>
+                  <div onClick={() => { setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Envoyer un message
+                  </div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#888", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    Bloquer
+                  </div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Annuler le match
+                  </div>
                 </div>
               )}
             </div>
@@ -2846,9 +2908,26 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages }: { auth: Au
             {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: `1px solid rgba(212,168,67,0.3)`, color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{p.religion}</span>}
           </div>
           {p.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{p.bio}</p>}
-          <Btn variant="primary" onClick={() => { setSelectedMatch(null); if (onGoMessages) onGoMessages(); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>Envoyer un message</Btn>
+          <Btn variant="primary" onClick={() => { const pid = selectedMatch?.partner?.id; setSelectedMatch(null); if (onGoMessages) onGoMessages(pid); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>Envoyer un message</Btn>
         </div>
       </div>
+
+    {/* Modal confirmation blocage */}
+    {confirmBlockMatch && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          </div>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111", marginBottom: 8 }}>Bloquer {confirmBlockMatch.partner?.name} ?</h3>
+          <p style={{ fontSize: "0.83rem", color: "#666", marginBottom: 22, lineHeight: 1.6 }}>Le match et la conversation seront supprimés. Cette personne ne pourra plus te voir ni te contacter.</p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setConfirmBlockMatch(null)} style={{ flex: 1 }}>Annuler</Btn>
+            <Btn variant="danger" onClick={() => handleBlockMatch(confirmBlockMatch)} style={{ flex: 1 }}>Bloquer</Btn>
+          </div>
+        </div>
+      </div>
+    )}
     </div>}
   </div>;
 }
@@ -2886,7 +2965,7 @@ function TickIcon({ read, isPremium, white = false }: { read: boolean; isPremium
   );
 }
 
-function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void }) {
+function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   const [msgs, setMsgs] = useState<Message[]>([]);
@@ -2901,7 +2980,15 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
   const openRef = useRef<Match | null>(null);
 
   useEffect(() => { openRef.current = open; }, [open]);
-  useEffect(() => { loadConvs(); }, []);
+  useEffect(() => {
+    loadConvs().then(convList => {
+      // Si on arrive depuis un match, ouvrir directement la bonne conversation
+      if (initialPartnerId && convList) {
+        const target = convList.find(c => c.partner?.id === initialPartnerId);
+        if (target) setOpen(target);
+      }
+    });
+  }, []);
   useEffect(() => { if (open) loadMsgs(open); }, [open]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
@@ -2934,7 +3021,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
   const loadConvs = async () => {
     setLoading(true);
     const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})`);
-    if (!res.length) { setConvs([]); onUnreadCount(0); setLoading(false); return; }
+    if (!res.length) { setConvs([]); onUnreadCount(0); setLoading(false); return []; }
     const enriched = await Promise.all(res.map(async m => {
       const pid = m.user1 === auth.userId ? m.user2 : m.user1;
       const [profiles, lastMsgs, unread] = await Promise.all([
@@ -2955,6 +3042,7 @@ function Messages({ auth, onUnreadCount, onShowPremium }: { auth: Auth; onUnread
     setConvs(deduped);
     onUnreadCount(deduped.reduce((s, c) => s + (c.unreadCount || 0), 0));
     setLoading(false);
+    return deduped;
   };
 
   const loadMsgs = async (conv: Match) => {
@@ -3797,6 +3885,8 @@ export default function App() {
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
+  const [openConvPartnerId, setOpenConvPartnerId] = useState<string | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   // Ref pour permettre à LikesPage de déclencher un refresh des badges
   const refreshBadgesRef = useRef<(() => void) | null>(null);
 
@@ -3857,13 +3947,32 @@ export default function App() {
       if (saved) {
         const a: Auth = JSON.parse(saved);
         if (a?.token && a?.userId) {
-          // Vérifier rapidement que le token est encore valide
+          // Restaurer immédiatement la session sans attendre la vérification réseau
           setAuth(a);
           setPage("app");
           setTab("discover");
+          setSessionLoaded(true);
+          // Vérifier en arrière-plan que le compte existe encore
+          sb.query<Profile>(a.token, "profiles", `?id=eq.${a.userId}&select=id,is_premium,is_admin`)
+            .then(profiles => {
+              if (!profiles || profiles.length === 0) {
+                localStorage.removeItem("moyo_session");
+                setAuth(null);
+                setPage("landing");
+              } else if (profiles[0].is_premium !== a.isPremium) {
+                const updated = { ...a, isPremium: profiles[0].is_premium, isAdmin: profiles[0].is_admin || false };
+                setAuth(updated);
+                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+              }
+            })
+            .catch(() => {
+              // Erreur réseau : garder la session locale, pas de déconnexion
+            });
+          return;
         }
       }
     } catch { localStorage.removeItem("moyo_session"); }
+    setSessionLoaded(true);
   }, []);
 
   const handleAuth = (a: Auth) => {
@@ -4090,6 +4199,7 @@ export default function App() {
     </div>
   ) : null;
 
+  if (!sessionLoaded) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: G.blanc }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>;
   if (page === "landing") return <>{<Landing onNav={setPage} />}{InstallBanner}</>;
   if (page === "about") return <About onBack={() => setPage("landing")} />;
   if (page === "signup") return <SignUp onNav={setPage} />;
@@ -4114,8 +4224,8 @@ export default function App() {
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
-      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={() => setTab("messages")} />}
-      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} />}
+      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
+      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
       {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}
     </AppShell>
