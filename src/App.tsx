@@ -72,7 +72,12 @@ const sb = {
   async query<T>(token: string, table: string, params = ""): Promise<T[]> {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { headers: this.h(token) });
     const data = await r.json().catch(() => []);
-    return Array.isArray(data) ? data : [];
+    // Si Supabase renvoie une erreur (objet avec "code" ou "message"), lever une exception
+    if (!Array.isArray(data)) {
+      if (data?.code || data?.message) throw new Error(data.message || data.code);
+      return [];
+    }
+    return data;
   },
   async insert<T>(token: string, table: string, data: object): Promise<T[]> {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
@@ -2460,8 +2465,21 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   const [loading, setLoading] = useState(true);
   const [liking, setLiking] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
+  // isPremium toujours vérifié en direct depuis Supabase — pas depuis le cache localStorage
+  const [isPremiumReal, setIsPremiumReal] = useState(isPremiumReal);
 
   useEffect(() => {
+    // Vérifier isPremium en direct depuis Supabase au montage
+    sb.query<{ is_premium: boolean }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=is_premium`)
+      .then(res => {
+        if (Array.isArray(res) && res.length > 0) {
+          const prem = res[0].is_premium === true;
+          setIsPremiumReal(prem);
+          // Recharger les données avec la vraie valeur Premium
+          loadData(prem);
+        }
+      })
+      .catch(() => {});
     loadData();
     const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => { loadData(); });
     const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => { loadData(); });
@@ -2471,10 +2489,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     };
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (premiumOverride?: boolean) => {
+    const isPrem = premiumOverride !== undefined ? premiumOverride : isPremiumReal;
     setLoading(true);
 
-    // 1. Charger les IDs dismissés séparément — si ça échoue, continuer quand même
+    // 1. Charger les IDs dismissés séparément
     let dIds = new Set<string>();
     try {
       const dismissed = await sb.query<{ dismissed_id: string }>(
@@ -2484,25 +2503,30 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       setDismissedIds(dIds);
     } catch {}
 
-    // 2. Charger les likes reçus — indépendant des dismissed
+    // 2. Charger les likes reçus
     try {
       const res = await sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
-      setCount(Array.isArray(res) ? res.length : 0);
-      if (auth.isPremium && Array.isArray(res) && res.length > 0) {
-        const ids = res.map(r => r.from_user).join(",");
-        const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids})&select=*`);
-        setLikers(Array.isArray(profiles) ? profiles.filter(p => !dIds.has(p.id)) : []);
+      const total = Array.isArray(res) ? res.length : 0;
+      setCount(total);
+      if (isPrem && total > 0) {
+        const ids = res.map(r => r.from_user).filter(Boolean).join(",");
+        if (ids) {
+          const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified`);
+          setLikers(Array.isArray(profiles) ? profiles.filter(p => p && !dIds.has(p.id)) : []);
+        }
       }
-    } catch {}
+    } catch (e) {
+      console.error("LikesPage loadData likes error:", e);
+    }
 
-    // 3. Charger les visiteurs — indépendant
-    if (auth.isPremium) {
+    // 3. Charger les visiteurs
+    if (isPrem) {
       try {
         const views = await sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id&order=created_at.desc&limit=50`);
         if (Array.isArray(views) && views.length > 0) {
           const vIds = [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).join(",");
           if (vIds) {
-            const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=*`);
+            const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified`);
             setVisitors(Array.isArray(vProfiles) ? vProfiles : []);
           }
         }
@@ -2558,16 +2582,16 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     <div style={{ padding: "12px 16px 16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>{mode === "likes" ? "Likes reçus" : "Visiteurs"}</h2>
-        {auth.isPremium && <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>}
+        {isPremiumReal && <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>}
       </div>
 
       {/* Bandeau */}
-      <div onClick={() => !auth.isPremium && onShowPremium("Découvre qui a liké ton profil en passant Premium !")}
-        style={{ background: auth.isPremium ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "14px 18px", marginBottom: 16, color: auth.isPremium ? "#111" : G.blanc, cursor: auth.isPremium ? "default" : "pointer", display: "flex", alignItems: "center", gap: 12 }}>
+      <div onClick={() => !isPremiumReal && onShowPremium("Découvre qui a liké ton profil en passant Premium !")}
+        style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "14px 18px", marginBottom: 16, color: isPremiumReal ? "#111" : G.blanc, cursor: isPremiumReal ? "default" : "pointer", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {mode === "likes"
-            ? <svg width="18" height="18" viewBox="0 0 24 24" fill={auth.isPremium ? "#111" : "white"} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? "#111" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            ? <svg width="18" height="18" viewBox="0 0 24 24" fill={isPremiumReal ? "#111" : "white"} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isPremiumReal ? "#111" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           }
         </div>
         <div style={{ flex: 1 }}>
@@ -2578,10 +2602,10 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             }
           </div>
           <div style={{ fontSize: "0.78rem", opacity: 0.85 }}>
-            {auth.isPremium ? "Accès Premium activé" : "Passe Premium pour découvrir qui"}
+            {isPremiumReal ? "Accès Premium activé" : "Passe Premium pour découvrir qui"}
           </div>
         </div>
-        {!auth.isPremium && count > 0 && mode === "likes" && (
+        {!isPremiumReal && count > 0 && mode === "likes" && (
           <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1rem" }}>
             {count > 9 ? "9+" : count}
           </div>
@@ -2589,7 +2613,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       </div>
 
       {/* Contenu Premium */}
-      {auth.isPremium && (
+      {isPremiumReal && (
         <>
           {loading ? (
             <div style={{ textAlign: "center", padding: 40 }}>
@@ -3386,35 +3410,34 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
         <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Zoom pour ajuster</div>
         {/* Zone de crop : cercle = aperçu avatar, rectangle = zone carte */}
-        <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#1a1a1a", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
+        <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
           onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
           onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
         >
           <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
           <canvas ref={canvasRef} width={SIZE} height={SIZE} style={{ display: "block" }} />
-          {/* Overlay : rectangle (zone carte) + grille des tiers */}
+          {/* Overlay : grille des tiers + cercle avatar */}
           <svg style={{ position: "absolute", inset: 0, pointerEvents: "none", width: "100%", height: "100%" }} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-            {/* Assombrissement hors rectangle */}
-            <rect x="0" y="0" width={SIZE} height={SIZE} fill="rgba(0,0,0,0.35)" />
-            {/* Rectangle de cadrage (ratio 3:4 centré) */}
-            <rect x={SIZE*0.08} y={SIZE*0.06} width={SIZE*0.84} height={SIZE*0.88} fill="transparent" stroke="white" strokeWidth="1.5" />
-            {/* Grille des tiers */}
-            <line x1={SIZE*0.08 + SIZE*0.84/3} y1={SIZE*0.06} x2={SIZE*0.08 + SIZE*0.84/3} y2={SIZE*0.06+SIZE*0.88} stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
-            <line x1={SIZE*0.08 + SIZE*0.84*2/3} y1={SIZE*0.06} x2={SIZE*0.08 + SIZE*0.84*2/3} y2={SIZE*0.06+SIZE*0.88} stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
-            <line x1={SIZE*0.08} y1={SIZE*0.06 + SIZE*0.88/3} x2={SIZE*0.08+SIZE*0.84} y2={SIZE*0.06 + SIZE*0.88/3} stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
-            <line x1={SIZE*0.08} y1={SIZE*0.06 + SIZE*0.88*2/3} x2={SIZE*0.08+SIZE*0.84} y2={SIZE*0.06 + SIZE*0.88*2/3} stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
-            {/* Coins du rectangle */}
-            <polyline points={`${SIZE*0.08},${SIZE*0.06+14} ${SIZE*0.08},${SIZE*0.06} ${SIZE*0.08+14},${SIZE*0.06}`} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-            <polyline points={`${SIZE*0.92-14},${SIZE*0.06} ${SIZE*0.92},${SIZE*0.06} ${SIZE*0.92},${SIZE*0.06+14}`} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-            <polyline points={`${SIZE*0.08},${SIZE*0.94-14} ${SIZE*0.08},${SIZE*0.94} ${SIZE*0.08+14},${SIZE*0.94}`} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-            <polyline points={`${SIZE*0.92-14},${SIZE*0.94} ${SIZE*0.92},${SIZE*0.94} ${SIZE*0.92},${SIZE*0.94-14}`} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-            {/* Cercle central = zone avatar */}
-            <circle cx={SIZE/2} cy={SIZE/2} r={SIZE*0.32} fill="none" stroke={G.or} strokeWidth="1.5" strokeDasharray="4 3" />
+            {/* Grille des tiers sur toute la surface */}
+            <line x1={SIZE/3} y1="0" x2={SIZE/3} y2={SIZE} stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
+            <line x1={SIZE*2/3} y1="0" x2={SIZE*2/3} y2={SIZE} stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
+            <line x1="0" y1={SIZE/3} x2={SIZE} y2={SIZE/3} stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
+            <line x1="0" y1={SIZE*2/3} x2={SIZE} y2={SIZE*2/3} stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
+            {/* Cercle central = avatar rond */}
+            <circle cx={SIZE/2} cy={SIZE/2} r={SIZE*0.38} fill="none" stroke="white" strokeWidth="1.5" />
           </svg>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 12, fontSize: "0.7rem", color: "#888" }}>
-          <span><svg width="10" height="10" viewBox="0 0 10 10" style={{display:"inline",marginRight:4}}><rect x="1" y="1" width="8" height="8" fill="none" stroke="white" strokeWidth="1.5"/></svg>Zone carte</span>
-          <span><svg width="10" height="10" viewBox="0 0 10 10" style={{display:"inline",marginRight:4}}><circle cx="5" cy="5" r="4" fill="none" stroke="#D4A843" strokeWidth="1.5" strokeDasharray="2 2"/></svg>Avatar rond</span>
+
+        {/* Légende */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 14, marginTop: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
+            <svg width="14" height="10" viewBox="0 0 14 10"><rect x="1" y="1" width="12" height="8" fill="none" stroke="#555" strokeWidth="1.5"/><line x1="4.3" y1="1" x2="4.3" y2="9" stroke="rgba(0,0,0,0.2)" strokeWidth="0.8"/><line x1="9.7" y1="1" x2="9.7" y2="9" stroke="rgba(0,0,0,0.2)" strokeWidth="0.8"/><line x1="1" y1="4.3" x2="13" y2="4.3" stroke="rgba(0,0,0,0.2)" strokeWidth="0.8"/></svg>
+            Aperçu carte
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#555" strokeWidth="1.5"/></svg>
+            Photo de profil
+          </div>
         </div>
         <input type="range" min={0.5} max={3} step={0.05} value={scale}
           onChange={e => setScale(parseFloat(e.target.value))}
@@ -3639,7 +3662,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
 
             {/* Liste noire — descend sur la vague */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1, transform: "translateY(18px)" }} onClick={() => setShowBlocked(true)}>
-              <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.2)", position: "relative" }}>
+              <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#e0e0e0", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.2)", position: "relative" }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                   <circle cx="12" cy="7" r="4"/>
