@@ -68,7 +68,7 @@ const G = {
 type Auth = { token: string; userId: string; name: string; email: string; isPremium: boolean; isAdmin: boolean };
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
-type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string };
+type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
 const sb = {
@@ -3467,6 +3467,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           const isMine = m.sender_id === auth.userId;
           const isImg = isImage(m.content);
           const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
+          const reactions = m.reactions || {};
+          const reactionEntries = Object.entries(reactions).filter(([, users]) => users.length > 0);
           const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
             longPressTimer.current = setTimeout(() => {
               const touch = "touches" in e ? e.touches[0] : (e as React.MouseEvent);
@@ -3475,7 +3477,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           };
           const handleLongPressEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
           return (
-            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}>
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0 }}>
               {isImg ? (
                 <div
                   style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
@@ -3488,16 +3490,49 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   </div>
                 </div>
               ) : (
-                <div
-                  style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", maxWidth: "72%", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none" }}
-                  onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
-                >
-                  {replyTo?.id === m.id && <div style={{ fontSize: "0.72rem", opacity: 0.6, borderLeft: `3px solid ${isMine ? "rgba(255,255,255,0.6)" : G.rouge}`, paddingLeft: 6, marginBottom: 4 }}>↩ Citation</div>}
-                  <span>{m.content}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
-                    <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
-                    {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} white />}
+                <div style={{ position: "relative", maxWidth: "72%" }}>
+                  <div
+                    style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none" }}
+                    onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
+                  >
+                    {(() => {
+                      const replyMatch = m.content.match(/^\[↩ (.+?) : (.+?)\]\n([\s\S]*)$/);
+                      if (replyMatch) {
+                        const [, who, quoted, body] = replyMatch;
+                        return <>
+                          <div style={{ background: isMine ? "rgba(0,0,0,0.15)" : "rgba(192,57,43,0.07)", borderLeft: `3px solid ${isMine ? "rgba(255,255,255,0.5)" : G.rouge}`, borderRadius: "0 6px 6px 0", padding: "4px 8px", marginBottom: 6, fontSize: "0.75rem" }}>
+                            <div style={{ fontWeight: 700, color: isMine ? "rgba(255,255,255,0.85)" : G.rouge, marginBottom: 2 }}>↩ {who}</div>
+                            <div style={{ opacity: 0.75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{quoted}</div>
+                          </div>
+                          <span>{body}</span>
+                        </>;
+                      }
+                      return <span>{m.content}</span>;
+                    })()}
+                    <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                      <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
+                      {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} white />}
+                    </div>
                   </div>
+                  {/* Badges réactions sous la bulle */}
+                  {reactionEntries.length > 0 && (
+                    <div style={{ position: "absolute", bottom: -18, [isMine ? "right" : "left"]: 4, display: "flex", gap: 3 }}>
+                      {reactionEntries.map(([emoji, users]) => (
+                        <div key={emoji} onClick={async () => {
+                          if (!m.id) return;
+                          const current = m.reactions || {};
+                          const users = current[emoji] || [];
+                          const hasReacted = users.includes(auth.userId);
+                          const updated = hasReacted ? users.filter((u: string) => u !== auth.userId) : [...users, auth.userId];
+                          const newReactions = { ...current, [emoji]: updated };
+                          await sb.update(auth.token, "messages", m.id, { reactions: newReactions });
+                          setMsgs(prev => prev.map(msg => msg.id === m.id ? { ...msg, reactions: newReactions } : msg));
+                        }} style={{ background: G.blanc, borderRadius: 50, padding: "2px 6px", fontSize: "0.75rem", boxShadow: "0 1px 4px rgba(0,0,0,0.15)", cursor: "pointer", display: "flex", alignItems: "center", gap: 2, border: `1px solid ${G.gris}` }}>
+                          {emoji}<span style={{ fontSize: "0.65rem", color: "#555", fontWeight: 600 }}>{users.length > 1 ? users.length : ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -3535,46 +3570,53 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         </div>
       </div>
 
-      {/* Menu contextuel appui long */}
+      {/* Menu contextuel style WhatsApp */}
       {contextMenu && (
-        <div onClick={() => setContextMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 600 }}>
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: "fixed",
-              top: Math.min(contextMenu.y, window.innerHeight - 130),
-              left: Math.min(contextMenu.x, window.innerWidth - 180),
-              background: G.blanc,
-              borderRadius: 14,
-              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-              overflow: "hidden",
-              minWidth: 170,
-              zIndex: 601,
-            }}
-          >
-            <div
-              onClick={() => { setReplyTo(contextMenu.msg); setContextMenu(null); }}
-              style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-              <span style={{ fontSize: "0.88rem", fontWeight: 600, color: G.brun }}>Répondre</span>
+        <div onClick={() => setContextMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "88%", maxWidth: 340 }}>
+            {/* Barre emojis réactions */}
+            <div style={{ background: G.blanc, borderRadius: 50, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-around", marginBottom: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+              {["👍","❤️","😂","😮","😢","🙏"].map(emoji => {
+                const hasReacted = (contextMenu.msg.reactions?.[emoji] || []).includes(auth.userId);
+                return (
+                  <div key={emoji} onClick={async () => {
+                    const msgId = contextMenu.msg.id;
+                    if (!msgId) return;
+                    const current = contextMenu.msg.reactions || {};
+                    const users: string[] = current[emoji] || [];
+                    const updated = hasReacted ? users.filter((u: string) => u !== auth.userId) : [...users, auth.userId];
+                    const newReactions = { ...current, [emoji]: updated };
+                    await sb.update(auth.token, "messages", msgId, { reactions: newReactions });
+                    setMsgs(prev => prev.map(msg => msg.id === msgId ? { ...msg, reactions: newReactions } : msg));
+                    setContextMenu(null);
+                  }} style={{ fontSize: hasReacted ? "1.8rem" : "1.5rem", cursor: "pointer", transition: "font-size 0.15s", filter: hasReacted ? "drop-shadow(0 0 4px rgba(192,57,43,0.5))" : "none", padding: "2px" }}>
+                    {emoji}
+                  </div>
+                );
+              })}
             </div>
-            {contextMenu.msg.sender_id === auth.userId && (
-              <div
-                onClick={async () => {
-                  const msgId = contextMenu.msg.id;
-                  setContextMenu(null);
-                  if (!msgId) return;
-                  await sb.delete(auth.token, "messages", `?id=eq.${msgId}`);
-                  setMsgs(prev => prev.filter(m => m.id !== msgId));
-                  setToast({ msg: "Message supprimé", type: "success" });
-                }}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", cursor: "pointer" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c" }}>Supprimer</span>
+            {/* Actions */}
+            <div style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+              <div onClick={() => { setReplyTo(contextMenu.msg); setContextMenu(null); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
               </div>
-            )}
+              <div onClick={async () => {
+                const msgId = contextMenu.msg.id;
+                setContextMenu(null);
+                if (!msgId) return;
+                await sb.delete(auth.token, "messages", `?id=eq.${msgId}`);
+                setMsgs(prev => prev.filter(msg => msg.id !== msgId));
+                setToast({ msg: "Message supprimé", type: "success" });
+              }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer" }}>
+                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#e74c3c" }}>Supprimer</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </div>
+            </div>
+            {/* Annuler */}
+            <div onClick={() => setContextMenu(null)} style={{ background: G.blanc, borderRadius: 14, padding: "15px 20px", textAlign: "center", marginTop: 10, cursor: "pointer", fontWeight: 700, fontSize: "0.92rem", color: G.rouge, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
+              Annuler
+            </div>
           </div>
         </div>
       )}
