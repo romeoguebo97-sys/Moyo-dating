@@ -1739,6 +1739,12 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       <p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>
         Déjà un compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("login")}>Se connecter</span>
       </p>
+      <p style={{ textAlign: "center", marginTop: 14, fontSize: "0.7rem", color: "#aaa", lineHeight: 1.6, padding: "0 12px" }}>
+        En continuant, vous acceptez nos{" "}
+        <a href="https://moyo-congo.com" onClick={e => { e.preventDefault(); onNav("landing"); }} style={{ color: "#888", textDecoration: "underline", cursor: "pointer" }}>Conditions d'utilisation</a>
+        {" "}et confirmez avoir lu notre{" "}
+        <a href="https://moyo-congo.com" onClick={e => { e.preventDefault(); onNav("landing"); }} style={{ color: "#888", textDecoration: "underline", cursor: "pointer" }}>Politique de confidentialité</a>.
+      </p>
     </AuthLayout>
   );
 }
