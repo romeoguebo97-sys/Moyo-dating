@@ -2466,28 +2466,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   const [liking, setLiking] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   // isPremium toujours vérifié en direct depuis Supabase — pas depuis le cache localStorage
-  const [isPremiumReal, setIsPremiumReal] = useState(isPremiumReal);
-
-  useEffect(() => {
-    // Vérifier isPremium en direct depuis Supabase au montage
-    sb.query<{ is_premium: boolean }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=is_premium`)
-      .then(res => {
-        if (Array.isArray(res) && res.length > 0) {
-          const prem = res[0].is_premium === true;
-          setIsPremiumReal(prem);
-          // Recharger les données avec la vraie valeur Premium
-          loadData(prem);
-        }
-      })
-      .catch(() => {});
-    loadData();
-    const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => { loadData(); });
-    const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => { loadData(); });
-    return () => {
-      try { wsLikes?.close(); } catch {}
-      try { wsViews?.close(); } catch {}
-    };
-  }, []);
+  const [isPremiumReal, setIsPremiumReal] = useState(auth.isPremium);
 
   const loadData = async (premiumOverride?: boolean) => {
     const isPrem = premiumOverride !== undefined ? premiumOverride : isPremiumReal;
@@ -2535,6 +2514,28 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
 
     setLoading(false);
   };
+  useEffect(() => {
+    // Vérifier isPremium en direct depuis Supabase au montage
+    sb.query<{ is_premium: boolean }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=is_premium`)
+      .then(res => {
+        if (Array.isArray(res) && res.length > 0) {
+          const prem = res[0].is_premium === true;
+          setIsPremiumReal(prem);
+          // Recharger les données avec la vraie valeur Premium
+          loadData(prem);
+        }
+      })
+      .catch(() => {});
+    loadData();
+    const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => { loadData(); });
+    const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => { loadData(); });
+    return () => {
+      try { wsLikes?.close(); } catch {}
+      try { wsViews?.close(); } catch {}
+    };
+  }, []);
+
+
 
   // Confirmer la suppression d'une carte
   const confirmAndDismiss = async (profileId: string) => {
