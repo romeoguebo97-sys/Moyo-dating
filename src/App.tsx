@@ -55,10 +55,7 @@ const getModerationMessage = (type: "insult" | "scam" | "sexual"): string => {
 
 // Fond messages style Moyo — compatible tous navigateurs mobiles
 const MSG_BG_STYLE: React.CSSProperties = {
-  backgroundImage: "url('/msg-bg.png')",
-  backgroundRepeat: "repeat-y",
-  backgroundSize: "100% auto",
-  backgroundPosition: "center top",
+  position: "relative",
 };
 const FREE_LIMITS = { likes: 5, messages: 3 };
 
@@ -3451,8 +3448,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       )}
 
       {/* Zone messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: 10, ...MSG_BG_STYLE }}>
-        {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour ! 👋</div>}
+      <div style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
+        <img src="/msg-bg.png" alt="" style={{ position: "fixed", top: 48, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, height: "calc(100% - 48px - 65px)", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+          {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
           const isImg = isImage(m.content);
@@ -3479,7 +3478,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
             </div>
           );
         })}
-        <div ref={bottomRef} />
+          <div ref={bottomRef} />
+        </div>
       </div>
 
       {/* Barre envoi */}
