@@ -2432,7 +2432,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500 }}>{p.religion}</span>}
   </div>
   {p.bio && <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 6, marginBottom: 0 }}>{p.bio}</p>}
-</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => { const prev = Math.max(0, current - 1); setCurrent(prev); if (profiles[prev]) recordView(profiles[prev].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => { const next = Math.min(profiles.length - 1, current + 1); setCurrent(next); if (profiles[next]) recordView(profiles[next].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1} / {profiles.length}</p></>}{viewedProfile && (
+</div></div><div style={{ display: "flex", justifyContent: "center", gap: 14, alignItems: "center", marginBottom: 10 }}><div onClick={() => { const prev = Math.max(0, current - 1); setCurrent(prev); if (profiles[prev]) recordView(profiles[prev].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 68, height: 68, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => { const next = Math.min(profiles.length - 1, current + 1); setCurrent(next); if (profiles[next]) recordView(profiles[next].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><p style={{ textAlign: "center", fontSize: "0.72rem", color: "#ccc" }}>{current + 1}</p></>}{viewedProfile && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 240, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
@@ -3260,6 +3260,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [previewImg, setPreviewImg] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [showPartnerProfile, setShowPartnerProfile] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
   const openRef = useRef<Match | null>(null);
@@ -3360,8 +3363,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     }
     if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
     if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
-    const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: text, is_read: false });
-    if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); }
+    const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content.substring(0, 60)}]\n` : "";
+    const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: prefix + text, is_read: false });
+    if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); setReplyTo(null); }
   };
 
   const sendImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -3463,10 +3467,20 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           const isMine = m.sender_id === auth.userId;
           const isImg = isImage(m.content);
           const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
+          const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
+            longPressTimer.current = setTimeout(() => {
+              const touch = "touches" in e ? e.touches[0] : (e as React.MouseEvent);
+              setContextMenu({ msg: m, x: touch.clientX, y: touch.clientY });
+            }, 500);
+          };
+          const handleLongPressEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
           return (
             <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}>
               {isImg ? (
-                <div style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}>
+                <div
+                  style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
+                  onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
+                >
                   <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
                   <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: isMine ? "flex-end" : "flex-start" }}>
                     <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
@@ -3474,7 +3488,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   </div>
                 </div>
               ) : (
-                <div style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", maxWidth: "72%", fontSize: "0.88rem", lineHeight: 1.5 }}>
+                <div
+                  style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", maxWidth: "72%", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none" }}
+                  onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
+                >
+                  {replyTo?.id === m.id && <div style={{ fontSize: "0.72rem", opacity: 0.6, borderLeft: `3px solid ${isMine ? "rgba(255,255,255,0.6)" : G.rouge}`, paddingLeft: 6, marginBottom: 4 }}>↩ Citation</div>}
                   <span>{m.content}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
                     <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
@@ -3489,22 +3507,77 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         </div>
       </div>
 
-      {/* Barre envoi */}
-      <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
-        {/* Bouton image - Premium */}
-        <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
-        <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
-          style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-          {imgLoading ? <span style={{ fontSize: "0.8rem" }}>⏳</span> : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-          )}
+      {/* Barre d'envoi */}
+      <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", gap: 0, flexShrink: 0 }}>
+        {/* Bandeau répondre */}
+        {replyTo && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px 6px 12px", background: "rgba(192,57,43,0.06)", borderRadius: 10, marginBottom: 6, borderLeft: `3px solid ${G.rouge}` }}>
+            <div style={{ flex: 1, fontSize: "0.78rem", color: "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              ↩ <span style={{ fontWeight: 600, color: G.rouge }}>{replyTo.sender_id === auth.userId ? "Toi" : open?.partner?.name}</span> : {replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content}
+            </div>
+            <div onClick={() => setReplyTo(null)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1rem", lineHeight: 1, flexShrink: 0 }}>✕</div>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Bouton image - Premium */}
+          <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
+          <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
+            style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            {imgLoading ? <span style={{ fontSize: "0.8rem" }}>⏳</span> : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            )}
+          </div>
+          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Écris un message..." style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "16px", outline: "none", background: G.creme }} />
+          <div onClick={send} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
         </div>
-        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Écris un message..." style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "16px", outline: "none", background: G.creme }} />
-        <div onClick={send} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
       </div>
+
+      {/* Menu contextuel appui long */}
+      {contextMenu && (
+        <div onClick={() => setContextMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 600 }}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: "fixed",
+              top: Math.min(contextMenu.y, window.innerHeight - 130),
+              left: Math.min(contextMenu.x, window.innerWidth - 180),
+              background: G.blanc,
+              borderRadius: 14,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              overflow: "hidden",
+              minWidth: 170,
+              zIndex: 601,
+            }}
+          >
+            <div
+              onClick={() => { setReplyTo(contextMenu.msg); setContextMenu(null); }}
+              style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+              <span style={{ fontSize: "0.88rem", fontWeight: 600, color: G.brun }}>Répondre</span>
+            </div>
+            {contextMenu.msg.sender_id === auth.userId && (
+              <div
+                onClick={async () => {
+                  const msgId = contextMenu.msg.id;
+                  setContextMenu(null);
+                  if (!msgId) return;
+                  await sb.delete(auth.token, "messages", `?id=eq.${msgId}`);
+                  setMsgs(prev => prev.filter(m => m.id !== msgId));
+                  setToast({ msg: "Message supprimé", type: "success" });
+                }}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", cursor: "pointer" }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c" }}>Supprimer</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal aperçu image */}
       {previewImg && (
@@ -3570,7 +3643,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-              <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, fontSize: "0.92rem", color: (c.unreadCount || 0) > 0 ? "#1a1a1a" : G.brun }}>{c.partner?.name}</div>
+              <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, fontSize: "0.92rem", color: (c.unreadCount || 0) > 0 ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>{c.partner?.name}</div>
               {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
             </div>
             <div style={{ fontSize: "0.82rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#555", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
