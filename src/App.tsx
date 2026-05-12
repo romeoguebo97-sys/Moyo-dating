@@ -543,6 +543,16 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const isMobile = useWindowWidth() < 768;
   const toggleSection = (s: string) => setOpenMenuSection(prev => prev === s ? null : s);
 
+  // Détecter le hash URL pour ouvrir automatiquement une section du menu
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (hash === "confidentialite" || hash === "mentions") {
+      setShowLandingMenu(true);
+      setOpenMenuSection(hash);
+      window.location.hash = "";
+    }
+  }, []);
+
   const landingMenuSections = [
     { id: "conseils", title: "Conseils pour bien rencontrer", emoji: "💡", items: [
       { icon: "camera", titre: "Mets une vraie photo", desc: "Les profils avec une photo reçoivent 5x plus de messages. Utilise une photo récente et souriante." },
@@ -1741,9 +1751,9 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       </p>
       <p style={{ textAlign: "center", marginTop: 14, fontSize: "0.7rem", color: "#aaa", lineHeight: 1.6, padding: "0 12px" }}>
         En continuant, vous acceptez nos{" "}
-        <a href="https://moyo-congo.com" onClick={e => { e.preventDefault(); onNav("landing"); }} style={{ color: "#888", textDecoration: "underline", cursor: "pointer" }}>Conditions d'utilisation</a>
+        <span onClick={() => { onNav("landing"); setTimeout(() => window.location.hash = "confidentialite", 100); }} style={{ color: "#888", textDecoration: "underline", cursor: "pointer" }}>Conditions d'utilisation</span>
         {" "}et confirmez avoir lu notre{" "}
-        <a href="https://moyo-congo.com" onClick={e => { e.preventDefault(); onNav("landing"); }} style={{ color: "#888", textDecoration: "underline", cursor: "pointer" }}>Politique de confidentialité</a>.
+        <span onClick={() => { onNav("landing"); setTimeout(() => window.location.hash = "confidentialite", 100); }} style={{ color: "#888", textDecoration: "underline", cursor: "pointer" }}>Politique de confidentialité</span>.
       </p>
     </AuthLayout>
   );
