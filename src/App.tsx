@@ -3252,6 +3252,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [showDeleteConv, setShowDeleteConv] = useState(false);
   const [imgLoading, setImgLoading] = useState(false);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
   const openRef = useRef<Match | null>(null);
@@ -3387,6 +3388,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
   if (open) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: 100, maxWidth: 500, margin: "0 auto" }}>
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {/* Header fixe */}
       <div style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
         {/* Bouton retour cercle rouge */}
