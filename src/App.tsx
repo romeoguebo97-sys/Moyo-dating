@@ -3555,7 +3555,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           const reactions = m.reactions || {};
           const reactionEntries = Object.entries(reactions).filter(([, users]) => users.length > 0);
           const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
+            // Empêcher la sélection de texte native au long press
+            if (window.getSelection) window.getSelection()?.removeAllRanges();
             longPressTimer.current = setTimeout(() => {
+              if (window.getSelection) window.getSelection()?.removeAllRanges();
               const touch = "touches" in e ? e.touches[0] : (e as React.MouseEvent);
               setContextMenu({ msg: m, x: touch.clientX, y: touch.clientY });
             }, 500);
@@ -3582,7 +3585,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   </div>
                   <div style={{ position: "relative", maxWidth: "72%" }}>
                     <div
-                      style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none" }}
+                      style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
                       {(() => {
@@ -3671,7 +3674,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       {/* Menu contextuel style WhatsApp */}
       {contextMenu && (
         <div onClick={() => setContextMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: "88%", maxWidth: 340 }}>
+        <div onClick={e => e.stopPropagation()} style={{ width: "88%", maxWidth: 340, userSelect: "none", WebkitUserSelect: "none" }}>
             {/* Barre emojis réactions */}
             <div style={{ background: G.blanc, borderRadius: 50, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-around", marginBottom: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
               {["👍","❤️","😂","😮","😢","🙏"].map(emoji => {
@@ -3711,10 +3714,20 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                 if (!msgId) return;
                 await sb.delete(auth.token, "messages", `?id=eq.${msgId}`);
                 setMsgs(prev => prev.filter(msg => msg.id !== msgId));
-                setToast({ msg: "Message supprimé", type: "success" });
+                setToast({ msg: "Message supprimé pour tout le monde", type: "success" });
+              }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#e74c3c" }}>Supprimer pour tous</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div onClick={() => {
+                const msgId = contextMenu.msg.id;
+                setContextMenu(null);
+                if (!msgId) return;
+                setMsgs(prev => prev.filter(msg => msg.id !== msgId));
+                setToast({ msg: "Message supprimé pour vous", type: "success" });
               }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer" }}>
-                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#e74c3c" }}>Supprimer</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#888" }}>Supprimer pour moi</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
             </div>
             {/* Annuler */}
