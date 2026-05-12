@@ -543,16 +543,6 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const isMobile = useWindowWidth() < 768;
   const toggleSection = (s: string) => setOpenMenuSection(prev => prev === s ? null : s);
 
-  // Détecter le hash URL pour ouvrir automatiquement une section du menu
-  useEffect(() => {
-    const hash = window.location.hash.replace("#", "");
-    if (hash === "confidentialite" || hash === "mentions") {
-      setShowLandingMenu(true);
-      setOpenMenuSection(hash);
-      window.location.hash = "";
-    }
-  }, []);
-
   const landingMenuSections = [
     { id: "conseils", title: "Conseils pour bien rencontrer", emoji: "💡", items: [
       { icon: "camera", titre: "Mets une vraie photo", desc: "Les profils avec une photo reçoivent 5x plus de messages. Utilise une photo récente et souriante." },
@@ -588,7 +578,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment activer le mode sombre ?", desc: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
       { icon: "Q", titre: "Comment rendre mon profil invisible ?", desc: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
       { icon: "Q", titre: "Pourquoi je ne vois pas mon profil dans Découvrir ?", desc: "Votre profil doit être complet jusqu'à la dernière étape de l'inscription pour apparaître dans Découvrir. Vérifiez aussi que votre profil est bien visible dans les paramètres." },
-      { icon: "Q", titre: "À quoi servent les onglets Likes et Vus ?", desc: "Deux onglets séparés : Likes (personnes qui vous ont liké) et Vus (personnes qui ont visité votre profil). Premium requis pour voir les cartes. Vous pouvez retirer une carte sans affecter les matchs." },
+      { icon: "Q", titre: "À quoi servent les onglets Likes et Vus ?", desc: "Deux onglets séparés : Likes (personnes qui vous ont liké) et Vus (personnes qui ont visité votre profil). Tout le monde voit le compteur. Premium requis pour voir les cartes et l'identité des personnes. Vous pouvez retirer une carte sans affecter les matchs." },
       { icon: "Q", titre: "Qui apparaît dans mes Vus ?", desc: "Uniquement les membres Premium qui ont consulté votre profil. Les membres gratuits ne génèrent pas de vues et n'apparaissent pas dans votre liste Vus." },
       { icon: "Q", titre: "Si je unlike quelqu'un, que se passe-t-il ?", desc: "Le like disparait des deux côtés instantanément. Si vous aviez un match, la conversation et tous les messages sont supprimés." },
     ]},
@@ -1766,9 +1756,162 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 }
 
 
+// ── FAQ pour le bot ──
+const BOT_FAQ = [
+  { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: "Le Premium coûte 3 500 FCFA/mois. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN MoMo ou Airtel MoMo. Activation sous 24h." },
+  { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
+  { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: "Compte gratuit : 5 likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément." },
+  { q: ["message", "envoyer", "écrire", "conversation"], r: "Compte gratuit : 3 messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message." },
+  { q: ["photo", "image", "profil", "modifier"], r: "Allez dans l'onglet Profil → Modifier ma photo. Un outil de recadrage s'ouvre pour cadrer votre photo parfaitement." },
+  { q: ["visible", "invisible", "disparaître", "cacher"], r: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
+  { q: ["badge", "vérifié", "vérification", "bleu"], r: "La vérification est gratuite. Allez dans Profil → Faire vérifier mon compte → WhatsApp. Réponse sous 24h." },
+  { q: ["bloquer", "signaler", "harcèlement", "problème"], r: "Appuyez sur les 3 traits d'un profil → Bloquer ou Signaler. Les profils bloqués sont gérables depuis votre Liste noire dans le Profil." },
+  { q: ["supprimer", "compte", "désinscrire"], r: "Dans Profil → Supprimer mon compte. Cette action est définitive et irréversible." },
+  { q: ["inscription", "créer", "inscrire", "rejoindre"], r: "L'inscription est gratuite. Cliquez sur Créer mon compte gratuit, renseignez votre email et mot de passe, ajoutez une photo et complétez votre profil." },
+  { q: ["vus", "visiteurs", "qui a vu"], r: "L'onglet Vus affiche le nombre de personnes qui ont visité votre profil. Le compteur est visible pour tous. Premium requis pour voir l'identité des visiteurs. Seuls les membres Premium génèrent des vues." },
+  { q: ["sombre", "thème", "dark", "nuit"], r: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
+  { q: ["annuler", "unmatch", "fin"], r: "Dans Matchs → 3 traits → Annuler le match. La conversation et les messages sont supprimés. L'autre personne n'est pas notifiée." },
+];
+
+function getBotResponse(input: string): string {
+  const lower = input.toLowerCase();
+  for (const entry of BOT_FAQ) {
+    if (entry.q.some(k => lower.includes(k))) return entry.r;
+  }
+  return "Je n'ai pas trouvé de réponse précise à ta question. Tu peux contacter notre équipe sur WhatsApp au +33 07 53 35 64 71 ou via notre page Facebook.";
+}
+
+function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
+  const [mode, setMode] = useState<"home" | "chat" | "report">("home");
+  const [msgs, setMsgs] = useState<{ from: "bot" | "user"; text: string }[]>([
+    { from: "bot", text: `Bonjour ${auth.name || ""} ! Je suis l'assistant Moyo. Comment puis-je t'aider ?` }
+  ]);
+  const [input, setInput] = useState("");
+  const [reportText, setReportText] = useState("");
+  const [reportSent, setReportSent] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  const sendMsg = () => {
+    if (!input.trim()) return;
+    const userMsg = input.trim();
+    setInput("");
+    setMsgs(prev => [...prev, { from: "user", text: userMsg }]);
+    setTimeout(() => {
+      setMsgs(prev => [...prev, { from: "bot", text: getBotResponse(userMsg) }]);
+    }, 600);
+  };
+
+  const sendReport = async () => {
+    if (!reportText.trim()) return;
+    try {
+      await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: auth.userId, reason: `[BOT SIGNALEMENT] ${reportText}` });
+    } catch {}
+    setReportSent(true);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9998, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ background: `linear-gradient(135deg,${G.vert},#0D4020)`, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/>
+              <path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/>
+              <circle cx="9" cy="11" r="1" fill="white" stroke="none"/>
+              <circle cx="15" cy="11" r="1" fill="white" stroke="none"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.blanc }}>Assistant Moyo</div>
+            <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.75)" }}>Répond instantanément</div>
+          </div>
+          <div onClick={onClose} style={{ cursor: "pointer", opacity: 0.7 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+        </div>
+
+        {/* Home */}
+        {mode === "home" && (
+          <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <p style={{ fontSize: "0.85rem", color: "#555", marginBottom: 4 }}>Que puis-je faire pour toi ?</p>
+            <div onClick={() => setMode("chat")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px", background: "#F8F8F8", borderRadius: 14, cursor: "pointer", border: `1px solid ${G.gris}` }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg,${G.vert},#0D4020)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>Besoin d'aide</div>
+                <div style={{ fontSize: "0.75rem", color: "#888" }}>Pose ta question, je réponds instantanément</div>
+              </div>
+            </div>
+            <div onClick={() => setMode("report")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px", background: "#F8F8F8", borderRadius: 14, cursor: "pointer", border: `1px solid ${G.gris}` }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>Signaler un problème</div>
+                <div style={{ fontSize: "0.75rem", color: "#888" }}>Comportement abusif, arnaque, harcèlement</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Chat */}
+        {mode === "chat" && (
+          <>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {msgs.map((m, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start" }}>
+                  <div style={{ maxWidth: "78%", padding: "10px 14px", borderRadius: m.from === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: m.from === "user" ? G.vert : "#F2F2F2", color: m.from === "user" ? G.blanc : "#1a1a1a", fontSize: "0.83rem", lineHeight: 1.5 }}>
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+              <div ref={bottomRef} />
+            </div>
+            <div style={{ padding: "10px 12px", borderTop: `1px solid ${G.gris}`, display: "flex", gap: 8 }}>
+              <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMsg()} placeholder="Pose ta question..." style={{ flex: 1, padding: "10px 14px", borderRadius: 50, border: `1px solid ${G.gris}`, fontSize: "0.85rem", outline: "none" }} />
+              <div onClick={sendMsg} style={{ width: 40, height: 40, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Report */}
+        {mode === "report" && (
+          <div style={{ padding: "20px 16px" }}>
+            {reportSent ? (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div style={{ fontWeight: 700, color: "#1a1a1a", marginBottom: 6 }}>Signalement envoyé</div>
+                <div style={{ fontSize: "0.82rem", color: "#555" }}>Notre équipe traite votre signalement sous 24h.</div>
+              </div>
+            ) : (
+              <>
+                <p style={{ fontSize: "0.85rem", color: "#555", marginBottom: 14 }}>Décris le problème rencontré. Notre équipe intervient sous 24h.</p>
+                <textarea value={reportText} onChange={e => setReportText(e.target.value)} placeholder="Ex: un utilisateur m'a envoyé des messages harcelants..." style={{ width: "100%", minHeight: 100, padding: "12px", borderRadius: 12, border: `1px solid ${G.gris}`, fontSize: "0.85rem", resize: "none", outline: "none", marginBottom: 12 }} />
+                <div style={{ display: "flex", gap: 10 }}>
+                  <Btn variant="ghost" onClick={() => setMode("home")} style={{ flex: 1 }}>Retour</Btn>
+                  <Btn variant="danger" onClick={sendReport} style={{ flex: 2 }} disabled={!reportText.trim()}>Envoyer le signalement</Btn>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
+  const [showBot, setShowBot] = useState(false);
 
   const tabs = [
     {
@@ -1838,10 +1981,23 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
         {auth.isAdmin && <div onClick={() => setTab("admin")} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>⚙️ Admin</div>}
-        <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.blanc, background: G.rouge, borderRadius: 50, padding: "6px 16px", cursor: "pointer", letterSpacing: "0.02em" }}>Guide</div>
+        <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.blanc, background: G.rouge, borderRadius: 50, padding: "6px 14px", cursor: "pointer", letterSpacing: "0.02em" }}>Guide</div>
+        <div onClick={() => setShowBot(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(26,92,58,0.35)", flexShrink: 0 }} title="Assistant Moyo">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/>
+            <path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/>
+            <line x1="8" y1="21" x2="8" y2="19"/>
+            <line x1="16" y1="21" x2="16" y2="19"/>
+            <circle cx="9" cy="11" r="1" fill="white"/>
+            <circle cx="15" cy="11" r="1" fill="white"/>
+          </svg>
+        </div>
       </div>
     </div>
     <div style={{ flex: 1, overflowY: "auto", paddingBottom: 75, paddingTop: 48 }}>{children}</div>
+
+    {/* Bot Widget */}
+    {showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
 
     {/* ── NAVBAR BAS STYLE TINDER (6 onglets) ── */}
     <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "6px 4px 14px", zIndex: 50 }}>
@@ -2479,6 +2635,7 @@ function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClos
 
 function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void }) {
   const [count, setCount] = useState(0);
+  const [viewsCount, setViewsCount] = useState(0);
   const [likers, setLikers] = useState<Profile[]>([]);
   const [visitors, setVisitors] = useState<Profile[]>([]);
   const [dismissedIds, setDismissedIds] = useState(new Set<string>());
@@ -2520,19 +2677,21 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       console.error("LikesPage loadData likes error:", e);
     }
 
-    // 3. Charger les visiteurs
-    if (isPrem) {
-      try {
-        const views = await sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id&order=created_at.desc&limit=50`);
-        if (Array.isArray(views) && views.length > 0) {
-          const vIds = [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).join(",");
+    // 3. Charger les visiteurs — compteur brut même pour non-premium
+    try {
+      const views = await sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id&order=created_at.desc&limit=50`);
+      if (Array.isArray(views)) {
+        const uniqueViewers = [...new Set(views.map(v => v.viewer_id))];
+        setViewsCount(uniqueViewers.length); // compteur brut pour le bandeau
+        if (isPrem && uniqueViewers.length > 0) {
+          const vIds = uniqueViewers.filter(id => !dIds.has(id)).join(",");
           if (vIds) {
             const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified`);
             setVisitors(Array.isArray(vProfiles) ? vProfiles : []);
           }
         }
-      } catch {}
-    }
+      }
+    } catch {}
 
     setLoading(false);
   };
@@ -2621,16 +2780,21 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>
             {mode === "likes"
               ? (count > 0 ? `${count} personne${count > 1 ? "s ont" : " a"} liké ton profil` : "Personne n'a encore liké ton profil")
-              : (visitors.length > 0 ? `${visitors.length} personne${visitors.length > 1 ? "s ont" : " a"} visité ton profil` : "Personne n'a encore visité ton profil")
+              : (viewsCount > 0 ? `${viewsCount} personne${viewsCount > 1 ? "s ont" : " a"} visité ton profil` : "Personne n'a encore visité ton profil")
             }
           </div>
           <div style={{ fontSize: "0.78rem", opacity: 0.85 }}>
             {isPremiumReal ? "Accès Premium activé" : "Passe Premium pour découvrir qui"}
           </div>
         </div>
-        {!isPremiumReal && count > 0 && mode === "likes" && (
+        {!isPremiumReal && mode === "likes" && count > 0 && (
           <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1rem" }}>
             {count > 9 ? "9+" : count}
+          </div>
+        )}
+        {!isPremiumReal && mode === "visitors" && viewsCount > 0 && (
+          <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1rem" }}>
+            {viewsCount > 9 ? "9+" : viewsCount}
           </div>
         )}
       </div>
@@ -3418,13 +3582,21 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
 
   const handleConfirm = () => {
     const img = imgRef2.current; if (!img || !img.complete) return;
-    // Export RECTANGULAIRE sans clip circulaire — le cercle est juste pour l'aperçu UI
+    // Export haute résolution (1200x1200) — le ratio scale/offset est recalculé
+    const EXPORT_SIZE = 1200;
+    const ratio = EXPORT_SIZE / SIZE;
     const exportCanvas = document.createElement("canvas");
-    exportCanvas.width = SIZE;
-    exportCanvas.height = SIZE;
+    exportCanvas.width = EXPORT_SIZE;
+    exportCanvas.height = EXPORT_SIZE;
     const ctx = exportCanvas.getContext("2d"); if (!ctx) return;
-    ctx.drawImage(img, offset.x, offset.y, img.naturalWidth * scale, img.naturalHeight * scale);
-    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.92);
+    ctx.drawImage(
+      img,
+      offset.x * ratio,
+      offset.y * ratio,
+      img.naturalWidth * scale * ratio,
+      img.naturalHeight * scale * ratio
+    );
+    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.95);
   };
 
   return (
@@ -3685,7 +3857,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
 
             {/* Liste noire — descend sur la vague */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1, transform: "translateY(18px)" }} onClick={() => setShowBlocked(true)}>
-              <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#e0e0e0", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.2)", position: "relative" }}>
+              <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.2)", position: "relative" }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                   <circle cx="12" cy="7" r="4"/>
