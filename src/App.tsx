@@ -55,12 +55,10 @@ const getModerationMessage = (type: "insult" | "scam" | "sexual"): string => {
 
 // Fond messages style Moyo — compatible tous navigateurs mobiles
 const MSG_BG_STYLE: React.CSSProperties = {
-  backgroundColor: "#F5F0EB",
-  backgroundImage: [
-    "radial-gradient(circle at 20% 30%, rgba(192,57,43,0.06) 0%, transparent 50%)",
-    "radial-gradient(circle at 80% 70%, rgba(212,168,67,0.06) 0%, transparent 50%)",
-    "radial-gradient(circle at 50% 50%, rgba(192,57,43,0.03) 0%, transparent 70%)",
-  ].join(", "),
+  backgroundImage: "url('/msg-bg.png')",
+  backgroundRepeat: "repeat-y",
+  backgroundSize: "100% auto",
+  backgroundPosition: "center top",
 };
 const FREE_LIMITS = { likes: 5, messages: 3 };
 
