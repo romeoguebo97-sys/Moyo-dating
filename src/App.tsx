@@ -27,16 +27,22 @@ const hasContactInfo = (text: string): boolean => CONTACT_PATTERNS.some(p => p.t
 
 // ── MODÉRATION : insultes, arnaques, contenu interdit ──
 const MODERATION_RULES: { pattern: RegExp; type: "insult" | "scam" | "sexual" }[] = [
-  // Insultes français
-  { pattern: /(putain|pute|salope|connard|connasse|fdp|fils.?de.?pute|bâtard|batard|va.?te.?faire|enculé|encule|merde|ta.?gueule|ferme.?la|idiot|idiote|imbécile|imbecile|abruti|abrutie|débile|debile|crétin|cretin|nègre|negre|singe|bamboula)/i, type: "insult" },
-  // Insultes lingala / congo
-  { pattern: /(punda|malewa|mbwa|boloko|bandeko.?ya.?mabe|wumela|zoba|lokuta)/i, type: "insult" },
+  // Insultes français — liste étendue
+  { pattern: /(putain|putin|pute|salope|connard|connasse|con\b|fdp|fils.?de.?pute|bâtard|batard|va.?te.?faire|enculé|encule|merde|ta.?gueule|ferme.?ta.?gueule|ferme.?la|idiot|idiote|imbécile|imbecile|abruti|abrutie|débile|debile|crétin|cretin|nègre|negre|singe|bamboula|tafiole|tapette|mongol|nique.?ta.?mère|ntm\b|tg\b|sale.?chien|sale.?con|sale.?pute|bouffon|clochard|porc|sale.?race|sale.?noir|sale.?blanc|sale.?arabe|sale.?africain|sale.?congolais|sale.?étranger|retourne.?dans.?ton.?pays|nigga)/i, type: "insult" },
+  // Menaces
+  { pattern: /(je.?vais.?te.?tuer|je.?vais.?te.?frapper|je.?vais.?te.?retrouver|je.?vais.?venir.?chez.?toi|je.?vais.?te.?violer|suicide.?toi|crève\b|meurs\b)/i, type: "insult" },
+  // Insultes lingala / congo — liste étendue
+  { pattern: /(likata|libolo|lisoko|lissoko|punda|malewa|mbwa|boloko|bandeko.?ya.?mabe|wumela|zoba|lokuta)/i, type: "insult" },
   // Arnaques classiques
-  { pattern: /(envoie.?moi|envoi.?moi|send.?me|vire.?moi|transfert|western.?union|moneygram|recharge.?(moi|mon)|carte.?cadeau|gift.?card|bitcoin|crypto|investiss|placement|bénéfice|benefice|profit.?garanti|doubl.{1,5}argent|multipli.{1,5}argent)/i, type: "scam" },
-  { pattern: /(j.?ai.?besoin.?d.?argent|problème.?financier|probleme.?financier|urgence.?financière|urgence.?financiere|aide.?financière|aide.?financiere|prêt.?argent|pret.?argent|dépanne.?moi|depanne.?moi|avance.?moi)/i, type: "scam" },
+  { pattern: /(envoie.?moi|envoi.?moi|send.?me|vire.?moi|transfert|western.?union|moneygram|recharge.?(moi|mon)|carte.?cadeau|gift.?card|bitcoin|crypto.?facile|investiss(ement)?.?rapide|investissement.?rapide|placement|bénéfice|benefice|profit.?garanti|doubl.{1,5}argent|multipli.{1,5}argent|paypal.?urgent|clique.?ici|gagne.?de.?l.?argent|casino|paris.?sportif)/i, type: "scam" },
+  { pattern: /(j.?ai.?besoin.?d.?argent|problème.?financier|probleme.?financier|urgence.?financière|urgence.?financiere|aide.?financière|aide.?financiere|prêt.?argent|pret.?argent|dépanne.?moi|depanne.?moi|avance.?moi|envoie.?l.?argent)/i, type: "scam" },
   { pattern: /(héritage|heritage|succession|millions.?fcfa|millions.?cfa|millions.?euro|compte.?bloqué|compte.?bloque|ambassade|visa.?contre|billet.?bloqué|billet.?bloque)/i, type: "scam" },
-  // Contenu sexuel non sollicité
-  { pattern: /(envoie.?moi.?(ta|tes|une|des).?(photo|pic|nude|nue|nichon|fesse|cul|seins?)|photo.?(nue?|sexy|hot|intime|coquine?)|video.?(nue?|hot|intime))/i, type: "sexual" },
+  // Redirection vers autres plateformes (contournement)
+  { pattern: /(viens.?whatsapp|viens.?sur.?telegram|contacte.?moi.?sur.?telegram|écris.?moi.?sur.?whatsapp)/i, type: "scam" },
+  // Contenu sexuel non sollicité — liste étendue
+  { pattern: /(envoie.?moi.?(ta|tes|une|des).?(photo|pic|nude|nue|nichon|fesse|cul|seins?)|photo.?(nue?|sexy|hot|intime|coquine?)|video.?(nue?|hot|intime)|plan.?cul|viens.?dans.?mon.?lit|pipe\b|branlette|branler|sucer\b|chatte\b|bite\b|queue\b|grosse.?bite|nude\b|envoie.?tes.?seins|viens.?coucher)/i, type: "sexual" },
+  // Mots sexuels directs
+  { pattern: /\b(baise|baiser|nique\b|sexe\b)\b/i, type: "sexual" },
 ];
 
 const moderateMessage = (text: string): { blocked: boolean; type?: "insult" | "scam" | "sexual" } => {
@@ -356,6 +362,47 @@ function ErrorModal({ msg, onClose }: { msg: string; onClose: () => void }) {
         <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
         <p style={{ fontSize: "0.88rem", color: "#111", lineHeight: 1.6, marginBottom: 22, fontWeight: 500 }}>{msg}</p>
         <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>OK</Btn>
+      </div>
+    </div>
+  );
+}
+
+function ModerationModal({ type, onClose }: { type: "insult" | "scam" | "sexual"; onClose: () => void }) {
+  const config = {
+    insult: {
+      icon: "🚫",
+      text: "Ce message contient des termes irrespectueux. Sur MOYO, nous encourageons le respect et la bienveillance ❤️",
+    },
+    scam: {
+      icon: "⚠️",
+      text: "Ce message contient des éléments suspects (demande d'argent, arnaque). Ce comportement est interdit sur MOYO ❤️",
+    },
+    sexual: {
+      icon: "🔒",
+      text: "Ce message contient du contenu inapproprié. Sur MOYO, nous encourageons le respect et la bienveillance ❤️",
+    },
+  };
+  const { icon, text } = config[type];
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "fadeIn 0.2s ease" }}>
+      <div style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 24px 64px rgba(44,26,14,0.18)", overflow: "hidden", animation: "fadeUp 0.25s ease" }}>
+        <div style={{ background: "linear-gradient(135deg, #fff5f5, #ffe8e8)", padding: "24px 20px 16px" }}>
+          <div style={{ fontSize: "2rem", marginBottom: 10 }}>{icon}</div>
+          <div style={{ fontSize: "1rem", fontWeight: 800, color: G.rouge, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Avertissement
+          </div>
+        </div>
+        <div style={{ padding: "16px 24px 22px" }}>
+          <p style={{ fontSize: "0.84rem", color: "#555", lineHeight: 1.65, marginBottom: 20, fontWeight: 400 }}>
+            {text}
+          </p>
+          <button
+            onClick={onClose}
+            style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: G.blanc, border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.04em", boxShadow: "0 4px 14px rgba(192,57,43,0.3)" }}
+          >
+            OK, J'AI COMPRIS
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -3266,6 +3313,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [imgLoading, setImgLoading] = useState(false);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
+  const [moderationAlert, setModerationAlert] = useState<"insult" | "scam" | "sexual" | null>(null);
   const [showPartnerProfile, setShowPartnerProfile] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -3363,7 +3411,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     // Modération : insultes, arnaques, contenu interdit
     const mod = moderateMessage(text);
     if (mod.blocked && mod.type) {
-      setToast({ msg: getModerationMessage(mod.type), type: "error" });
+      setModerationAlert(mod.type);
       // Signaler automatiquement à l'admin
       try { await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: auth.userId, reason: `[AUTO-MOD ${mod.type.toUpperCase()}] ${text.substring(0, 100)}` }); } catch {}
       return;
@@ -3407,6 +3455,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   if (open) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: 100, maxWidth: 500, margin: "0 auto" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Header fixe */}
       <div style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
         {/* Bouton retour cercle rouge */}
