@@ -3304,8 +3304,14 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   const onMouseUp = () => setDragging(false);
 
   const handleConfirm = () => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    canvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.92);
+    const img = imgRef2.current; if (!img || !img.complete) return;
+    // Export RECTANGULAIRE sans clip circulaire — le cercle est juste pour l'aperçu UI
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = SIZE;
+    exportCanvas.height = SIZE;
+    const ctx = exportCanvas.getContext("2d"); if (!ctx) return;
+    ctx.drawImage(img, offset.x, offset.y, img.naturalWidth * scale, img.naturalHeight * scale);
+    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.92);
   };
 
   return (
