@@ -1391,7 +1391,13 @@ function About({ onBack }: { onBack: () => void }) {
 
         <div style={{ textAlign: "center", color: "#555" }}>
           <p style={{ fontSize: "0.75rem" }}>© 2026 Moyo Congo · Tous droits réservés</p>
-          <p style={{ fontSize: "0.72rem", marginTop: 4, color: "#555" }}>Confidentialité & CGU · Mentions légales · Contact</p>
+          <p style={{ fontSize: "0.72rem", marginTop: 4, color: "#555" }}>
+            <span onClick={() => { setShowLandingMenu(true); setOpenMenuSection("confidentialite"); }} style={{ cursor: "pointer", textDecoration: "underline" }}>Confidentialité & CGU</span>
+            {" · "}
+            <span onClick={() => { setShowLandingMenu(true); setOpenMenuSection("mentions"); }} style={{ cursor: "pointer", textDecoration: "underline" }}>Mentions légales</span>
+            {" · "}
+            <span onClick={() => onNav("about")} style={{ cursor: "pointer", textDecoration: "underline" }}>Contact</span>
+          </p>
         </div>
       </div>
 
@@ -1751,9 +1757,9 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       </p>
       <p style={{ textAlign: "center", marginTop: 14, fontSize: "0.7rem", color: "#aaa", lineHeight: 1.6, padding: "0 12px" }}>
         En continuant, vous acceptez nos{" "}
-        <span onClick={() => { onNav("landing"); setTimeout(() => window.location.hash = "confidentialite", 100); }} style={{ color: "#888", textDecoration: "underline", cursor: "pointer" }}>Conditions d'utilisation</span>
+        <a href="https://www.moyo-congo.com/#confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: "#888", textDecoration: "underline" }}>Conditions d'utilisation</a>
         {" "}et confirmez avoir lu notre{" "}
-        <span onClick={() => { onNav("landing"); setTimeout(() => window.location.hash = "confidentialite", 100); }} style={{ color: "#888", textDecoration: "underline", cursor: "pointer" }}>Politique de confidentialité</span>.
+        <a href="https://www.moyo-congo.com/#confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: "#888", textDecoration: "underline" }}>Politique de confidentialité</a>.
       </p>
     </AuthLayout>
   );
