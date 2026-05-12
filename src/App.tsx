@@ -1392,11 +1392,11 @@ function About({ onBack }: { onBack: () => void }) {
         <div style={{ textAlign: "center", color: "#555" }}>
           <p style={{ fontSize: "0.75rem" }}>© 2026 Moyo Congo · Tous droits réservés</p>
           <p style={{ fontSize: "0.72rem", marginTop: 4, color: "#555" }}>
-            <span onClick={() => { setShowLandingMenu(true); setOpenMenuSection("confidentialite"); }} style={{ cursor: "pointer", textDecoration: "underline" }}>Confidentialité & CGU</span>
+            <a href="https://www.moyo-congo.com/#confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: "#555", textDecoration: "underline" }}>Confidentialité & CGU</a>
             {" · "}
-            <span onClick={() => { setShowLandingMenu(true); setOpenMenuSection("mentions"); }} style={{ cursor: "pointer", textDecoration: "underline" }}>Mentions légales</span>
+            <a href="https://www.moyo-congo.com/#confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: "#555", textDecoration: "underline" }}>Mentions légales</a>
             {" · "}
-            <span onClick={() => onNav("about")} style={{ cursor: "pointer", textDecoration: "underline" }}>Contact</span>
+            <span onClick={() => onBack()} style={{ cursor: "pointer", textDecoration: "underline" }}>Contact</span>
           </p>
         </div>
       </div>
