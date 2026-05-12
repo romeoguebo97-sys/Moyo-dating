@@ -3414,11 +3414,18 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
         {/* Bouton cadeau - offrir Premium : visible UNIQUEMENT aux utilisateurs Premium */}
         {auth.isPremium && !open.partner?.is_premium && (
-          <div onClick={() => setShowGift(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, opacity: 0.85 }} title="Offrir Premium">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          <div onClick={() => setShowGift(true)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Offrir Premium">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
+              <path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+            </svg>
           </div>
         )}
-        <div onClick={() => setShowDeleteConv(true)} style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, color: "#e74c3c", fontSize: "1rem", opacity: 0.7 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
+        <div onClick={() => setShowDeleteConv(true)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(180,60,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Supprimer la conversation">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </div>
       </div>
 
       {/* Modal Offrir Premium */}
@@ -3436,7 +3443,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
             <div style={{ display: "flex", gap: 10 }}>
               <Btn variant="ghost" onClick={() => setShowGift(false)} style={{ flex: 1 }}>Annuler</Btn>
               <a
-                href={`https://wa.me/33753356471?text=Bonjour%2C%20je%20souhaite%20offrir%201%20mois%20de%20Premium%20%C3%A0%20${encodeURIComponent(open.partner?.name || "")}%20sur%20Moyo.%20Mon%20email%20%3A%20${encodeURIComponent(auth.email)}`}
+                href={`https://wa.me/33753356471?text=Bonjour%2C%20je%20souhaite%20offrir%201%20mois%20de%20Premium%20%C3%A0%20${encodeURIComponent(open.partner?.name || "")}%20(${encodeURIComponent(open.partner?.age + " ans")}%2C%20${encodeURIComponent(open.partner?.city || "")})%20sur%20Moyo.%20ID%20du%20profil%20%3A%20${encodeURIComponent(open.partner?.id || "")}%20%7C%20Mon%20email%20%3A%20${encodeURIComponent(auth.email)}`}
                 target="_blank" rel="noopener noreferrer" style={{ flex: 1, textDecoration: "none" }}
                 onClick={() => setShowGift(false)}
               >
