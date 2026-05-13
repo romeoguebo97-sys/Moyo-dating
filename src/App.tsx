@@ -793,6 +793,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const svgFb = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>;
   const svgIg = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>;
   const svgTk = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.75a4.85 4.85 0 01-1.01-.06z"/></svg>;
+  const svgWa = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>;
   const [showLandingMenu, setShowLandingMenu] = useState(false);
   const [openMenuSection, setOpenMenuSection] = useState<string | null>(null);
   const [userRating, setUserRating] = useState(0);
@@ -1540,8 +1541,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         <div className="landing-sections" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             <a href={NEW_FB} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Facebook">{svgFb}</a>
-            <a href="javascript:void(0)" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Instagram">{svgIg}</a>
-            <a href="javascript:void(0)" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="TikTok">{svgTk}</a>
+            <a href="https://www.instagram.com/moyo_congo" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Instagram">{svgIg}</a>
+            <a href="https://www.tiktok.com/@moyo_congo" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="TikTok">{svgTk}</a>
+            <a href="https://wa.me/33753356471" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="WhatsApp +33 07 53 35 64 71">{svgWa}</a>
           </div>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
             {[
@@ -1606,7 +1608,7 @@ function About({ onBack }: { onBack: () => void }) {
           <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           </div>
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Nous contacter</h2>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Restons connectés</h2>
           <a href="https://www.facebook.com/profile.php?id=61576092648690" target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#1877F2", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
             <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -1615,6 +1617,28 @@ function About({ onBack }: { onBack: () => void }) {
             <div>
               <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem", fontWeight: 500 }}>Rejoins-nous sur</div>
               <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>Facebook - Page Moyo Congo</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="https://www.tiktok.com/@moyo_congo" target="_blank" rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#111111", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.16 8.16 0 0 0 4.77 1.52V6.75a4.85 4.85 0 0 1-1-.06z"/></svg>
+            </div>
+            <div>
+              <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.72rem", fontWeight: 500 }}>Suis-nous sur</div>
+              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>TikTok - MOYO Congo</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="https://www.instagram.com/moyo_congo" target="_blank" rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </div>
+            <div>
+              <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.72rem", fontWeight: 500 }}>Retrouve-nous sur</div>
+              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>Instagram - MOYO Congo</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -1692,6 +1716,11 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
       const profiles = await sb.query<Profile>(res.access_token, "profiles", `?id=eq.${res.user.id}`);
       if (!profiles[0]) {
         setErrorMsg("Profil introuvable. Réessaie dans quelques secondes.");
+        setLoading(false); return;
+      }
+      if ((profiles[0] as any).is_banned) {
+        await sb.signOut(res.access_token);
+        setErrorMsg("Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à contact@moyo-congo.com");
         setLoading(false); return;
       }
       onAuth({
@@ -4460,7 +4489,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     if (!open) return;
     const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, async () => {
       const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
-      setMsgs(res);
+      setMsgs(res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)));
     });
     return () => { try { ws?.close(); } catch {} };
   }, [open?.id]);
@@ -4471,10 +4500,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     const readInterval = setInterval(async () => {
       try {
         const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
+        const filtered = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId));
         setMsgs(prev => {
-          // Mettre à jour seulement si is_read a changé pour éviter re-render inutile
-          const hasChange = res.some((m, i) => prev[i]?.is_read !== m.is_read || prev[i]?.id !== m.id);
-          return hasChange ? res : prev;
+          const hasChange = filtered.some((m, i) => prev[i]?.is_read !== m.is_read || prev[i]?.id !== m.id || prev[i]?.reactions !== m.reactions);
+          return hasChange ? filtered : prev;
         });
       } catch {}
     }, 2000);
@@ -4510,13 +4539,14 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
   const loadMsgs = async (conv: Match) => {
     const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
-    setMsgs(res);
-    setMsgCount(res.filter(m => m.sender_id === auth.userId).length);
+    const visible = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId));
+    setMsgs(visible);
+    setMsgCount(visible.filter(m => m.sender_id === auth.userId).length);
     // Marquer comme lu ET livré
     await sb.markMessagesRead(auth.token, conv.id, auth.userId);
     // Recharger après marquage lu
     const res2 = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
-    setMsgs(res2);
+    setMsgs(res2.filter(m => !((m as any).deleted_for || []).includes(auth.userId)));
     loadConvs();
   };
 
@@ -4856,11 +4886,18 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#e74c3c" }}>Supprimer pour tous</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
-              <div onClick={() => {
+              <div onClick={async () => {
                 const msgId = contextMenu.msg.id;
+                const currentDeletedFor: string[] = (contextMenu.msg as any).deleted_for || [];
                 setContextMenu(null);
                 if (!msgId) return;
+                // Masquer immédiatement dans le state local
                 setMsgs(prev => prev.filter(msg => msg.id !== msgId));
+                // Persister dans Supabase — ajouter userId dans deleted_for sans écraser
+                const updatedDeletedFor = currentDeletedFor.includes(auth.userId)
+                  ? currentDeletedFor
+                  : [...currentDeletedFor, auth.userId];
+                await sb.update(auth.token, "messages", msgId, { deleted_for: updatedDeletedFor });
                 setToast({ msg: "Message supprimé pour vous", type: "success" });
               }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer" }}>
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#888" }}>Supprimer pour moi</span>
@@ -5796,6 +5833,7 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   const [toast, setToast] = useState<ToastState>(null);
   const [confirmModal, setConfirmModal] = useState<{ msg: string; onConfirm: () => void } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // userId en cours
+  const [showHelp, setShowHelp] = useState(false);
 
   // ── Utilitaires ──
   const showToast = (msg: string, type: "success" | "error" = "success") => setToast({ msg, type });
@@ -6028,6 +6066,175 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
         </div>
       )}
 
+      {/* Modal d'aide Admin */}
+      {showHelp && (
+        <div
+          onClick={() => setShowHelp(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center", animation: "fadeIn 0.2s ease" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 560, maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 -8px 40px rgba(0,0,0,0.18)", animation: "fadeUp 0.28s ease" }}
+          >
+            {/* En-tête modal */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 20px 14px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun }}>Guide Admin</div>
+                  <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 1 }}>Tableau de bord MOYO</div>
+                </div>
+              </div>
+              <div onClick={() => setShowHelp(false)} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
+            </div>
+            {/* Contenu scrollable */}
+            <div style={{ overflowY: "auto", padding: "18px 20px 32px", display: "flex", flexDirection: "column", gap: 18 }}>
+
+              {/* Section 1 — Rôle admin */}
+              <div style={{ background: `linear-gradient(135deg,${G.rouge}12,${G.rouge}06)`, borderRadius: 14, padding: "14px 16px", borderLeft: `3px solid ${G.rouge}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.rouge }}>Rôle d'un administrateur</span>
+                </div>
+                <p style={{ fontSize: "0.82rem", color: G.brun, lineHeight: 1.65 }}>Un admin supervise la plateforme, protège les utilisateurs, vérifie les signalements et applique les décisions de modération. Il agit avec neutralité, sans jamais utiliser ses droits à des fins personnelles.</p>
+              </div>
+
+              {/* Section 2 — Stats */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Statistiques</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Membres total", "Nombre total de comptes créés sur la plateforme."],
+                    ["Matchs", "Nombre de paires qui se sont mutuellement likées."],
+                    ["Messages", "Volume total de messages échangés."],
+                    ["Signalements", "Nombre de signalements reçus toutes sources confondues."],
+                    ["Nouveaux membres", "Inscriptions du jour en cours."],
+                    ["Premium actifs", "Utilisateurs ayant un abonnement Premium actif."],
+                    ["Profils vérifiés", "Comptes ayant obtenu le badge de vérification."],
+                    ["Profils bannis", "Comptes actuellement bannis de la plateforme."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 3 — Utilisateurs */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Utilisateurs</span>
+                </div>
+                <div style={{ background: "#FFF8F0", borderRadius: 10, padding: "9px 12px", marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span style={{ fontSize: "0.79rem", color: "#7a5500" }}>Les actions sensibles doivent toujours être utilisées avec prudence et discernement.</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  {([
+                    ["Rendre Premium / Retirer Premium", "Attribue ou retire l'accès aux fonctionnalités payantes."],
+                    ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
+                    ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
+                    ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
+                    ["Bannir", "Interdit l'accès à la plateforme. Action irréversible sans intervention admin."],
+                    ["Supprimer", "Efface définitivement le compte et toutes ses données."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 4 — Signalements */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Signalements</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Signalement profil", "Un utilisateur a manuellement signalé un autre profil. À examiner en priorité."],
+                    ["Auto-modération", "Le système a détecté un contenu interdit ou suspect (insulte, arnaque, contenu sexuel…)."],
+                    ["Alerte système", "Notification technique ou comportement inhabituel détecté automatiquement."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 5 — Statuts */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Traitement des signalements</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["En attente", "#e67e22", "Pas encore examiné par un administrateur."],
+                    ["Traité", G.vert, "Signalement vérifié et pris en charge par un admin."],
+                    ["Rejeté", "#999", "Signalement examiné mais non retenu (sans suite)."],
+                    ["Banni", G.rouge, "Sanction appliquée suite au signalement."],
+                  ] as [string, string, string][]).map(([label, color, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, marginTop: 3, flexShrink: 0 }} />
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 6 — Avertissements */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Avertissements utilisateurs</span>
+                </div>
+                <div style={{ background: G.creme, borderRadius: 10, padding: "12px 14px", fontSize: "0.82rem", color: G.brun, lineHeight: 1.7 }}>
+                  Un avertissement est une étape préventive avant bannissement. L'utilisateur voit une modal officielle MOYO à sa prochaine connexion. Lorsqu'il clique <strong>"OK, j'ai compris"</strong>, la plateforme enregistre qu'il a bien pris connaissance de l'avertissement. L'admin peut ainsi suivre le 1er, 2e ou 3e avertissement et adapter la décision en conséquence.
+                </div>
+              </div>
+
+              {/* Section 7 — Bonnes pratiques */}
+              <div style={{ background: `linear-gradient(135deg,${G.vert}14,${G.vert}06)`, borderRadius: 14, padding: "14px 16px", borderLeft: `3px solid ${G.vert}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.vert }}>Bonnes pratiques admin</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {[
+                    "Rester neutre en toutes circonstances.",
+                    "Ne jamais utiliser les droits admin pour des raisons personnelles.",
+                    "Vérifier les faits avant d'appliquer une sanction.",
+                    "Protéger les données des utilisateurs — elles sont confidentielles.",
+                    "Ne jamais partager d'informations privées avec des tiers.",
+                    "Privilégier l'avertissement avant le bannissement quand c'est possible.",
+                  ].map((rule, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                      <span style={{ fontSize: "0.82rem", color: G.brun, lineHeight: 1.6 }}>{rule}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ background: G.blanc, padding: "14px 16px 0", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
@@ -6036,6 +6243,15 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
             <IcoGear />
             <span style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</span>
           </div>
+          <button
+            onClick={() => setShowHelp(true)}
+            style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: G.brunLight, transition: "all 0.18s ease", flexShrink: 0 }}
+            onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.cremeDark; }}
+            onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Aide
+          </button>
         </div>
         {/* Onglets */}
         <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}` }}>
