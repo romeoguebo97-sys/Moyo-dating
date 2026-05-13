@@ -71,19 +71,52 @@ const G = {
   brun: "#2C1A0E", brunLight: "#5C3D2A", blanc: "#FFFFFF", gris: "#E8DDD0",
 };
 
-type Auth = { token: string; userId: string; name: string; email: string; isPremium: boolean; isAdmin: boolean };
+type Auth = {
+  token: string;
+  userId: string;
+  name: string;
+  email: string;
+  isPremium: boolean;
+  isAdmin: boolean;
+  // ── SESSION v2 : refresh automatique JWT ──
+  refreshToken?: string;   // refresh_token Supabase
+  expiresAt?: number;      // timestamp ms (Date.now()) d'expiration du access_token
+};
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CLIENT SUPABASE — v2 avec refresh automatique JWT
+// Stratégie :
+//   • Toutes les requêtes REST passent par safeRequest()
+//   • Si Supabase répond 401 → on tente un refresh du token (une seule fois)
+//   • Si le refresh réussit → on relance la requête avec le nouveau token
+//   • Si le refresh échoue → on appelle onAuthFailure() (déconnexion propre)
+//   • Un flag _isRefreshing évite les boucles infinies
+//   • onAuthFailure est injecté par App au montage via sb.setAuthFailureHandler()
+// ─────────────────────────────────────────────────────────────────────────────
 const sb = {
+  // ── Callback injecté par App pour déclencher la déconnexion propre ──
+  _onAuthFailure: null as (() => void) | null,
+  setAuthFailureHandler(fn: () => void) { this._onAuthFailure = fn; },
+
+  // ── Anti-boucle : un seul refresh en cours à la fois ──
+  _isRefreshing: false,
+  _pendingRefreshToken: null as string | null,
+
+  // ── Headers standard REST ──
   h: (token?: string) => ({
     "Content-Type": "application/json",
     "apikey": SUPABASE_KEY,
     "Authorization": `Bearer ${token || SUPABASE_KEY}`,
     "Prefer": "return=representation",
   }),
+
+  // ────────────────────────────────────────────────────────────────────────
+  // AUTH
+  // ────────────────────────────────────────────────────────────────────────
   async signUp(email: string, password: string, metadata: object) {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
       method: "POST", headers: this.h(),
@@ -108,46 +141,6 @@ const sb = {
     });
     return r.json();
   },
-  async query<T>(token: string, table: string, params = ""): Promise<T[]> {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { headers: this.h(token) });
-    const data = await r.json().catch(() => []);
-    // Si Supabase renvoie une erreur (objet avec "code" ou "message"), lever une exception
-    if (!Array.isArray(data)) {
-      if (data?.code || data?.message) throw new Error(data.message || data.code);
-      return [];
-    }
-    return data;
-  },
-  async insert<T>(token: string, table: string, data: object): Promise<T[]> {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: "POST", headers: this.h(token), body: JSON.stringify(data),
-    });
-    const res = await r.json().catch(() => null);
-    return Array.isArray(res) ? res : res ? [res] : [];
-  },
-  async update(token: string, table: string, id: string, data: object) {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
-      method: "PATCH", headers: this.h(token), body: JSON.stringify(data),
-    });
-    return r.json().catch(() => null);
-  },
-  async upsert(token: string, table: string, data: object) {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: "POST",
-      headers: { ...this.h(token), "Prefer": "return=representation,resolution=merge-duplicates" },
-      body: JSON.stringify(data),
-    });
-    return r.json().catch(() => null);
-  },
-  async delete(token: string, table: string, params: string) {
-    await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { method: "DELETE", headers: this.h(token) });
-  },
-  async rpc(token: string, fn: string) {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-      method: "POST", headers: this.h(token), body: JSON.stringify({}),
-    });
-    return r.json().catch(() => null);
-  },
   async updatePassword(accessToken: string, newPassword: string) {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       method: "PUT",
@@ -156,6 +149,177 @@ const sb = {
     });
     return r.json().catch(() => null);
   },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // REFRESH SESSION
+  // Appelle /auth/v1/token?grant_type=refresh_token
+  // Retourne { access_token, refresh_token, expires_in } ou null si échec
+  // ────────────────────────────────────────────────────────────────────────
+  async refreshSession(refreshToken: string): Promise<{ access_token: string; refresh_token: string; expires_in: number } | null> {
+    if (this._isRefreshing) {
+      console.log("[Moyo][Session] Refresh déjà en cours — skip");
+      return null;
+    }
+    this._isRefreshing = true;
+    console.log("[Moyo][Session] Tentative de refresh du token…");
+    try {
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: "POST",
+        headers: this.h(),
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      const data = await r.json().catch(() => null);
+      if (data?.access_token) {
+        console.log("[Moyo][Session] ✅ Refresh réussi — nouveau token obtenu");
+        return data;
+      }
+      console.warn("[Moyo][Session] ❌ Refresh échoué :", data?.error_description || data?.message || "réponse invalide");
+      return null;
+    } catch (e) {
+      console.warn("[Moyo][Session] ❌ Refresh — erreur réseau :", e);
+      return null;
+    } finally {
+      this._isRefreshing = false;
+    }
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // SAFE REQUEST
+  // Wrapper central : exécute fn(token), détecte 401, tente refresh, relance.
+  // fn = fonction qui prend un token et retourne une Promise<Response>
+  // refreshToken = le refresh_token courant (passé par l'appelant)
+  // onNewToken = callback appelé si un nouveau token a été obtenu (pour màj Auth)
+  // ────────────────────────────────────────────────────────────────────────
+  async safeRequest(
+    token: string,
+    refreshToken: string | undefined,
+    fn: (t: string) => Promise<Response>,
+    onNewToken?: (newToken: string, newRefreshToken: string, newExpiresAt: number) => void,
+  ): Promise<Response> {
+    const r = await fn(token);
+
+    // Pas de 401 → tout va bien, retourner directement
+    if (r.status !== 401) return r;
+
+    console.warn("[Moyo][Session] 401 détecté — JWT probablement expiré");
+
+    // Pas de refresh_token disponible → déconnexion propre
+    if (!refreshToken) {
+      console.warn("[Moyo][Session] Pas de refresh_token — déconnexion");
+      this._onAuthFailure?.();
+      return r;
+    }
+
+    // Tentative de refresh
+    const refreshed = await this.refreshSession(refreshToken);
+    if (!refreshed) {
+      console.warn("[Moyo][Session] Refresh impossible — déconnexion");
+      this._onAuthFailure?.();
+      return r;
+    }
+
+    // Refresh réussi → notifier App pour màj du state/localStorage
+    const newExpiresAt = Date.now() + refreshed.expires_in * 1000;
+    onNewToken?.(refreshed.access_token, refreshed.refresh_token, newExpiresAt);
+
+    // Relancer la requête originale avec le nouveau token
+    console.log("[Moyo][Session] ✅ Requête relancée avec le nouveau token");
+    return fn(refreshed.access_token);
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // REST — toutes les méthodes passent par safeRequest
+  // ────────────────────────────────────────────────────────────────────────
+  async query<T>(
+    token: string, table: string, params = "",
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ): Promise<T[]> {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { headers: this.h(t) }),
+      onNewToken,
+    );
+    const data = await r.json().catch(() => []);
+    if (!Array.isArray(data)) {
+      if (data?.code || data?.message) throw new Error(data.message || data.code);
+      return [];
+    }
+    return data;
+  },
+
+  async insert<T>(
+    token: string, table: string, data: object,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ): Promise<T[]> {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: "POST", headers: this.h(t), body: JSON.stringify(data),
+      }),
+      onNewToken,
+    );
+    const res = await r.json().catch(() => null);
+    return Array.isArray(res) ? res : res ? [res] : [];
+  },
+
+  async update(
+    token: string, table: string, id: string, data: object,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ) {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+        method: "PATCH", headers: this.h(t), body: JSON.stringify(data),
+      }),
+      onNewToken,
+    );
+    return r.json().catch(() => null);
+  },
+
+  async upsert(
+    token: string, table: string, data: object,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ) {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: "POST",
+        headers: { ...this.h(t), "Prefer": "return=representation,resolution=merge-duplicates" },
+        body: JSON.stringify(data),
+      }),
+      onNewToken,
+    );
+    return r.json().catch(() => null);
+  },
+
+  async delete(
+    token: string, table: string, params: string,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ) {
+    await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { method: "DELETE", headers: this.h(t) }),
+      onNewToken,
+    );
+  },
+
+  async rpc(
+    token: string, fn: string,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ) {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+        method: "POST", headers: this.h(t), body: JSON.stringify({}),
+      }),
+      onNewToken,
+    );
+    return r.json().catch(() => null);
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // UTILITAIRES (pas de refresh nécessaire — pas de données privées)
+  // ────────────────────────────────────────────────────────────────────────
   async uploadPhoto(token: string, userId: string, file: File): Promise<string | null> {
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -169,11 +333,13 @@ const sb = {
       return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
     } catch { return null; }
   },
+
   async markMessagesRead(token: string, matchId: string, userId: string) {
     await fetch(`${SUPABASE_URL}/rest/v1/messages?match_id=eq.${matchId}&sender_id=neq.${userId}&is_read=eq.false`, {
       method: "PATCH", headers: this.h(token), body: JSON.stringify({ is_read: true }),
     });
   },
+
   async recordVisit(token: string, visitorId: string, visitedId: string) {
     if (visitorId === visitedId) return;
     await fetch(`${SUPABASE_URL}/rest/v1/profile_visits`, {
@@ -182,6 +348,7 @@ const sb = {
       body: JSON.stringify({ visitor_id: visitorId, visited_id: visitedId }),
     });
   },
+
   subscribeRealtime(token: string, table: string, filter: string, callback: () => void): WebSocket | null {
     try {
       const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
@@ -1527,7 +1694,17 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         setErrorMsg("Profil introuvable. Réessaie dans quelques secondes.");
         setLoading(false); return;
       }
-      onAuth({ token: res.access_token, userId: res.user.id, name: profiles[0].name || "Utilisateur", email: res.user.email || "", isPremium: profiles[0].is_premium || false, isAdmin: profiles[0].is_admin || false });
+      onAuth({
+        token: res.access_token,
+        userId: res.user.id,
+        name: profiles[0].name || "Utilisateur",
+        email: res.user.email || "",
+        isPremium: profiles[0].is_premium || false,
+        isAdmin: profiles[0].is_admin || false,
+        // ── SESSION v2 : persist refresh_token + expiration ──
+        refreshToken: res.refresh_token || undefined,
+        expiresAt: res.expires_in ? Date.now() + res.expires_in * 1000 : undefined,
+      });
     } catch { setErrorMsg("Erreur de connexion. Veuillez vérifier votre adresse e-mail ou votre mot de passe."); }
     setLoading(false);
   };
@@ -1904,9 +2081,21 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
 
   const sendReport = async () => {
     if (!reportText.trim()) return;
+    // ── Alerte bot : ce n'est PAS un signalement contre un profil précis.
+    // reported_id = null (alerte système, pas d'utilisateur ciblé).
+    console.log(`[Moyo][BotReport] Signalement bot — auteur:${auth.userId}`);
     try {
-      await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: auth.userId, reason: `[BOT SIGNALEMENT] ${reportText}` });
-    } catch {}
+      await sb.insert(auth.token, "reports", {
+        reporter_id: auth.userId,
+        reported_id: null,
+        reason: `[BOT SIGNALEMENT] ${reportText.trim()}`,
+        status: "pending",
+      });
+      console.log("[Moyo][BotReport] ✅ Signalement bot enregistré");
+    } catch (e: any) {
+      // Si reported_id n'accepte pas null → log sans crasher
+      console.warn("[Moyo][BotReport] ⚠️ Signalement bot non enregistré :", e?.message || e);
+    }
     setReportSent(true);
   };
 
@@ -2663,16 +2852,51 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     }
   };
 
+  // ── État toast local pour Discover ──
+  const [discoverToast, setDiscoverToast] = useState<ToastState>(null);
+  const [isReporting, setIsReporting] = useState(false);
+
   const handleReport = async (reason: string) => {
     if (!profiles[current]) return;
-    await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: profiles[current].id, reason });
-    setShowReport(false);
+    const reportedProfile = profiles[current];
+    setIsReporting(true);
+    console.log(`[Moyo][Report] Signalement en cours — reporter:${auth.userId} reported:${reportedProfile.id} motif:"${reason}"`);
+    try {
+      const res = await sb.insert<{ id: string }>(
+        auth.token,
+        "reports",
+        {
+          reporter_id: auth.userId,
+          reported_id: reportedProfile.id,
+          reason,
+          status: "pending",
+        },
+        auth.refreshToken,
+        // onNewToken : pas nécessaire ici, safeRequest le gère en interne
+      );
+      if (res && res.length > 0) {
+        console.log(`[Moyo][Report] ✅ Signalement enregistré — id:${res[0]?.id}`);
+        setDiscoverToast({ msg: "Signalement envoyé. Merci de protéger la communauté Moyo.", type: "success" });
+        setShowReport(false);
+        setShowSignaler(false);
+      } else {
+        // Supabase a renvoyé un tableau vide sans erreur (RLS silencieuse possible)
+        console.warn("[Moyo][Report] ⚠️ Insert report : réponse vide — vérifier les policies RLS de la table reports");
+        setDiscoverToast({ msg: "Signalement non enregistré. Réessaie dans quelques instants.", type: "error" });
+      }
+    } catch (e: any) {
+      console.error("[Moyo][Report] ❌ Erreur insert report :", e?.message || e);
+      setDiscoverToast({ msg: "Erreur lors du signalement. Vérifie ta connexion.", type: "error" });
+    }
+    setIsReporting(false);
   };
 
   const p = profiles[current];
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
 
-  return <div style={{ padding: "4px 16px 8px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}><h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 6 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: "#555" }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
+  return <div style={{ padding: "4px 16px 8px" }}>
+    {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}><h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 6 }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: "#555" }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
   <select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
     <option value="">Toutes les villes</option>
     {VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}
@@ -2823,12 +3047,18 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden" }}>
     <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
       <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#1a1a1a" }}>Signaler ce profil</h3>
-      <div onClick={() => setShowSignaler(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
+      <div onClick={() => !isReporting && setShowSignaler(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
     </div>
     <div style={{ padding: "12px 16px 32px" }}>
-      {["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => (
-        <div key={r} onClick={() => { handleReport(r); setShowSignaler(false); }} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500, color: "#1a1a1a" }}>{r}</div>
-      ))}
+      {isReporting ? (
+        <div style={{ textAlign: "center", padding: "24px 0", color: "#555", fontSize: "0.88rem" }}>
+          Envoi du signalement…
+        </div>
+      ) : (
+        ["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => (
+          <div key={r} onClick={() => { handleReport(r); setShowSignaler(false); }} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500, color: "#1a1a1a" }}>{r}</div>
+        ))
+      )}
     </div>
   </div>
 </div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}</div>;
@@ -3747,8 +3977,22 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     const mod = moderateMessage(text);
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
-      // Signaler automatiquement à l'admin
-      try { await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: auth.userId, reason: `[AUTO-MOD ${mod.type.toUpperCase()}] ${text.substring(0, 100)}` }); } catch {}
+      // ── Alerte système auto-mod : ce n'est PAS un signalement utilisateur contre un autre profil.
+      // reported_id = null (alerte système sans cible).
+      // Si la colonne reported_id n'accepte pas null, Supabase renverra une erreur catchée silencieusement.
+      console.log(`[Moyo][AutoMod] Alerte système — type:${mod.type} auteur:${auth.userId}`);
+      try {
+        await sb.insert(auth.token, "reports", {
+          reporter_id: auth.userId,
+          reported_id: null,
+          reason: `[AUTO-MOD ${mod.type.toUpperCase()}] ${text.substring(0, 100)}`,
+          status: "pending",
+        });
+        console.log("[Moyo][AutoMod] ✅ Alerte système enregistrée");
+      } catch (e: any) {
+        // Si reported_id n'accepte pas null → log sans crasher, comportement conservé
+        console.warn("[Moyo][AutoMod] ⚠️ Alerte non enregistrée (reported_id null non accepté ?) :", e?.message || e);
+      }
       return;
     }
     if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
@@ -4938,10 +5182,160 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
 }
 
 function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
-  const [stats, setStats] = useState({ users: 0, matches: 0, messages: 0, reports: 0 }); const [reports, setReports] = useState<Array<{ reason: string; reporter_id: string; status: string }>>([]); const [loading, setLoading] = useState(true);
+  type ReportRow = {
+    id?: string;
+    reason: string;
+    reporter_id: string;
+    reported_id: string | null;
+    status: string;
+    created_at?: string;
+  };
+
+  const [stats, setStats] = useState({ users: 0, matches: 0, messages: 0, reports: 0 });
+  const [reports, setReports] = useState<ReportRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "user" | "system">("all");
+
+  const loadStats = async () => {
+    setLoading(true);
+    console.log("[Moyo][Admin] Chargement du dashboard…");
+    try {
+      const [users, matches, messages, reps, totalReps] = await Promise.all([
+        sb.query<Profile>(auth.token, "profiles", "?select=id"),
+        sb.query<Match>(auth.token, "matches", "?select=id"),
+        sb.query<{ id: string }>(auth.token, "messages", "?select=id"),
+        // 50 derniers signalements avec toutes les colonnes utiles
+        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&order=created_at.desc&limit=50"),
+        // Vrai total (sans limit)
+        sb.query<{ id: string }>(auth.token, "reports", "?select=id"),
+      ]);
+      setStats({
+        users: users.length,
+        matches: matches.length,
+        messages: messages.length,
+        reports: totalReps.length, // vrai total, pas limité à 50
+      });
+      setReports(reps);
+      console.log(`[Moyo][Admin] ✅ ${reps.length} signalements chargés (total: ${totalReps.length})`);
+    } catch (e: any) {
+      console.error("[Moyo][Admin] ❌ Erreur chargement dashboard :", e?.message || e);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => { loadStats(); }, []);
-  const loadStats = async () => { setLoading(true); const [users, matches, messages, reps] = await Promise.all([sb.query<Profile>(auth.token, "profiles", "?select=id"), sb.query<Match>(auth.token, "matches", "?select=id"), sb.query<Message>(auth.token, "messages", "?select=id"), sb.query<{ reason: string; reporter_id: string; status: string }>(auth.token, "reports", "?order=created_at.desc&limit=20")]); setStats({ users: users.length, matches: matches.length, messages: messages.length, reports: reps.length }); setReports(reps); setLoading(false); };
-  return <div style={{ padding: "12px 16px 16px" }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}><div onClick={onBack} style={{ cursor: "pointer", fontSize: "1.1rem", color: "#555" }}>←</div><h2 style={{  fontSize: "1.3rem", fontWeight: 700 }}>⚙️ Admin Dashboard</h2></div>{loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : <><div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>{[["Membres", stats.users, "👥"], ["Matchs", stats.matches, "💞"], ["Messages", stats.messages, "💬"], ["Signalements", stats.reports, "🚨"]].map(([label, value, icon]: any) => <div key={label} style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}><div style={{ fontSize: "1.8rem" }}>{icon}</div><div style={{  fontSize: "1.8rem", fontWeight: 700, color: G.rouge }}>{value}</div><div style={{ fontSize: "0.75rem", color: "#555" }}>{label}</div></div>)}</div><div style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}><h3 style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 12, color: "#555" }}>🚨 Signalements récents</h3>{reports.length === 0 ? <p style={{ color: "#555", fontSize: "0.85rem" }}>Aucun signalement</p> : reports.map((r, i) => <div key={i} style={{ padding: "10px 0", borderBottom: `1px solid ${G.gris}`, fontSize: "0.82rem" }}><div style={{ fontWeight: 600, color: G.rouge }}>Motif : {r.reason}</div><div style={{ color: "#555" }}>ID : {r.reporter_id?.slice(0, 12)}...</div></div>)}</div><Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12 }}>Actualiser</Btn></>}</div>;
+
+  // ── Classifier chaque report pour l'affichage ──
+  const classifyReport = (r: ReportRow): { label: string; color: string; emoji: string } => {
+    if (r.reason?.startsWith("[AUTO-MOD")) return { label: "Auto-modération", color: "#e67e22", emoji: "🤖" };
+    if (r.reason?.startsWith("[BOT SIGNALEMENT]")) return { label: "Alerte bot", color: "#8e44ad", emoji: "🤖" };
+    if (!r.reported_id) return { label: "Alerte système", color: "#7f8c8d", emoji: "⚠️" };
+    return { label: "Signalement profil", color: G.rouge, emoji: "🚨" };
+  };
+
+  const formatDate = (iso?: string) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
+  const filtered = reports.filter(r => {
+    if (filter === "user") return !r.reason?.startsWith("[AUTO-MOD") && !r.reason?.startsWith("[BOT") && r.reported_id;
+    if (filter === "system") return r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id;
+    return true;
+  });
+
+  return (
+    <div style={{ padding: "12px 16px 32px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <div onClick={onBack} style={{ cursor: "pointer", fontSize: "1.1rem", color: "#555" }}>←</div>
+        <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>⚙️ Admin Dashboard</h2>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+      ) : (
+        <>
+          {/* Stats */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>
+            {([
+              ["Membres", stats.users, "👥"],
+              ["Matchs", stats.matches, "💞"],
+              ["Messages", stats.messages, "💬"],
+              ["Signalements", stats.reports, "🚨"],
+            ] as [string, number, string][]).map(([label, value, emoji]) => (
+              <div key={label} style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}>
+                <div style={{ fontSize: "1.8rem" }}>{emoji}</div>
+                <div style={{ fontSize: "1.8rem", fontWeight: 700, color: G.rouge }}>{value}</div>
+                <div style={{ fontSize: "0.75rem", color: "#555" }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Filtres reports */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            {(["all", "user", "system"] as const).map(f => (
+              <div key={f} onClick={() => setFilter(f)} style={{
+                padding: "6px 14px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                background: filter === f ? G.rouge : "#F0F0F0",
+                color: filter === f ? G.blanc : "#555",
+              }}>
+                {f === "all" ? "Tous" : f === "user" ? "🚨 Profils" : "🤖 Système"}
+              </div>
+            ))}
+          </div>
+
+          {/* Liste des reports */}
+          <div style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}>
+            <h3 style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 12, color: "#555" }}>
+              Signalements récents ({filtered.length} affichés / {stats.reports} total)
+            </h3>
+
+            {filtered.length === 0 ? (
+              <p style={{ color: "#555", fontSize: "0.85rem" }}>Aucun signalement dans cette catégorie</p>
+            ) : (
+              filtered.map((r, i) => {
+                const cat = classifyReport(r);
+                return (
+                  <div key={r.id || i} style={{ padding: "12px 0", borderBottom: `1px solid ${G.gris}` }}>
+                    {/* Badge catégorie */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ background: `${cat.color}18`, color: cat.color, borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 700 }}>
+                        {cat.emoji} {cat.label}
+                      </span>
+                      {r.status && (
+                        <span style={{ background: r.status === "pending" ? "rgba(243,156,18,0.12)" : "rgba(39,174,96,0.12)", color: r.status === "pending" ? "#f39c12" : "#27ae60", borderRadius: 50, padding: "2px 10px", fontSize: "0.68rem", fontWeight: 600 }}>
+                          {r.status === "pending" ? "En attente" : r.status}
+                        </span>
+                      )}
+                    </div>
+                    {/* Motif */}
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>
+                      {r.reason}
+                    </div>
+                    {/* IDs */}
+                    <div style={{ fontSize: "0.75rem", color: "#888", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      <span>👤 Auteur : {r.reporter_id?.slice(0, 12)}…</span>
+                      {r.reported_id
+                        ? <span>🎯 Signalé : {r.reported_id?.slice(0, 12)}…</span>
+                        : <span style={{ color: "#aaa" }}>🎯 Aucune cible (alerte système)</span>
+                      }
+                      {r.created_at && <span>🕐 {formatDate(r.created_at)}</span>}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12 }}>↺ Actualiser</Btn>
+        </>
+      )}
+    </div>
+  );
 }
 
 export default function App() {
@@ -4961,6 +5355,37 @@ export default function App() {
   const isUnmatchingRef = useRef(false);
   // Ref pour permettre à LikesPage de déclencher un refresh des badges
   const refreshBadgesRef = useRef<(() => void) | null>(null);
+
+  // ── SESSION v2 : callback injecté dans sb pour déconnexion propre sur 401 irrécupérable ──
+  // Défini ici (pas dans useEffect) pour être stable dès le premier render
+  const authRef = useRef<Auth | null>(null);
+  const handleSessionExpired = React.useCallback(() => {
+    console.warn("[Moyo][Session] Session expirée — déconnexion propre");
+    localStorage.removeItem("moyo_session");
+    authRef.current = null;
+    setAuth(null);
+    setPage("landing");
+    setUnreadCount(0);
+    setNotifCount(0);
+    setLikesReceived(0);
+  }, []);
+
+  // ── Injecter le handler dans sb une seule fois ──
+  useEffect(() => {
+    sb.setAuthFailureHandler(handleSessionExpired);
+  }, [handleSessionExpired]);
+
+  // ── Helper pour mettre à jour le token après un refresh réussi ──
+  const handleTokenRefreshed = React.useCallback((newToken: string, newRefreshToken: string, newExpiresAt: number) => {
+    setAuth(prev => {
+      if (!prev) return prev;
+      const updated: Auth = { ...prev, token: newToken, refreshToken: newRefreshToken, expiresAt: newExpiresAt };
+      authRef.current = updated;
+      try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+      console.log("[Moyo][Session] Auth state mis à jour avec le nouveau token");
+      return updated;
+    });
+  }, []);
 
   // PWA - écouter l'événement d'installation
   useEffect(() => {
@@ -5019,26 +5444,68 @@ export default function App() {
       if (saved) {
         const a: Auth = JSON.parse(saved);
         if (a?.token && a?.userId) {
-          // Restaurer immédiatement la session sans attendre la vérification réseau
+
+          // ── SESSION v2 : détecter si le token est déjà expiré avant même de l'utiliser ──
+          const isExpired = a.expiresAt ? Date.now() > a.expiresAt - 60_000 : false; // marge 60s
+          if (isExpired && a.refreshToken) {
+            console.log("[Moyo][Session] Token expiré au chargement — refresh préventif…");
+            sb.refreshSession(a.refreshToken).then(refreshed => {
+              if (refreshed) {
+                const newExpiresAt = Date.now() + refreshed.expires_in * 1000;
+                const updated: Auth = { ...a, token: refreshed.access_token, refreshToken: refreshed.refresh_token, expiresAt: newExpiresAt };
+                authRef.current = updated;
+                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+                setAuth(updated);
+              } else {
+                // Refresh échoué → pas de session utilisable
+                console.warn("[Moyo][Session] Refresh préventif échoué — retour landing");
+                localStorage.removeItem("moyo_session");
+                setAuth(null);
+                setPage("landing");
+              }
+              setSessionLoaded(true);
+            });
+            setPage("app");
+            setTab("discover");
+            // Ne pas afficher l'app tant que le refresh n'est pas terminé
+            return;
+          }
+
+          // Token non expiré (ou pas d'expiresAt) → restaurer immédiatement
+          authRef.current = a;
           setAuth(a);
           setPage("app");
           setTab("discover");
           setSessionLoaded(true);
+
           // Vérifier en arrière-plan que le compte existe encore
-          sb.query<Profile>(a.token, "profiles", `?id=eq.${a.userId}&select=id,is_premium,is_admin`)
+          sb.query<Profile>(a.token, "profiles", `?id=eq.${a.userId}&select=id,is_premium,is_admin`, a.refreshToken, handleTokenRefreshed)
             .then(profiles => {
               if (!profiles || profiles.length === 0) {
+                // ── Avant de déconnecter, vérifier que ce n'est pas un 401 récupéré ──
+                // Si le token a été refreshé entre-temps, authRef.current.token ≠ a.token
+                if (authRef.current?.token !== a.token) {
+                  console.log("[Moyo][Session] Token refreshé entre-temps — pas de déconnexion");
+                  return;
+                }
+                console.warn("[Moyo][Session] Profil introuvable au chargement — déconnexion");
                 localStorage.removeItem("moyo_session");
                 setAuth(null);
                 setPage("landing");
-              } else if (profiles[0].is_premium !== a.isPremium) {
-                const updated = { ...a, isPremium: profiles[0].is_premium, isAdmin: profiles[0].is_admin || false };
-                setAuth(updated);
-                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+              } else {
+                // Mettre à jour Premium/isAdmin si changé
+                const p = profiles[0];
+                if (p.is_premium !== a.isPremium || (p.is_admin || false) !== a.isAdmin) {
+                  const updated = { ...a, isPremium: p.is_premium, isAdmin: p.is_admin || false };
+                  authRef.current = updated;
+                  setAuth(updated);
+                  try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+                }
               }
             })
             .catch(() => {
               // Erreur réseau : garder la session locale, pas de déconnexion
+              console.log("[Moyo][Session] Vérification arrière-plan — erreur réseau ignorée");
             });
           return;
         }
@@ -5048,6 +5515,7 @@ export default function App() {
   }, []);
 
   const handleAuth = (a: Auth) => {
+    authRef.current = a;
     setAuth(a); setPage("app"); setTab("discover");
     try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch {}
     // Demander permission notifications push
@@ -5071,30 +5539,49 @@ export default function App() {
   useEffect(() => {
     if (!auth) return;
 
-    // Vérifier que la session est toujours valide (compte pas supprimé)
+    // ── SESSION v2 : validateSession sécurisée ──
+    // • Ne déconnecte QUE si le profil est confirmé inexistant (compte supprimé par admin)
+    // • Ignore les erreurs réseau (timeout, hors ligne, 401 récupéré par safeRequest)
+    // • Met à jour Premium/isAdmin silencieusement
     const validateSession = async () => {
       try {
-        const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`);
-        // Si le profil n'existe plus → compte supprimé → déconnecter
+        const profiles = await sb.query<Profile>(
+          auth.token, "profiles",
+          `?id=eq.${auth.userId}&select=id,is_premium,is_admin`,
+          auth.refreshToken,
+          handleTokenRefreshed,
+        );
         if (!profiles || profiles.length === 0) {
+          // Vérification supplémentaire : le token a peut-être été refreshé
+          // entre le moment de l'appel et maintenant → authRef est à jour
+          if (authRef.current && authRef.current.token !== auth.token) {
+            console.log("[Moyo][Session] validateSession — token refreshé, on garde la session");
+            return true;
+          }
+          console.warn("[Moyo][Session] validateSession — profil inexistant → compte supprimé");
           localStorage.removeItem("moyo_session");
           setAuth(null);
           setPage("landing");
           return false;
         }
-        // Mettre à jour Premium si changé
-        if (profiles[0].is_premium !== auth.isPremium) {
-          const updated = { ...auth, isPremium: profiles[0].is_premium, isAdmin: profiles[0].is_admin || false };
+        // Mettre à jour Premium/isAdmin si changé
+        const p = profiles[0];
+        if (p.is_premium !== auth.isPremium || (p.is_admin || false) !== auth.isAdmin) {
+          console.log("[Moyo][Session] validateSession — mise à jour Premium/isAdmin");
+          const updated = { ...auth, isPremium: p.is_premium, isAdmin: p.is_admin || false };
+          authRef.current = updated;
           setAuth(updated);
           try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
         }
         return true;
-      } catch {
-        // Erreur d'auth → session expirée → déconnecter
-        localStorage.removeItem("moyo_session");
-        setAuth(null);
-        setPage("landing");
-        return false;
+      } catch (e) {
+        // ── ANCIEN comportement supprimé ──
+        // Avant : on déconnectait sur toute erreur. Problème : un 401 résolu
+        // par safeRequest() ne remonte PAS ici en exception → ce catch ne
+        // reçoit que les vraies erreurs réseau (offline, timeout), auquel cas
+        // on ne déconnecte PAS pour éviter les déconnexions fantômes.
+        console.log("[Moyo][Session] validateSession — erreur réseau ignorée (session conservée)", e);
+        return true;
       }
     };
     validateSession();
@@ -5106,18 +5593,34 @@ export default function App() {
     // sans éjecter si c'est juste un timeout réseau
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        // Revalider la session de façon non-bloquante
-        sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=id,is_premium,is_admin`)
+        // Utiliser authRef.current pour avoir le token le plus récent
+        const currentAuth = authRef.current || auth;
+        sb.query<Profile>(
+          currentAuth.token, "profiles",
+          `?id=eq.${currentAuth.userId}&select=id,is_premium,is_admin`,
+          currentAuth.refreshToken,
+          handleTokenRefreshed,
+        )
           .then(profiles => {
             if (!profiles || profiles.length === 0) {
-              // Compte réellement supprimé → déconnecter
+              // Vérifier que le token n'a pas été refreshé entre-temps
+              if (authRef.current && authRef.current.token !== currentAuth.token) {
+                console.log("[Moyo][Session] visibilitychange — token refreshé, pas de déconnexion");
+                return;
+              }
+              console.warn("[Moyo][Session] visibilitychange — profil inexistant → déconnexion");
               localStorage.removeItem("moyo_session");
               setAuth(null);
               setPage("landing");
-            } else if (profiles[0].is_premium !== auth.isPremium) {
-              const updated = { ...auth, isPremium: profiles[0].is_premium, isAdmin: profiles[0].is_admin || false };
-              setAuth(updated);
-              try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+            } else {
+              const p = profiles[0];
+              const cur = authRef.current || auth;
+              if (p.is_premium !== cur.isPremium || (p.is_admin || false) !== cur.isAdmin) {
+                const updated = { ...cur, isPremium: p.is_premium, isAdmin: p.is_admin || false };
+                authRef.current = updated;
+                setAuth(updated);
+                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+              }
             }
           })
           .catch(() => {
