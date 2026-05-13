@@ -3685,69 +3685,56 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
         </div>
       </div>
 
-      {/* ── Switch interne ── */}
-      {mode === "likes" ? (
-        <InnerSwitch
-          value={likesSubTab}
-          onChange={v => setLikesSubTab(v as "received"|"sent")}
-          options={[
-            { id: "received", label: `Reçus${count > 0 ? ` (${count})` : ""}`,
-              icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
-            { id: "sent", label: "Envoyés",
-              icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> },
-          ]}
-        />
-      ) : (
-        <InnerSwitch
-          value={visitorsSubTab}
-          onChange={v => setVisitorsSubTab(v as "visitors"|"visited")}
-          options={[
-            { id: "visitors", label: `Visiteurs${viewsCount > 0 ? ` (${viewsCount})` : ""}`,
-              icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
-            { id: "visited", label: "Profils vus",
-              icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
-          ]}
-        />
-      )}
-
       {/* ══════════════════════════════
           ONGLET LIKES
       ══════════════════════════════ */}
       {mode === "likes" && (
         <>
+          {/* 1. Bandeau compteur */}
+          <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
+            borderRadius: 14, padding: "13px 16px", marginBottom: 14,
+            color: isPremiumReal ? "#111" : G.blanc,
+            display: "flex", alignItems: "center", gap: 12,
+            cursor: isPremiumReal ? "default" : "pointer" }}
+            onClick={() => !isPremiumReal && onShowPremium("Découvre qui a liké ton profil en passant Premium !")}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)",
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={isPremiumReal?"#111":"white"} stroke="none">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                {count > 0 ? `${count} personne${count > 1?"s ont":" a"} liké ton profil` : "Aucun like reçu pour l'instant"}
+              </div>
+              <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>
+                {isPremiumReal ? "Historique complet activé" : "Passe Premium pour voir qui"}
+              </div>
+            </div>
+            {!isPremiumReal && count > 0 && (
+              <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32,
+                display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>
+                {count > 9 ? "9+" : count}
+              </div>
+            )}
+          </div>
+
+          {/* 2. Switch Reçus / Envoyés */}
+          <InnerSwitch
+            value={likesSubTab}
+            onChange={v => setLikesSubTab(v as "received"|"sent")}
+            options={[
+              { id: "received", label: `Reçus${count > 0 ? ` (${count})` : ""}`,
+                icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
+              { id: "sent", label: "Envoyés",
+                icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> },
+            ]}
+          />
+
+          {/* 3. Contenu selon sous-onglet */}
           {/* ── Likes reçus ── */}
           {likesSubTab === "received" && (
             <>
-              {/* Bandeau compteur */}
-              <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
-                borderRadius: 14, padding: "13px 16px", marginBottom: 16,
-                color: isPremiumReal ? "#111" : G.blanc,
-                display: "flex", alignItems: "center", gap: 12,
-                cursor: isPremiumReal ? "default" : "pointer" }}
-                onClick={() => !isPremiumReal && onShowPremium("Découvre qui a liké ton profil en passant Premium !")}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)",
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill={isPremiumReal?"#111":"white"} stroke="none">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                  </svg>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                    {count > 0 ? `${count} personne${count > 1?"s ont":" a"} liké ton profil` : "Aucun like reçu pour l'instant"}
-                  </div>
-                  <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>
-                    {isPremiumReal ? "Historique complet activé" : "Passe Premium pour voir qui"}
-                  </div>
-                </div>
-                {!isPremiumReal && count > 0 && (
-                  <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32,
-                    display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>
-                    {count > 9 ? "9+" : count}
-                  </div>
-                )}
-              </div>
-
-              {/* Contenu */}
               {isPremiumReal ? (
                 loading ? <Spinner /> :
                 likers.length === 0 ? (
@@ -3870,38 +3857,51 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       ══════════════════════════════ */}
       {mode === "visitors" && (
         <>
+          {/* 1. Bandeau compteur */}
+          <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
+            borderRadius: 14, padding: "13px 16px", marginBottom: 14,
+            color: isPremiumReal ? "#111" : G.blanc,
+            display: "flex", alignItems: "center", gap: 12,
+            cursor: isPremiumReal ? "default" : "pointer" }}
+            onClick={() => !isPremiumReal && onShowPremium("Découvre qui a visité ton profil en passant Premium !")}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)",
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isPremiumReal?"#111":"white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                {viewsCount > 0 ? `${viewsCount} visiteur${viewsCount>1?"s ont":" a"} consulté ton profil` : "Aucune visite pour l'instant"}
+              </div>
+              <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>
+                {isPremiumReal ? "Historique complet activé" : "Passe Premium pour voir qui"}
+              </div>
+            </div>
+            {!isPremiumReal && viewsCount > 0 && (
+              <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32,
+                display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>
+                {viewsCount > 9 ? "9+" : viewsCount}
+              </div>
+            )}
+          </div>
+
+          {/* 2. Switch Visiteurs / Profils vus */}
+          <InnerSwitch
+            value={visitorsSubTab}
+            onChange={v => setVisitorsSubTab(v as "visitors"|"visited")}
+            options={[
+              { id: "visitors", label: `Visiteurs${viewsCount > 0 ? ` (${viewsCount})` : ""}`,
+                icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
+              { id: "visited", label: "Profils vus",
+                icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
+            ]}
+          />
+
+          {/* 3. Contenu selon sous-onglet */}
           {/* ── Visiteurs ── */}
           {visitorsSubTab === "visitors" && (
             <>
-              {/* Bandeau */}
-              <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
-                borderRadius: 14, padding: "13px 16px", marginBottom: 16,
-                color: isPremiumReal ? "#111" : G.blanc,
-                display: "flex", alignItems: "center", gap: 12,
-                cursor: isPremiumReal ? "default" : "pointer" }}
-                onClick={() => !isPremiumReal && onShowPremium("Découvre qui a visité ton profil en passant Premium !")}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)",
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isPremiumReal?"#111":"white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                  </svg>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                    {viewsCount > 0 ? `${viewsCount} visiteur${viewsCount>1?"s ont":" a"} consulté ton profil` : "Aucune visite pour l'instant"}
-                  </div>
-                  <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>
-                    {isPremiumReal ? "Historique complet activé" : "Passe Premium pour voir qui"}
-                  </div>
-                </div>
-                {!isPremiumReal && viewsCount > 0 && (
-                  <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32,
-                    display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>
-                    {viewsCount > 9 ? "9+" : viewsCount}
-                  </div>
-                )}
-              </div>
-
               {isPremiumReal ? (
                 loading ? <Spinner /> :
                 visitors.length === 0 ? (
