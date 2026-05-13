@@ -2721,7 +2721,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       setCurrent(prev); if (profiles[prev]) recordView(profiles[prev].id);
     }
   }}
-  style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 8, position: "relative", touchAction: "pan-y" }}><div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "10px 14px" }}>
+  style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 8, position: "relative", touchAction: "pan-y" }}><div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "10px 14px" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {p.is_verified && <VerifiedBadge size={18} />}</div>
     {/* 3 traits menu */}
@@ -2775,7 +2775,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
 </div><PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} /></>}{viewedProfile && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-        <div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
+        <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
           {viewedProfile.photo_url ? <img src={viewedProfile.photo_url} alt={viewedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
           <div onClick={() => setViewedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16 }}>
@@ -2953,7 +2953,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
       {selectedProfile && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 600, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedProfile(null)}>
           <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
+            <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
               {selectedProfile.photo_url
                 ? <img src={selectedProfile.photo_url} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
@@ -3264,7 +3264,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       {selectedProfile && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 600, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedProfile(null)}>
           <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
+            <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
               {selectedProfile.photo_url
                 ? <img src={selectedProfile.photo_url} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
@@ -4101,7 +4101,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       {showPartnerProfile && open.partner && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowPartnerProfile(false)}>
           <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
+            <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
               {open.partner.photo_url
                 ? <img src={open.partner.photo_url} alt={open.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
@@ -4161,28 +4161,40 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef2 = useRef<HTMLImageElement>(null);
-  const [scale, setScale] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const SIZE = 280;
 
+  // Tout l'état de transform dans des refs pour éviter les re-renders pendant le drag/pinch
+  const stateRef = useRef({ scale: 1, minScale: 1, offset: { x: 0, y: 0 } });
+  const [scale, setScaleUI] = useState(1);         // uniquement pour le slider
+  const [dragging, setDragging] = useState(false);
+
+  // Refs pour drag
+  const draggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+
+  // Refs pour pinch
+  const pinchingRef = useRef(false);
+  const lastPinchDistRef = useRef(0);
+  const lastPinchMidRef = useRef({ x: 0, y: 0 });
+
+  // ── Init image ──
   useEffect(() => {
     const img = new Image();
     img.onload = () => {
       const s = Math.max(SIZE / img.width, SIZE / img.height);
-      setScale(s);
-      setOffset({ x: (SIZE - img.width * s) / 2, y: (SIZE - img.height * s) / 2 });
+      stateRef.current = { scale: s, minScale: s, offset: { x: (SIZE - img.width * s) / 2, y: (SIZE - img.height * s) / 2 } };
+      setScaleUI(s);
+      draw();
     };
     img.src = src;
   }, [src]);
-
-  useEffect(() => { draw(); }, [scale, offset, src]);
 
   const draw = () => {
     const canvas = canvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext("2d"); if (!ctx) return;
     const img = imgRef2.current; if (!img || !img.complete) return;
+    const { scale, offset } = stateRef.current;
     ctx.clearRect(0, 0, SIZE, SIZE);
     ctx.save();
     ctx.beginPath();
@@ -4192,72 +4204,135 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
     ctx.restore();
   };
 
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
+  // ── Zoom centré sur un point (pinch mid ou centre) ──
+  const applyZoom = (newScale: number, pivotX: number, pivotY: number) => {
+    const { scale: oldScale, minScale, offset } = stateRef.current;
+    const clamped = Math.min(Math.max(newScale, minScale), minScale * 4);
+    // Zoom centré sur le pivot : on translate pour garder le point sous les doigts
+    const ratio = clamped / oldScale;
+    const newOffsetX = pivotX - (pivotX - offset.x) * ratio;
+    const newOffsetY = pivotY - (pivotY - offset.y) * ratio;
+    stateRef.current = { scale: clamped, minScale, offset: { x: newOffsetX, y: newOffsetY } };
+    setScaleUI(clamped);
+    draw();
+  };
 
-  // Attacher touchmove en non-passif pour pouvoir appeler preventDefault
+  // ── Attacher les touch events en non-passif ──
   useEffect(() => {
     const el = canvasContainerRef.current;
     if (!el) return;
-    const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault(); // bloque le scroll natif du navigateur
-      e.stopPropagation();
-      if (!draggingRef.current) return;
-      const pos = e.touches[0];
-      setOffset({ x: pos.clientX - dragStartRef.current.x, y: pos.clientY - dragStartRef.current.y });
+
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        // Drag simple
+        pinchingRef.current = false;
+        draggingRef.current = true;
+        setDragging(true);
+        const t = e.touches[0];
+        dragStartRef.current = { x: t.clientX - stateRef.current.offset.x, y: t.clientY - stateRef.current.offset.y };
+      } else if (e.touches.length === 2) {
+        // Pinch
+        draggingRef.current = false;
+        pinchingRef.current = true;
+        const t0 = e.touches[0]; const t1 = e.touches[1];
+        lastPinchDistRef.current = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        lastPinchMidRef.current = {
+          x: (t0.clientX + t1.clientX) / 2 - el.getBoundingClientRect().left,
+          y: (t0.clientY + t1.clientY) / 2 - el.getBoundingClientRect().top,
+        };
+      }
     };
-    el.addEventListener("touchmove", handleTouchMove, { passive: false });
-    return () => el.removeEventListener("touchmove", handleTouchMove);
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && draggingRef.current) {
+        const t = e.touches[0];
+        stateRef.current = { ...stateRef.current, offset: { x: t.clientX - dragStartRef.current.x, y: t.clientY - dragStartRef.current.y } };
+        draw();
+      } else if (e.touches.length === 2 && pinchingRef.current) {
+        const t0 = e.touches[0]; const t1 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const mid = {
+          x: (t0.clientX + t1.clientX) / 2 - el.getBoundingClientRect().left,
+          y: (t0.clientY + t1.clientY) / 2 - el.getBoundingClientRect().top,
+        };
+        if (lastPinchDistRef.current > 0) {
+          const ratio = dist / lastPinchDistRef.current;
+          applyZoom(stateRef.current.scale * ratio, mid.x, mid.y);
+        }
+        lastPinchDistRef.current = dist;
+        lastPinchMidRef.current = mid;
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 0) {
+        draggingRef.current = false;
+        pinchingRef.current = false;
+        setDragging(false);
+      } else if (e.touches.length === 1) {
+        // Passage de pinch → drag : réinitialise l'ancre drag
+        pinchingRef.current = false;
+        draggingRef.current = true;
+        const t = e.touches[0];
+        dragStartRef.current = { x: t.clientX - stateRef.current.offset.x, y: t.clientY - stateRef.current.offset.y };
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
   }, []);
 
-  const onMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+  // ── Mouse drag (desktop) ──
+  const onMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     draggingRef.current = true;
     setDragging(true);
-    const pos = "touches" in e ? e.touches[0] : e;
-    dragStartRef.current = { x: pos.clientX - offset.x, y: pos.clientY - offset.y };
-    setDragStart({ x: pos.clientX - offset.x, y: pos.clientY - offset.y });
+    dragStartRef.current = { x: e.clientX - stateRef.current.offset.x, y: e.clientY - stateRef.current.offset.y };
   };
   const onMouseMove = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!dragging) return;
-    setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+    if (!draggingRef.current) return;
+    stateRef.current = { ...stateRef.current, offset: { x: e.clientX - dragStartRef.current.x, y: e.clientY - dragStartRef.current.y } };
+    draw();
   };
-  const onMouseUp = (e?: React.MouseEvent | React.TouchEvent) => {
-    draggingRef.current = false;
-    setDragging(false);
-  };
-  const onTouchStart = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    draggingRef.current = true;
-    setDragging(true);
-    const pos = e.touches[0];
-    dragStartRef.current = { x: pos.clientX - offset.x, y: pos.clientY - offset.y };
-    setDragStart({ x: pos.clientX - offset.x, y: pos.clientY - offset.y });
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    draggingRef.current = false;
-    setDragging(false);
+  const onMouseUp = () => { draggingRef.current = false; setDragging(false); };
+
+  // ── Scroll wheel zoom (desktop) ──
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const rect = canvasContainerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const pivotX = e.clientX - rect.left;
+    const pivotY = e.clientY - rect.top;
+    const delta = e.deltaY > 0 ? 0.92 : 1.08;
+    applyZoom(stateRef.current.scale * delta, pivotX, pivotY);
   };
 
+  // ── Slider ──
+  const onSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newScale = parseFloat(e.target.value);
+    applyZoom(newScale, SIZE / 2, SIZE / 2);
+  };
+
+  // ── Export ──
   const handleConfirm = () => {
     const img = imgRef2.current; if (!img || !img.complete) return;
-    // Export haute résolution (1200x1200) — le ratio scale/offset est recalculé
     const EXPORT_SIZE = 1200;
     const ratio = EXPORT_SIZE / SIZE;
+    const { scale, offset } = stateRef.current;
     const exportCanvas = document.createElement("canvas");
     exportCanvas.width = EXPORT_SIZE;
     exportCanvas.height = EXPORT_SIZE;
     const ctx = exportCanvas.getContext("2d"); if (!ctx) return;
-    ctx.drawImage(
-      img,
-      offset.x * ratio,
-      offset.y * ratio,
-      img.naturalWidth * scale * ratio,
-      img.naturalHeight * scale * ratio
-    );
+    ctx.drawImage(img, offset.x * ratio, offset.y * ratio, img.naturalWidth * scale * ratio, img.naturalHeight * scale * ratio);
     exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.95);
   };
 
@@ -4265,40 +4340,32 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ background: G.blanc, borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
-        <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Zoom pour ajuster</div>
-        {/* Zone de crop : cercle = aperçu avatar, rectangle = zone carte */}
+        <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Pince pour zoomer</div>
         <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
-          onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-          onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
+          onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onWheel={onWheel}
         >
           <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
           <canvas ref={canvasRef} width={SIZE} height={SIZE} style={{ display: "block" }} />
-          {/* Overlay : rectangle carte (ratio 210/358) + grille des tiers + cercle avatar */}
+          {/* Overlay : rectangle carte + grille des tiers + cercle avatar */}
           <svg style={{ position: "absolute", inset: 0, pointerEvents: "none", width: "100%", height: "100%" }} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-            {/* Rectangle zone carte — ratio 210px/358px = 0.586, centré */}
             {(() => {
-              const rW = SIZE; // pleine largeur
-              const rH = Math.round(SIZE * (210 / 358));
+              const rW = SIZE;
+              const rH = Math.round(SIZE * (270 / 358));
               const rX = 0;
               const rY = Math.round((SIZE - rH) / 2);
               return <>
-                {/* Zone sombre hors rectangle carte */}
                 <rect x={0} y={0} width={SIZE} height={rY} fill="rgba(0,0,0,0.35)" />
                 <rect x={0} y={rY + rH} width={SIZE} height={SIZE - rY - rH} fill="rgba(0,0,0,0.35)" />
-                {/* Bordure rectangle carte */}
                 <rect x={rX} y={rY} width={rW} height={rH} fill="none" stroke={G.or} strokeWidth="2" strokeDasharray="6 3" />
-                {/* Grille des tiers dans le rectangle carte */}
                 <line x1={rW/3} y1={rY} x2={rW/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
                 <line x1={rW*2/3} y1={rY} x2={rW*2/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
                 <line x1={0} y1={rY+rH/3} x2={rW} y2={rY+rH/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
                 <line x1={0} y1={rY+rH*2/3} x2={rW} y2={rY+rH*2/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
-                {/* Cercle central = avatar rond */}
                 <circle cx={SIZE/2} cy={SIZE/2} r={SIZE*0.28} fill="none" stroke="white" strokeWidth="1.5" strokeDasharray="4 3" />
               </>;
             })()}
           </svg>
         </div>
-
         {/* Légende */}
         <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 14, marginTop: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
@@ -4310,8 +4377,8 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
             Avatar rond
           </div>
         </div>
-        <input type="range" min={0.5} max={3} step={0.05} value={scale}
-          onChange={e => setScale(parseFloat(e.target.value))}
+        <input type="range" min={stateRef.current.minScale} max={stateRef.current.minScale * 4} step={0.01} value={scale}
+          onChange={onSliderChange}
           style={{ width: "100%", marginBottom: 18, accentColor: G.rouge }}
         />
         <div style={{ display: "flex", gap: 10 }}>
