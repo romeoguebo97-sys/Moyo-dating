@@ -5182,6 +5182,14 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
 }
 
 function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
+  // ── Sécurité : redirection si non-admin ──
+  useEffect(() => {
+    if (!auth.isAdmin) {
+      console.warn("[Moyo][Admin] Accès refusé — non-admin");
+      onBack();
+    }
+  }, [auth.isAdmin]);
+
   type ReportRow = {
     id?: string;
     reason: string;
@@ -5191,139 +5199,645 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
     created_at?: string;
   };
 
-  const [stats, setStats] = useState({ users: 0, matches: 0, messages: 0, reports: 0 });
+  type AdminProfile = {
+    id: string;
+    name: string;
+    age: number;
+    city: string;
+    gender: string;
+    is_premium: boolean;
+    is_admin?: boolean;
+    is_verified?: boolean;
+    is_banned?: boolean;
+    created_at?: string;
+  };
+
+  // ── Onglet actif ──
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports">("stats");
+
+  // ── Stats ──
+  const [stats, setStats] = useState({
+    users: 0, matches: 0, messages: 0, reports: 0,
+    todayUsers: 0, premiumUsers: 0, verifiedUsers: 0, bannedUsers: 0,
+    maleCount: 0, femaleCount: 0,
+    topCities: [] as { city: string; count: number }[],
+    recentUsers: [] as AdminProfile[],
+  });
+
+  // ── Reports ──
   const [reports, setReports] = useState<ReportRow[]>([]);
+  const [reportFilter, setReportFilter] = useState<"all" | "user" | "system">("all");
+
+  // ── Users ──
+  const [users, setUsers] = useState<AdminProfile[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userPage, setUserPage] = useState(0);
+  const USER_PAGE_SIZE = 20;
+
+  // ── Global ──
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "user" | "system">("all");
+  const [toast, setToast] = useState<ToastState>(null);
+  const [confirmModal, setConfirmModal] = useState<{ msg: string; onConfirm: () => void } | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // userId en cours
 
-  const loadStats = async () => {
-    setLoading(true);
-    console.log("[Moyo][Admin] Chargement du dashboard…");
-    try {
-      const [users, matches, messages, reps, totalReps] = await Promise.all([
-        sb.query<Profile>(auth.token, "profiles", "?select=id"),
-        sb.query<Match>(auth.token, "matches", "?select=id"),
-        sb.query<{ id: string }>(auth.token, "messages", "?select=id"),
-        // 50 derniers signalements avec toutes les colonnes utiles
-        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&order=created_at.desc&limit=50"),
-        // Vrai total (sans limit)
-        sb.query<{ id: string }>(auth.token, "reports", "?select=id"),
-      ]);
-      setStats({
-        users: users.length,
-        matches: matches.length,
-        messages: messages.length,
-        reports: totalReps.length, // vrai total, pas limité à 50
-      });
-      setReports(reps);
-      console.log(`[Moyo][Admin] ✅ ${reps.length} signalements chargés (total: ${totalReps.length})`);
-    } catch (e: any) {
-      console.error("[Moyo][Admin] ❌ Erreur chargement dashboard :", e?.message || e);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => { loadStats(); }, []);
-
-  // ── Classifier chaque report pour l'affichage ──
-  const classifyReport = (r: ReportRow): { label: string; color: string; emoji: string } => {
-    if (r.reason?.startsWith("[AUTO-MOD")) return { label: "Auto-modération", color: "#e67e22", emoji: "🤖" };
-    if (r.reason?.startsWith("[BOT SIGNALEMENT]")) return { label: "Alerte bot", color: "#8e44ad", emoji: "🤖" };
-    if (!r.reported_id) return { label: "Alerte système", color: "#7f8c8d", emoji: "⚠️" };
-    return { label: "Signalement profil", color: G.rouge, emoji: "🚨" };
-  };
+  // ── Utilitaires ──
+  const showToast = (msg: string, type: "success" | "error" = "success") => setToast({ msg, type });
 
   const formatDate = (iso?: string) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  };
+
+  const formatDateTime = (iso?: string) => {
     if (!iso) return "";
     const d = new Date(iso);
     return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
-  const filtered = reports.filter(r => {
-    if (filter === "user") return !r.reason?.startsWith("[AUTO-MOD") && !r.reason?.startsWith("[BOT") && r.reported_id;
-    if (filter === "system") return r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id;
+  // ── Chargement des stats globales ──
+  const loadStats = async () => {
+    setLoading(true);
+    console.log("[Moyo][Admin] Chargement du dashboard…");
+    try {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const todayIso = today.toISOString();
+
+      const [allUsers, matches, messages, reps, totalReps] = await Promise.all([
+        sb.query<AdminProfile>(auth.token, "profiles", "?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at&order=created_at.desc&limit=500"),
+        sb.query<{ id: string }>(auth.token, "matches", "?select=id"),
+        sb.query<{ id: string }>(auth.token, "messages", "?select=id"),
+        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&order=created_at.desc&limit=50"),
+        sb.query<{ id: string }>(auth.token, "reports", "?select=id"),
+      ]);
+
+      // Calculs stats avancées
+      const todayUsers = allUsers.filter(u => u.created_at && u.created_at >= todayIso).length;
+      const premiumUsers = allUsers.filter(u => u.is_premium).length;
+      const verifiedUsers = allUsers.filter(u => u.is_verified).length;
+      const bannedUsers = allUsers.filter(u => u.is_banned).length;
+      const maleCount = allUsers.filter(u => u.gender === "Homme").length;
+      const femaleCount = allUsers.filter(u => u.gender === "Femme").length;
+
+      // Top villes
+      const cityMap: Record<string, number> = {};
+      allUsers.forEach(u => { if (u.city) cityMap[u.city] = (cityMap[u.city] || 0) + 1; });
+      const topCities = Object.entries(cityMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([city, count]) => ({ city, count }));
+
+      // Derniers inscrits
+      const recentUsers = allUsers.slice(0, 5);
+
+      setStats({
+        users: allUsers.length,
+        matches: matches.length,
+        messages: messages.length,
+        reports: totalReps.length,
+        todayUsers, premiumUsers, verifiedUsers, bannedUsers,
+        maleCount, femaleCount, topCities, recentUsers,
+      });
+      setReports(reps);
+      console.log(`[Moyo][Admin] ✅ Dashboard chargé — ${allUsers.length} profils, ${reps.length} signalements`);
+    } catch (e: any) {
+      console.error("[Moyo][Admin] ❌ Erreur chargement dashboard :", e?.message || e);
+      showToast("Erreur chargement dashboard : " + (e?.message || "inconnue"), "error");
+    }
+    setLoading(false);
+  };
+
+  // ── Chargement des utilisateurs avec recherche ──
+  const loadUsers = async (search = "", page = 0) => {
+    setUsersLoading(true);
+    try {
+      const offset = page * USER_PAGE_SIZE;
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at&order=created_at.desc&limit=${USER_PAGE_SIZE}&offset=${offset}`;
+      if (search.trim()) {
+        // Recherche par nom (ilike)
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at&name=ilike.*${encodeURIComponent(search.trim())}*&order=created_at.desc&limit=${USER_PAGE_SIZE}&offset=${offset}`;
+      }
+      const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
+      setUsers(res);
+    } catch (e: any) {
+      console.error("[Moyo][Admin][Users] ❌ Erreur :", e?.message || e);
+      showToast("Erreur chargement utilisateurs : " + (e?.message || "inconnue"), "error");
+    }
+    setUsersLoading(false);
+  };
+
+  useEffect(() => { loadStats(); }, []);
+  useEffect(() => {
+    if (activeTab === "users") loadUsers(userSearch, userPage);
+  }, [activeTab, userPage]);
+
+  // ── Action admin générique sur un profil ──
+  const adminAction = async (
+    userId: string,
+    updates: Partial<AdminProfile>,
+    successMsg: string,
+  ) => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setActionLoading(userId);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify(updates),
+      });
+      const data = await r.json().catch(() => null);
+      if (!r.ok) {
+        const errMsg = data?.message || data?.code || `HTTP ${r.status}`;
+        console.error("[Moyo][Admin][Action] ❌ Supabase error :", data);
+        if (r.status === 403 || r.status === 401) {
+          showToast(`Action bloquée par Supabase RLS (policy). Détail : ${errMsg}`, "error");
+        } else {
+          showToast(`Erreur Supabase : ${errMsg}`, "error");
+        }
+        return;
+      }
+      console.log("[Moyo][Admin][Action] ✅", successMsg, updates);
+      showToast(successMsg, "success");
+      // Mise à jour locale immédiate
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+    } catch (e: any) {
+      console.error("[Moyo][Admin][Action] ❌ Erreur réseau :", e?.message || e);
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setActionLoading(null);
+  };
+
+  // ── Suppression de compte ──
+  const deleteAccount = async (user: AdminProfile) => {
+    if (user.id === auth.userId) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setActionLoading(user.id);
+    try {
+      // Supprimer le profil (cascade selon policies)
+      await sb.delete(auth.token, "profiles", `?id=eq.${user.id}`);
+      console.log("[Moyo][Admin][Delete] ✅ Profil supprimé :", user.id);
+      showToast(`Profil de ${user.name} supprimé.`, "success");
+      setUsers(prev => prev.filter(u => u.id !== user.id));
+      setStats(s => ({ ...s, users: s.users - 1 }));
+    } catch (e: any) {
+      console.error("[Moyo][Admin][Delete] ❌ Erreur :", e?.message || e);
+      showToast("Erreur suppression : " + (e?.message || "inconnue"), "error");
+    }
+    setActionLoading(null);
+  };
+
+  // ── Confirmation modale ──
+  const confirm = (msg: string, fn: () => void) => setConfirmModal({ msg, onConfirm: fn });
+
+  // ── Classify reports ──
+  const classifyReport = (r: ReportRow): { label: string; color: string } => {
+    if (r.reason?.startsWith("[AUTO-MOD")) return { label: "Auto-modération", color: "#e67e22" };
+    if (r.reason?.startsWith("[BOT SIGNALEMENT]")) return { label: "Alerte bot", color: "#8e44ad" };
+    if (!r.reported_id) return { label: "Alerte système", color: "#7f8c8d" };
+    return { label: "Signalement profil", color: G.rouge };
+  };
+
+  const filteredReports = reports.filter(r => {
+    if (reportFilter === "user") return !r.reason?.startsWith("[AUTO-MOD") && !r.reason?.startsWith("[BOT") && r.reported_id;
+    if (reportFilter === "system") return r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id;
     return true;
   });
 
+  // ── SVG Icons ──
+  const IcoUsers = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+  const IcoStats = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+  const IcoAlert = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+  const IcoStar = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="#D4A843" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+  const IcoShield = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+  const IcoBan = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>;
+  const IcoCheck = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+  const IcoTrash = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>;
+  const IcoSearch = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+  const IcoRefresh = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>;
+  const IcoArrowLeft = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
+  const IcoGear = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+
+  // ── Rendu d'un badge statut ──
+  const StatusBadge = ({ label, active, color, Icon }: { label: string; active: boolean; color: string; Icon: () => JSX.Element }) => (
+    active ? (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${color}18`, color, borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>
+        <Icon />{label}
+      </span>
+    ) : null
+  );
+
+  // ── Rendu d'un bouton d'action utilisateur ──
+  const ActionBtn = ({ label, onClick, color = G.rouge, disabled = false }: {
+    label: string; onClick: () => void; color?: string; disabled?: boolean
+  }) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: `${color}14`, color, border: `1px solid ${color}30`, borderRadius: 8,
+        padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.5 : 1, whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  if (!auth.isAdmin) return null;
+
   return (
-    <div style={{ padding: "12px 16px 32px" }}>
+    <div style={{ padding: "0 0 80px", minHeight: "100vh", background: G.creme }}>
+      {/* Toast */}
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Modal confirmation */}
+      {confirmModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <p style={{ fontSize: "0.9rem", color: "#111", lineHeight: 1.6, marginBottom: 22, fontWeight: 500 }}>{confirmModal.msg}</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn variant="ghost" onClick={() => setConfirmModal(null)} style={{ flex: 1, padding: "11px" }}>Annuler</Btn>
+              <Btn variant="danger" onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }} style={{ flex: 1, padding: "11px" }}>Confirmer</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <div onClick={onBack} style={{ cursor: "pointer", fontSize: "1.1rem", color: "#555" }}>←</div>
-        <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>⚙️ Admin Dashboard</h2>
+      <div style={{ background: G.blanc, padding: "14px 16px 0", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+          <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><IcoArrowLeft /></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <IcoGear />
+            <span style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</span>
+          </div>
+        </div>
+        {/* Onglets */}
+        <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}` }}>
+          {([
+            ["stats", "Statistiques", IcoStats],
+            ["users", "Utilisateurs", IcoUsers],
+            ["reports", "Signalements", IcoAlert],
+          ] as [string, string, () => JSX.Element][]).map(([key, label, Icon]) => (
+            <div
+              key={key}
+              onClick={() => {
+                setActiveTab(key as any);
+                if (key === "users" && users.length === 0) loadUsers("", 0);
+              }}
+              style={{
+                flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                padding: "10px 0 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
+                color: activeTab === key ? G.rouge : "#999",
+                borderBottom: activeTab === key ? `2.5px solid ${G.rouge}` : "2.5px solid transparent",
+                transition: "all 0.2s",
+              }}
+            >
+              <Icon />{label}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 40 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
-        </div>
-      ) : (
-        <>
-          {/* Stats */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>
-            {([
-              ["Membres", stats.users, "👥"],
-              ["Matchs", stats.matches, "💞"],
-              ["Messages", stats.messages, "💬"],
-              ["Signalements", stats.reports, "🚨"],
-            ] as [string, number, string][]).map(([label, value, emoji]) => (
-              <div key={label} style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}>
-                <div style={{ fontSize: "1.8rem" }}>{emoji}</div>
-                <div style={{ fontSize: "1.8rem", fontWeight: 700, color: G.rouge }}>{value}</div>
-                <div style={{ fontSize: "0.75rem", color: "#555" }}>{label}</div>
+      {/* ═══════════════════════════════════════════ ONGLET STATS */}
+      {activeTab === "stats" && (
+        <div style={{ padding: "16px" }}>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: 60 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+          ) : (
+            <>
+              {/* Grille stats principales */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
+                {([
+                  ["Membres total", stats.users, G.rouge, <IcoUsers key="u"/>],
+                  ["Matchs", stats.matches, "#8e44ad", <svg key="m" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
+                  ["Messages", stats.messages, "#2980b9", <svg key="ms" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
+                  ["Signalements", stats.reports, "#e67e22", <IcoAlert key="a"/>],
+                ] as [string, number, string, React.ReactNode][]).map(([label, value, color, icon]) => (
+                  <div key={label} style={{ background: G.blanc, borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                    <div style={{ color, marginBottom: 6 }}>{icon}</div>
+                    <div style={{ fontSize: "1.8rem", fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+                    <div style={{ fontSize: "0.73rem", color: "#777", marginTop: 4 }}>{label}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+
+              {/* Stats avancées */}
+              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 14 }}>Statistiques avancées</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+                  {([
+                    ["Nouveaux aujourd'hui", stats.todayUsers, "#27ae60"],
+                    ["Premium actifs", stats.premiumUsers, "#D4A843"],
+                    ["Profils vérifiés", stats.verifiedUsers, G.vert],
+                    ["Profils bannis", stats.bannedUsers, "#e74c3c"],
+                  ] as [string, number, string][]).map(([label, val, color]) => (
+                    <div key={label} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25` }}>
+                      <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val}</div>
+                      <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Ratio Genre */}
+              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Ratio Homme / Femme</h3>
+                {stats.users > 0 ? (
+                  <>
+                    <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                      <div style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#1a6ef5" }}>{stats.maleCount}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#555" }}>Hommes</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#e91e8c" }}>{stats.femaleCount}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#555" }}>Femmes</div>
+                      </div>
+                    </div>
+                    <div style={{ height: 10, borderRadius: 50, background: "#f0f0f0", overflow: "hidden", display: "flex" }}>
+                      <div style={{ width: `${Math.round(stats.maleCount / stats.users * 100)}%`, background: "#1a6ef5", borderRadius: "50px 0 0 50px", transition: "width 0.5s" }} />
+                      <div style={{ flex: 1, background: "#e91e8c", borderRadius: "0 50px 50px 0" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.68rem", color: "#888" }}>
+                      <span>{Math.round(stats.maleCount / stats.users * 100)}% H</span>
+                      <span>{Math.round(stats.femaleCount / stats.users * 100)}% F</span>
+                    </div>
+                  </>
+                ) : <p style={{ fontSize: "0.82rem", color: "#aaa" }}>Données insuffisantes</p>}
+              </div>
+
+              {/* Top villes */}
+              {stats.topCities.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Top villes</h3>
+                  {stats.topCities.map(({ city, count }, i) => (
+                    <div key={city} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                      <span style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{city}</span>
+                          <span style={{ fontSize: "0.78rem", color: G.rouge, fontWeight: 700 }}>{count}</span>
+                        </div>
+                        <div style={{ height: 5, borderRadius: 50, background: "#f0f0f0", overflow: "hidden" }}>
+                          <div style={{ width: `${Math.round(count / stats.users * 100)}%`, background: `linear-gradient(90deg,${G.rouge},${G.or})`, height: "100%", borderRadius: 50 }} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Derniers inscrits */}
+              {stats.recentUsers.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Derniers inscrits</h3>
+                  {stats.recentUsers.map(u => (
+                    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${G.gris}` }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 5 }}>
+                          {u.name}{u.is_premium && <IcoStar />}
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: "#888" }}>{u.city} · {u.age} ans</div>
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "#aaa" }}>{formatDate(u.created_at)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}>
+                <IcoRefresh />Actualiser
+              </Btn>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET UTILISATEURS */}
+      {activeTab === "users" && (
+        <div style={{ padding: "16px" }}>
+          {/* Barre de recherche */}
+          <div style={{ position: "relative", marginBottom: 14 }}>
+            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
+            <input
+              value={userSearch}
+              onChange={e => setUserSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0); } }}
+              placeholder="Rechercher par nom…"
+              style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0); }} style={{ flex: 1, padding: "10px" }}>
+              Rechercher
+            </Btn>
+            <Btn variant="ghost" onClick={() => { setUserSearch(""); setUserPage(0); loadUsers("", 0); }} style={{ padding: "10px 16px" }}>
+              Réinitialiser
+            </Btn>
           </div>
 
-          {/* Filtres reports */}
+          {usersLoading ? (
+            <div style={{ textAlign: "center", padding: 40 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+          ) : users.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.88rem" }}>Aucun utilisateur trouvé</div>
+          ) : (
+            <>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 10, fontWeight: 600 }}>{users.length} utilisateur(s) affichés</div>
+              {users.map(u => {
+                const isLoading = actionLoading === u.id;
+                const isSelf = u.id === auth.userId;
+                return (
+                  <div key={u.id} style={{ background: G.blanc, borderRadius: 16, padding: "14px", marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                    {/* En-tête utilisateur */}
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                      <div style={{ width: 42, height: 42, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5 }}>
+                          {u.name}
+                          {isSelf && <span style={{ fontSize: "0.65rem", background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Vous</span>}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 2 }}>
+                          {u.age} ans · {u.city} · {u.gender}
+                          {u.created_at && <span> · inscrit le {formatDate(u.created_at)}</span>}
+                        </div>
+                        {/* Badges statuts */}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                          <StatusBadge label="Premium" active={u.is_premium} color="#D4A843" Icon={IcoStar} />
+                          <StatusBadge label="Admin" active={!!u.is_admin} color={G.rouge} Icon={IcoGear} />
+                          <StatusBadge label="Vérifié" active={!!u.is_verified} color={G.vert} Icon={IcoCheck} />
+                          <StatusBadge label="Banni" active={!!u.is_banned} color="#e74c3c" Icon={IcoBan} />
+                        </div>
+                      </div>
+                      {isLoading && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite", flexShrink: 0 }}><circle cx="12" cy="12" r="10"/></svg>
+                      )}
+                    </div>
+
+                    {/* Actions — ligne 1 : Premium & Admin */}
+                    <div style={{ borderTop: `1px solid ${G.gris}`, paddingTop: 10 }}>
+                      <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Statuts</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                        {!u.is_premium ? (
+                          <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
+                            onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true }, `${u.name} est maintenant Premium.`))} />
+                        ) : (
+                          <ActionBtn label="— Premium" color="#B8860B" disabled={isLoading}
+                            onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false }, `Premium retiré pour ${u.name}.`))} />
+                        )}
+                        {!u.is_admin ? (
+                          <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
+                            onClick={() => confirm(`Rendre ${u.name} administrateur(trice) ?`, () => adminAction(u.id, { is_admin: true }, `${u.name} est maintenant admin.`))} />
+                        ) : (
+                          <ActionBtn label="— Admin" color="#c0392b" disabled={isLoading || isSelf}
+                            onClick={() => {
+                              if (isSelf) { showToast("Vous ne pouvez pas retirer vos propres droits admin.", "error"); return; }
+                              confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false }, `Droits admin retirés pour ${u.name}.`));
+                            }} />
+                        )}
+                        {!u.is_verified ? (
+                          <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading}
+                            onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
+                        ) : (
+                          <ActionBtn label="— Vérifier" color="#555" disabled={isLoading}
+                            onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
+                        )}
+                      </div>
+
+                      {/* Actions modération */}
+                      <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Modération</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {!u.is_banned ? (
+                          <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || isSelf}
+                            onClick={() => {
+                              if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }
+                              confirm(`Bannir ${u.name} ? Il/elle ne pourra plus accéder à l'application.`, () => adminAction(u.id, { is_banned: true, is_visible: false }, `${u.name} a été banni(e).`));
+                            }} />
+                        ) : (
+                          <ActionBtn label="Débannir" color={G.vert} disabled={isLoading}
+                            onClick={() => confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true }, `${u.name} a été débanni(e).`))} />
+                        )}
+                        <ActionBtn label="Supprimer" color="#c0392b" disabled={isLoading || isSelf}
+                          onClick={() => {
+                            if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
+                            confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
+                          }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Pagination */}
+              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                <Btn variant="ghost" onClick={() => { const p = Math.max(0, userPage - 1); setUserPage(p); loadUsers(userSearch, p); }} disabled={userPage === 0} style={{ flex: 1, padding: "10px" }}>
+                  ← Précédent
+                </Btn>
+                <span style={{ display: "flex", alignItems: "center", fontSize: "0.8rem", color: "#888", padding: "0 8px" }}>
+                  Page {userPage + 1}
+                </span>
+                <Btn variant="ghost" onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(userSearch, p); }} disabled={users.length < USER_PAGE_SIZE} style={{ flex: 1, padding: "10px" }}>
+                  Suivant →
+                </Btn>
+              </div>
+            </>
+          )}
+
+          {/* Note colonnes manquantes */}
+          <div style={{ background: "rgba(243,156,18,0.08)", border: "1px solid rgba(243,156,18,0.3)", borderRadius: 12, padding: "12px 14px", marginTop: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span style={{ fontWeight: 700, fontSize: "0.78rem", color: "#f39c12" }}>Note technique</span>
+            </div>
+            <p style={{ fontSize: "0.73rem", color: "#555", lineHeight: 1.5 }}>
+              Si les actions Bannir/Débannir échouent, la colonne <code>is_banned</code> est peut-être absente. SQL à exécuter dans Supabase : <code>ALTER TABLE profiles ADD COLUMN is_banned boolean DEFAULT false;</code>
+            </p>
+            <p style={{ fontSize: "0.73rem", color: "#555", lineHeight: 1.5, marginTop: 6 }}>
+              Si les mises à jour sont bloquées (erreur 403), les policies RLS doivent autoriser les admins à modifier les profils. Contactez le développeur.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET SIGNALEMENTS */}
+      {activeTab === "reports" && (
+        <div style={{ padding: "16px" }}>
+          {/* Filtres */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             {(["all", "user", "system"] as const).map(f => (
-              <div key={f} onClick={() => setFilter(f)} style={{
-                padding: "6px 14px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
-                background: filter === f ? G.rouge : "#F0F0F0",
-                color: filter === f ? G.blanc : "#555",
+              <div key={f} onClick={() => setReportFilter(f)} style={{
+                padding: "7px 14px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                background: reportFilter === f ? G.rouge : G.blanc,
+                color: reportFilter === f ? G.blanc : "#555",
+                boxShadow: reportFilter === f ? "0 2px 8px rgba(192,57,43,0.25)" : "none",
+                border: `1px solid ${reportFilter === f ? G.rouge : G.gris}`,
               }}>
-                {f === "all" ? "Tous" : f === "user" ? "🚨 Profils" : "🤖 Système"}
+                {f === "all" ? "Tous" : f === "user" ? "Profils" : "Système"}
               </div>
             ))}
           </div>
 
-          {/* Liste des reports */}
-          <div style={{ background: G.blanc, borderRadius: 16, padding: "16px" }}>
-            <h3 style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 12, color: "#555" }}>
-              Signalements récents ({filtered.length} affichés / {stats.reports} total)
-            </h3>
+          <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
+                Signalements ({filteredReports.length} / {stats.reports} total)
+              </h3>
+            </div>
 
-            {filtered.length === 0 ? (
-              <p style={{ color: "#555", fontSize: "0.85rem" }}>Aucun signalement dans cette catégorie</p>
+            {filteredReports.length === 0 ? (
+              <p style={{ color: "#aaa", fontSize: "0.85rem", textAlign: "center", padding: "20px 0" }}>Aucun signalement dans cette catégorie</p>
             ) : (
-              filtered.map((r, i) => {
+              filteredReports.map((r, i) => {
                 const cat = classifyReport(r);
                 return (
-                  <div key={r.id || i} style={{ padding: "12px 0", borderBottom: `1px solid ${G.gris}` }}>
-                    {/* Badge catégorie */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <span style={{ background: `${cat.color}18`, color: cat.color, borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 700 }}>
-                        {cat.emoji} {cat.label}
+                  <div key={r.id || i} style={{ padding: "12px 0", borderBottom: i < filteredReports.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <span style={{ background: `${cat.color}18`, color: cat.color, borderRadius: 50, padding: "2px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                        {cat.label}
                       </span>
                       {r.status && (
-                        <span style={{ background: r.status === "pending" ? "rgba(243,156,18,0.12)" : "rgba(39,174,96,0.12)", color: r.status === "pending" ? "#f39c12" : "#27ae60", borderRadius: 50, padding: "2px 10px", fontSize: "0.68rem", fontWeight: 600 }}>
+                        <span style={{ background: r.status === "pending" ? "rgba(243,156,18,0.12)" : "rgba(39,174,96,0.12)", color: r.status === "pending" ? "#f39c12" : "#27ae60", borderRadius: 50, padding: "2px 10px", fontSize: "0.66rem", fontWeight: 600 }}>
                           {r.status === "pending" ? "En attente" : r.status}
                         </span>
                       )}
                     </div>
-                    {/* Motif */}
-                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>
-                      {r.reason}
-                    </div>
-                    {/* IDs */}
-                    <div style={{ fontSize: "0.75rem", color: "#888", display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      <span>👤 Auteur : {r.reporter_id?.slice(0, 12)}…</span>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a", marginBottom: 5, lineHeight: 1.4 }}>{r.reason}</div>
+                    <div style={{ fontSize: "0.72rem", color: "#999", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        {r.reporter_id?.slice(0, 12)}…
+                      </span>
                       {r.reported_id
-                        ? <span>🎯 Signalé : {r.reported_id?.slice(0, 12)}…</span>
-                        : <span style={{ color: "#aaa" }}>🎯 Aucune cible (alerte système)</span>
+                        ? <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                            {r.reported_id?.slice(0, 12)}…
+                          </span>
+                        : <span style={{ color: "#ccc" }}>Alerte système</span>
                       }
-                      {r.created_at && <span>🕐 {formatDate(r.created_at)}</span>}
+                      {r.created_at && (
+                        <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          {formatDateTime(r.created_at)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -5331,8 +5845,10 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
             )}
           </div>
 
-          <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12 }}>↺ Actualiser</Btn>
-        </>
+          <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <IcoRefresh />Actualiser
+          </Btn>
+        </div>
       )}
     </div>
   );
