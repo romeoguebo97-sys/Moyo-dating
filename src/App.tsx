@@ -1718,6 +1718,11 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         setErrorMsg("Profil introuvable. Réessaie dans quelques secondes.");
         setLoading(false); return;
       }
+      if ((profiles[0] as any).is_banned) {
+        await sb.signOut(res.access_token);
+        setErrorMsg("Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à contact@moyo-congo.com");
+        setLoading(false); return;
+      }
       onAuth({
         token: res.access_token,
         userId: res.user.id,
