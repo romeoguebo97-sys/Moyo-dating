@@ -2269,6 +2269,308 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
   );
 }
 
+// ── CAROUSEL D'ENGAGEMENT PREMIUM ──
+const premiumConversionSlides = [
+  {
+    id: 1,
+    title: "Passe au niveau supérieur",
+    description: "Profite d'une expérience plus complète pour faire de meilleures rencontres.",
+    buttonText: "Découvrir Premium",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/>
+      </svg>
+    ),
+    accent: G.or,
+    bg: "linear-gradient(135deg,rgba(212,168,67,0.12),rgba(212,168,67,0.04))",
+  },
+  {
+    id: 2,
+    title: "Découvre qui t'apprécie",
+    description: "Gagne du temps en voyant les personnes déjà intéressées par ton profil.",
+    buttonText: "Passer à Premium",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    ),
+    accent: G.rouge,
+    bg: "linear-gradient(135deg,rgba(192,57,43,0.08),rgba(192,57,43,0.02))",
+  },
+  {
+    id: 3,
+    title: "Sois plus visible",
+    description: "Ton profil peut être mieux mis en avant auprès des personnes compatibles.",
+    buttonText: "Améliorer mon profil",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+    ),
+    accent: G.vert,
+    bg: "linear-gradient(135deg,rgba(26,92,58,0.08),rgba(26,92,58,0.02))",
+  },
+  {
+    id: 4,
+    title: "Des échanges plus qualifiés",
+    description: "Accède à une expérience pensée pour ceux qui veulent vraiment construire quelque chose.",
+    buttonText: "Découvrir Premium",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    ),
+    accent: "#7B5EA7",
+    bg: "linear-gradient(135deg,rgba(123,94,167,0.08),rgba(123,94,167,0.02))",
+  },
+  {
+    id: 5,
+    title: "Moins de limites, plus de liberté",
+    description: "Profite d'une navigation plus fluide et d'options avancées.",
+    buttonText: "Voir les avantages",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    ),
+    accent: G.or,
+    bg: "linear-gradient(135deg,rgba(212,168,67,0.12),rgba(212,168,67,0.04))",
+  },
+];
+
+const premiumAdviceSlides = [
+  {
+    id: 1,
+    title: "Choisis une photo claire",
+    description: "Une photo lumineuse, nette et récente inspire plus facilement confiance.",
+    buttonText: "Modifier mon profil",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+    ),
+    accent: G.rouge,
+    bg: "linear-gradient(135deg,rgba(192,57,43,0.08),rgba(192,57,43,0.02))",
+    tab: "profile",
+  },
+  {
+    id: 2,
+    title: "Montre ton visage",
+    description: "Les profils avec un visage bien visible donnent plus envie d'engager la conversation.",
+    buttonText: "Ajouter une photo",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
+      </svg>
+    ),
+    accent: G.vert,
+    bg: "linear-gradient(135deg,rgba(26,92,58,0.08),rgba(26,92,58,0.02))",
+    tab: "profile",
+  },
+  {
+    id: 3,
+    title: "Écris une bio simple",
+    description: "Quelques phrases sincères suffisent pour montrer qui tu es et ce que tu recherches.",
+    buttonText: "Compléter ma bio",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+      </svg>
+    ),
+    accent: G.or,
+    bg: "linear-gradient(135deg,rgba(212,168,67,0.12),rgba(212,168,67,0.04))",
+    tab: "profile",
+  },
+  {
+    id: 4,
+    title: "Reste naturel",
+    description: "Les profils trop parfaits paraissent moins crédibles. Montre une vraie part de toi.",
+    buttonText: "Améliorer mon profil",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    ),
+    accent: "#7B5EA7",
+    bg: "linear-gradient(135deg,rgba(123,94,167,0.08),rgba(123,94,167,0.02))",
+    tab: "profile",
+  },
+  {
+    id: 5,
+    title: "Commence avec attention",
+    description: "Un message personnalisé fonctionne mieux qu'un simple \"salut\".",
+    buttonText: "Voir mes matchs",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    ),
+    accent: G.rouge,
+    bg: "linear-gradient(135deg,rgba(192,57,43,0.08),rgba(192,57,43,0.02))",
+    tab: "matches",
+  },
+];
+
+const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel({
+  isPremium,
+  onShowPremium,
+  onNav,
+}: {
+  isPremium: boolean;
+  onShowPremium: (r: string) => void;
+  onNav?: (tab: string) => void;
+}) {
+  const slides = isPremium ? premiumAdviceSlides : premiumConversionSlides;
+  const [idx, setIdx] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartX = useRef<number | null>(null);
+
+  const resetTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setIdx(i => (i + 1) % slides.length);
+    }, 4000);
+  };
+
+  useEffect(() => {
+    resetTimer();
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isPremium]);
+
+  const goTo = (i: number) => { setIdx(i); resetTimer(); };
+  const prev = () => goTo((idx - 1 + slides.length) % slides.length);
+  const next = () => goTo((idx + 1) % slides.length);
+
+  const slide = slides[idx];
+
+  const handleAction = () => {
+    if (isPremium) {
+      onNav?.((slide as typeof premiumAdviceSlides[0]).tab || "profile");
+    } else {
+      onShowPremium("Passe Premium pour débloquer toutes les fonctionnalités de Moyo !");
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 14, userSelect: "none", WebkitUserSelect: "none" }}
+      onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+      onTouchEnd={e => {
+        if (touchStartX.current === null) return;
+        const diff = touchStartX.current - e.changedTouches[0].clientX;
+        touchStartX.current = null;
+        if (Math.abs(diff) < 35) return;
+        diff > 0 ? next() : prev();
+      }}
+    >
+      {/* Carte slide */}
+      <div style={{
+        background: G.blanc,
+        borderRadius: 20,
+        padding: "18px 18px 16px",
+        boxShadow: "0 4px 20px rgba(44,26,14,0.08)",
+        border: `1px solid ${G.gris}`,
+        position: "relative",
+        overflow: "hidden",
+        transition: "all 0.3s ease",
+        minHeight: 130,
+      }}>
+        {/* Fond décoratif */}
+        <div style={{
+          position: "absolute", top: -20, right: -20, width: 100, height: 100,
+          borderRadius: "50%", background: slide.bg, pointerEvents: "none",
+        }} />
+
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14, position: "relative" }}>
+          {/* Icône */}
+          <div style={{
+            width: 50, height: 50, borderRadius: 16, flexShrink: 0,
+            background: slide.bg, border: `1.5px solid ${slide.accent}22`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: slide.accent,
+          }}>
+            {slide.icon}
+          </div>
+
+          {/* Texte */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {!isPremium && (
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                background: `${G.or}18`, border: `1px solid ${G.or}44`,
+                borderRadius: 50, padding: "2px 8px", marginBottom: 5,
+              }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill={G.or} stroke="none">
+                  <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/>
+                </svg>
+                <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#856A1A", letterSpacing: "0.03em" }}>PREMIUM</span>
+              </div>
+            )}
+            {isPremium && (
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                background: "rgba(26,92,58,0.08)", border: "1px solid rgba(26,92,58,0.2)",
+                borderRadius: 50, padding: "2px 8px", marginBottom: 5,
+              }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span style={{ fontSize: "0.65rem", fontWeight: 700, color: G.vert, letterSpacing: "0.03em" }}>CONSEIL</span>
+              </div>
+            )}
+            <div style={{ fontSize: "0.9rem", fontWeight: 700, color: G.brun, lineHeight: 1.3, marginBottom: 5 }}>
+              {slide.title}
+            </div>
+            <div style={{ fontSize: "0.76rem", color: "#777", lineHeight: 1.5 }}>
+              {slide.description}
+            </div>
+          </div>
+        </div>
+
+        {/* Bouton */}
+        <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <button
+            onClick={handleAction}
+            style={{
+              background: isPremium
+                ? `linear-gradient(135deg,${slide.accent},${slide.accent}cc)`
+                : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
+              color: G.blanc,
+              border: "none",
+              borderRadius: 50,
+              padding: "8px 16px",
+              fontSize: "0.76rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              letterSpacing: "0.01em",
+              boxShadow: `0 3px 10px ${isPremium ? slide.accent : G.rouge}44`,
+            }}
+          >
+            {slide.buttonText}
+          </button>
+
+          {/* Dots */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            {slides.map((_, i) => (
+              <div
+                key={i}
+                onClick={() => goTo(i)}
+                style={{
+                  width: i === idx ? 18 : 5, height: 5, borderRadius: 99,
+                  background: i === idx ? slide.accent : "#D8D0C8",
+                  transition: "width 0.3s ease, background 0.3s ease",
+                  cursor: "pointer",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [likedIds, setLikedIds] = useState(new Set<string>());
@@ -2515,7 +2817,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       <div key={idx} style={{ width: isActive ? 20 : 6, height: 6, borderRadius: 99, background: isActive ? G.rouge : "#E0D5CC", transition: "width 0.25s ease, background 0.25s ease" }} />
     );
   })}
-</div></>}{viewedProfile && (
+</div><PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} /></>}{viewedProfile && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 240, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
