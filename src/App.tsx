@@ -2454,7 +2454,7 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
   };
 
   return (
-    <div style={{ marginTop: 14, userSelect: "none", WebkitUserSelect: "none" }}
+    <div style={{ marginTop: 10, userSelect: "none", WebkitUserSelect: "none" }}
       onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
       onTouchEnd={e => {
         if (touchStartX.current === null) return;
@@ -2464,107 +2464,61 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
         diff > 0 ? next() : prev();
       }}
     >
-      {/* Carte slide */}
       <div style={{
         background: G.blanc,
-        borderRadius: 20,
-        padding: "18px 18px 16px",
-        boxShadow: "0 4px 20px rgba(44,26,14,0.08)",
+        borderRadius: 16,
+        padding: "10px 14px",
+        boxShadow: "0 2px 12px rgba(44,26,14,0.07)",
         border: `1px solid ${G.gris}`,
         position: "relative",
         overflow: "hidden",
-        transition: "all 0.3s ease",
-        minHeight: 130,
       }}>
-        {/* Fond décoratif */}
-        <div style={{
-          position: "absolute", top: -20, right: -20, width: 100, height: 100,
-          borderRadius: "50%", background: slide.bg, pointerEvents: "none",
-        }} />
+        {/* Fond décoratif léger */}
+        <div style={{ position: "absolute", top: -16, right: -16, width: 70, height: 70, borderRadius: "50%", background: slide.bg, pointerEvents: "none" }} />
 
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 14, position: "relative" }}>
-          {/* Icône */}
+        {/* Ligne unique : icône + texte + bouton */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
+          {/* Icône compacte */}
           <div style={{
-            width: 50, height: 50, borderRadius: 16, flexShrink: 0,
-            background: slide.bg, border: `1.5px solid ${slide.accent}22`,
-            display: "flex", alignItems: "center", justifyContent: "center",
+            width: 36, height: 36, borderRadius: 12, flexShrink: 0,
+            background: slide.bg, display: "flex", alignItems: "center", justifyContent: "center",
             color: slide.accent,
           }}>
             {slide.icon}
           </div>
 
-          {/* Texte */}
+          {/* Titre + description */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            {!isPremium && (
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 4,
-                background: `${G.or}18`, border: `1px solid ${G.or}44`,
-                borderRadius: 50, padding: "2px 8px", marginBottom: 5,
-              }}>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill={G.or} stroke="none">
-                  <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/>
-                </svg>
-                <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#856A1A", letterSpacing: "0.03em" }}>PREMIUM</span>
-              </div>
-            )}
-            {isPremium && (
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 4,
-                background: "rgba(26,92,58,0.08)", border: "1px solid rgba(26,92,58,0.2)",
-                borderRadius: 50, padding: "2px 8px", marginBottom: 5,
-              }}>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                <span style={{ fontSize: "0.65rem", fontWeight: 700, color: G.vert, letterSpacing: "0.03em" }}>CONSEIL</span>
-              </div>
-            )}
-            <div style={{ fontSize: "0.9rem", fontWeight: 700, color: G.brun, lineHeight: 1.3, marginBottom: 5 }}>
+            <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, lineHeight: 1.2, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {slide.title}
             </div>
-            <div style={{ fontSize: "0.76rem", color: "#777", lineHeight: 1.5 }}>
+            <div style={{ fontSize: "0.68rem", color: "#888", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
               {slide.description}
             </div>
           </div>
-        </div>
 
-        {/* Bouton */}
-        <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <button
-            onClick={handleAction}
-            style={{
-              background: isPremium
-                ? `linear-gradient(135deg,${slide.accent},${slide.accent}cc)`
-                : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
-              color: G.blanc,
-              border: "none",
-              borderRadius: 50,
-              padding: "8px 16px",
-              fontSize: "0.76rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              letterSpacing: "0.01em",
-              boxShadow: `0 3px 10px ${isPremium ? slide.accent : G.rouge}44`,
-            }}
-          >
+          {/* Bouton compact */}
+          <button onClick={handleAction} style={{
+            background: `linear-gradient(135deg,${slide.accent},${slide.accent}cc)`,
+            color: G.blanc, border: "none", borderRadius: 50,
+            padding: "6px 11px", fontSize: "0.66rem", fontWeight: 700,
+            cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
+            boxShadow: `0 2px 8px ${slide.accent}44`,
+          }}>
             {slide.buttonText}
           </button>
+        </div>
 
-          {/* Dots */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            {slides.map((_, i) => (
-              <div
-                key={i}
-                onClick={() => goTo(i)}
-                style={{
-                  width: i === idx ? 18 : 5, height: 5, borderRadius: 99,
-                  background: i === idx ? slide.accent : "#D8D0C8",
-                  transition: "width 0.3s ease, background 0.3s ease",
-                  cursor: "pointer",
-                }}
-              />
-            ))}
-          </div>
+        {/* Dots */}
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 4, marginTop: 8 }}>
+          {slides.map((_, i) => (
+            <div key={i} onClick={() => goTo(i)} style={{
+              width: i === idx ? 16 : 4, height: 4, borderRadius: 99,
+              background: i === idx ? slide.accent : "#D8D0C8",
+              transition: "width 0.3s ease, background 0.3s ease",
+              cursor: "pointer",
+            }} />
+          ))}
         </div>
       </div>
     </div>
