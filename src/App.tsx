@@ -2774,7 +2774,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
 </div><PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} /></>}{viewedProfile && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-        <div style={{ height: 240, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
+        <div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
           {viewedProfile.photo_url ? <img src={viewedProfile.photo_url} alt={viewedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
           <div onClick={() => setViewedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16 }}>
@@ -2952,7 +2952,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
       {selectedProfile && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 600, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedProfile(null)}>
           <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ height: 240, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
+            <div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
               {selectedProfile.photo_url
                 ? <img src={selectedProfile.photo_url} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
@@ -2991,7 +2991,7 @@ function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClos
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
       <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         {/* Photo */}
-        <div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
+        <div style={{ height: 220, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
           {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
           <div onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
@@ -3263,7 +3263,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       {selectedProfile && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 600, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedProfile(null)}>
           <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ height: 240, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
+            <div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
               {selectedProfile.photo_url
                 ? <img src={selectedProfile.photo_url} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
@@ -3500,7 +3500,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
 
     {selectedMatch && p && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedMatch(null)}>
       <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-        <div style={{ height: 280, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
+        <div style={{ height: 220, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
           {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
           <div onClick={() => setSelectedMatch(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
@@ -4100,7 +4100,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       {showPartnerProfile && open.partner && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowPartnerProfile(false)}>
           <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ height: 260, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
+            <div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
               {open.partner.photo_url
                 ? <img src={open.partner.photo_url} alt={open.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
@@ -4272,27 +4272,41 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
         >
           <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
           <canvas ref={canvasRef} width={SIZE} height={SIZE} style={{ display: "block" }} />
-          {/* Overlay : grille des tiers + cercle avatar */}
+          {/* Overlay : rectangle carte (ratio 210/358) + grille des tiers + cercle avatar */}
           <svg style={{ position: "absolute", inset: 0, pointerEvents: "none", width: "100%", height: "100%" }} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-            {/* Grille des tiers sur toute la surface */}
-            <line x1={SIZE/3} y1="0" x2={SIZE/3} y2={SIZE} stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
-            <line x1={SIZE*2/3} y1="0" x2={SIZE*2/3} y2={SIZE} stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
-            <line x1="0" y1={SIZE/3} x2={SIZE} y2={SIZE/3} stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
-            <line x1="0" y1={SIZE*2/3} x2={SIZE} y2={SIZE*2/3} stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
-            {/* Cercle central = avatar rond */}
-            <circle cx={SIZE/2} cy={SIZE/2} r={SIZE*0.38} fill="none" stroke="white" strokeWidth="1.5" />
+            {/* Rectangle zone carte — ratio 210px/358px = 0.586, centré */}
+            {(() => {
+              const rW = SIZE; // pleine largeur
+              const rH = Math.round(SIZE * (210 / 358));
+              const rX = 0;
+              const rY = Math.round((SIZE - rH) / 2);
+              return <>
+                {/* Zone sombre hors rectangle carte */}
+                <rect x={0} y={0} width={SIZE} height={rY} fill="rgba(0,0,0,0.35)" />
+                <rect x={0} y={rY + rH} width={SIZE} height={SIZE - rY - rH} fill="rgba(0,0,0,0.35)" />
+                {/* Bordure rectangle carte */}
+                <rect x={rX} y={rY} width={rW} height={rH} fill="none" stroke={G.or} strokeWidth="2" strokeDasharray="6 3" />
+                {/* Grille des tiers dans le rectangle carte */}
+                <line x1={rW/3} y1={rY} x2={rW/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1={rW*2/3} y1={rY} x2={rW*2/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1={0} y1={rY+rH/3} x2={rW} y2={rY+rH/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1={0} y1={rY+rH*2/3} x2={rW} y2={rY+rH*2/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                {/* Cercle central = avatar rond */}
+                <circle cx={SIZE/2} cy={SIZE/2} r={SIZE*0.28} fill="none" stroke="white" strokeWidth="1.5" strokeDasharray="4 3" />
+              </>;
+            })()}
           </svg>
         </div>
 
         {/* Légende */}
         <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 14, marginTop: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
-            <svg width="14" height="10" viewBox="0 0 14 10"><rect x="1" y="1" width="12" height="8" fill="none" stroke="#555" strokeWidth="1.5"/><line x1="4.3" y1="1" x2="4.3" y2="9" stroke="rgba(0,0,0,0.2)" strokeWidth="0.8"/><line x1="9.7" y1="1" x2="9.7" y2="9" stroke="rgba(0,0,0,0.2)" strokeWidth="0.8"/><line x1="1" y1="4.3" x2="13" y2="4.3" stroke="rgba(0,0,0,0.2)" strokeWidth="0.8"/></svg>
-            Aperçu carte
+            <svg width="14" height="9" viewBox="0 0 14 9"><rect x="1" y="1" width="12" height="7" fill="none" stroke={G.or} strokeWidth="1.5" strokeDasharray="3 1.5"/></svg>
+            Zone carte
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
-            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#555" strokeWidth="1.5"/></svg>
-            Photo de profil
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#555" strokeWidth="1.5" strokeDasharray="3 2"/></svg>
+            Avatar rond
           </div>
         </div>
         <input type="range" min={0.5} max={3} step={0.05} value={scale}
