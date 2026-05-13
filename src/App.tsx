@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 const SUPABASE_URL = "https://mcswcapxpruiffzrxfvl.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nx44ipF3_X98flDVXxBZ5A_aztvDdgN";
@@ -3331,6 +3331,55 @@ function TickIcon({ read, isPremium, white = false }: { read: boolean; isPremium
   );
 }
 
+const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId, onCancel }: {
+  replyTo: Message; partnerName?: string; myId: string; onCancel: () => void;
+}) {
+  const isMine = replyTo.sender_id === myId;
+  const name = isMine ? "Toi" : (partnerName ?? "…");
+  const accent = isMine ? G.vert : G.rouge;
+  const isImg = replyTo.content.startsWith("[img]");
+  const raw = replyTo.content.replace(/^\[↩.*?\]\n/, "");
+  const preview = !isImg && raw.length > 80 ? raw.slice(0, 80) + "…" : raw;
+  return (
+    <div style={{ display: "flex", alignItems: "stretch", background: "#F2F2F2", borderRadius: 14, marginBottom: 8, overflow: "hidden", border: `1px solid ${G.gris}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+      {/* Barre colorée gauche */}
+      <div style={{ width: 5, flexShrink: 0, background: accent, borderRadius: "14px 0 0 14px" }} />
+      {/* Icône ↩ */}
+      <div style={{ display: "flex", alignItems: "center", paddingLeft: 10, paddingRight: 4, flexShrink: 0 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+        </svg>
+      </div>
+      {/* Texte */}
+      <div style={{ flex: 1, padding: "8px 6px 8px 2px", minWidth: 0 }}>
+        <div style={{ fontSize: "0.76rem", fontWeight: 700, color: accent, marginBottom: 3 }}>{name}</div>
+        <div style={{ fontSize: "0.78rem", color: "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.4 }}>
+          {isImg ? (
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span style={{ color: "#888" }}>Photo</span>
+            </span>
+          ) : preview}
+        </div>
+      </div>
+      {/* Miniature image */}
+      {isImg && (
+        <img src={replyTo.content.slice(5, -6)} alt="" style={{ width: 48, height: 48, objectFit: "cover", flexShrink: 0, alignSelf: "center", borderRadius: 8, margin: "0 6px" }} />
+      )}
+      {/* Bouton ✕ */}
+      <div onClick={onCancel} style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 12px", cursor: "pointer", flexShrink: 0 }}>
+        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#E0E0E0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="3" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
@@ -3567,14 +3616,44 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           return (
             <div key={i} className="msg-row" style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0 }}>
               {isImg ? (
-                <div
-                  style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
-                  onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
-                >
-                  <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
-                  <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: isMine ? "flex-end" : "flex-start" }}>
-                    <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
-                    {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} />}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row" }}>
+                  {/* Flèche contextuelle — même que les messages texte */}
+                  <div className="msg-arrow" onClick={() => setContextMenu({ msg: m, x: 0, y: 0 })} style={{ marginTop: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </div>
+                  <div
+                    style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
+                    onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
+                  >
+                    <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                      <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
+                      {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} />}
+                    </div>
+                    {/* Badges réactions sous l'image — identique aux messages texte */}
+                    {reactionEntries.length > 0 && (
+                      <div style={{ position: "absolute", bottom: -18, [isMine ? "right" : "left"]: 4, display: "flex", gap: 3 }}>
+                        {reactionEntries.map(([emoji, users]) => (
+                          <div key={emoji} onClick={async () => {
+                            if (!m.id) return;
+                            const current = m.reactions || {};
+                            const usersOnThis = (current[emoji] || []) as string[];
+                            const hasReacted = usersOnThis.includes(auth.userId);
+                            const cleaned: Record<string, string[]> = {};
+                            for (const [e, us] of Object.entries(current)) {
+                              cleaned[e] = (us as string[]).filter((u: string) => u !== auth.userId);
+                            }
+                            const base: string[] = cleaned[emoji] || [];
+                            const updated = hasReacted ? base : [...base, auth.userId];
+                            const newReactions = { ...cleaned, [emoji]: updated };
+                            await sb.update(auth.token, "messages", m.id, { reactions: newReactions });
+                            setMsgs(prev => prev.map(msg => msg.id === m.id ? { ...msg, reactions: newReactions } : msg));
+                          }} style={{ background: G.blanc, borderRadius: 50, padding: "2px 6px", fontSize: "0.75rem", boxShadow: "0 1px 4px rgba(0,0,0,0.15)", cursor: "pointer", display: "flex", alignItems: "center", gap: 2, border: `1px solid ${G.gris}` }}>
+                            {emoji}<span style={{ fontSize: "0.65rem", color: "#555", fontWeight: 600 }}>{users.length > 1 ? users.length : ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -3655,67 +3734,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       {/* Barre d'envoi */}
       <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", gap: 0, flexShrink: 0 }}>
         {/* Bandeau répondre style WhatsApp */}
-        {replyTo && (() => {
-          const isMineReply = replyTo.sender_id === auth.userId;
-          const replyName = isMineReply ? "Toi" : open?.partner?.name ?? "…";
-          const accentColor = isMineReply ? G.vert : G.rouge;
-          const rawContent = replyTo.content.replace(/^\[↩.*?\]\n/, "");
-          const isImgReply = replyTo.content.startsWith("[img]");
-          const truncated = !isImgReply && rawContent.length > 80 ? rawContent.slice(0, 80) + "…" : rawContent;
-          return (
-            <div style={{
-              display: "flex", alignItems: "stretch",
-              background: "#F7F7F7",
-              borderRadius: 14,
-              marginBottom: 8,
-              overflow: "hidden",
-              border: `1px solid ${G.gris}`,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              animation: "slideUpIn 0.18s ease",
-            }}>
-              <style>{`@keyframes slideUpIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }`}</style>
-              {/* Barre colorée gauche */}
-              <div style={{ width: 5, flexShrink: 0, background: accentColor, borderRadius: "14px 0 0 14px" }} />
-              {/* Icône répondre */}
-              <div style={{ display: "flex", alignItems: "center", paddingLeft: 10, paddingRight: 4, flexShrink: 0 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
-                </svg>
-              </div>
-              {/* Contenu texte */}
-              <div style={{ flex: 1, padding: "8px 6px 8px 2px", minWidth: 0 }}>
-                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: accentColor, marginBottom: 3, letterSpacing: "0.01em" }}>
-                  {replyName}
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.4 }}>
-                  {isImgReply ? (
-                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                      </svg>
-                      <span style={{ color: "#888" }}>Photo</span>
-                    </span>
-                  ) : truncated}
-                </div>
-              </div>
-              {/* Miniature si image */}
-              {isImgReply && (
-                <img src={replyTo.content.slice(5, -6)} alt="" style={{ width: 48, height: 48, objectFit: "cover", flexShrink: 0, alignSelf: "center", borderRadius: 8, margin: "0 6px" }} />
-              )}
-              {/* Bouton ✕ fermer */}
-              <div
-                onClick={() => setReplyTo(null)}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 12px", cursor: "pointer", flexShrink: 0 }}
-              >
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#E0E0E0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="3" strokeLinecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {replyTo && <ReplyBanner replyTo={replyTo} partnerName={open?.partner?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />}
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {/* Bouton image - Premium */}
           <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
