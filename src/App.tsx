@@ -3145,7 +3145,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
       {/* Onglets likes / visiteurs — Premium uniquement */}
       {auth.isPremium && (likers.length > 0 || visitors.length > 0) && (
         <div style={{ display: "flex", background: G.gris, borderRadius: 50, padding: 3, gap: 2, marginBottom: 10 }}>
-          {[{ id: "likes", label: `❤️ Likes (${likers.length})` }, { id: "visitors", label: `👁 Visiteurs (${visitors.length})` }].map(t => (
+          {[{ id: "likes", label: <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{`Likes (${likers.length})`}</span> }, { id: "visitors", label: <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{`Visiteurs (${visitors.length})`}</span> }].map(t => (
             <div key={t.id} onClick={() => setActiveTab(t.id as "likes" | "visitors")} style={{ flex: 1, padding: "6px 10px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", textAlign: "center", background: activeTab === t.id ? G.blanc : "transparent", color: activeTab === t.id ? G.rouge : "#888", boxShadow: activeTab === t.id ? "0 2px 6px rgba(0,0,0,0.1)" : "none", transition: "all 0.2s" }}>
               {t.label}
             </div>
@@ -3188,7 +3188,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
                 ? <img src={selectedProfile.photo_url} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               }
-              <div onClick={() => setSelectedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
+              <div onClick={() => setSelectedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
               <div style={{ position: "absolute", bottom: 14, left: 16 }}>
                 <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{selectedProfile.name}, {selectedProfile.age} ans {selectedProfile.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}{selectedProfile.is_verified && <VerifiedBadge size={14} />}</div>
                 <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{selectedProfile.city}</div>
@@ -3201,7 +3201,10 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
               </div>
               {selectedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{selectedProfile.bio}</p>}
               <Btn variant="primary" onClick={() => handleLikeFromBanner(selectedProfile)} loading={liking} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
-                ❤️ Liker {selectedProfile.name}
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  Liker {selectedProfile.name}
+                </span>
               </Btn>
             </div>
           </div>
@@ -3224,7 +3227,7 @@ function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClos
         {/* Photo */}
         <div style={{ height: 220, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
           {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
-          <div onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}>✕</div>
+          <div onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
           <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
             <div style={{  fontSize: "1.6rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age} ans</div>
             <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{p.city}</div>
@@ -3342,7 +3345,7 @@ function PremiumBlur({ count, label, onShowPremium }: { count: number; label: st
           style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111",
             border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700,
             fontSize: "0.88rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(212,168,67,0.4)" }}>
-          Passer à Premium ✦
+          Passer à Premium <svg width="11" height="11" viewBox="0 0 24 24" fill="#111" stroke="none" style={{ display: "inline", verticalAlign: "middle", marginLeft: 3 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </button>
       </div>
     </div>
@@ -3554,6 +3557,50 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     setConfirmUnlike(null);
   };
 
+  // ── Sous-composant carte profil (grille) ──
+  const ProfileCard = ({ p, meta, rightSlot, onView }: {
+    p: Profile;
+    meta?: { date?: string; isMatch?: boolean; status?: string };
+    rightSlot?: React.ReactNode;
+    onView: () => void;
+  }) => (
+    <div style={{ background: G.blanc, borderRadius: 16, overflow: "hidden",
+      boxShadow: "0 2px 12px rgba(44,26,14,0.09)", position: "relative", marginBottom: 12 }}>
+      <div onClick={onView} style={{ height: 140, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)",
+        overflow: "hidden", cursor: "pointer", position: "relative" }}>
+        {p.photo_url
+          ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>}
+        {/* Badges en overlay */}
+        <div style={{ position: "absolute", top: 6, left: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+          {(meta?.isMatch || meta?.status === "match") && (
+            <span style={{ background: G.vert, color: "white", borderRadius: 50, padding: "2px 7px", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match
+            </span>
+          )}
+          {meta?.date && isRecent(meta.date) && !meta?.isMatch && meta?.status !== "match" && (
+            <span style={{ background: G.rouge, color: "white", borderRadius: 50, padding: "2px 7px", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
+              <svg width="7" height="7" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Nouveau
+            </span>
+          )}
+        </div>
+        {/* Bouton action (dismiss) en overlay */}
+        {rightSlot && (
+          <div style={{ position: "absolute", top: 6, right: 6 }}>{rightSlot}</div>
+        )}
+      </div>
+      <div onClick={onView} style={{ padding: "8px 10px 10px", cursor: "pointer" }}>
+        <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}, {p.age} ans</div>
+        <div style={{ fontSize: "0.68rem", color: "#777", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   // ── Sous-composant carte profil (liste) ──
   const ProfileRow = ({ p, meta, rightSlot, onView }: {
     p: Profile;
@@ -3575,11 +3622,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       <div onClick={onView} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111" }}>{p.name}, {p.age} ans</span>
-          {meta?.isMatch && <Badge label="💑 Match" color={G.vert} bg="rgba(26,92,58,0.1)" />}
-          {meta?.status === "match" && <Badge label="💑 Match" color={G.vert} bg="rgba(26,92,58,0.1)" />}
+          {meta?.isMatch && <Badge label={<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill={G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match</span>} color={G.vert} bg="rgba(26,92,58,0.1)" />}
+          {meta?.status === "match" && <Badge label={<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill={G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match</span>} color={G.vert} bg="rgba(26,92,58,0.1)" />}
           {meta?.status === "pending" && <Badge label="En attente" color="#888" bg="#F0F0F0" />}
           {meta?.status === "unavailable" && <Badge label="Profil indispo" color="#aaa" bg="#F5F5F5" />}
-          {meta?.date && isRecent(meta.date) && !meta?.isMatch && meta?.status !== "match" && <Badge label="Nouveau ✦" color={G.rouge} bg="rgba(192,57,43,0.08)" />}
+          {meta?.date && isRecent(meta.date) && !meta?.isMatch && meta?.status !== "match" && <Badge label={<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Nouveau</span>} color={G.rouge} bg="rgba(192,57,43,0.08)" />}
         </div>
         <div style={{ fontSize: "0.73rem", color: "#777", marginTop: 3, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <span>
@@ -3608,14 +3655,34 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       {/* ── En-tête ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <h2 style={{ fontSize: "1.18rem", fontWeight: 800, color: "#111" }}>
-          {mode === "likes" ? "❤️ Likes" : "👁️ Vus"}
+          {mode === "likes" ? (
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              Likes
+            </span>
+          ) : (
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Vus
+            </span>
+          )}
         </h2>
-        {isPremiumReal && (
-          <span style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111",
-            borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700 }}>
-            PREMIUM ✦
-          </span>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")}
+            style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`,
+              borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
+            {viewMode === "card" ? "≡ Liste" : "⊞ Carte"}
+          </div>
+          {isPremiumReal && (
+            <span style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111",
+              borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#111" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                PREMIUM
+              </span>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Switch interne ── */}
@@ -3689,6 +3756,23 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                     title="Aucun like reçu pour l'instant"
                     subtitle="Complète ton profil pour attirer plus d'attention ✨"
                   />
+                ) : viewMode === "card" ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+                    {likers.map(p => (
+                      <ProfileCard key={p.id}
+                        p={p}
+                        meta={likerMeta[p.id]}
+                        onView={() => setSelectedProfile(p)}
+                        rightSlot={
+                          <div onClick={(e) => handleDismiss(p, e)}
+                            style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,0.35)",
+                              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </div>
+                        }
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <div>
                     {likers.map(p => (
@@ -3729,6 +3813,19 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                     title="Tu n'as encore liké personne"
                     subtitle="Explore les profils et envoie des likes !"
                   />
+                ) : viewMode === "card" ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+                    {sentLikes.map(p => {
+                      const meta = sentLikesMeta[p.id];
+                      return (
+                        <ProfileCard key={p.id}
+                          p={p}
+                          meta={meta}
+                          onView={() => setSelectedProfile(p)}
+                        />
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div>
                     {sentLikes.map(p => {
@@ -3813,6 +3910,23 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                     title="Aucun visiteur pour l'instant"
                     subtitle="Les personnes qui consultent ton profil apparaîtront ici"
                   />
+                ) : viewMode === "card" ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+                    {visitors.map(p => (
+                      <ProfileCard key={p.id}
+                        p={p}
+                        meta={visitorMeta[p.id]}
+                        onView={() => setSelectedProfile(p)}
+                        rightSlot={
+                          <div onClick={(e) => handleDismiss(p, e)}
+                            style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,0.35)",
+                              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </div>
+                        }
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <div>
                     {visitors.map(p => (
@@ -3852,6 +3966,16 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                     title="Aucun profil consulté"
                     subtitle="Les profils que tu auras visités apparaîtront ici"
                   />
+                ) : viewMode === "card" ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+                    {visitedProfiles.map(p => (
+                      <ProfileCard key={p.id}
+                        p={p}
+                        meta={visitedMeta[p.id]}
+                        onView={() => setSelectedProfile(p)}
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <div>
                     {visitedProfiles.map(p => (
@@ -3900,7 +4024,9 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                 style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)",
                   borderRadius: "50%", width: 34, height: 34, display: "flex",
                   alignItems: "center", justifyContent: "center", cursor: "pointer",
-                  color: G.blanc, fontWeight: 700, fontSize: "1rem" }}>✕</div>
+                  color: G.blanc, fontWeight: 700, fontSize: "1rem" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
               <div style={{ position: "absolute", bottom: 14, left: 16 }}>
                 <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
                   {selectedProfile.name}, {selectedProfile.age} ans
