@@ -3296,7 +3296,7 @@ function InnerSwitch({ options, value, onChange }: {
 }
 
 // Badge générique
-function Badge({ label, color = G.rouge, bg = "rgba(192,57,43,0.1)" }: { label: string; color?: string; bg?: string }) {
+function Badge({ label, color = G.rouge, bg = "rgba(192,57,43,0.1)" }: { label: React.ReactNode; color?: string; bg?: string }) {
   return (
     <span style={{ background: bg, color, borderRadius: 50, padding: "2px 8px",
       fontSize: "0.65rem", fontWeight: 700, letterSpacing: 0.2, flexShrink: 0 }}>
