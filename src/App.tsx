@@ -852,19 +852,19 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "adult", titre: "Majorité requise", desc: "Moyo est strictement réservé aux personnes de 18 ans et plus." },
     ]},
     { id: "confidentialite", title: "Confidentialité & CGU", emoji: "📋", items: [
-      { icon: "shield", titre: "Responsable du traitement", desc: "Romeo GUEBO - contact : romeoguebo97@gmail.com" },
+      { icon: "shield", titre: "Responsable du traitement", desc: "Romeo GUEBO - contact : contact@moyo-congo.com" },
       { icon: "lock2", titre: "Données collectées", desc: "Nom, e-mail, photos, messages, données de connexion et abonnement. Utilisées uniquement pour le fonctionnement de Moyo." },
       { icon: "lock2", titre: "Conservation & sécurité", desc: "Données conservées le temps nécessaire au service. Aucune revente. Prestataires techniques liés à l'hébergement uniquement." },
-      { icon: "verified", titre: "Vos droits (RGPD)", desc: "Accès, modification et suppression de vos données sur demande à romeoguebo97@gmail.com" },
+      { icon: "verified", titre: "Vos droits (RGPD)", desc: "Accès, modification et suppression de vos données sur demande à contact@moyo-congo.com" },
       { icon: "chat", titre: "CGU - Utilisation", desc: "Moyo est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
       { icon: "alert", titre: "Contenus interdits", desc: "Faux profils, harcèlement, contenus illégaux, tentatives d'arnaque ou usurpation d'identité sont strictement interdits." },
       { icon: "star2", titre: "Premium & paiement", desc: "Certaines fonctionnalités sont accessibles via abonnement. Paiements via prestataires sécurisés (MTN MoMo, Airtel Money)." },
     ]},
     { id: "mentions", title: "Mentions légales", emoji: "⚖️", items: [
-      { icon: "user", titre: "Éditeur du site", desc: "Romeo GUEBO - romeoguebo97@gmail.com" },
+      { icon: "user", titre: "Éditeur du site", desc: "Romeo GUEBO - contact@moyo-congo.com" },
       { icon: "shield", titre: "Propriété intellectuelle", desc: "Tous les contenus, visuels et logos de Moyo sont protégés. Toute reproduction sans autorisation est interdite." },
       { icon: "verified", titre: "Droit applicable", desc: "Les présentes conditions sont régies par le droit français. Tout litige relève des tribunaux compétents." },
-      { icon: "chat", titre: "Contact", desc: "Pour toute question légale : romeoguebo97@gmail.com" },
+      { icon: "chat", titre: "Contact", desc: "Pour toute question légale : contact@moyo-congo.com" },
     ]},
     { id: "notation", title: "Noter Moyo", emoji: "⭐", items: [] },
   ];
