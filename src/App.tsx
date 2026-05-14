@@ -361,7 +361,7 @@ const sb = {
         try {
           const msg = JSON.parse(e.data);
           if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") callback();
-        } catch {}
+        } catch (_e) {}
       };
       ws.onerror = () => {};
       return ws;
@@ -1929,7 +1929,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       if (uploadRes.ok) {
         setPhotoUrl(`${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`);
       }
-    } catch {}
+    } catch (_e) {}
     setUploadingPhoto(false);
     setStep(3);
   };
@@ -2323,7 +2323,7 @@ function AdminDesktopPage() {
         const a: Auth = JSON.parse(saved);
         if (a?.token && a?.userId && a?.isAdmin) setAuth(a);
       }
-    } catch {}
+    } catch (_e) {}
     setChecked(true);
   }, []);
 
@@ -3081,7 +3081,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     if (profileId === auth.userId) return;
     try {
       await sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: profileId });
-    } catch {}
+    } catch (_e) {}
   };
 
   const handleLike = async (p: Profile) => {
@@ -3113,7 +3113,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
           // Supprimer les vues mutuelles
           sb.delete(auth.token, "profile_views", `?viewer_id=eq.${auth.userId}&viewed_id=eq.${p.id}`),
         ]);
-      } catch {}
+      } catch (_e) {}
       return;
     }
     if (!auth.isPremium && likesToday >= FREE_LIMITS.likes) { onShowPremium(`Tu as utilisé tes ${FREE_LIMITS.likes} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !`); return; }
@@ -3388,7 +3388,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
       if (Array.isArray(mutual) && mutual.length > 0) {
         await sb.insert(auth.token, "matches", { user1: auth.userId, user2: p.id });
       }
-    } catch {}
+    } catch (_e) {}
     setLiking(false);
     setSelectedProfile(null);
   };
@@ -3415,7 +3415,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
             setVisitors(Array.isArray(vProfiles) ? vProfiles : []);
           }
         }
-      } catch {}
+      } catch (_e) {}
       setLoading(false);
     };
     load();
@@ -3713,7 +3713,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       const dismissed = await sb.query<{ dismissed_id: string }>(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}&select=dismissed_id`);
       dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
       setDismissedIds(dIds);
-    } catch {}
+    } catch (_e) {}
 
     // 2. Matches actuels (pour croiser)
     let matchedUserIds = new Set<string>();
@@ -3724,7 +3724,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           matchedUserIds.add(m.user1 === auth.userId ? m.user2 : m.user1);
         });
       }
-    } catch {}
+    } catch (_e) {}
 
     // ── LIKES REÇUS ──
     try {
@@ -3759,7 +3759,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           });
           setSentLikesMeta(smeta);
         }
-      } catch {}
+      } catch (_e) {}
     }
 
     // ── VISITEURS (qui m'ont vu) ──
@@ -3781,7 +3781,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           }
         }
       }
-    } catch {}
+    } catch (_e) {}
 
     // ── PROFILS VUS PAR MOI ──
     if (isPrem) {
@@ -3797,7 +3797,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           seenVisited.forEach((date, id) => { pvmeta[id] = { date }; });
           setVisitedMeta(pvmeta);
         }
-      } catch {}
+      } catch (_e) {}
     }
 
     setLoading(false);
@@ -3816,8 +3816,8 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => { loadData(); });
     const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => { loadData(); });
     return () => {
-      try { wsLikes?.close(); } catch {}
-      try { wsViews?.close(); } catch {}
+      try { wsLikes?.close(); } catch (_e) {}
+      try { wsViews?.close(); } catch (_e) {}
     };
   }, []);
 
@@ -3833,7 +3833,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
         headers: { ...sb.h(auth.token), "Prefer": "return=minimal,resolution=ignore-duplicates" },
         body: JSON.stringify({ user_id: auth.userId, dismissed_id: profileId }),
       });
-    } catch {}
+    } catch (_e) {}
     if (onBadgeUpdate) onBadgeUpdate();
   };
 
@@ -3847,7 +3847,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       if (Array.isArray(mutual) && mutual.length > 0) {
         await sb.insert(auth.token, "matches", { user1: auth.userId, user2: p.id });
       }
-    } catch {}
+    } catch (_e) {}
     setLiking(false);
     setSelectedProfile(null);
     loadData();
@@ -3860,7 +3860,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     try {
       await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${p.id}`);
       setSentLikes(prev => prev.filter(s => s.id !== p.id));
-    } catch {}
+    } catch (_e) {}
     setConfirmUnlike(null);
   };
 
@@ -4475,7 +4475,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       try {
         await sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`);
         await sb.delete(auth.token, "matches", `?id=eq.${m.id}`);
-      } catch {}
+      } catch (_e) {}
     } finally {
       setTimeout(() => {
         isUnmatching.current = false;
@@ -4490,7 +4490,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     await handleUnmatch(m);
     // Bloquer la personne
     if (m.partner?.id) {
-      try { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: m.partner.id }); } catch {}
+      try { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: m.partner.id }); } catch (_e) {}
     }
   };
 
@@ -4832,7 +4832,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
       setMsgs(res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)));
     });
-    return () => { try { ws?.close(); } catch {} };
+    return () => { try { ws?.close(); } catch (_e) {} };
   }, [open?.id]);
 
   // Polling dédié toutes les 2s pour détecter les changements de is_read
@@ -4846,7 +4846,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           const hasChange = filtered.some((m, i) => prev[i]?.is_read !== m.is_read || prev[i]?.id !== m.id || prev[i]?.reactions !== m.reactions);
           return hasChange ? filtered : prev;
         });
-      } catch {}
+      } catch (_e) {}
     }, 2000);
     return () => clearInterval(readInterval);
   }, [open?.id]);
@@ -4947,7 +4947,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
         if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
       }
-    } catch {}
+    } catch (_e) {}
     setImgLoading(false);
     e.target.value = "";
   };
@@ -5689,7 +5689,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         setRatingComment(res[0].comment || "");
         setRatingSubmitted(true);
       }
-    } catch {}
+    } catch (_e) {}
   };
 
   const handleSubmitRating = async () => {
@@ -6562,7 +6562,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       } else {
         setReviewsStats({ total: 0, avg: 0 });
       }
-    } catch {}
+    } catch (_e) {}
     setReviewsLoading(false);
   };
 
@@ -8372,7 +8372,7 @@ export default function App() {
       if (!prev) return prev;
       const updated: Auth = { ...prev, token: newToken, refreshToken: newRefreshToken, expiresAt: newExpiresAt };
       authRef.current = updated;
-      try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+      try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
       console.log("[Moyo][Session] Auth state mis à jour avec le nouveau token");
       return updated;
     });
@@ -8445,7 +8445,7 @@ export default function App() {
                 const newExpiresAt = Date.now() + refreshed.expires_in * 1000;
                 const updated: Auth = { ...a, token: refreshed.access_token, refreshToken: refreshed.refresh_token, expiresAt: newExpiresAt };
                 authRef.current = updated;
-                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
                 setAuth(updated);
               } else {
                 // Refresh échoué → pas de session utilisable
@@ -8490,7 +8490,7 @@ export default function App() {
                   const updated = { ...a, isPremium: p.is_premium, isAdmin: p.is_admin || false };
                   authRef.current = updated;
                   setAuth(updated);
-                  try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+                  try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
                 }
               }
             })
@@ -8508,7 +8508,7 @@ export default function App() {
   const handleAuth = (a: Auth) => {
     authRef.current = a;
     setAuth(a); setPage("app"); setTab("discover");
-    try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch {}
+    try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch (_e) {}
     // Demander permission notifications push
     if ('Notification' in window && Notification.permission === 'default') {
       setTimeout(() => {
@@ -8538,7 +8538,7 @@ export default function App() {
           const w = data[0];
           setPendingWarning({ id: w.id, warning_number: w.warning_number, reason: w.reason });
         }
-      } catch {}
+      } catch (_e) {}
     };
     checkWarnings();
   }, [auth?.userId]);
@@ -8556,13 +8556,13 @@ export default function App() {
         },
         body: JSON.stringify({ acknowledged: true, acknowledged_at: new Date().toISOString() }),
       });
-    } catch {}
+    } catch (_e) {}
     setPendingWarning(null);
   };
 
   const handleLogout = () => {
     setAuth(null); setPage("landing"); setUnreadCount(0); setNotifCount(0); setLikesReceived(0);
-    try { localStorage.removeItem("moyo_session"); } catch {}
+    try { localStorage.removeItem("moyo_session"); } catch (_e) {}
   };
   useEffect(() => {
     if (!auth) return;
@@ -8599,7 +8599,7 @@ export default function App() {
           const updated = { ...auth, isPremium: p.is_premium, isAdmin: p.is_admin || false };
           authRef.current = updated;
           setAuth(updated);
-          try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+          try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
         }
         return true;
       } catch (e) {
@@ -8647,7 +8647,7 @@ export default function App() {
                 const updated = { ...cur, isPremium: p.is_premium, isAdmin: p.is_admin || false };
                 authRef.current = updated;
                 setAuth(updated);
-                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
               }
             }
           })
@@ -8686,7 +8686,7 @@ export default function App() {
           xhr.setRequestHeader("apikey", SUPABASE_KEY);
           xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
           xhr.send(body);
-        } catch {}
+        } catch (_e) {}
       }
     };
 
@@ -8719,7 +8719,7 @@ export default function App() {
       try {
         const dismissed = await sb.query<{ dismissed_id: string }>(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}&select=dismissed_id`);
         dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
-      } catch {}
+      } catch (_e) {}
       try {
         const [likes, views] = await Promise.all([
           sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`),
@@ -8729,7 +8729,7 @@ export default function App() {
         const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
         setLikesReceived(likesCount);
         setViewsReceived(viewsCount);
-      } catch {}
+      } catch (_e) {}
     };
     loadLikesReceived();
     refreshBadgesRef.current = loadLikesReceived;
@@ -8770,7 +8770,7 @@ export default function App() {
           }
           return count;
         });
-      } catch {}
+      } catch (_e) {}
     };
     checkUnread();
 
@@ -8784,7 +8784,7 @@ export default function App() {
         ]);
         const parseCount = (r: Response) => { const h = r.headers.get("content-range"); return h ? parseInt(h.split("/")[1]) || 0 : 0; };
         setAdminBadgeCount(parseCount(rPending) + parseCount(rUnreadReviews));
-      } catch {}
+      } catch (_e) {}
     };
     checkAdminBadge();
     const adminBadgeInterval = setInterval(checkAdminBadge, 1500);
@@ -8824,11 +8824,11 @@ export default function App() {
     }, 3000);
 
     return () => {
-      try { wsMessages?.close(); } catch {}
-      try { wsLikes?.close(); } catch {}
-      try { wsMatches?.close(); } catch {}
-      try { wsMatches2?.close(); } catch {}
-      try { wsViews?.close(); } catch {}
+      try { wsMessages?.close(); } catch (_e) {}
+      try { wsLikes?.close(); } catch (_e) {}
+      try { wsMatches?.close(); } catch (_e) {}
+      try { wsMatches2?.close(); } catch (_e) {}
+      try { wsViews?.close(); } catch (_e) {}
       clearInterval(fallbackInterval);
       clearInterval(adminBadgeInterval);
       clearInterval(lastSeenInterval);
