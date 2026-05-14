@@ -3219,19 +3219,62 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 8, position: "relative", touchAction: "pan-y" }}><div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div>
-  {/* Zone infos — hauteur totale fixe 118px : empêche tout saut entre les profils */}
-  <div style={{ padding: "10px 14px", height: 118, boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexShrink: 0 }}>
-    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{p.name}, {p.age} ans {p.is_premium && <svg width="18" height="18" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:4,flexShrink:0}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {p.is_verified && <VerifiedBadge size={18} />}</div>
-    {/* 3 traits menu */}
-    <div style={{ position: "relative" }}>
-      <div onClick={() => setShowReport(v => !v)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", padding: 4 }}>
-        {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2, borderRadius: 2, background: "#555" }} />)}
+  style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 8, position: "relative", touchAction: "pan-y" }}>
+  {/* Photo */}
+  <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+    {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
+  </div>
+
+  {/* Zone infos — 4 lignes fixes, hauteur totale figée à 136px */}
+  <div style={{ padding: "10px 14px 10px", height: 136, boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
+
+    {/* Ligne 1 — Nom, âge, badges premium/vérifié + bouton menu (hauteur 26px) */}
+    <div style={{ height: 26, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, overflow: "hidden", flex: 1, minWidth: 0 }}>
+        <span style={{ fontWeight: 700, fontSize: "1.15rem", color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {p.name}, {p.age} ans
+        </span>
+        {p.is_premium && <svg width="14" height="14" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
+        {p.is_verified && <VerifiedBadge size={14} />}
+      </div>
+      <div style={{ flexShrink: 0, marginLeft: 6 }}>
+        <div onClick={() => setShowReport(v => !v)} style={{ width: 32, height: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer" }}>
+          {[0,1,2].map(i => <div key={i} style={{ width: 16, height: 2, borderRadius: 2, background: "#888" }} />)}
+        </div>
       </div>
     </div>
+
+    {/* Ligne 2 — Champs info groupe 1 : genre + ville (hauteur 24px) */}
+    <div style={{ height: 24, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, overflow: "hidden", marginTop: 4 }}>
+      <span style={{ flexShrink: 0, background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", fontWeight: 600, whiteSpace: "nowrap" }}>
+        {p.gender === "Femme" ? "Femme" : "Homme"}
+      </span>
+      {p.city && <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>}
+      {p.religion && <span style={{ flexShrink: 0, background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.3)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis" }}>{p.religion}</span>}
+    </div>
+
+    {/* Ligne 3 — Champs info groupe 2 : profession + hobbies (hauteur 24px) */}
+    <div style={{ height: 24, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, overflow: "hidden", marginTop: 4 }}>
+      {p.profession && p.profession.trim()
+        ? <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profession.trim()}</span>
+        : <span style={{ height: 20, display: "block" }} />
+      }
+      {p.hobbies && p.hobbies.trim()
+        ? <span style={{ flexShrink: 0, background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#2a5a3a", fontWeight: 500, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.hobbies.trim()}</span>
+        : null
+      }
+    </div>
+
+    {/* Ligne 4 — Bio, une seule ligne, ellipsis si trop long (hauteur restante) */}
+    <div style={{ flex: 1, display: "flex", alignItems: "center", marginTop: 4, overflow: "hidden" }}>
+      <p style={{ margin: 0, fontSize: "0.8rem", color: "#666", lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%" }}>
+        {p.bio || ""}
+      </p>
+    </div>
+
   </div>
-  {/* Bottom sheet options - en dehors de la carte */}
+
+  {/* Modals (hors flux) */}
   {showReport && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowReport(false)}>
       <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
@@ -3258,17 +3301,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       </div>
     </div>
   )}
-  {/* Zone badges — hauteur fixe 28px, overflow hidden, pas de wrap vers le bas */}
-  <div style={{ height: 28, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
-    <span style={{ flexShrink: 0, background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600, whiteSpace: "nowrap" }}>{p.gender === "Femme" ? "Femme" : "Homme"}</span>
-    <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.72rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>
-    {p.religion && <span style={{ flexShrink: 0, background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap" }}>{p.religion}</span>}
-    {p.profession && p.profession.trim() && <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profession.trim()}</span>}
-    {p.hobbies && p.hobbies.trim() && <span style={{ flexShrink: 0, background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.hobbies.trim()}</span>}
-  </div>
-  {/* Zone bio — occupe le reste, hauteur fixe, jamais de débordement */}
-  <p style={{ flex: 1, fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 5, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{p.bio || ""}</p>
-</div></div><div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => navigate("prev")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => navigate("next")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div>{wrapToast && <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#888", marginBottom: 4, animation: "fadeIn 0.3s ease" }}>On repart du début 🔄</div>}<div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
+</div><div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => navigate("prev")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => navigate("next")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div>{<div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
   {profiles.slice(Math.max(0, current - 2), Math.min(profiles.length, current + 3)).map((_, i) => {
     const idx = Math.max(0, current - 2) + i;
     const isActive = idx === current;
@@ -5059,10 +5092,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   </div>
                 </div>
               ) : (
-                <div style={{ display: "flex", alignItems: "flex-start", flexDirection: isMine ? "row-reverse" : "row" }}>
-                  <div style={{ position: "relative", maxWidth: "82%", minWidth: 0, boxSizing: "border-box", overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", flexDirection: isMine ? "row-reverse" : "row", width: "100%", boxSizing: "border-box", paddingLeft: isMine ? 40 : 0, paddingRight: isMine ? 0 : 40 }}>
+                  <div style={{ position: "relative", maxWidth: "82%", minWidth: 0, boxSizing: "border-box", width: "fit-content", overflow: isEmojiOnly ? "visible" : "hidden" }}>
                     <div
-                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: isEmojiOnly ? "6px 14px 5px" : "10px 14px", paddingTop: isEmojiOnly ? "20px" : "22px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: isEmojiOnly ? "2.2rem" : "0.88rem", lineHeight: isEmojiOnly ? 1.2 : 1.5, minWidth: isEmojiOnly ? "80px" : undefined, userSelect: "none", WebkitUserSelect: "none", wordBreak: "break-word", overflowWrap: "anywhere", position: "relative" }}
+                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: isEmojiOnly ? "6px 14px 5px" : "10px 14px", paddingTop: isEmojiOnly ? "20px" : "22px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: isEmojiOnly ? "2.2rem" : "0.88rem", lineHeight: isEmojiOnly ? 1.2 : 1.5, whiteSpace: isEmojiOnly ? "nowrap" : undefined, userSelect: "none", WebkitUserSelect: "none", wordBreak: isEmojiOnly ? undefined : "break-word", overflowWrap: isEmojiOnly ? undefined : "anywhere", position: "relative" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
                       {/* Flèche options — intégrée en haut à droite de la bulle */}
