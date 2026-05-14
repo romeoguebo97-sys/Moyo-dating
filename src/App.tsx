@@ -2252,6 +2252,210 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DESKTOP ADMIN — utilitaires
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Détecte un vrai écran desktop (largeur > 900px ET non-tactile) */
+const isDesktop = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return window.innerWidth > 900 && !("ontouchstart" in window);
+};
+
+/**
+ * Sur desktop : ouvre le dashboard admin dans un nouvel onglet (?admin=1).
+ * Sur mobile  : appelle fallback (comportement actuel = setTab("admin")).
+ */
+const openAdminPanel = (fallback: () => void): void => {
+  if (isDesktop()) {
+    // Ouvrir dans un nouvel onglet — le paramètre ?admin=1 est détecté au démarrage
+    const url = `${window.location.origin}${window.location.pathname}?admin=1`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  } else {
+    fallback();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN DESKTOP PAGE — layout pleine largeur monté quand ?admin=1 dans l'URL
+// ─────────────────────────────────────────────────────────────────────────────
+function AdminDesktopPage() {
+  const [auth, setAuth] = React.useState<Auth | null>(null);
+  const [checked, setChecked] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("moyo_session");
+      if (saved) {
+        const a: Auth = JSON.parse(saved);
+        if (a?.token && a?.userId && a?.isAdmin) {
+          setAuth(a);
+        }
+      }
+    } catch {}
+    setChecked(true);
+  }, []);
+
+  if (!checked) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F0F1F5" }}>
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+      </div>
+    );
+  }
+
+  // Sécurité : non connecté ou non admin → accès refusé
+  if (!auth) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#F0F1F5", gap: 16 }}>
+        <div style={{ width: 72, height: 72, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 32px rgba(192,57,43,0.35)" }}>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "1.5rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Accès refusé</div>
+          <div style={{ fontSize: "0.92rem", color: "#777", marginBottom: 24 }}>Vous devez être connecté en tant qu'administrateur.</div>
+          <button
+            onClick={() => window.close()}
+            style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: G.blanc, border: "none", borderRadius: 50, padding: "12px 32px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(192,57,43,0.35)" }}
+          >
+            Fermer cet onglet
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#F0F1F5" }}>
+      <style>{`
+        /* ── Layout desktop Admin ── */
+        .adm-shell { display: flex; flex-direction: column; min-height: 100vh; }
+        .adm-topbar {
+          position: sticky; top: 0; z-index: 200;
+          background: ${G.blanc};
+          border-bottom: 1px solid ${G.gris};
+          box-shadow: 0 2px 16px rgba(44,26,14,0.07);
+          padding: 0 32px;
+          display: flex; align-items: center; gap: 20; height: 60px;
+        }
+        .adm-topbar-logo { font-size: 1.6rem; font-weight: 800; color: ${G.rouge}; flex-shrink: 0; }
+        .adm-topbar-logo span { color: ${G.or}; }
+        .adm-topbar-title { font-size: 1rem; font-weight: 700; color: ${G.brun}; opacity: 0.7; }
+        .adm-topbar-spacer { flex: 1; }
+        .adm-topbar-badge {
+          display: flex; align-items: center; gap: 8;
+          background: linear-gradient(135deg,${G.rouge},${G.rougeDark});
+          color: white; border-radius: 50px; padding: 6px 16px;
+          font-size: 0.8rem; font-weight: 700;
+        }
+        .adm-content { flex: 1; max-width: 1400px; margin: 0 auto; width: 100%; padding: 28px 32px 60px; box-sizing: border-box; }
+
+        /* Override du contenu Admin pour desktop */
+        .adm-content .adm-inner { background: transparent; padding: 0; }
+
+        /* Grille stats desktop — 4 colonnes au lieu de 2 */
+        @media (min-width: 900px) {
+          .adm-stats-grid-main { grid-template-columns: repeat(4, 1fr) !important; gap: 16px !important; }
+          .adm-stats-grid-adv  { grid-template-columns: repeat(4, 1fr) !important; gap: 16px !important; }
+          .adm-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+          .adm-stats-card { padding: 22px 20px !important; border-radius: 18px !important; }
+          .adm-stats-val { font-size: 2.4rem !important; }
+          .adm-users-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+          .adm-reports-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+          .adm-reviews-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+          .adm-inner-header { display: none !important; } /* cacher l'entête mobile dans le contexte desktop */
+        }
+        @media (min-width: 1200px) {
+          .adm-users-grid { grid-template-columns: repeat(3, 1fr); }
+          .adm-reports-grid { grid-template-columns: repeat(3, 1fr); }
+          .adm-reviews-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+      `}</style>
+
+      {/* Topbar desktop */}
+      <div style={{ position: "sticky", top: 0, zIndex: 200, background: G.blanc, borderBottom: `1px solid ${G.gris}`, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", padding: "0 32px", display: "flex", alignItems: "center", gap: 16, height: 60 }}>
+        <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.rouge }}>Mo<span style={{ color: G.or }}>yo</span></div>
+        <div style={{ width: 1, height: 28, background: G.gris }} />
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <div style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</div>
+        <div style={{ fontSize: "0.8rem", color: "#999", fontWeight: 500 }}>— espace de modération</div>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{auth.name}</div>
+          <div style={{ background: `rgba(26,92,58,0.1)`, color: G.vert, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>🛡️ Admin</div>
+        </div>
+        <button
+          onClick={() => window.close()}
+          style={{ marginLeft: 8, display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: "#888" }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Fermer
+        </button>
+      </div>
+
+      {/* Contenu Admin dans le wrapper desktop */}
+      <div style={{ maxWidth: 1400, margin: "0 auto", width: "100%", padding: "28px 32px 60px", boxSizing: "border-box" }}>
+        <AdminDesktopWrapper auth={auth} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Wrapper qui applique les overrides CSS desktop sur le composant Admin existant.
+ * On réutilise Admin tel quel — zéro duplication de logique.
+ */
+function AdminDesktopWrapper({ auth }: { auth: Auth }) {
+  const [, forceUpdate] = React.useState(0);
+  return (
+    <div className="adm-desktop-wrapper">
+      <style>{`
+        /* ── Overrides layout desktop pour le composant Admin ── */
+        .adm-desktop-wrapper {
+          --card-radius: 18px;
+        }
+        /* Cacher le bouton retour (flèche) — inutile dans l'onglet dédié */
+        .adm-desktop-wrapper [data-role="admin-back"] { display: none !important; }
+
+        /* Stats principales : 4 colonnes */
+        @media (min-width: 900px) {
+          .adm-desktop-wrapper [data-role="stats-grid-main"] {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 18px !important;
+          }
+          .adm-desktop-wrapper [data-role="stats-grid-adv"] {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 16px !important;
+          }
+          .adm-desktop-wrapper [data-role="stats-row"] {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 20px !important;
+          }
+          .adm-desktop-wrapper [data-role="users-list"] > div,
+          .adm-desktop-wrapper [data-role="reports-list"] > div,
+          .adm-desktop-wrapper [data-role="reviews-list"] > div {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 14px !important;
+          }
+        }
+        @media (min-width: 1200px) {
+          .adm-desktop-wrapper [data-role="users-list"] > div,
+          .adm-desktop-wrapper [data-role="reports-list"] > div,
+          .adm-desktop-wrapper [data-role="reviews-list"] > div {
+            grid-template-columns: repeat(3, 1fr) !important;
+          }
+        }
+      `}</style>
+      <Admin auth={auth} onBack={() => window.close()} onBadgeCount={() => {}} />
+    </div>
+  );
+}
+
 function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
@@ -2325,7 +2529,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
         {auth.isAdmin && (
-          <div onClick={() => setTab("admin")} style={{ display: "flex", alignItems: "center", gap: 5, background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
+          <div onClick={() => openAdminPanel(() => setTab("admin"))} style={{ display: "flex", alignItems: "center", gap: 5, background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
             <span>⚙️ Admin</span>
             {adminBadgeCount && adminBadgeCount > 0 ? (
               <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.62rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
@@ -7242,9 +7446,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
 
       {/* Header */}
-      <div style={{ background: G.blanc, padding: "14px 16px 0", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
+      <div data-role="admin-header" style={{ background: G.blanc, padding: "14px 16px 0", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-          <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><IcoArrowLeft /></div>
+          <div data-role="admin-back" onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><IcoArrowLeft /></div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <IcoGear />
             <span style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</span>
@@ -7311,7 +7515,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           ) : (
             <>
               {/* Grille stats principales */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
+              <div data-role="stats-grid-main" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
                 {([
                   ["Membres total", stats.users, G.rouge, <IcoUsers key="u"/>],
                   ["Matchs", stats.matches, "#8e44ad", <svg key="m" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
@@ -7329,7 +7533,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* Stats avancées */}
               <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                 <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 14 }}>Statistiques avancées</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+                <div data-role="stats-grid-adv" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
                   {([
                     ["Nouveaux aujourd'hui", stats.todayUsers, "#27ae60"],
                     ["Premium actifs", stats.premiumUsers, "#D4A843"],
@@ -7344,6 +7548,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              {/* Grille basse desktop : ratio / villes / inscrits en 2 colonnes */}
+              <div data-role="stats-row" style={{ marginTop: 0 }}>
               {/* Ratio Genre */}
               <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                 <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Ratio Homme / Femme</h3>
@@ -7413,6 +7619,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               )}
 
+              </div>{/* /stats-row */}
+
               <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}>
                 <IcoRefresh />Actualiser
               </Btn>
@@ -7453,6 +7661,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           ) : (
             <>
               <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 10, fontWeight: 600 }}>{users.length} utilisateur(s) affichés</div>
+              <div data-role="users-list">
+              <div>
               {users.map(u => {
                 const isLoading = actionLoading === u.id;
                 const isSelf = u.id === auth.userId;
@@ -7547,6 +7757,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 );
               })}
+              </div>{/* inner grid */}
+              </div>{/* /users-list */}
 
               {/* Pagination */}
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
@@ -7652,7 +7864,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 }
               </div>
             ) : (
-              filteredReports.map((r, i) => {
+              <div data-role="reports-list"><div>
+              {filteredReports.map((r, i) => {
                 const cat = classifyReport(r);
                 const statusStyle = reportStatusStyle(r.status);
                 const isSystemAlert = !r.reported_id;
@@ -7867,7 +8080,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>}
                   </div>
                 );
-              })
+              })}</div></div>{/* /reports-list */}
             )}
           </div>
 
@@ -7997,7 +8210,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ fontSize: "0.88rem" }}>Aucun avis pour l'instant</div>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div data-role="reviews-list" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div>
                   {reviews.map(r => {
                     const isHidden = hiddenReviews.has(r.id);
                     const isUnread = !r.is_read;
@@ -8063,6 +8277,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       </div>
                     );
                   })}
+                  </div>{/* /reviews inner */}
                 </div>
               )}
 
@@ -8575,6 +8790,13 @@ export default function App() {
   ) : null;
 
   if (!sessionLoaded) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: G.blanc }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>;
+
+  // ── Mode Admin Desktop : si ?admin=1 dans l'URL, monter le layout plein écran ──
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("admin") === "1") {
+    return <AdminDesktopPage />;
+  }
+
   if (page === "landing") return <>{<Landing onNav={setPage} />}{InstallBanner}</>;
   if (page === "about") return <About onBack={() => setPage("landing")} />;
   if (page === "signup") return <SignUp onNav={setPage} />;
