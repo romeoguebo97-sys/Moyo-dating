@@ -5244,7 +5244,63 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadProfile(); loadBlocked(); }, []);
+  // ── NOTATION ──
+  const [showRating, setShowRating] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingError, setRatingError] = useState("");
+  const [existingRatingId, setExistingRatingId] = useState<string | null>(null);
+
+  const loadExistingRating = async () => {
+    try {
+      const res = await sb.query<{ id: string; rating: number; comment: string }>(
+        auth.token, "app_ratings", `?user_id=eq.${auth.userId}`
+      );
+      if (res[0]) {
+        setExistingRatingId(res[0].id);
+        setUserRating(res[0].rating);
+        setRatingComment(res[0].comment || "");
+        setRatingSubmitted(true);
+      }
+    } catch {}
+  };
+
+  const handleSubmitRating = async () => {
+    if (userRating === 0) { setRatingError("Choisis une note avant d'envoyer."); return; }
+    if (ratingComment.length > 300) { setRatingError("Le commentaire ne doit pas dépasser 300 caractères."); return; }
+    setRatingLoading(true);
+    setRatingError("");
+    try {
+      const payload = { user_id: auth.userId, rating: userRating, comment: ratingComment.trim() || null };
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/app_ratings`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${auth.token}`,
+            "Prefer": "return=representation,resolution=merge-duplicates",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!r.ok) throw new Error("Erreur réseau");
+      const data = await r.json().catch(() => null);
+      if (data?.[0]?.id) setExistingRatingId(data[0].id);
+      setRatingSubmitted(true);
+      setToast({ msg: existingRatingId ? "Avis mis à jour !" : "Merci pour ton avis !", type: "success" });
+    } catch {
+      setRatingError("Une erreur est survenue. Réessaie dans quelques instants.");
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+
+  useEffect(() => { loadProfile(); loadBlocked(); loadExistingRating(); }, []);
   const loadProfile = async () => {
     const res = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`);
     if (res[0]) { setProfile(res[0]); setForm(res[0]); }
@@ -5646,6 +5702,121 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
 
+        {/* ── Carte Noter Moyo ── */}
+        <div>
+          <div
+            onClick={() => setShowRating(v => !v)}
+            style={{ background: G.blanc, borderRadius: showRating ? "16px 16px 0 0" : 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid ${showRating ? G.or : "#E8E8E8"}`, cursor: "pointer", transition: "border-color 0.2s, border-radius 0.2s" }}
+          >
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={G.or} stroke="none">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>
+                {ratingSubmitted ? "Ton avis Moyo" : "Noter Moyo"}
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>
+                {ratingSubmitted
+                  ? `${["", "😕", "🙁", "😐", "😊", "😍"][userRating]} ${userRating}/5 étoiles — Modifier`
+                  : "Donne-nous ton avis sur l'application"}
+              </div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showRating ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+
+          {showRating && (
+            <div style={{ background: "#FAFAFA", border: `1px solid ${G.or}`, borderTop: "none", borderRadius: "0 0 16px 16px", padding: "20px 20px 16px" }}>
+              {ratingSubmitted && !ratingLoading ? (
+                <div style={{ textAlign: "center", paddingBottom: 4 }}>
+                  <div style={{ fontSize: "2rem", marginBottom: 6 }}>🎉</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111", marginBottom: 4 }}>Merci pour ton avis !</div>
+                  <div style={{ display: "flex", justifyContent: "center", gap: 4, marginBottom: 14 }}>
+                    {[1,2,3,4,5].map(s => (
+                      <svg key={s} width="22" height="22" viewBox="0 0 24 24" fill={s <= userRating ? G.or : "#ddd"} stroke="none">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      </svg>
+                    ))}
+                  </div>
+                  {ratingComment && (
+                    <div style={{ fontSize: "0.8rem", color: "#666", fontStyle: "italic", marginBottom: 14, background: G.blanc, borderRadius: 10, padding: "8px 12px", border: `1px solid #EEE` }}>
+                      "{ratingComment}"
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setRatingSubmitted(false)}
+                    style={{ background: "transparent", border: `1.5px solid ${G.or}`, color: "#B8860B", borderRadius: 50, padding: "8px 20px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Modifier mon avis
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#111", marginBottom: 4, textAlign: "center" }}>Comment tu trouves Moyo ?</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, textAlign: "center" }}>Ton avis nous aide à améliorer l'application</div>
+
+                  {/* Étoiles */}
+                  <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 4 }}>
+                    {[1,2,3,4,5].map(star => (
+                      <div
+                        key={star}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        onClick={() => { setUserRating(star); setRatingError(""); }}
+                        style={{ cursor: "pointer", transform: (hoverRating || userRating) >= star ? "scale(1.25)" : "scale(1)", transition: "transform 0.15s" }}
+                      >
+                        <svg width="38" height="38" viewBox="0 0 24 24" fill={(hoverRating || userRating) >= star ? G.or : "#DDD"} stroke="none">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ textAlign: "center", fontSize: "0.75rem", color: "#aaa", marginBottom: 14, minHeight: 18 }}>
+                    {userRating > 0 && ["", "Très déçu(e)", "Déçu(e)", "Correct", "Bien !", "Excellent !"][userRating]}
+                  </div>
+
+                  {/* Commentaire */}
+                  <textarea
+                    value={ratingComment}
+                    onChange={e => setRatingComment(e.target.value.slice(0, 300))}
+                    placeholder="Laisse un commentaire (optionnel)..."
+                    rows={3}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid #DDD`, fontSize: "0.82rem", resize: "none", outline: "none", fontFamily: "inherit", marginBottom: 4 }}
+                  />
+                  <div style={{ textAlign: "right", fontSize: "0.72rem", color: ratingComment.length >= 280 ? G.rouge : "#ccc", marginBottom: 12 }}>
+                    {ratingComment.length}/300
+                  </div>
+
+                  {/* Erreur */}
+                  {ratingError && (
+                    <div style={{ background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: "0.8rem", color: "#e74c3c", marginBottom: 10 }}>
+                      {ratingError}
+                    </div>
+                  )}
+
+                  {/* Bouton envoi */}
+                  <button
+                    onClick={handleSubmitRating}
+                    disabled={ratingLoading || userRating === 0}
+                    style={{
+                      width: "100%", background: userRating === 0 ? "#DDD" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
+                      color: userRating === 0 ? "#aaa" : G.blanc, border: "none", borderRadius: 50,
+                      padding: "12px", fontSize: "0.88rem", fontWeight: 700,
+                      cursor: userRating === 0 || ratingLoading ? "not-allowed" : "pointer",
+                      transition: "all 0.2s", opacity: ratingLoading ? 0.7 : 1,
+                    }}
+                  >
+                    {ratingLoading ? "Envoi en cours..." : existingRatingId ? "Mettre à jour mon avis" : "Envoyer mon avis"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* ── Carte Avertissements ── */}
         {(() => {
           const wc = profile?.warning_count ?? 0;
@@ -5939,7 +6110,48 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   };
 
   // ── Onglet actif ──
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews">("stats");
+
+  // ── Avis utilisateurs ──
+  type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
+  const [hiddenReviews, setHiddenReviews] = useState<Set<string>>(new Set());
+
+  const loadReviews = async () => {
+    setReviewsLoading(true);
+    try {
+      const rows = await sb.query<ReviewRow>(auth.token, "app_ratings", "?order=created_at.desc&limit=200");
+      const enriched = await Promise.all(rows.map(async r => {
+        const prof = await sb.query<{ name: string; city?: string; gender?: string }>(auth.token, "profiles", `?id=eq.${r.user_id}&select=name,city,gender`);
+        return { ...r, profile: prof[0] };
+      }));
+      setReviews(enriched);
+      if (enriched.length) {
+        const avg = enriched.reduce((s, r) => s + r.rating, 0) / enriched.length;
+        setReviewsStats({ total: enriched.length, avg: Math.round(avg * 10) / 10 });
+      } else {
+        setReviewsStats({ total: 0, avg: 0 });
+      }
+    } catch {}
+    setReviewsLoading(false);
+  };
+
+  const deleteReview = async (id: string) => {
+    await sb.delete(auth.token, "app_ratings", `?id=eq.${id}`);
+    setReviews(prev => prev.filter(r => r.id !== id));
+    setReviewsStats(prev => {
+      if (!prev || prev.total <= 1) return { total: 0, avg: 0 };
+      const remaining = reviews.filter(r => r.id !== id);
+      const avg = remaining.length ? remaining.reduce((s, r) => s + r.rating, 0) / remaining.length : 0;
+      return { total: remaining.length, avg: Math.round(avg * 10) / 10 };
+    });
+  };
+
+  const toggleHideReview = (id: string) => {
+    setHiddenReviews(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
 
   // ── Avertissements ──
   type WarnModal = { user: AdminProfile } | null;
@@ -6722,18 +6934,20 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
             ["stats", "Statistiques", IcoStats],
             ["users", "Utilisateurs", IcoUsers],
             ["reports", "Signalements", IcoAlert],
+            ["reviews", "Avis", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
             <div
               key={key}
               onClick={() => {
                 setActiveTab(key as any);
                 if (key === "users" && users.length === 0) loadUsers("", 0);
+                if (key === "reviews" && reviews.length === 0) loadReviews();
               }}
               style={{
                 flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                 padding: "10px 0 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
-                color: activeTab === key ? G.rouge : "#999",
-                borderBottom: activeTab === key ? `2.5px solid ${G.rouge}` : "2.5px solid transparent",
+                color: activeTab === key ? (key === "reviews" ? "#B8860B" : G.rouge) : "#999",
+                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : G.rouge}` : "2.5px solid transparent",
                 transition: "all 0.2s",
               }}
             >
@@ -7298,6 +7512,132 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
           <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <IcoRefresh />Actualiser
           </Btn>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET AVIS */}
+      {activeTab === "reviews" && (
+        <div style={{ padding: "16px" }}>
+          {reviewsLoading ? (
+            <div style={{ textAlign: "center", padding: 60 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+          ) : (
+            <>
+              {/* ── Résumé stats ── */}
+              {reviewsStats && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                  <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", textAlign: "center" }}>
+                    <div style={{ fontSize: "2rem", fontWeight: 800, color: "#B8860B", lineHeight: 1 }}>{reviewsStats.total}</div>
+                    <div style={{ fontSize: "0.73rem", color: "#777", marginTop: 4 }}>Avis total</div>
+                  </div>
+                  <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", textAlign: "center" }}>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                      <span style={{ fontSize: "2rem", fontWeight: 800, color: "#B8860B", lineHeight: 1 }}>{reviewsStats.avg || "—"}</span>
+                      {reviewsStats.avg > 0 && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      )}
+                    </div>
+                    <div style={{ fontSize: "0.73rem", color: "#777" }}>Note moyenne /5</div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Répartition par note ── */}
+              {reviews.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.82rem", color: G.brun, marginBottom: 10 }}>Répartition des notes</div>
+                  {[5,4,3,2,1].map(n => {
+                    const count = reviews.filter(r => r.rating === n).length;
+                    const pct = reviews.length ? Math.round((count / reviews.length) * 100) : 0;
+                    return (
+                      <div key={n} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0, width: 60 }}>
+                          {[...Array(n)].map((_, i) => (
+                            <svg key={i} width="10" height="10" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          ))}
+                        </div>
+                        <div style={{ flex: 1, background: "#F0F0F0", borderRadius: 50, height: 7, overflow: "hidden" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", background: n >= 4 ? "#27ae60" : n === 3 ? G.or : G.rouge, borderRadius: 50, transition: "width 0.5s" }} />
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: "#888", flexShrink: 0, width: 34, textAlign: "right" }}>{count} ({pct}%)</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ── Liste des avis ── */}
+              {reviews.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#DDD" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 12px" }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <div style={{ fontSize: "0.88rem" }}>Aucun avis pour l'instant</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {reviews.map(r => {
+                    const isHidden = hiddenReviews.has(r.id);
+                    return (
+                      <div key={r.id} style={{ background: isHidden ? "#F8F8F8" : G.blanc, borderRadius: 14, padding: "14px 16px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)", border: `1px solid ${isHidden ? "#E8E8E8" : "#F0F0F0"}`, opacity: isHidden ? 0.55 : 1, transition: "opacity 0.2s" }}>
+                        {/* Header : user + date */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: "50%", background: G.gris, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>
+                              {r.profile?.gender === "Femme" ? "👩🏿" : "👨🏿"}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: "0.83rem", color: "#1a1a1a" }}>{r.profile?.name || "Utilisateur"}</div>
+                              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{r.profile?.city || "—"} · {new Date(r.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
+                            </div>
+                          </div>
+                          {/* Note */}
+                          <div style={{ display: "flex", gap: 2 }}>
+                            {[1,2,3,4,5].map(s => (
+                              <svg key={s} width="13" height="13" viewBox="0 0 24 24" fill={s <= r.rating ? G.or : "#DDD"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Commentaire */}
+                        {r.comment && (
+                          <div style={{ fontSize: "0.82rem", color: "#444", lineHeight: 1.6, fontStyle: "italic", background: "#F7F7F7", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+                            "{r.comment}"
+                          </div>
+                        )}
+
+                        {/* Actions admin */}
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          <div
+                            onClick={() => toggleHideReview(r.id)}
+                            style={{ display: "flex", alignItems: "center", gap: 5, background: isHidden ? "rgba(39,174,96,0.08)" : "rgba(0,0,0,0.04)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: isHidden ? "#27ae60" : "#888" }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                              {isHidden
+                                ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                                : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                              }
+                            </svg>
+                            {isHidden ? "Afficher" : "Masquer"}
+                          </div>
+                          <div
+                            onClick={() => { if (window.confirm(`Supprimer l'avis de ${r.profile?.name || "cet utilisateur"} ?`)) deleteReview(r.id); }}
+                            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(231,76,60,0.07)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: "#e74c3c" }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                            Supprimer
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <Btn variant="ghost" onClick={loadReviews} style={{ width: "100%", marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <IcoRefresh />Actualiser
+              </Btn>
+            </>
+          )}
         </div>
       )}
     </div>
