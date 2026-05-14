@@ -2097,21 +2097,6 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
-  // Mesure la hauteur du footer + scroll quand ReplyBanner apparaît/disparaît
-  useEffect(() => {
-    const measure = () => {
-      if (footerRef.current) {
-        setFooterHeight(footerRef.current.offsetHeight);
-      }
-    };
-    measure();
-    // Re-mesurer après le rendu du bandeau
-    const t = setTimeout(measure, 30);
-    if (replyTo) {
-      setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, 60);
-    }
-    return () => clearTimeout(t);
-  }, [replyTo]);
 
   const sendMsg = () => {
     if (!input.trim()) return;
@@ -4510,6 +4495,20 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   }, []);
   useEffect(() => { if (open) loadMsgs(open); }, [open]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  // Mesure la hauteur du footer + scroll quand ReplyBanner apparaît/disparaît
+  useEffect(() => {
+    const measure = () => {
+      if (footerRef.current) {
+        setFooterHeight(footerRef.current.offsetHeight);
+      }
+    };
+    const t = setTimeout(measure, 30);
+    if (replyTo) {
+      setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, 60);
+    }
+    return () => clearTimeout(t);
+  }, [replyTo]);
 
   // Realtime - écoute INSERT sur les messages (nouveaux messages)
   useEffect(() => {
