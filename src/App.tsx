@@ -4503,7 +4503,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     });
   }, []);
   useEffect(() => { if (open) loadMsgs(open); }, [open]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+  // Scroll uniquement si un nouveau message est apparu (count augmente), pas sur les mises à jour de is_read/reactions
+  const prevMsgCountRef = useRef(0);
+  useEffect(() => {
+    const count = msgs.length;
+    if (count > prevMsgCountRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    prevMsgCountRef.current = count;
+  }, [msgs]);
 
   // Mesure la hauteur du footer + scroll quand ReplyBanner apparaît/disparaît
   useEffect(() => {
@@ -4513,9 +4521,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       }
     };
     const t = setTimeout(measure, 30);
-    if (replyTo) {
-      setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, 60);
-    }
     return () => clearTimeout(t);
   }, [replyTo]);
 
