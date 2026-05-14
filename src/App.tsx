@@ -4521,6 +4521,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [footerHeight, setFooterHeight] = useState(65);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -4557,7 +4558,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     };
     const t = setTimeout(measure, 30);
     return () => clearTimeout(t);
-  }, [replyTo]);
+  }, [replyTo, showEmojiPicker]);
 
   // Realtime - écoute INSERT sur les messages (nouveaux messages)
   useEffect(() => {
@@ -4900,6 +4901,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
             <ReplyBanner replyTo={replyTo} partnerName={open?.partner?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />
           </div>
         )}
+        {/* Palette emojis */}
+        {showEmojiPicker && (
+          <div style={{ padding: "10px 12px 4px 12px", borderBottom: `1px solid ${G.gris}` }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 160, overflowY: "auto" }}>
+              {["😊","😍","🥰","😘","😁","😂","🤣","😅","😆","😉","😋","😎","🤩","😏","🥳","😔","😢","😭","😤","😡","🤔","🫠","😶","🫡","🥺","🙏","👏","💪","🤝","👍","❤️","🧡","💛","💚","💙","💜","🖤","💔","💕","💞","💓","💗","💖","💝","🌹","🌸","🌺","🌷","✨","🎉","🎊","🥂","🍀","🌍","🔥","💫","⭐","🌟","🌈","🎶","🎵","💃","🕺","😴","🤗","🫶","🙌","👀","💯","🫀","🥹","🤭","😇","🤠","🥸","😼","🫣","🤫","🫦"].map(em => (
+                <span key={em} onClick={() => { setText(prev => prev + em); }} style={{ fontSize: "1.45rem", cursor: "pointer", lineHeight: 1, padding: "3px 2px", borderRadius: 6, transition: "transform 0.1s", userSelect: "none", WebkitUserSelect: "none" }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.25)")}
+                  onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                >{em}</span>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px" }}>
           {/* Bouton image - Premium */}
           <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
@@ -4912,8 +4926,18 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
               </svg>
             )}
           </div>
-          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Écris un message..." style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "16px", outline: "none", background: G.creme }} />
-          <div onClick={send} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+          {/* Bouton emoji */}
+          <div onClick={() => setShowEmojiPicker(prev => !prev)}
+            style={{ width: 40, height: 40, borderRadius: "50%", background: showEmojiPicker ? "rgba(192,57,43,0.12)" : "rgba(44,26,14,0.06)", border: `1.5px solid ${showEmojiPicker ? "rgba(192,57,43,0.35)" : G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.15s" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={showEmojiPicker ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+              <line x1="9" y1="9" x2="9.01" y2="9"/>
+              <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+          </div>
+          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { send(); setShowEmojiPicker(false); } }} onFocus={() => setShowEmojiPicker(false)} placeholder="Écris un message..." style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "16px", outline: "none", background: G.creme }} />
+          <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
         </div>
       </div>
 
