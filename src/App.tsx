@@ -4927,7 +4927,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [showGift, setShowGift] = useState(false);
 
   if (open) return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: 100, maxWidth: 500, margin: "0 auto" }}>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: 100, maxWidth: 500, margin: "0 auto", overflowX: "hidden" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Header fixe */}
@@ -4989,9 +4989,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       )}
 
       {/* Zone messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "14px", paddingBottom: `${footerHeight + 14}px`, display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "14px", paddingBottom: `${footerHeight + 14}px`, display: "flex", flexDirection: "column", gap: 10, position: "relative", boxSizing: "border-box", width: "100%" }}>
         <img src="/msg-bg.png" alt="" style={{ position: "fixed", top: 48, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, height: `calc(100% - 48px - ${footerHeight}px)`, objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
@@ -5010,7 +5010,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           };
           const handleLongPressEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
           return (
-            <div key={i} className="msg-row" style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0 }}>
+            <div key={i} className="msg-row" style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", overflowX: "hidden" }}>
               {isImg ? (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row" }}>
                   {/* Flèche contextuelle — même que les messages texte */}
@@ -5058,9 +5058,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   <div className="msg-arrow" onClick={() => setContextMenu({ msg: m, x: 0, y: 0 })} style={{ marginTop: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
-                  <div style={{ position: "relative", maxWidth: "82%" }}>
+                  <div style={{ position: "relative", maxWidth: "82%", minWidth: 0, boxSizing: "border-box", overflow: "hidden" }}>
                     <div
-                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none" }}
+                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", wordBreak: "break-word", overflowWrap: "anywhere" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
                       {(() => {
