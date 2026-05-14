@@ -4871,7 +4871,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
             </div>
             {/* Actions */}
             <div style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-              <div onClick={() => { setReplyTo(contextMenu.msg); setContextMenu(null); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+              <div onClick={() => { const msg = contextMenu!.msg; setContextMenu(null); setTimeout(() => setReplyTo(msg), 0); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
               </div>
