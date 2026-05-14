@@ -4999,6 +4999,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
           const reactions = m.reactions || {};
           const reactionEntries = Object.entries(reactions).filter(([, users]) => users.length > 0);
+          // Détection emoji seul : 1-3 emojis, sans autre caractère
+          const isEmojiOnly = !isImg && /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}){1,3}$/u.test(m.content.trim());
           const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
             // Empêcher la sélection de texte native au long press
             if (window.getSelection) window.getSelection()?.removeAllRanges();
@@ -5056,7 +5058,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                 <div style={{ display: "flex", alignItems: "flex-start", flexDirection: isMine ? "row-reverse" : "row" }}>
                   <div style={{ position: "relative", maxWidth: "82%", minWidth: 0, boxSizing: "border-box", overflow: "hidden" }}>
                     <div
-                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", paddingTop: "22px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", wordBreak: "break-word", overflowWrap: "anywhere", position: "relative" }}
+                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: isEmojiOnly ? "6px 12px 5px" : "10px 14px", paddingTop: isEmojiOnly ? "20px" : "22px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: isEmojiOnly ? "1.7rem" : "0.88rem", lineHeight: isEmojiOnly ? 1.2 : 1.5, userSelect: "none", WebkitUserSelect: "none", wordBreak: "break-word", overflowWrap: "anywhere", position: "relative" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
                       {/* Flèche options — intégrée en haut à droite de la bulle */}
@@ -5090,7 +5092,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                         }
                         return <span>{m.content}</span>;
                       })()}
-                      <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: isEmojiOnly ? 2 : 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
                         <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
                         {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} white />}
                       </div>
