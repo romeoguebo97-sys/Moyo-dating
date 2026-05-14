@@ -2787,13 +2787,36 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const swipeStartX = useRef<number | null>(null);
+  const [wrapToast, setWrapToast] = useState(false);
+  const wrapToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Navigation circulaire — pure locale, aucun effet en base
+  const navigate = (dir: "next" | "prev") => {
+    if (profiles.length === 0) return;
+    setCurrent(c => {
+      let next: number;
+      if (dir === "next") {
+        next = c + 1 >= profiles.length ? 0 : c + 1;
+        // Toast discret une seule fois au wrap vers 0
+        if (c + 1 >= profiles.length) {
+          if (wrapToastTimer.current) clearTimeout(wrapToastTimer.current);
+          setWrapToast(true);
+          wrapToastTimer.current = setTimeout(() => setWrapToast(false), 2200);
+        }
+      } else {
+        next = c - 1 < 0 ? profiles.length - 1 : c - 1;
+      }
+      if (profiles[next]) recordView(profiles[next].id);
+      return next;
+    });
+  };
   useEffect(() => {
     loadProfiles();
     // Charger le genre de l'utilisateur connecté
     sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
       .then(res => { if (res[0]) setMyGender(res[0].gender); });
   }, []);
-  useEffect(() => { if (profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
+  useEffect(() => { if (profiles.length > 0 && profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
 
   const loadProfiles = async (pageNum = 0, append = false) => {
     if (pageNum === 0) setLoading(true); else setLoadingMore(true);
@@ -2986,13 +3009,11 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     swipeStartX.current = null;
     if (Math.abs(diff) < 40) return; // trop petit = pas un swipe
     if (diff > 0) {
-      // swipe gauche → profil suivant
-      const next = Math.min(profiles.length - 1, current + 1);
-      setCurrent(next); if (profiles[next]) recordView(profiles[next].id);
+      // swipe gauche → profil suivant (avec wrap)
+      navigate("next");
     } else {
-      // swipe droite → profil précédent
-      const prev = Math.max(0, current - 1);
-      setCurrent(prev); if (profiles[prev]) recordView(profiles[prev].id);
+      // swipe droite → profil précédent (avec wrap)
+      navigate("prev");
     }
   }}
   style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 8, position: "relative", touchAction: "pan-y" }}><div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "10px 14px" }}>
@@ -3040,7 +3061,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     {p.hobbies && p.hobbies.trim() && <span style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>{p.hobbies.trim()}</span>}
   </div>
   <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 6, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", minHeight: "1.23rem" }}>{p.bio || ""}</p>
-</div></div><div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => { const prev = Math.max(0, current - 1); setCurrent(prev); if (profiles[prev]) recordView(profiles[prev].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => { const next = Math.min(profiles.length - 1, current + 1); setCurrent(next); if (profiles[next]) recordView(profiles[next].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
+</div></div><div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => navigate("prev")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => navigate("next")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div>{wrapToast && <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#888", marginBottom: 4, animation: "fadeIn 0.3s ease" }}>On repart du début 🔄</div>}<div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
   {profiles.slice(Math.max(0, current - 2), Math.min(profiles.length, current + 3)).map((_, i) => {
     const idx = Math.max(0, current - 2) + i;
     const isActive = idx === current;
