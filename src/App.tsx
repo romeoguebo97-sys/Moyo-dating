@@ -2097,6 +2097,21 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+  // Mesure la hauteur du footer + scroll quand ReplyBanner apparaît/disparaît
+  useEffect(() => {
+    const measure = () => {
+      if (footerRef.current) {
+        setFooterHeight(footerRef.current.offsetHeight);
+      }
+    };
+    measure();
+    // Re-mesurer après le rendu du bandeau
+    const t = setTimeout(measure, 30);
+    if (replyTo) {
+      setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, 60);
+    }
+    return () => clearTimeout(t);
+  }, [replyTo]);
 
   const sendMsg = () => {
     if (!input.trim()) return;
@@ -4476,9 +4491,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [showPartnerProfile, setShowPartnerProfile] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [footerHeight, setFooterHeight] = useState(65);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
   const openRef = useRef<Match | null>(null);
 
   useEffect(() => { openRef.current = open; }, [open]);
@@ -4689,8 +4706,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       )}
 
       {/* Zone messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
-        <img src="/msg-bg.png" alt="" style={{ position: "fixed", top: 48, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, height: "calc(100% - 48px - 65px)", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
+      <div style={{ flex: 1, overflowY: "auto", padding: "14px", paddingBottom: `${footerHeight + 14}px`, display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
+        <img src="/msg-bg.png" alt="" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
@@ -4828,7 +4845,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       </div>
 
       {/* Barre d'envoi */}
-      <div style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+      <div ref={footerRef} style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         {/* Bandeau répondre style WhatsApp — visible immédiatement au-dessus du champ */}
         {replyTo && (
           <div style={{ padding: "8px 12px 0 12px" }}>
