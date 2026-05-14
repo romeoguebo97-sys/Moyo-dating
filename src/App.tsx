@@ -3225,7 +3225,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
   </div>
 
-  {/* Zone infos — 4 lignes fixes, hauteur totale figée à 140px — immuable quelle que soit les données */}
+  {/* Zone infos — 4 lignes fixes, hauteur totale figée à 140px */}
   <div style={{ padding: "10px 14px 10px", height: 140, boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
 
     {/* Ligne 1 — Nom, âge, badges premium/vérifié + bouton menu (hauteur 26px) */}
@@ -3244,37 +3244,25 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       </div>
     </div>
 
-    {/* Ligne 2 — Champs info groupe 1 : genre + ville + religion (hauteur 26px fixe) */}
-    <div style={{ height: 26, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, overflow: "hidden", marginTop: 4 }}>
+    {/* Ligne 2 — genre + ville + religion (hauteur 26px, jamais de retour à la ligne) */}
+    <div style={{ height: 26, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, flexWrap: "nowrap", overflow: "hidden", marginTop: 4 }}>
       <span style={{ flexShrink: 0, background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", fontWeight: 600, whiteSpace: "nowrap" }}>
         {p.gender === "Femme" ? "Femme" : "Homme"}
       </span>
-      {p.city
-        ? <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>
-        : <span style={{ flexShrink: 0, width: 60, height: 20, display: "block" }} />
-      }
-      {p.religion
-        ? <span style={{ flexShrink: 0, background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.3)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis" }}>{p.religion}</span>
-        : <span style={{ flexShrink: 0, width: 40, height: 20, display: "block" }} />
-      }
+      {p.city && <span style={{ flexShrink: 1, minWidth: 0, background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>}
+      {p.religion && <span style={{ flexShrink: 1, minWidth: 0, background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.3)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.religion}</span>}
     </div>
 
-    {/* Ligne 3 — Champs info groupe 2 : profession + hobbies (hauteur 26px fixe — toujours présente) */}
-    <div style={{ height: 26, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, overflow: "hidden", marginTop: 4 }}>
-      {p.profession && p.profession.trim()
-        ? <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profession.trim()}</span>
-        : <span style={{ flexShrink: 0, width: 80, height: 20, display: "block" }} />
-      }
-      {p.hobbies && p.hobbies.trim()
-        ? <span style={{ flexShrink: 0, background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#2a5a3a", fontWeight: 500, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.hobbies.trim()}</span>
-        : <span style={{ flexShrink: 0, width: 60, height: 20, display: "block" }} />
-      }
+    {/* Ligne 3 — profession + hobbies (hauteur 26px, toujours présente) */}
+    <div style={{ height: 26, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, flexWrap: "nowrap", overflow: "hidden", marginTop: 4 }}>
+      {p.profession && p.profession.trim() && <span style={{ flexShrink: 1, minWidth: 0, background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profession.trim()}</span>}
+      {p.hobbies && p.hobbies.trim() && <span style={{ flexShrink: 1, minWidth: 0, background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#2a5a3a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.hobbies.trim()}</span>}
     </div>
 
-    {/* Ligne 4 — Bio, une seule ligne, ellipsis si trop long (hauteur restante fixe) */}
-    <div style={{ flex: 1, display: "flex", alignItems: "center", marginTop: 4, overflow: "hidden", minHeight: 22 }}>
+    {/* Ligne 4 — Bio, une seule ligne, ellipsis si trop long */}
+    <div style={{ flex: 1, minHeight: 22, display: "flex", alignItems: "center", marginTop: 4, overflow: "hidden" }}>
       <p style={{ margin: 0, fontSize: "0.8rem", color: "#666", lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%" }}>
-        {p.bio || " "}
+        {p.bio || ""}
       </p>
     </div>
 
