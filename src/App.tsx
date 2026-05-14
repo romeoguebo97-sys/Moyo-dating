@@ -6496,6 +6496,49 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
     setReportActionLoading(null);
   };
 
+  // ── Suppression de TOUTES les archives (bulk delete) ──
+  const deleteAllArchivedReports = async () => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    const archivedIds = reports
+      .filter(r => ARCHIVED_STATUSES.includes(r.status) && r.id)
+      .map(r => r.id as string);
+    if (archivedIds.length === 0) return;
+    setReportActionLoading("bulk");
+    try {
+      // Supabase : DELETE avec filtre IN sur les IDs archivés uniquement
+      const inList = archivedIds.map(id => `"${id}"`).join(",");
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/reports?id=in.(${archivedIds.join(",")})&status=in.(reviewed,rejected,banned)`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${auth.token}`,
+          },
+        }
+      );
+      if (!r.ok && r.status !== 204) {
+        const err = await r.json().catch(() => null);
+        const errMsg = err?.message || err?.code || `HTTP ${r.status}`;
+        if (r.status === 403 || r.status === 401) {
+          showToast(`Bloqué par RLS. Exécute ce SQL dans Supabase :
+CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`, "error");
+        } else {
+          showToast(`Erreur suppression globale : ${errMsg}`, "error");
+        }
+        setReportActionLoading(null);
+        return;
+      }
+      // Suppression locale immédiate — ne touche qu'aux archivés
+      setReports(prev => prev.filter(rep => !ARCHIVED_STATUSES.includes(rep.status)));
+      showToast(`${archivedIds.length} archive${archivedIds.length > 1 ? "s" : ""} supprimée${archivedIds.length > 1 ? "s" : ""} définitivement.`, "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setReportActionLoading(null);
+  };
+
   const banReportedProfile = async (report: ReportRow) => {
     if (!auth.isAdmin || !report.reported_id || !report.id) return;
     setReportActionLoading(report.id);
@@ -7615,6 +7658,45 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
           <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <IcoRefresh />Actualiser
           </Btn>
+
+          {/* Bouton Tout supprimer — visible uniquement dans la vue Archivés */}
+          {reportFilter === "archived" && (
+            <button
+              disabled={archivedCount === 0 || reportActionLoading === "bulk"}
+              onClick={() => {
+                if (archivedCount === 0) return;
+                setConfirmModal({
+                  msg: `Voulez-vous vraiment supprimer définitivement toutes les archives (${archivedCount} signalement${archivedCount > 1 ? "s" : ""}) ? Cette action est irréversible. Les profils, messages et avertissements ne seront pas supprimés.`,
+                  onConfirm: () => { setConfirmModal(null); deleteAllArchivedReports(); },
+                });
+              }}
+              style={{
+                width: "100%",
+                marginTop: 8,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                background: archivedCount === 0 ? "rgba(192,57,43,0.03)" : "rgba(192,57,43,0.07)",
+                color: archivedCount === 0 ? "#ccc" : "#C0392B",
+                border: `1px solid ${archivedCount === 0 ? "#eee" : "rgba(192,57,43,0.2)"}`,
+                borderRadius: 12,
+                padding: "11px 16px",
+                fontSize: "0.82rem", fontWeight: 600,
+                cursor: archivedCount === 0 || reportActionLoading === "bulk" ? "not-allowed" : "pointer",
+                opacity: archivedCount === 0 ? 0.5 : 1,
+                transition: "all 0.2s",
+              }}
+            >
+              {reportActionLoading === "bulk"
+                ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+              }
+              {reportActionLoading === "bulk" ? "Suppression…" : `Tout supprimer (${archivedCount})`}
+            </button>
+          )}
         </div>
       )}
 
