@@ -4817,10 +4817,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         </div>
       </div>
 
+      {/* Bandeau répondre style WhatsApp — positionné HORS du footer pour éviter tout conflit overflow/z-index */}
+      {replyTo && (
+        <div style={{ position: "relative", zIndex: 10, background: G.blanc, borderTop: `1px solid ${G.gris}`, padding: "6px 12px 0", flexShrink: 0 }}>
+          <ReplyBanner replyTo={replyTo} partnerName={open?.partner?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />
+        </div>
+      )}
+
       {/* Barre d'envoi */}
-      <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
-        {/* Bandeau répondre style WhatsApp */}
-        {replyTo && <ReplyBanner replyTo={replyTo} partnerName={open?.partner?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />}
+      <div style={{ padding: "10px 12px", background: G.blanc, borderTop: replyTo ? "none" : `1px solid ${G.gris}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {/* Bouton image - Premium */}
           <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
@@ -4871,7 +4876,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
             </div>
             {/* Actions */}
             <div style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-              <div onClick={() => { const msg = contextMenu!.msg; setContextMenu(null); setTimeout(() => setReplyTo(msg), 0); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+              <div onClick={() => { const msg = contextMenu!.msg; setReplyTo(msg); setContextMenu(null); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
               </div>
