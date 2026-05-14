@@ -2629,22 +2629,47 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
   const [showMenu, setShowMenu] = useState(false);
   const [showSignalerMenu, setShowSignalerMenu] = useState(false);
   return (
-    <div className="profile-card" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
+    <div className="profile-card" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative", minHeight: 86 }}>
+      {/* Avatar — hauteur fixe */}
       <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)" }}>
         {prof.photo_url
           ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         }
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {prof.is_verified && <VerifiedBadge size={15} />}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-          <span style={{ background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{prof.gender === "Femme" ? "Femme" : "Homme"}</span>
-          <span style={{ fontSize: "0.78rem", color: "#555" }}>{prof.city}</span>
-          {prof.religion && <span style={{ fontSize: "0.72rem", color: "#555" }}>· {prof.religion}</span>}
+
+      {/* Zone infos — hauteur fixe 62px, jamais plus, jamais moins */}
+      <div style={{ flex: 1, minWidth: 0, height: 62, display: "flex", flexDirection: "column", justifyContent: "space-between", overflow: "hidden" }}>
+
+        {/* Ligne 1 : nom + âge + badges premium/vérifié — hauteur fixe */}
+        <div style={{ height: 20, display: "flex", alignItems: "center", gap: 5, overflow: "hidden" }}>
+          <span style={{ fontWeight: 700, fontSize: "0.95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "#111" }}>
+            {prof.name}, {prof.age} ans
+          </span>
+          {prof.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
+          {prof.is_verified && <VerifiedBadge size={15} />}
         </div>
-        {prof.bio && <div style={{ fontSize: "0.78rem", color: "#555", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}
+
+        {/* Ligne 2 : genre + ville + religion — hauteur fixe */}
+        <div style={{ height: 20, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+          <span style={{ flexShrink: 0, background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>
+            {prof.gender === "Femme" ? "Femme" : "Homme"}
+          </span>
+          <span style={{ fontSize: "0.78rem", color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {prof.city}{prof.religion ? ` · ${prof.religion}` : ""}
+          </span>
+        </div>
+
+        {/* Ligne 3 : bio — hauteur fixe, toujours présente même si vide */}
+        <div style={{ height: 18, overflow: "hidden" }}>
+          {prof.bio
+            ? <div style={{ fontSize: "0.78rem", color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>
+            : <div style={{ fontSize: "0.78rem", color: "transparent", userSelect: "none" }}>—</div>
+          }
+        </div>
+
       </div>
+
       {/* Cœur */}
       <div className="icon-btn" onClick={onLike} style={{ width: 42, height: 42, borderRadius: "50%", background: liked ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(192,57,43,0.06)", border: liked ? "none" : `1.5px solid rgba(192,57,43,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill={liked ? "white" : "rgba(192,57,43,0.4)"} stroke={liked ? "white" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2658,7 +2683,6 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
         </div>
         {showMenu && (
           <>
-            {/* Overlay transparent pour fermer au clic extérieur */}
             <div style={{ position: "fixed", inset: 0, zIndex: 49 }} onClick={() => setShowMenu(false)} />
             <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
               {isPremium && onView && <div onClick={() => { setShowMenu(false); onView(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>}
@@ -4594,12 +4618,13 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
 
 function getOnlineStatus(lastSeen?: string): { label: string; color: string } {
   if (!lastSeen) return { label: "Hors ligne", color: "#bbb" };
-  const diff = (Date.now() - new Date(lastSeen).getTime()) / 1000 / 60; // en minutes
-  if (diff < 2) return { label: "En ligne", color: "#27ae60" };
-  if (diff < 10) return { label: `Vu il y a ${Math.floor(diff)} min`, color: "#f39c12" };
-  if (diff < 60) return { label: `Vu il y a ${Math.floor(diff)} min`, color: "#bbb" };
-  if (diff < 1440) return { label: `Vu il y a ${Math.floor(diff / 60)}h`, color: "#bbb" };
-  return { label: `Vu il y a ${Math.floor(diff / 1440)}j`, color: "#bbb" };
+  const diffSec = (Date.now() - new Date(lastSeen).getTime()) / 1000;
+  const diffMin = diffSec / 60;
+  if (diffSec < 30) return { label: "En ligne", color: "#27ae60" };
+  if (diffMin < 10) return { label: `Vu il y a ${Math.floor(diffMin)} min`, color: "#f39c12" };
+  if (diffMin < 60) return { label: `Vu il y a ${Math.floor(diffMin)} min`, color: "#bbb" };
+  if (diffMin < 1440) return { label: `Vu il y a ${Math.floor(diffMin / 60)}h`, color: "#bbb" };
+  return { label: `Vu il y a ${Math.floor(diffMin / 1440)}j`, color: "#bbb" };
 }
 
 function TickIcon({ read, isPremium, white = false }: { read: boolean; isPremium: boolean; white?: boolean }) {
@@ -8581,9 +8606,60 @@ export default function App() {
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
-    const updateLastSeen = () => sb.update(auth.token, "profiles", auth.userId, { last_seen: new Date().toISOString() });
-    updateLastSeen();
-    const lastSeenInterval = setInterval(updateLastSeen, 30000);
+
+    // ── Système last_seen amélioré ──────────────────────────────────────────
+    // Écriture immédiate + heartbeat 15s + écriture sur fermeture/mise en fond
+    const writeLastSeen = () =>
+      sb.update(auth.token, "profiles", auth.userId, { last_seen: new Date().toISOString() }).catch(() => {});
+
+    const writeOffline = () => {
+      // Marquer "hors ligne" en forçant last_seen à 10 minutes dans le passé
+      // → détecté immédiatement comme inactif par tous les clients
+      const past = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      // sendBeacon : fonctionne même quand la page se ferme (pas de fetch)
+      const body = JSON.stringify({ last_seen: past });
+      const url = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`;
+      const sent = navigator.sendBeacon
+        ? navigator.sendBeacon(
+            url + "&apikey=" + SUPABASE_KEY,
+            new Blob([body], { type: "application/json" })
+          )
+        : false;
+      // Fallback synchrone si sendBeacon échoue ou n'existe pas
+      if (!sent) {
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PATCH", url, false); // synchrone intentionnel (fermeture de page)
+          xhr.setRequestHeader("Content-Type", "application/json");
+          xhr.setRequestHeader("apikey", SUPABASE_KEY);
+          xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
+          xhr.send(body);
+        } catch {}
+      }
+    };
+
+    // Présence immédiate au montage
+    writeLastSeen();
+
+    // Heartbeat toutes les 15s (au lieu de 30s)
+    const lastSeenInterval = setInterval(writeLastSeen, 15000);
+
+    // Fermeture onglet / navigation sortante
+    const handleBeforeUnload = () => writeOffline();
+    const handlePageHide = () => writeOffline();
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+
+    // Mise en arrière-plan (mobile + desktop)
+    const handleVisibilityForPresence = () => {
+      if (document.visibilityState === "hidden") {
+        writeOffline();
+      } else {
+        // Retour au premier plan → mise à jour immédiate
+        writeLastSeen();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityForPresence);
 
     // Chargement initial des likes reçus (badge séparé pour likes et vus)
     const loadLikesReceived = async () => {
@@ -8706,6 +8782,11 @@ export default function App() {
       clearInterval(lastSeenInterval);
       clearInterval(sessionCheck);
       document.removeEventListener("visibilitychange", handleVisibility);
+      document.removeEventListener("visibilitychange", handleVisibilityForPresence);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+      // Marquer hors ligne au démontage du composant (ex: logout)
+      writeOffline();
     };
   }, [auth?.userId]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
