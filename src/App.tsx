@@ -1408,9 +1408,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               Ils nous ont fait confiance
             </h2>
           </div>
-          {/* Cartes témoignages */}
-          <div className="testi-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
-            {[
+          {/* Cartes témoignages — carrousel automatique */}
+          {(() => {
+            const temoignages = [
               {
                 initiales: "OA",
                 noms: "Orlane & Armel",
@@ -1438,53 +1438,99 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 stars: 5,
                 accent: G.vert,
               },
-            ].map((t, i) => (
-              <div key={t.noms} className="testi-card" style={{
-                background: G.blanc,
-                border: `1px solid ${G.gris}`,
-                boxShadow: "0 4px 24px rgba(44,26,14,0.07)",
-                borderRadius: 24,
-                padding: "28px 24px",
-                position: "relative",
-                overflow: "hidden",
-              }}>
-                {/* Accent couleur */}
-                <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: t.accent, borderRadius: "24px 0 0 24px" }} />
-                {/* Guillemet décoratif */}
-                <div style={{ position: "absolute", top: 16, right: 20,  fontSize: "5rem", color: "rgba(44,26,14,0.06)", lineHeight: 1, userSelect: "none" }}>"</div>
-                {/* Étoiles */}
-                <div style={{ display: "flex", gap: 3, marginBottom: 16, paddingLeft: 12 }}>
-                  {[...Array(t.stars)].map((_, si) => (
-                    <svg key={si} width="13" height="13" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  ))}
-                </div>
-                {/* Texte */}
-                <p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.8, fontStyle: "italic", marginBottom: 22, paddingLeft: 12, }}>
-                  "{t.temoignage}"
-                </p>
-                {/* Profil */}
-                <div style={{ display: "flex", alignItems: "center", gap: 14, paddingLeft: 12 }}>
-                  <div style={{
-                    width: 64, height: 64, borderRadius: "50%", flexShrink: 0,
-                    background: `linear-gradient(135deg,${G.cremeDark},${G.creme})`,
-                    border: `2px solid ${t.accent}`,
-                    boxShadow: `0 4px 14px rgba(44,26,14,0.12), 0 0 0 3px rgba(212,168,67,0.15)`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <span style={{
-                       fontWeight: 700,
-                      fontSize: "1rem", color: "#111", letterSpacing: "0.02em",
-                    }}>{t.initiales}</span>
+            ];
+            const CarouselTesti = () => {
+              const [idx, setIdx] = React.useState(0);
+              const [anim, setAnim] = React.useState<"in"|"out">("in");
+              const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+              const idxRef = React.useRef(0);
+
+              const goTo = React.useCallback((next: number) => {
+                setAnim("out");
+                setTimeout(() => {
+                  idxRef.current = next;
+                  setIdx(next);
+                  setAnim("in");
+                }, 320);
+              }, []);
+
+              React.useEffect(() => {
+                timerRef.current = setInterval(() => {
+                  const next = (idxRef.current + 1) % temoignages.length;
+                  goTo(next);
+                }, 4000);
+                return () => { if (timerRef.current) clearInterval(timerRef.current); };
+              }, [goTo]);
+
+              const t = temoignages[idx];
+              return (
+                <div style={{ position: "relative" }}>
+                  <style>{`
+                    @keyframes testiIn  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+                    @keyframes testiOut { from { opacity: 1; transform: translateY(0); }  to { opacity: 0; transform: translateY(-10px); } }
+                    .testi-in  { animation: testiIn  0.32s ease forwards; }
+                    .testi-out { animation: testiOut 0.28s ease forwards; }
+                  `}</style>
+
+                  {/* Carte */}
+                  <div
+                    className={anim === "in" ? "testi-in" : "testi-out"}
+                    style={{
+                      background: G.blanc,
+                      border: `1px solid ${G.gris}`,
+                      boxShadow: "0 4px 24px rgba(44,26,14,0.07)",
+                      borderRadius: 24,
+                      padding: "28px 24px",
+                      position: "relative",
+                      overflow: "hidden",
+                      minHeight: 220,
+                    }}
+                  >
+                    <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: t.accent, borderRadius: "24px 0 0 24px" }} />
+                    <div style={{ position: "absolute", top: 16, right: 20, fontSize: "5rem", color: "rgba(44,26,14,0.06)", lineHeight: 1, userSelect: "none" as const }}>"</div>
+                    <div style={{ display: "flex", gap: 3, marginBottom: 16, paddingLeft: 12 }}>
+                      {[...Array(t.stars)].map((_, si) => (
+                        <svg key={si} width="13" height="13" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.8, fontStyle: "italic", marginBottom: 22, paddingLeft: 12 }}>
+                      "{t.temoignage}"
+                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, paddingLeft: 12 }}>
+                      <div style={{ width: 56, height: 56, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg,${G.cremeDark},${G.creme})`, border: `2px solid ${t.accent}`, boxShadow: `0 4px 14px rgba(44,26,14,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111" }}>{t.initiales}</span>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111" }}>{t.noms}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>{t.lieu}</div>
+                        <div style={{ fontSize: "0.7rem", color: t.accent, fontWeight: 600, marginTop: 2 }}>{t.since}</div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111" }}>{t.noms}</div>
-                    <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>{t.lieu}</div>
-                    <div style={{ fontSize: "0.7rem", color: t.accent, fontWeight: 600, marginTop: 2 }}>{t.since}</div>
+
+                  {/* Indicateurs dots */}
+                  <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20 }}>
+                    {temoignages.map((_, i) => (
+                      <div
+                        key={i}
+                        onClick={() => { if (timerRef.current) clearInterval(timerRef.current); goTo(i); }}
+                        style={{
+                          width: i === idx ? 22 : 8,
+                          height: 8,
+                          borderRadius: 50,
+                          background: i === idx ? G.rouge : G.gris,
+                          cursor: "pointer",
+                          transition: "all 0.35s ease",
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              );
+            };
+            return <CarouselTesti />;
+          })()}
           {/* CTA sous les témoignages */}
           <div style={{ textAlign: "center", marginTop: 40 }}>
             <p style={{ color: "#555", fontSize: "0.82rem", marginBottom: 16 }}>Rejoins des milliers de Congolais qui ont trouvé l'amour</p>
