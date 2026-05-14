@@ -6995,7 +6995,7 @@ export default function App() {
       }, 3000);
     }
   };
-  // ── Vérifier les avertissements non lus à chaque connexion ──
+  // ── Vérifier les avertissements non lus — polling 10s + realtime ──
   useEffect(() => {
     if (!auth?.userId) return;
     const checkWarnings = async () => {
@@ -7008,11 +7008,23 @@ export default function App() {
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
           const w = data[0];
-          setPendingWarning({ id: w.id, warning_number: w.warning_number, reason: w.reason });
+          setPendingWarning(prev => prev?.id === w.id ? prev : { id: w.id, warning_number: w.warning_number, reason: w.reason });
+        } else {
+          setPendingWarning(null);
         }
       } catch {}
     };
     checkWarnings();
+    // Polling toutes les 10 secondes
+    const interval = setInterval(checkWarnings, 10000);
+    // Realtime — écoute les INSERT sur user_warnings pour cet utilisateur
+    const ws = sb.subscribeRealtime(auth.token, "user_warnings", `user_id=eq.${auth.userId}`, () => {
+      checkWarnings();
+    });
+    return () => {
+      clearInterval(interval);
+      try { ws?.close(); } catch {}
+    };
   }, [auth?.userId]);
 
   const acknowledgeWarning = async () => {
@@ -7030,6 +7042,20 @@ export default function App() {
       });
     } catch {}
     setPendingWarning(null);
+    // Re-vérifier immédiatement s'il y a d'autres avertissements en attente
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${auth.userId}&acknowledged=eq.false&order=created_at.asc&limit=1`,
+        { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
+      );
+      if (r.ok) {
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data) && data.length > 0) {
+          const w = data[0];
+          setPendingWarning({ id: w.id, warning_number: w.warning_number, reason: w.reason });
+        }
+      }
+    } catch {}
   };
 
   const handleLogout = () => {
