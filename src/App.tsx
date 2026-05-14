@@ -5883,6 +5883,9 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   // ── Reports ──
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [reportFilter, setReportFilter] = useState<"all" | "user" | "system">("all");
+  const [reportActionLoading, setReportActionLoading] = useState<string | null>(null); // report id en cours
+  const [reportProfilePreview, setReportProfilePreview] = useState<AdminProfile | null>(null);
+  const [reportProfileLoading, setReportProfileLoading] = useState<string | null>(null);
 
   // ── Users ──
   const [users, setUsers] = useState<AdminProfile[]>([]);
@@ -6098,6 +6101,112 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   // ── Confirmation modale ──
   const confirm = (msg: string, fn: () => void) => setConfirmModal({ msg, onConfirm: fn });
 
+  // ── Actions sur les signalements ──
+  const updateReportStatus = async (reportId: string, newStatus: string, successMsg: string) => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setReportActionLoading(reportId);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${reportId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => null);
+        const errMsg = err?.message || err?.code || `HTTP ${r.status}`;
+        if (r.status === 403 || r.status === 401) {
+          showToast(`Bloqué par RLS. Exécute le SQL de policy dans Supabase. (${errMsg})`, "error");
+        } else {
+          showToast(`Erreur Supabase : ${errMsg}`, "error");
+        }
+        setReportActionLoading(null);
+        return;
+      }
+      // Mise à jour locale immédiate
+      setReports(prev => prev.map(rep => rep.id === reportId ? { ...rep, status: newStatus } : rep));
+      showToast(successMsg, "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setReportActionLoading(null);
+  };
+
+  const banReportedProfile = async (report: ReportRow) => {
+    if (!auth.isAdmin || !report.reported_id || !report.id) return;
+    setReportActionLoading(report.id);
+    try {
+      // 1. Bannir le profil
+      const rProfile = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${report.reported_id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({ is_banned: true, is_visible: false }),
+      });
+      if (!rProfile.ok) {
+        const err = await rProfile.json().catch(() => null);
+        showToast(`Erreur bannissement profil : ${err?.message || rProfile.status}`, "error");
+        setReportActionLoading(null);
+        return;
+      }
+      // 2. Mettre à jour le report → status "banned"
+      await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${report.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({ status: "banned" }),
+      });
+      // 3. Mise à jour locale
+      setReports(prev => prev.map(rep => rep.id === report.id ? { ...rep, status: "banned" } : rep));
+      setUsers(prev => prev.map(u => u.id === report.reported_id ? { ...u, is_banned: true, is_visible: false } : u));
+      showToast("Profil banni et signalement clôturé.", "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setReportActionLoading(null);
+  };
+
+  const loadReportedProfile = async (reportedId: string) => {
+    setReportProfileLoading(reportedId);
+    try {
+      const res = await sb.query<AdminProfile>(
+        auth.token, "profiles",
+        `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_visible,warning_count,created_at&id=eq.${reportedId}`
+      );
+      if (res.length > 0) {
+        setReportProfilePreview(res[0]);
+      } else {
+        showToast("Profil introuvable (supprimé ?)", "error");
+      }
+    } catch (e: any) {
+      showToast("Erreur chargement profil : " + (e?.message || "inconnue"), "error");
+    }
+    setReportProfileLoading(null);
+  };
+
+  // ── Couleur badge statut report ──
+  const reportStatusStyle = (status: string): { bg: string; color: string; label: string } => {
+    switch (status) {
+      case "pending":    return { bg: "rgba(243,156,18,0.12)", color: "#f39c12", label: "En attente" };
+      case "reviewed":   return { bg: "rgba(39,174,96,0.12)",  color: "#27ae60", label: "Traité" };
+      case "rejected":   return { bg: "rgba(127,140,141,0.12)", color: "#7f8c8d", label: "Rejeté" };
+      case "banned":     return { bg: "rgba(231,76,60,0.12)",  color: "#e74c3c", label: "Banni" };
+      default:           return { bg: "rgba(52,152,219,0.12)", color: "#3498db", label: status };
+    }
+  };
+
   // ── Classify reports ──
   const classifyReport = (r: ReportRow): { label: string; color: string } => {
     if (r.reason?.startsWith("[AUTO-MOD")) return { label: "Auto-modération", color: "#e67e22" };
@@ -6119,6 +6228,11 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   const IcoStar = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="#D4A843" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
   const IcoShield = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
   const IcoBan = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>;
+  const IcoEye = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+  const IcoCheckCircle = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+  const IcoXCircle = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>;
+  const IcoBanLg = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>;
+  const IcoWarnLg = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
   const IcoCheck = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
   const IcoTrash = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>;
   const IcoSearch = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
@@ -6226,6 +6340,96 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
                   Envoyer
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal aperçu profil signalé */}
+      {reportProfilePreview && (
+        <div
+          onClick={() => setReportProfilePreview(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "fadeIn 0.2s ease" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden", animation: "fadeUp 0.25s ease" }}
+          >
+            {/* Header */}
+            <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "22px 20px 18px", textAlign: "center", position: "relative" }}>
+              <button
+                onClick={() => setReportProfilePreview(null)}
+                style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: "2rem" }}>
+                {reportProfilePreview.gender === "Femme" ? "👩🏿" : "👨🏿"}
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.blanc }}>{reportProfilePreview.name}</div>
+              <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
+                {reportProfilePreview.age} ans · {reportProfilePreview.city}
+              </div>
+            </div>
+            {/* Body */}
+            <div style={{ padding: "18px 20px 20px" }}>
+              {/* Statuts */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                {reportProfilePreview.is_banned && (
+                  <span style={{ background: "rgba(231,76,60,0.12)", color: "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    🚫 Banni
+                  </span>
+                )}
+                {reportProfilePreview.is_premium && (
+                  <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    ⭐ Premium
+                  </span>
+                )}
+                {reportProfilePreview.is_verified && (
+                  <span style={{ background: "rgba(29,155,240,0.12)", color: "#1d9bf0", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    ✓ Vérifié
+                  </span>
+                )}
+                {reportProfilePreview.is_admin && (
+                  <span style={{ background: `rgba(26,92,58,0.12)`, color: G.vert, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    🛡️ Admin
+                  </span>
+                )}
+                {(reportProfilePreview.warning_count || 0) > 0 && (
+                  <span style={{ background: "rgba(243,156,18,0.12)", color: "#e67e22", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    ⚠️ Avert. {reportProfilePreview.warning_count}/3
+                  </span>
+                )}
+              </div>
+              {/* Infos */}
+              <div style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                    <span style={{ color: "#888" }}>Genre</span>
+                    <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{reportProfilePreview.gender}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                    <span style={{ color: "#888" }}>Ville</span>
+                    <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{reportProfilePreview.city}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                    <span style={{ color: "#888" }}>ID</span>
+                    <span style={{ fontWeight: 500, color: "#666", fontSize: "0.72rem", fontFamily: "monospace" }}>{reportProfilePreview.id.slice(0, 20)}…</span>
+                  </div>
+                  {reportProfilePreview.created_at && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                      <span style={{ color: "#888" }}>Inscrit le</span>
+                      <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{formatDate(reportProfilePreview.created_at)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setReportProfilePreview(null)}
+                style={{ width: "100%", background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}
+              >
+                Fermer
+              </button>
             </div>
           </div>
         </div>
@@ -6753,20 +6957,29 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
             ) : (
               filteredReports.map((r, i) => {
                 const cat = classifyReport(r);
+                const statusStyle = reportStatusStyle(r.status);
+                const isSystemAlert = !r.reported_id;
+                const isLoading = reportActionLoading === r.id;
+                const alreadyHandled = r.status !== "pending";
                 return (
-                  <div key={r.id || i} style={{ padding: "12px 0", borderBottom: i < filteredReports.length - 1 ? `1px solid ${G.gris}` : "none" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-                      <span style={{ background: `${cat.color}18`, color: cat.color, borderRadius: 50, padding: "2px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                  <div key={r.id || i} style={{ padding: "14px 0", borderBottom: i < filteredReports.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                    {/* Ligne 1 : badges catégorie + statut */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+                      <span style={{ background: `${cat.color}18`, color: cat.color, borderRadius: 50, padding: "2px 10px", fontSize: "0.68rem", fontWeight: 700 }}>
                         {cat.label}
                       </span>
                       {r.status && (
-                        <span style={{ background: r.status === "pending" ? "rgba(243,156,18,0.12)" : "rgba(39,174,96,0.12)", color: r.status === "pending" ? "#f39c12" : "#27ae60", borderRadius: 50, padding: "2px 10px", fontSize: "0.66rem", fontWeight: 600 }}>
-                          {r.status === "pending" ? "En attente" : r.status}
+                        <span style={{ background: statusStyle.bg, color: statusStyle.color, borderRadius: 50, padding: "2px 10px", fontSize: "0.66rem", fontWeight: 600 }}>
+                          {statusStyle.label}
                         </span>
                       )}
                     </div>
+
+                    {/* Ligne 2 : raison */}
                     <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a", marginBottom: 5, lineHeight: 1.4 }}>{r.reason}</div>
-                    <div style={{ fontSize: "0.72rem", color: "#999", display: "flex", flexWrap: "wrap", gap: 8 }}>
+
+                    {/* Ligne 3 : IDs + date */}
+                    <div style={{ fontSize: "0.72rem", color: "#999", display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         {r.reporter_id?.slice(0, 12)}…
@@ -6785,10 +6998,151 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
                         </span>
                       )}
                     </div>
+
+                    {/* Ligne 4 : boutons d'action */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {/* ── Actions communes (alerte système) ── */}
+                      {isSystemAlert && (
+                        <>
+                          <button
+                            onClick={() => !alreadyHandled && r.id && updateReportStatus(r.id, "reviewed", "Signalement marqué comme traité.")}
+                            disabled={isLoading || alreadyHandled}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: alreadyHandled ? "rgba(39,174,96,0.06)" : "rgba(39,174,96,0.1)",
+                              color: "#27ae60", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                              opacity: alreadyHandled ? 0.5 : 1,
+                            }}
+                          >
+                            <IcoCheckCircle size={12} /> Traiter
+                          </button>
+                          <button
+                            onClick={() => !alreadyHandled && r.id && updateReportStatus(r.id, "rejected", "Signalement rejeté.")}
+                            disabled={isLoading || alreadyHandled}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: alreadyHandled ? "rgba(127,140,141,0.06)" : "rgba(127,140,141,0.1)",
+                              color: "#7f8c8d", border: "1px solid rgba(127,140,141,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                              opacity: alreadyHandled ? 0.5 : 1,
+                            }}
+                          >
+                            <IcoXCircle size={12} /> Rejeter
+                          </button>
+                        </>
+                      )}
+
+                      {/* ── Actions profil (reported_id existe) ── */}
+                      {!isSystemAlert && (
+                        <>
+                          {/* Voir profil */}
+                          <button
+                            onClick={() => r.reported_id && loadReportedProfile(r.reported_id)}
+                            disabled={reportProfileLoading === r.reported_id}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: "rgba(52,152,219,0.1)", color: "#2980b9",
+                              border: "1px solid rgba(52,152,219,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer",
+                            }}
+                          >
+                            {reportProfileLoading === r.reported_id
+                              ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                              : <IcoEye size={12} />
+                            }
+                            Voir profil
+                          </button>
+
+                          {/* Avertir */}
+                          <button
+                            onClick={() => {
+                              // Cherche le user dans la liste locale ou crée un objet minimal
+                              const knownUser = users.find(u => u.id === r.reported_id);
+                              setWarnModal({ user: knownUser || { id: r.reported_id!, name: r.reported_id!.slice(0, 8) + "…", age: 0, city: "", gender: "", is_premium: false } });
+                            }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: "rgba(243,156,18,0.1)", color: "#e67e22",
+                              border: "1px solid rgba(243,156,18,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer",
+                            }}
+                          >
+                            <IcoWarnLg size={12} /> Avertir
+                          </button>
+
+                          {/* Marquer traité */}
+                          <button
+                            onClick={() => !alreadyHandled && r.id && updateReportStatus(r.id, "reviewed", "Signalement marqué comme traité.")}
+                            disabled={isLoading || alreadyHandled}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: alreadyHandled ? "rgba(39,174,96,0.06)" : "rgba(39,174,96,0.1)",
+                              color: "#27ae60", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                              opacity: alreadyHandled ? 0.5 : 1,
+                            }}
+                          >
+                            <IcoCheckCircle size={12} /> Traité
+                          </button>
+
+                          {/* Rejeter */}
+                          <button
+                            onClick={() => !alreadyHandled && r.id && updateReportStatus(r.id, "rejected", "Signalement rejeté.")}
+                            disabled={isLoading || alreadyHandled}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: alreadyHandled ? "rgba(127,140,141,0.06)" : "rgba(127,140,141,0.1)",
+                              color: "#7f8c8d", border: "1px solid rgba(127,140,141,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                              opacity: alreadyHandled ? 0.5 : 1,
+                            }}
+                          >
+                            <IcoXCircle size={12} /> Rejeter
+                          </button>
+
+                          {/* Bannir */}
+                          <button
+                            onClick={() => {
+                              if (alreadyHandled && r.status === "banned") return;
+                              confirm(
+                                `Bannir ce profil (${r.reported_id?.slice(0, 12)}…) ? Il/elle ne pourra plus accéder à MOYO. Cette action est irréversible depuis ici.`,
+                                () => banReportedProfile(r)
+                              );
+                            }}
+                            disabled={isLoading || r.status === "banned"}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: r.status === "banned" ? "rgba(231,76,60,0.06)" : "rgba(231,76,60,0.1)",
+                              color: "#e74c3c", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: isLoading || r.status === "banned" ? "not-allowed" : "pointer",
+                              opacity: r.status === "banned" ? 0.5 : 1,
+                            }}
+                          >
+                            {isLoading
+                              ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                              : <IcoBanLg size={12} />
+                            }
+                            Bannir
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })
             )}
+          </div>
+
+          {/* Info policy SQL */}
+          <div style={{ background: "rgba(52,152,219,0.06)", border: "1px solid rgba(52,152,219,0.2)", borderRadius: 12, padding: "12px 14px", marginTop: 12, fontSize: "0.74rem", color: "#2980b9", lineHeight: 1.6 }}>
+            <strong>Si "Traiter" / "Rejeter" retourne une erreur 403</strong>, exécute ce SQL dans Supabase → SQL Editor :<br />
+            <code style={{ display: "block", marginTop: 6, background: "rgba(52,152,219,0.1)", padding: "8px 10px", borderRadius: 8, fontSize: "0.7rem", color: "#1a6a9a", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{`CREATE POLICY "Admin can update reports" ON public.reports FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`}</code>
           </div>
 
           <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
