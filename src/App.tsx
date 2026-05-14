@@ -5018,7 +5018,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
                   <div
-                    style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
+                    style={{ position: "relative", maxWidth: "82%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
                     onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                   >
                     <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
@@ -5058,9 +5058,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   <div className="msg-arrow" onClick={() => setContextMenu({ msg: m, x: 0, y: 0 })} style={{ marginTop: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
-                  <div style={{ position: "relative", maxWidth: "72%" }}>
+                  <div style={{ position: "relative", maxWidth: "82%" }}>
                     <div
-                      style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none" }}
+                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
                       {(() => {
