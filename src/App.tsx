@@ -2225,7 +2225,7 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
   );
 }
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
   const [showBot, setShowBot] = useState(false);
@@ -2297,7 +2297,16 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box" }}>
       <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
-        {auth.isAdmin && <div onClick={() => setTab("admin")} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>⚙️ Admin</div>}
+        {auth.isAdmin && (
+          <div onClick={() => setTab("admin")} style={{ display: "flex", alignItems: "center", gap: 5, background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
+            <span>⚙️ Admin</span>
+            {adminBadgeCount && adminBadgeCount > 0 ? (
+              <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.62rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
+                {adminBadgeCount > 99 ? "99+" : adminBadgeCount}
+              </span>
+            ) : null}
+          </div>
+        )}
         <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.blanc, background: G.rouge, borderRadius: 50, padding: "6px 14px", cursor: "pointer", letterSpacing: "0.02em" }}>Guide</div>
         <div onClick={() => setShowBot(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(26,92,58,0.35)", flexShrink: 0 }} title="Assistant Moyo">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -6106,7 +6115,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
+function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
     if (!auth.isAdmin) {
@@ -6143,7 +6152,7 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews">("stats");
 
   // ── Avis utilisateurs ──
-  type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
+  type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
@@ -6152,7 +6161,7 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   const loadReviews = async () => {
     setReviewsLoading(true);
     try {
-      const rows = await sb.query<ReviewRow>(auth.token, "app_ratings", "?order=created_at.desc&limit=200");
+      const rows = await sb.query<ReviewRow>(auth.token, "app_ratings", "?select=id,user_id,rating,comment,is_read,created_at,updated_at&order=created_at.desc&limit=200");
       const enriched = await Promise.all(rows.map(async r => {
         const prof = await sb.query<{ name: string; city?: string; gender?: string }>(auth.token, "profiles", `?id=eq.${r.user_id}&select=name,city,gender`);
         return { ...r, profile: prof[0] };
@@ -6177,6 +6186,15 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
       const avg = remaining.length ? remaining.reduce((s, r) => s + r.rating, 0) / remaining.length : 0;
       return { total: remaining.length, avg: Math.round(avg * 10) / 10 };
     });
+  };
+
+  const markReviewRead = async (id: string) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/app_ratings?id=eq.${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+      body: JSON.stringify({ is_read: true }),
+    });
+    setReviews(prev => prev.map(r => r.id === id ? { ...r, is_read: true } : r));
   };
 
   const toggleHideReview = (id: string) => {
@@ -6632,6 +6650,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
   const archivedCount = reports.filter(r => ARCHIVED_STATUSES.includes(r.status)).length;
   const pendingCount = reports.filter(isPending).length;
+  const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
+  const adminBadgeCount = pendingCount + unreadReviewsCount;
+  // Sync badge vers App parent
+  useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
 
   // ── SVG Icons ──
   const IcoUsers = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
@@ -7011,6 +7033,28 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              {/* Signature */}
+              <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
+                <div style={{ fontSize: "0.7rem", color: "#bbb", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>Conçu et développé par</div>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, letterSpacing: "0.01em" }}>Roméo GUEBO</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: G.rouge }}>CEO Moyo</span>
+                  {[
+                    "Chargé de communication et marketing",
+                    "Responsable marketing et développement commercial",
+                    "Chef de projet digital",
+                  ].map((role, i) => (
+                    <span key={i} style={{ fontSize: "0.71rem", color: "#888", lineHeight: 1.5 }}>· {role}</span>
+                  ))}
+                </div>
+                <a href="mailto:romeoguebo97@gmail.com" style={{ marginTop: 4, fontSize: "0.72rem", color: G.rouge, textDecoration: "none", fontWeight: 600, opacity: 0.8 }}>
+                  romeoguebo97@gmail.com
+                </a>
+                <div style={{ marginTop: 4, fontSize: "0.75rem", fontWeight: 800, color: G.brun, letterSpacing: "0.05em" }}>
+                  Mo<span style={{ color: G.or }}>yo</span>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -7057,7 +7101,20 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 transition: "all 0.2s",
               }}
             >
-              <Icon />{label}
+              <Icon />
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                {label}
+                {key === "reports" && pendingCount > 0 && (
+                  <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(192,57,43,0.2)", border: `1px solid rgba(192,57,43,0.15)` }}>
+                    {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
+                {key === "reviews" && unreadReviewsCount > 0 && (
+                  <span style={{ background: G.blanc, color: "#B8860B", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(184,134,11,0.2)", border: "1px solid rgba(184,134,11,0.15)" }}>
+                    {unreadReviewsCount > 99 ? "99+" : unreadReviewsCount}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -7762,8 +7819,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {reviews.map(r => {
                     const isHidden = hiddenReviews.has(r.id);
+                    const isUnread = !r.is_read;
                     return (
-                      <div key={r.id} style={{ background: isHidden ? "#F8F8F8" : G.blanc, borderRadius: 14, padding: "14px 16px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)", border: `1px solid ${isHidden ? "#E8E8E8" : "#F0F0F0"}`, opacity: isHidden ? 0.55 : 1, transition: "opacity 0.2s" }}>
+                      <div key={r.id} style={{ background: isHidden ? "#F8F8F8" : G.blanc, borderRadius: 14, padding: "14px 16px", boxShadow: isUnread ? "0 1px 8px rgba(192,57,43,0.1)" : "0 1px 6px rgba(0,0,0,0.05)", border: `1px solid ${isUnread ? "rgba(192,57,43,0.18)" : isHidden ? "#E8E8E8" : "#F0F0F0"}`, opacity: isHidden ? 0.55 : 1, transition: "opacity 0.2s" }}>
                         {/* Header : user + date */}
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -7791,7 +7849,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         )}
 
                         {/* Actions admin */}
-                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                          {isUnread && (
+                            <div
+                              onClick={() => markReviewRead(r.id)}
+                              style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(192,57,43,0.07)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: G.rouge }}
+                            >
+                              <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill={G.rouge}/></svg>
+                              Marquer lu
+                            </div>
+                          )}
                           <div
                             onClick={() => toggleHideReview(r.id)}
                             style={{ display: "flex", alignItems: "center", gap: 5, background: isHidden ? "rgba(39,174,96,0.08)" : "rgba(0,0,0,0.04)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: isHidden ? "#27ae60" : "#888" }}
@@ -7843,6 +7910,7 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
   const [openConvPartnerId, setOpenConvPartnerId] = useState<string | null>(null);
+  const [adminBadgeCount, setAdminBadgeCount] = useState(0);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const isUnmatchingRef = useRef(false);
   // Ref pour permettre à LikesPage de déclencher un refresh des badges
@@ -8330,14 +8398,14 @@ export default function App() {
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
       if (t === "messages") setUnreadCount(0);
-    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth}>
+    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
-      {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}
+      {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
