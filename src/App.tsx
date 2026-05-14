@@ -82,7 +82,7 @@ type Auth = {
   refreshToken?: string;   // refresh_token Supabase
   expiresAt?: number;      // timestamp ms (Date.now()) d'expiration du access_token
 };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string; warning_count?: number };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
@@ -1754,7 +1754,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
 
 function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "", profession: "" });
+  const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "" });
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
@@ -1898,7 +1898,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           gender: form.gender,
           bio: form.bio.trim(),
           religion: form.religion,
-          profession: form.profession.trim() || null,
           photo_url: photoUrl,
           is_complete: true,
         }),
@@ -2037,10 +2036,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             <option value="">Sélectionne ta religion</option>
             {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-        </div>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Profession <span style={{ color: "#aaa", fontSize: "0.8rem", fontWeight: 400 }}>(optionnel)</span></label>
-          <input value={form.profession} onChange={e => upd("profession", e.target.value.slice(0, 60))} placeholder="Ex: Infirmière, Ingénieur, Étudiant..." style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: "#111", outline: "none" }} />
         </div>
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Bio (optionnel)</label>
@@ -2462,7 +2457,6 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
           <span style={{ background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{prof.gender === "Femme" ? "Femme" : "Homme"}</span>
           <span style={{ fontSize: "0.78rem", color: "#555" }}>{prof.city}</span>
           {prof.religion && <span style={{ fontSize: "0.72rem", color: "#555" }}>· {prof.religion}</span>}
-          {prof.profession && prof.profession.trim() && <span style={{ fontSize: "0.68rem", color: "#2a5a3a", background: "rgba(26,92,58,0.07)", borderRadius: 50, padding: "1px 7px", fontWeight: 500 }}>{prof.profession.trim()}</span>}
         </div>
         {prof.bio && <div style={{ fontSize: "0.78rem", color: "#555", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}
       </div>
@@ -2793,7 +2787,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
       .then(res => { if (res[0]) setMyGender(res[0].gender); });
   }, []);
-  useEffect(() => { if (profiles.length > 0 && profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
+  useEffect(() => { if (profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
 
   const loadProfiles = async (pageNum = 0, append = false) => {
     if (pageNum === 0) setLoading(true); else setLoadingMore(true);
@@ -2986,21 +2980,18 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     swipeStartX.current = null;
     if (Math.abs(diff) < 40) return; // trop petit = pas un swipe
     if (diff > 0) {
-      // swipe gauche → profil suivant (boucle en fin de liste)
-      if (profiles.length === 0) return;
-      const next = current + 1 >= profiles.length ? 0 : current + 1;
-      if (current + 1 >= profiles.length) setDiscoverToast({ msg: "On repart du début 🔄", type: "success" });
+      // swipe gauche → profil suivant
+      const next = Math.min(profiles.length - 1, current + 1);
       setCurrent(next); if (profiles[next]) recordView(profiles[next].id);
     } else {
-      // swipe droite → profil précédent (boucle au début)
-      if (profiles.length === 0) return;
-      const prev = current - 1 < 0 ? profiles.length - 1 : current - 1;
+      // swipe droite → profil précédent
+      const prev = Math.max(0, current - 1);
       setCurrent(prev); if (profiles[prev]) recordView(profiles[prev].id);
     }
   }}
   style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 8, position: "relative", touchAction: "pan-y" }}><div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "10px 14px" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {p.is_verified && <VerifiedBadge size={18} />}</div>
+    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <svg width="18" height="18" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:4,flexShrink:0}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {p.is_verified && <VerifiedBadge size={18} />}</div>
     {/* 3 traits menu */}
     <div style={{ position: "relative" }}>
       <div onClick={() => setShowReport(v => !v)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", padding: 4 }}>
@@ -3035,14 +3026,14 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       </div>
     </div>
   )}
-  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
     <span style={{ background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600 }}>{p.gender === "Femme" ? "Femme" : "Homme"}</span>
-    <span style={{ fontSize: "0.78rem", color: "#555" }}>{p.city}</span>
+    <span style={{ background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.72rem", color: "#555", fontWeight: 500 }}>{p.city}</span>
     {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500 }}>{p.religion}</span>}
-  {p.profession && p.profession.trim() && <span style={{ background: "rgba(26,92,58,0.07)", border: `1px solid rgba(26,92,58,0.2)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500 }}>{p.profession.trim()}</span>}
+    {p.hobbies && p.hobbies.trim() && <span style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.hobbies.trim()}</span>}
   </div>
   <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 6, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", minHeight: "1.23rem" }}>{p.bio || ""}</p>
-</div></div><div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => { if (!profiles.length) return; const prev = current - 1 < 0 ? profiles.length - 1 : current - 1; setCurrent(prev); if (profiles[prev]) recordView(profiles[prev].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => { if (!profiles.length) return; const next = current + 1 >= profiles.length ? 0 : current + 1; setCurrent(next); if (profiles[next]) recordView(profiles[next].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
+</div></div><div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => { const prev = Math.max(0, current - 1); setCurrent(prev); if (profiles[prev]) recordView(profiles[prev].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => { const next = Math.min(profiles.length - 1, current + 1); setCurrent(next); if (profiles[next]) recordView(profiles[next].id); }} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
   {profiles.slice(Math.max(0, current - 2), Math.min(profiles.length, current + 3)).map((_, i) => {
     const idx = Math.max(0, current - 2) + i;
     const isActive = idx === current;
@@ -3065,7 +3056,6 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
             <span style={{ background: viewedProfile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: viewedProfile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>{viewedProfile.gender}</span>
             {viewedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{viewedProfile.religion}</span>}
-            {viewedProfile.profession && viewedProfile.profession.trim() && <span style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.2)", color: "#2a5a3a", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{viewedProfile.profession.trim()}</span>}
           </div>
           {viewedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{viewedProfile.bio}</p>}
           <Btn variant="primary" onClick={() => { handleLike(viewedProfile); setViewedProfile(null); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>❤️ Liker ce profil</Btn>
@@ -5383,7 +5373,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   };
   const saveProfile = async () => {
     if (form.age && (form.age < 18 || form.age > 99)) { setErrorMsg("Vous devez avoir entre 18 et 99 ans. Modification refusée."); return; }
-    await sb.update(auth.token, "profiles", auth.userId, { name: form.name, age: form.age, city: form.city, bio: form.bio, religion: form.religion, profession: (form.profession || "").trim() || null });
+    await sb.update(auth.token, "profiles", auth.userId, { name: form.name, age: form.age, city: form.city, bio: form.bio, religion: form.religion });
     setProfile(p => p ? { ...p, ...(form as Profile) } : null);
     setEditing(false);
     setToast({ msg: "Profil mis à jour !" });
@@ -5450,8 +5440,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           <option value="">Religion (optionnel)</option>
           {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <label style={{ display: "block", fontWeight: 600, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Profession <span style={{ color: "#aaa", fontSize: "0.8rem", fontWeight: 400 }}>(optionnel)</span></label>
-        <input value={form.profession || ""} onChange={e => setForm(f => ({ ...f, profession: e.target.value.slice(0, 60) }))} placeholder="Ex: Infirmière, Ingénieur, Étudiant..." style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 14, fontSize: "0.93rem", fontFamily: "inherit" }} />
         <label style={{ display: "block", fontWeight: 600, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Bio</label>
         <textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value.slice(0, 160) }))} rows={3} maxLength={160} style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 4, fontSize: "0.93rem", resize: "none", fontFamily: "inherit" }} />
         <div style={{ textAlign: "right", fontSize: "0.75rem", color: (form.bio || "").length >= 150 ? G.rouge : "#aaa", marginBottom: 16 }}>{(form.bio || "").length}/160</div>
