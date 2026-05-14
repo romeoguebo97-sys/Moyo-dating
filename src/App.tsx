@@ -2309,6 +2309,12 @@ function AdminDesktopPage() {
         /* Header mobile de Admin caché — remplacé par la topbar ci-dessus */
         .adm-wrap [data-admhdr] { display: none !important; }
 
+        /* Sur desktop, les onglets sticky se collent sous la topbar (60px) */
+        @media (min-width: 900px) {
+          .adm-wrap [data-admhdr] + div,
+          .adm-wrap [data-admtabs] { top: 0 !important; }
+        }
+
         /* Stats grille principale : 4 colonnes */
         @media (min-width: 900px) {
           .adm-wrap [data-admgrid="main"] { grid-template-columns: repeat(4,1fr) !important; gap: 18px !important; }
@@ -2340,8 +2346,7 @@ function AdminDesktopPage() {
         <button onClick={() => window.close()} style={{ marginLeft: 8, display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: "#888" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           Fermer
-        </button>
-      </div>
+        </button>      </div>
 
       {/* Contenu Admin dans wrapper desktop */}
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
@@ -7343,8 +7348,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
 
       {/* Header */}
-      <div data-admhdr="" style={{ background: G.blanc, padding: "14px 16px 0", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+      <div style={{ background: G.blanc, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
+        {/* Ligne titre — cachée sur desktop (remplacée par la topbar) */}
+        <div data-admhdr="" style={{ padding: "14px 16px 0 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
           <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><IcoArrowLeft /></div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <IcoGear />
@@ -7360,7 +7366,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             Aide
           </button>
         </div>
-        {/* Onglets */}
+        {/* Onglets — toujours visibles mobile ET desktop */}
         <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}` }}>
           {([
             ["stats", "Statistiques", IcoStats],
