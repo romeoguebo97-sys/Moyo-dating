@@ -6980,7 +6980,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["En attente (tous)", "Vue par défaut. Affiche tous les signalements non encore traités. Le badge rouge indique le nombre en attente."],
                     ["Profils", "Filtre les signalements manuels d'utilisateurs contre d'autres profils. À examiner en priorité."],
                     ["Système", "Signalements générés automatiquement par la modération (insultes, arnaques, contenus sexuels, alertes techniques)."],
-                    ["Archivés", "Signalements traités, rejetés ou ayant entraîné un bannissement. Chaque archive peut être supprimée définitivement. Le bouton "Tout supprimer" nettoie toutes les archives d'un coup."],
+                    ["Archivés", "Signalements traités, rejetés ou ayant entraîné un bannissement. Chaque archive peut être supprimée définitivement. Le bouton 'Tout supprimer' nettoie toutes les archives d'un coup."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -7030,7 +7030,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
-                    ["Avis non lus", "Les avis avec une bordure rouge sont non lus. Cliquez sur "Marquer lu" pour les acquitter et réduire le badge compteur de l'onglet."],
+                    ["Avis non lus", "Les avis avec une bordure rouge sont non lus. Cliquez sur 'Marquer lu' pour les acquitter et réduire le badge compteur de l'onglet."],
                     ["Masquer / Afficher", "Masquer un avis le rend discret visuellement sans le supprimer. Utile pour les avis déjà traités."],
                     ["Supprimer un avis", "Supprime définitivement l'avis de la base de données. Cette action est irréversible."],
                     ["Badge compteur", "Le badge doré sur l'onglet Avis indique le nombre d'avis non lus. Il disparaît quand tous les avis sont marqués comme lus."],
