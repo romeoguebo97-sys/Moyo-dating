@@ -8292,6 +8292,21 @@ export default function App() {
     };
     checkUnread();
 
+    // ── ADMIN badge — fetch au démarrage et toutes les 30s ──
+    const checkAdminBadge = async () => {
+      if (!auth.isAdmin) return;
+      try {
+        const [rPending, rUnreadReviews] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/reports?select=id&status=eq.pending`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } }),
+          fetch(`${SUPABASE_URL}/rest/v1/app_ratings?select=id&is_read=eq.false`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } }),
+        ]);
+        const parseCount = (r: Response) => { const h = r.headers.get("content-range"); return h ? parseInt(h.split("/")[1]) || 0 : 0; };
+        setAdminBadgeCount(parseCount(rPending) + parseCount(rUnreadReviews));
+      } catch {}
+    };
+    checkAdminBadge();
+    const adminBadgeInterval = setInterval(checkAdminBadge, 1500);
+
     // ── REALTIME messages ──
     const wsMessages = sb.subscribeRealtime(auth.token, "messages", `match_id=neq.null`, () => {
       checkUnread();
@@ -8333,6 +8348,7 @@ export default function App() {
       try { wsMatches2?.close(); } catch {}
       try { wsViews?.close(); } catch {}
       clearInterval(fallbackInterval);
+      clearInterval(adminBadgeInterval);
       clearInterval(lastSeenInterval);
       clearInterval(sessionCheck);
       document.removeEventListener("visibilitychange", handleVisibility);
