@@ -4412,9 +4412,19 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
   const raw = replyTo.content.replace(/^\[↩.*?\]\n/, "");
   const preview = !isImg && raw.length > 80 ? raw.slice(0, 80) + "…" : raw;
   return (
-    <div style={{ display: "flex", alignItems: "stretch", background: "#F2F2F2", borderRadius: 14, marginBottom: 8, overflow: "hidden", border: `1px solid ${G.gris}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+    // ── ReplyBanner v2 : visible, robuste iOS, sans overflow caché ──
+    <div style={{
+      display: "flex", alignItems: "stretch",
+      background: "#F0F0F0",
+      borderRadius: 12,
+      border: `1px solid ${G.gris}`,
+      boxShadow: "0 1px 6px rgba(0,0,0,0.08)",
+      minHeight: 52,
+      width: "100%",
+      flexShrink: 0,
+    }}>
       {/* Barre colorée gauche */}
-      <div style={{ width: 5, flexShrink: 0, background: accent, borderRadius: "14px 0 0 14px" }} />
+      <div style={{ width: 5, flexShrink: 0, background: accent, borderRadius: "12px 0 0 12px" }} />
       {/* Icône ↩ */}
       <div style={{ display: "flex", alignItems: "center", paddingLeft: 10, paddingRight: 4, flexShrink: 0 }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -4441,8 +4451,8 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
       )}
       {/* Bouton ✕ */}
       <div onClick={onCancel} style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 12px", cursor: "pointer", flexShrink: 0 }}>
-        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#E0E0E0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="3" strokeLinecap="round">
+        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#DCDCDC", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </div>
@@ -4818,10 +4828,14 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       </div>
 
       {/* Barre d'envoi */}
-      <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
-        {/* Bandeau répondre style WhatsApp */}
-        {replyTo && <ReplyBanner replyTo={replyTo} partnerName={open?.partner?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <div style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        {/* Bandeau répondre style WhatsApp — visible immédiatement au-dessus du champ */}
+        {replyTo && (
+          <div style={{ padding: "8px 12px 0 12px" }}>
+            <ReplyBanner replyTo={replyTo} partnerName={open?.partner?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px" }}>
           {/* Bouton image - Premium */}
           <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
           <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
@@ -6433,6 +6447,39 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
     setReportActionLoading(null);
   };
 
+  // ── Suppression définitive d'un signalement archivé ──
+  const deleteReport = async (reportId: string) => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setReportActionLoading(reportId);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${reportId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+        },
+      });
+      if (!r.ok && r.status !== 204) {
+        const err = await r.json().catch(() => null);
+        const errMsg = err?.message || err?.code || `HTTP ${r.status}`;
+        if (r.status === 403 || r.status === 401) {
+          showToast(`Bloqué par RLS. Exécute ce SQL dans Supabase :\nCREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`, "error");
+        } else {
+          showToast(`Erreur suppression : ${errMsg}`, "error");
+        }
+        setReportActionLoading(null);
+        return;
+      }
+      // Suppression locale immédiate
+      setReports(prev => prev.filter(rep => rep.id !== reportId));
+      showToast("Signalement supprimé définitivement.", "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setReportActionLoading(null);
+  };
+
   const banReportedProfile = async (report: ReportRow) => {
     if (!auth.isAdmin || !report.reported_id || !report.id) return;
     setReportActionLoading(report.id);
@@ -7290,7 +7337,7 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
                 }
               </h3>
               {reportFilter === "archived" && archivedCount > 0 && (
-                <span style={{ fontSize: "0.7rem", color: "#aaa" }}>Lecture seule</span>
+                <span style={{ fontSize: "0.7rem", color: "#aaa" }}>Supprimables</span>
               )}
             </div>
 
@@ -7354,6 +7401,40 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
                     </div>
 
                     {/* Ligne 4 : boutons d'action (masqués en vue archive) */}
+                    {/* Bouton suppression définitive — vue archive uniquement */}
+                    {isArchiveView && r.id && (
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
+                        <button
+                          onClick={() => {
+                            if (!r.id) return;
+                            const rid = r.id;
+                            setConfirmModal({
+                              msg: "Supprimer définitivement ce signalement archivé ? Cette action est irréversible. Le profil et les messages liés ne seront pas supprimés.",
+                              onConfirm: () => { setConfirmModal(null); deleteReport(rid); },
+                            });
+                          }}
+                          disabled={isLoading}
+                          title="Supprimer définitivement"
+                          style={{
+                            display: "flex", alignItems: "center", gap: 5,
+                            background: "rgba(192,57,43,0.06)",
+                            color: "#C0392B",
+                            border: "1px solid rgba(192,57,43,0.2)",
+                            borderRadius: 8,
+                            padding: "5px 10px",
+                            fontSize: "0.7rem", fontWeight: 600,
+                            cursor: isLoading ? "not-allowed" : "pointer",
+                            opacity: isLoading ? 0.5 : 1,
+                          }}
+                        >
+                          {isLoading
+                            ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                            : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                          }
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
                     {!isArchiveView && <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {/* ── Actions communes (alerte système) ── */}
                       {isSystemAlert && (
@@ -7501,12 +7582,18 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
             </div>
           )}
 
-          {/* Note archive */}
+          {/* Note archive + SQL policy DELETE */}
           {reportFilter === "archived" && archivedCount > 0 && (
-            <div style={{ background: "rgba(108,117,125,0.06)", border: "1px solid rgba(108,117,125,0.15)", borderRadius: 12, padding: "10px 14px", marginTop: 12, fontSize: "0.74rem", color: "#6c757d", display: "flex", alignItems: "center", gap: 8 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-              {archivedCount} signalement{archivedCount > 1 ? "s" : ""} archivé{archivedCount > 1 ? "s" : ""} — traités, rejetés ou bannis.
-            </div>
+            <>
+              <div style={{ background: "rgba(108,117,125,0.06)", border: "1px solid rgba(108,117,125,0.15)", borderRadius: 12, padding: "10px 14px", marginTop: 12, fontSize: "0.74rem", color: "#6c757d", display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                {archivedCount} signalement{archivedCount > 1 ? "s" : ""} archivé{archivedCount > 1 ? "s" : ""} — traités, rejetés ou bannis. Clique "Supprimer" pour nettoyer définitivement.
+              </div>
+              <div style={{ background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 12, padding: "12px 14px", marginTop: 10, fontSize: "0.74rem", color: "#C0392B", lineHeight: 1.6 }}>
+                <strong>Si "Supprimer" retourne une erreur 403</strong>, exécute ce SQL dans Supabase :<br />
+                <code style={{ display: "block", marginTop: 6, background: "rgba(192,57,43,0.08)", padding: "8px 10px", borderRadius: 8, fontSize: "0.7rem", color: "#922B21", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{`CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`}</code>
+              </div>
+            </>
           )}
 
           <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
