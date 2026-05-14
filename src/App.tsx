@@ -5646,14 +5646,68 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
 
-        {/* Se déconnecter */}
-        <div onClick={() => setShowLogout(true)} className="action-card" style={{
-          background: G.rouge, borderRadius: 50, padding: "16px 20px",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "pointer", boxShadow: "0 4px 18px rgba(192,57,43,0.3)",
-        }}>
-          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.blanc }}>Se déconnecter</div>
-        </div>
+        {/* ── Carte Avertissements ── */}
+        {(() => {
+          const wc = profile?.warning_count ?? 0;
+          const bgCard =
+            wc === 0 ? G.blanc :
+            wc === 1 ? "#FFFDE7" :
+            wc === 2 ? "#FFF3E0" :
+            "#FFF0F0";
+          const borderCard =
+            wc === 0 ? "#E8E8E8" :
+            wc === 1 ? "#FFF176" :
+            wc === 2 ? "#FFCC80" :
+            "#FFBDBD";
+          const iconBg =
+            wc === 0 ? "#F5F5F5" :
+            wc === 1 ? "rgba(255,235,59,0.2)" :
+            wc === 2 ? "rgba(255,152,0,0.15)" :
+            "rgba(231,76,60,0.12)";
+          const iconColor =
+            wc === 0 ? "#bbb" :
+            wc === 1 ? "#F9A825" :
+            wc === 2 ? "#E65100" :
+            "#e74c3c";
+          const labelColor =
+            wc === 0 ? "#aaa" :
+            wc === 1 ? "#F57F17" :
+            wc === 2 ? "#E65100" :
+            "#c0392b";
+          const countColor =
+            wc === 0 ? "#888" :
+            wc === 1 ? "#F9A825" :
+            wc === 2 ? "#E65100" :
+            "#e74c3c";
+          return (
+            <div style={{ background: bgCard, borderRadius: 16, padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${borderCard}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div style={{ width: 42, height: 42, borderRadius: "50%", background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: labelColor }}>Avertissements</div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {[0, 1, 2].map(i => (
+                      <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wc ? countColor : "#E0E0E0", transition: "background 0.3s" }} />
+                    ))}
+                  </div>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: "1rem", color: countColor, marginTop: 2 }}>
+                  {wc}/3
+                </div>
+                {wc >= 3 && (
+                  <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4, lineHeight: 1.5, fontWeight: 500 }}>
+                    Votre compte risque une suspension en cas de nouveau signalement.
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Demande de vérification */}
         {!profile?.is_verified ? (
@@ -5690,15 +5744,46 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           <div style={{ fontSize: "0.65rem", color: "#ccc", background: "#F5F5F5", padding: "3px 10px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>Non modifiable</div>
         </div>
 
-        {/* Supprimer mon compte - tout en bas */}
-        <div onClick={() => setShowDelete(true)} className="action-card" style={{
-          background: G.blanc, borderRadius: 16, padding: "16px 20px",
-          display: "flex", alignItems: "center", gap: 14, cursor: "pointer",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #FFE0E0`,
-        }}>
-          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
-          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#e74c3c" }}>Supprimer mon compte</div>
-          <div style={{ marginLeft: "auto", color: "#ffb3b3", fontSize: "1rem", fontWeight: 400 }}>›</div>
+        {/* ── Double action : Se déconnecter | Supprimer mon compte ── */}
+        <div style={{ display: "flex", gap: 10 }}>
+          {/* Se déconnecter */}
+          <div
+            onClick={() => setShowLogout(true)}
+            style={{
+              flex: 1, background: G.blanc, borderRadius: 16, padding: "15px 12px",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+              cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+              border: `1.5px solid #E8E8E8`, minHeight: 82,
+            }}
+          >
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: "0.82rem", color: G.rouge, textAlign: "center", lineHeight: 1.25 }}>Se déconnecter</div>
+          </div>
+
+          {/* Supprimer mon compte */}
+          <div
+            onClick={() => setShowDelete(true)}
+            style={{
+              flex: 1, background: "#FFF8F8", borderRadius: 16, padding: "15px 12px",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+              cursor: "pointer", boxShadow: "0 1px 4px rgba(231,76,60,0.07)",
+              border: `1.5px solid #FFD6D6`, minHeight: 82,
+            }}
+          >
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(231,76,60,0.10)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#e74c3c", textAlign: "center", lineHeight: 1.25 }}>Supprimer<br/>mon compte</div>
+          </div>
         </div>
 
       </div>{/* fin actions */}
@@ -5882,7 +5967,7 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
 
   // ── Reports ──
   const [reports, setReports] = useState<ReportRow[]>([]);
-  const [reportFilter, setReportFilter] = useState<"all" | "user" | "system">("all");
+  const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "archived">("all");
   const [reportActionLoading, setReportActionLoading] = useState<string | null>(null); // report id en cours
   const [reportProfilePreview, setReportProfilePreview] = useState<AdminProfile | null>(null);
   const [reportProfileLoading, setReportProfileLoading] = useState<string | null>(null);
@@ -6215,11 +6300,20 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
     return { label: "Signalement profil", color: G.rouge };
   };
 
+  const ARCHIVED_STATUSES = ["reviewed", "rejected", "banned"];
+  const isPending = (r: ReportRow) => !ARCHIVED_STATUSES.includes(r.status);
+
   const filteredReports = reports.filter(r => {
-    if (reportFilter === "user") return !r.reason?.startsWith("[AUTO-MOD") && !r.reason?.startsWith("[BOT") && r.reported_id;
+    if (reportFilter === "archived") return ARCHIVED_STATUSES.includes(r.status);
+    // Vues actives : exclure les archivés
+    if (!isPending(r)) return false;
+    if (reportFilter === "user") return !r.reason?.startsWith("[AUTO-MOD") && !r.reason?.startsWith("[BOT") && !!r.reported_id;
     if (reportFilter === "system") return r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id;
-    return true;
+    return true; // "all"
   });
+
+  const archivedCount = reports.filter(r => ARCHIVED_STATUSES.includes(r.status)).length;
+  const pendingCount = reports.filter(isPending).length;
 
   // ── SVG Icons ──
   const IcoUsers = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
@@ -6931,29 +7025,74 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
       {activeTab === "reports" && (
         <div style={{ padding: "16px" }}>
           {/* Filtres */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            {(["all", "user", "system"] as const).map(f => (
-              <div key={f} onClick={() => setReportFilter(f)} style={{
-                padding: "7px 14px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
-                background: reportFilter === f ? G.rouge : G.blanc,
-                color: reportFilter === f ? G.blanc : "#555",
-                boxShadow: reportFilter === f ? "0 2px 8px rgba(192,57,43,0.25)" : "none",
-                border: `1px solid ${reportFilter === f ? G.rouge : G.gris}`,
-              }}>
-                {f === "all" ? "Tous" : f === "user" ? "Profils" : "Système"}
-              </div>
-            ))}
+          <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
+            {(["all", "user", "system", "archived"] as const).map(f => {
+              const isActive = reportFilter === f;
+              const isArchived = f === "archived";
+              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : "Archivés";
+              const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : null;
+              return (
+                <div
+                  key={f}
+                  onClick={() => setReportFilter(f)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    padding: "7px 13px", borderRadius: 50, fontSize: "0.74rem", fontWeight: 600,
+                    cursor: "pointer", flexShrink: 0, transition: "all 0.15s",
+                    background: isActive
+                      ? isArchived ? "#6c757d" : G.rouge
+                      : G.blanc,
+                    color: isActive ? G.blanc : isArchived ? "#6c757d" : "#555",
+                    boxShadow: isActive ? `0 2px 8px ${isArchived ? "rgba(108,117,125,0.3)" : "rgba(192,57,43,0.25)"}` : "none",
+                    border: `1px solid ${isActive ? (isArchived ? "#6c757d" : G.rouge) : G.gris}`,
+                  }}
+                >
+                  {isArchived && (
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+                    </svg>
+                  )}
+                  {label}
+                  {count !== null && count > 0 && (
+                    <span style={{
+                      background: isActive ? "rgba(255,255,255,0.25)" : isArchived ? "rgba(108,117,125,0.12)" : "rgba(192,57,43,0.12)",
+                      color: isActive ? G.blanc : isArchived ? "#6c757d" : G.rouge,
+                      borderRadius: 50, padding: "1px 6px", fontSize: "0.65rem", fontWeight: 700, minWidth: 18, textAlign: "center",
+                    }}>
+                      {count}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
-                Signalements ({filteredReports.length} / {stats.reports} total)
+                {reportFilter === "archived"
+                  ? `Archivés (${archivedCount})`
+                  : `En attente (${filteredReports.length})`
+                }
               </h3>
+              {reportFilter === "archived" && archivedCount > 0 && (
+                <span style={{ fontSize: "0.7rem", color: "#aaa" }}>Lecture seule</span>
+              )}
             </div>
 
             {filteredReports.length === 0 ? (
-              <p style={{ color: "#aaa", fontSize: "0.85rem", textAlign: "center", padding: "20px 0" }}>Aucun signalement dans cette catégorie</p>
+              <div style={{ textAlign: "center", padding: "28px 0" }}>
+                {reportFilter === "archived"
+                  ? <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                      <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucun signalement archivé</p>
+                    </>
+                  : <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucun signalement en attente 🎉</p>
+                    </>
+                }
+              </div>
             ) : (
               filteredReports.map((r, i) => {
                 const cat = classifyReport(r);
@@ -6961,6 +7100,7 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
                 const isSystemAlert = !r.reported_id;
                 const isLoading = reportActionLoading === r.id;
                 const alreadyHandled = r.status !== "pending";
+                const isArchiveView = reportFilter === "archived";
                 return (
                   <div key={r.id || i} style={{ padding: "14px 0", borderBottom: i < filteredReports.length - 1 ? `1px solid ${G.gris}` : "none" }}>
                     {/* Ligne 1 : badges catégorie + statut */}
@@ -6999,8 +7139,8 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
                       )}
                     </div>
 
-                    {/* Ligne 4 : boutons d'action */}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {/* Ligne 4 : boutons d'action (masqués en vue archive) */}
+                    {!isArchiveView && <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {/* ── Actions communes (alerte système) ── */}
                       {isSystemAlert && (
                         <>
@@ -7132,18 +7272,28 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
                           </button>
                         </>
                       )}
-                    </div>
+                    </div>}
                   </div>
                 );
               })
             )}
           </div>
 
-          {/* Info policy SQL */}
-          <div style={{ background: "rgba(52,152,219,0.06)", border: "1px solid rgba(52,152,219,0.2)", borderRadius: 12, padding: "12px 14px", marginTop: 12, fontSize: "0.74rem", color: "#2980b9", lineHeight: 1.6 }}>
-            <strong>Si "Traiter" / "Rejeter" retourne une erreur 403</strong>, exécute ce SQL dans Supabase → SQL Editor :<br />
-            <code style={{ display: "block", marginTop: 6, background: "rgba(52,152,219,0.1)", padding: "8px 10px", borderRadius: 8, fontSize: "0.7rem", color: "#1a6a9a", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{`CREATE POLICY "Admin can update reports" ON public.reports FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`}</code>
-          </div>
+          {/* Info policy SQL — visible seulement hors archive */}
+          {reportFilter !== "archived" && (
+            <div style={{ background: "rgba(52,152,219,0.06)", border: "1px solid rgba(52,152,219,0.2)", borderRadius: 12, padding: "12px 14px", marginTop: 12, fontSize: "0.74rem", color: "#2980b9", lineHeight: 1.6 }}>
+              <strong>Si "Traiter" / "Rejeter" retourne une erreur 403</strong>, exécute ce SQL dans Supabase → SQL Editor :<br />
+              <code style={{ display: "block", marginTop: 6, background: "rgba(52,152,219,0.1)", padding: "8px 10px", borderRadius: 8, fontSize: "0.7rem", color: "#1a6a9a", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{`CREATE POLICY "Admin can update reports" ON public.reports FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`}</code>
+            </div>
+          )}
+
+          {/* Note archive */}
+          {reportFilter === "archived" && archivedCount > 0 && (
+            <div style={{ background: "rgba(108,117,125,0.06)", border: "1px solid rgba(108,117,125,0.15)", borderRadius: 12, padding: "10px 14px", marginTop: 12, fontSize: "0.74rem", color: "#6c757d", display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+              {archivedCount} signalement{archivedCount > 1 ? "s" : ""} archivé{archivedCount > 1 ? "s" : ""} — traités, rejetés ou bannis.
+            </div>
+          )}
 
           <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <IcoRefresh />Actualiser
