@@ -5053,16 +5053,20 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   </div>
                 </div>
               ) : (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row" }}>
-                  {/* Flèche */}
-                  <div className="msg-arrow" onClick={() => setContextMenu({ msg: m, x: 0, y: 0 })} style={{ marginTop: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                  </div>
+                <div style={{ display: "flex", alignItems: "flex-start", flexDirection: isMine ? "row-reverse" : "row" }}>
                   <div style={{ position: "relative", maxWidth: "82%", minWidth: 0, boxSizing: "border-box", overflow: "hidden" }}>
                     <div
-                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", wordBreak: "break-word", overflowWrap: "anywhere" }}
+                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", paddingTop: "22px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", wordBreak: "break-word", overflowWrap: "anywhere", position: "relative" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
+                      {/* Flèche options — intégrée en haut à droite de la bulle */}
+                      <div
+                        className="msg-arrow"
+                        onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }}
+                        style={{ position: "absolute", top: 5, right: 7, cursor: "pointer", width: 18, height: 18, borderRadius: "50%", background: isMine ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                      >
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={isMine ? "rgba(255,255,255,0.85)" : "#666"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      </div>
                       {(() => {
                         const replyMatch = m.content.match(/^\[↩ (.+?) : (.+?)\]\n([\s\S]*)$/);
                         if (replyMatch) {
@@ -5246,6 +5250,21 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
               <div onClick={() => { const msg = contextMenu!.msg; setContextMenu(null); setTimeout(() => setReplyTo(msg), 0); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+              </div>
+              <div onClick={() => {
+                const content = contextMenu.msg.content;
+                // Extraire le texte brut sans le préfixe de réponse
+                const replyMatch = content.match(/^\[↩ .+? : .+?\]\n([\s\S]*)$/);
+                const text = replyMatch ? replyMatch[1] : content;
+                navigator.clipboard?.writeText(text).then(() => {
+                  setContextMenu(null);
+                  setToast({ msg: "Message copié", type: "success" });
+                }).catch(() => {
+                  setContextMenu(null);
+                });
+              }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Copier</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </div>
               <div onClick={async () => {
                 const msgId = contextMenu.msg.id;
@@ -8821,7 +8840,7 @@ export default function App() {
             </button>
           )}
           <button onClick={() => { setShowInstall(false); localStorage.setItem("moyo_install_dismissed", "1"); }} style={{ width: "100%", background: "transparent", color: "#555", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
-            Non merci
+            J'ai compris
           </button>
         </div>
       </div>
