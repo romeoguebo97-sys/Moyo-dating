@@ -2304,7 +2304,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
         {auth.isAdmin && (
-          <div onClick={() => setTab("admin")} style={{ display: "flex", alignItems: "center", gap: 5, background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
+          <div onClick={() => setTab("admin")} title="Ouvrir le dashboard admin" style={{ display: "flex", alignItems: "center", gap: 5, background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
             <span>⚙️ Admin</span>
             {adminBadgeCount && adminBadgeCount > 0 ? (
               <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.62rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
@@ -6126,7 +6126,62 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN DESKTOP LAYOUT — Pleine largeur desktop (>= 1024px)
+// Sécurité : vérifie auth.isAdmin avant tout rendu
+// ─────────────────────────────────────────────────────────────────────────────
+function AdminDesktopLayout({ auth, onBack, onBadgeCount, adminBadgeCount }: {
+  auth: Auth;
+  onBack: () => void;
+  onBadgeCount?: (n: number) => void;
+  adminBadgeCount?: number;
+}) {
+  if (!auth || !auth.isAdmin) {
+    onBack();
+    return null;
+  }
+  return (
+    <div style={{ minHeight: "100vh", background: G.creme }}>
+      {/* Topbar desktop */}
+      <div style={{ background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "sticky", top: 0, zIndex: 200, boxShadow: "0 2px 16px rgba(44,26,14,0.07)" }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ fontSize: "1.6rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.02em" }}>
+              <span>Mo</span><span style={{ color: G.or }}>yo</span>
+            </div>
+            <div style={{ width: 1, height: 24, background: G.gris }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+              </div>
+              <span style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</span>
+            </div>
+            {adminBadgeCount && adminBadgeCount > 0 ? (
+              <span style={{ background: G.rouge, color: G.blanc, borderRadius: 50, fontSize: "0.68rem", fontWeight: 800, padding: "2px 8px", lineHeight: "1.6" }}>
+                {adminBadgeCount > 99 ? "99+" : adminBadgeCount} en attente
+              </span>
+            ) : null}
+          </div>
+          <button
+            onClick={onBack}
+            style={{ display: "flex", alignItems: "center", gap: 8, background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 50, padding: "8px 18px", fontSize: "0.83rem", fontWeight: 600, color: G.brunLight, cursor: "pointer" }}
+            onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.cremeDark; }}
+            onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Retour à l'app
+          </button>
+        </div>
+      </div>
+      {/* Contenu Admin en pleine largeur desktop */}
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 32px 48px" }}>
+        <Admin auth={auth} onBack={onBack} onBadgeCount={onBadgeCount} desktopMode={true} />
+      </div>
+    </div>
+  );
+}
+
+function Admin({ auth, onBack, onBadgeCount, desktopMode }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void; desktopMode?: boolean }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
     if (!auth.isAdmin) {
@@ -6715,7 +6770,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   if (!auth.isAdmin) return null;
 
   return (
-    <div style={{ padding: "0 0 80px", minHeight: "100vh", background: G.creme }}>
+    <div style={desktopMode ? { padding: "0 0 48px", background: "transparent" } : { padding: "0 0 80px", minHeight: "100vh", background: G.creme }}>
       {/* Toast */}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
@@ -7104,26 +7159,45 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ background: G.blanc, padding: "14px 16px 0", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-          <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><IcoArrowLeft /></div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <IcoGear />
-            <span style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</span>
+      {/* Header — masqué en desktop (géré par AdminDesktopLayout) */}
+      <div style={desktopMode
+        ? { background: G.blanc, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 60, zIndex: 90 }
+        : { background: G.blanc, padding: "14px 16px 0", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }
+      }>
+        {!desktopMode && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, padding: "0 0 0 0" }}>
+            <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><IcoArrowLeft /></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <IcoGear />
+              <span style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</span>
+            </div>
+            <button
+              onClick={() => setShowHelp(true)}
+              style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: G.brunLight, transition: "all 0.18s ease", flexShrink: 0 }}
+              onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.cremeDark; }}
+              onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Aide
+            </button>
           </div>
-          <button
-            onClick={() => setShowHelp(true)}
-            style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: G.brunLight, transition: "all 0.18s ease", flexShrink: 0 }}
-            onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.cremeDark; }}
-            onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Aide
-          </button>
-        </div>
+        )}
+        {desktopMode && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 0 0 0" }}>
+            <div style={{ fontSize: "0.75rem", color: "#888", paddingLeft: 0, paddingTop: 2 }}></div>
+            <button
+              onClick={() => setShowHelp(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, color: G.brunLight }}
+              onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.cremeDark; }}
+              onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Guide Admin
+            </button>
+          </div>
+        )}
         {/* Onglets */}
-        <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}` }}>
+        <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}`, padding: desktopMode ? "0 0" : "0" }}>
           {([
             ["stats", "Statistiques", IcoStats],
             ["users", "Utilisateurs", IcoUsers],
@@ -7138,11 +7212,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "reviews" && reviews.length === 0) loadReviews();
               }}
               style={{
-                flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                padding: "10px 0 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
+                flex: desktopMode ? "none" : 1,
+                display: "flex",
+                flexDirection: desktopMode ? "row" : "column",
+                alignItems: "center",
+                gap: desktopMode ? 8 : 4,
+                padding: desktopMode ? "14px 24px" : "10px 0 12px",
+                cursor: "pointer",
+                fontSize: desktopMode ? "0.85rem" : "0.72rem",
+                fontWeight: 600,
                 color: activeTab === key ? (key === "reviews" ? "#B8860B" : G.rouge) : "#999",
                 borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : G.rouge}` : "2.5px solid transparent",
                 transition: "all 0.2s",
+                whiteSpace: "nowrap",
               }}
             >
               <Icon />
@@ -7166,7 +7248,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ═══════════════════════════════════════════ ONGLET STATS */}
       {activeTab === "stats" && (
-        <div style={{ padding: "16px" }}>
+        <div style={{ padding: desktopMode ? "24px 0" : "16px" }}>
           {loading ? (
             <div style={{ textAlign: "center", padding: 60 }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
@@ -7174,7 +7256,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           ) : (
             <>
               {/* Grille stats principales */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: desktopMode ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: desktopMode ? 16 : 10, marginBottom: desktopMode ? 24 : 16 }}>
                 {([
                   ["Membres total", stats.users, G.rouge, <IcoUsers key="u"/>],
                   ["Matchs", stats.matches, "#8e44ad", <svg key="m" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
@@ -7192,7 +7274,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* Stats avancées */}
               <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                 <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 14 }}>Statistiques avancées</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: desktopMode ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: desktopMode ? 16 : 10 }}>
                   {([
                     ["Nouveaux aujourd'hui", stats.todayUsers, "#27ae60"],
                     ["Premium actifs", stats.premiumUsers, "#D4A843"],
@@ -7207,8 +7289,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              {/* Desktop: 2-col grid for lower stats sections */}
+              <div style={desktopMode ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 0 } : {}}>
               {/* Ratio Genre */}
-              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: desktopMode ? 0 : 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                 <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Ratio Homme / Femme</h3>
                 {stats.users > 0 ? (
                   <>
@@ -7236,7 +7320,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
               {/* Top villes */}
               {stats.topCities.length > 0 && (
-                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: desktopMode ? 0 : 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Top villes</h3>
                   {stats.topCities.map(({ city, count }, i) => (
                     <div key={city} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -7255,8 +7339,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               )}
 
-              {/* Derniers inscrits */}
-              {stats.recentUsers.length > 0 && (
+              {/* Derniers inscrits — mobile uniquement (desktop géré plus bas) */}
+              {!desktopMode && stats.recentUsers.length > 0 && (
                 <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Derniers inscrits</h3>
                   {stats.recentUsers.map(u => (
@@ -7276,6 +7360,30 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               )}
 
+              </div>{/* end desktop 2-col grid */}
+
+              {/* Derniers inscrits — full width below on desktop */}
+              {desktopMode && stats.recentUsers.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginTop: 20, marginBottom: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Derniers inscrits</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+                    {stats.recentUsers.map(u => (
+                      <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, background: G.creme }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 5 }}>
+                            {u.name}{u.is_premium && <IcoStar />}
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "#888" }}>{u.city} · {u.age} ans · {formatDate(u.created_at)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}>
                 <IcoRefresh />Actualiser
               </Btn>
@@ -7286,7 +7394,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ═══════════════════════════════════════════ ONGLET UTILISATEURS */}
       {activeTab === "users" && (
-        <div style={{ padding: "16px" }}>
+        <div style={{ padding: desktopMode ? "24px 0" : "16px" }}>
           {/* Barre de recherche */}
           <div style={{ position: "relative", marginBottom: 14 }}>
             <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
@@ -7444,7 +7552,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ═══════════════════════════════════════════ ONGLET SIGNALEMENTS */}
       {activeTab === "reports" && (
-        <div style={{ padding: "16px" }}>
+        <div style={{ padding: desktopMode ? "24px 0" : "16px" }}>
           {/* Filtres */}
           <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
             {(["all", "user", "system", "archived"] as const).map(f => {
@@ -7803,7 +7911,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ═══════════════════════════════════════════ ONGLET AVIS */}
       {activeTab === "reviews" && (
-        <div style={{ padding: "16px" }}>
+        <div style={{ padding: desktopMode ? "24px 0" : "16px" }}>
           {reviewsLoading ? (
             <div style={{ textAlign: "center", padding: 60 }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
@@ -8444,6 +8552,12 @@ export default function App() {
   if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
   if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
+
+  // ── Détection desktop (>= 1024px) ──
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
+  // Sur desktop, si l'onglet admin est actif → afficher pleine largeur hors AppShell
+  const showDesktopAdmin = isDesktop && tab === "admin" && auth.isAdmin;
+
   return <div style={darkMode ? { filter: "invert(93%) hue-rotate(180deg)", minHeight: "100vh" } : {}}>
     {darkMode && <style>{`
       img, video { filter: invert(100%) hue-rotate(180deg) !important; }
@@ -8455,18 +8569,27 @@ export default function App() {
         filter: invert(100%) hue-rotate(180deg) !important;
       }
     `}</style>}
-    <AppShell tab={tab} setTab={(t) => {
-      setTab(t);
-      if (t === "messages") setUnreadCount(0);
-    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount}>
-      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
-      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
-      {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
-      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
-      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} />}
-      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
-      {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
-    </AppShell>
+
+    {/* ── DESKTOP : Admin pleine largeur, hors AppShell ── */}
+    {showDesktopAdmin && (
+      <AdminDesktopLayout auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} adminBadgeCount={adminBadgeCount} />
+    )}
+
+    {/* ── APP SHELL (mobile + desktop non-admin) ── */}
+    {!showDesktopAdmin && (
+      <AppShell tab={tab} setTab={(t) => {
+        setTab(t);
+        if (t === "messages") setUnreadCount(0);
+      }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount}>
+        {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
+        {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
+        {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
+        {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
+        {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} />}
+        {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
+        {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
+      </AppShell>
+    )}
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {InstallBanner}
