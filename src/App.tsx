@@ -82,7 +82,7 @@ type Auth = {
   refreshToken?: string;   // refresh_token Supabase
   expiresAt?: number;      // timestamp ms (Date.now()) d'expiration du access_token
 };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
@@ -5773,6 +5773,53 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   );
 }
 
+// ── MODAL AVERTISSEMENT UTILISATEUR (s'affiche à la connexion si avertissement non lu) ──
+function UserWarningModal({ warning, onAcknowledge }: {
+  warning: { id: string; warning_number: number; reason: string };
+  onAcknowledge: () => void;
+}) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 28px 80px rgba(0,0,0,0.28)" }}>
+        {/* Header */}
+        <div style={{ background: "linear-gradient(135deg, #fff5e0, #ffe4a0)", padding: "26px 22px 18px", textAlign: "center" }}>
+          <div style={{ width: 58, height: 58, borderRadius: "50%", background: "rgba(243,156,18,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a1a", letterSpacing: "0.01em" }}>Avertissement de modération</div>
+          <div style={{ fontSize: "0.72rem", color: "#e67e22", fontWeight: 600, marginTop: 5, background: "rgba(243,156,18,0.15)", borderRadius: 50, padding: "3px 12px", display: "inline-block" }}>
+            Avertissement n°{warning.warning_number}
+          </div>
+        </div>
+        {/* Body */}
+        <div style={{ padding: "20px 22px 24px" }}>
+          <p style={{ fontSize: "0.85rem", color: "#333", lineHeight: 1.7, marginBottom: 14 }}>
+            Votre compte a reçu un avertissement pour non-respect des règles de la communauté MOYO.
+          </p>
+          {warning.reason && (
+            <div style={{ background: "rgba(243,156,18,0.08)", border: "1px solid rgba(243,156,18,0.25)", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
+              <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#e67e22", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Motif</div>
+              <div style={{ fontSize: "0.82rem", color: "#555" }}>{warning.reason}</div>
+            </div>
+          )}
+          <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.65, marginBottom: 20 }}>
+            Merci d'adopter un comportement respectueux et sécurisé dans vos échanges. En cas de récidive, votre compte pourra être temporairement suspendu ou supprimé.
+          </p>
+          <button
+            onClick={onAcknowledge}
+            style={{ width: "100%", background: `linear-gradient(135deg,#f39c12,#e67e22)`, color: G.blanc, border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.03em", boxShadow: "0 4px 16px rgba(243,156,18,0.35)" }}
+          >
+            OK, j'ai compris
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
@@ -5803,10 +5850,26 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
     is_banned?: boolean;
     is_visible?: boolean;
     created_at?: string;
+    warning_count?: number;
   };
 
   // ── Onglet actif ──
   const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports">("stats");
+
+  // ── Avertissements ──
+  type WarnModal = { user: AdminProfile } | null;
+  const WARN_REASONS = [
+    "Comportement inapproprié",
+    "Propos insultants",
+    "Suspicion de faux profil",
+    "Suspicion d'arnaque",
+    "Non-respect des règles",
+    "Autre motif",
+  ];
+  const [warnModal, setWarnModal] = useState<WarnModal>(null);
+  const [warnReason, setWarnReason] = useState(WARN_REASONS[0]);
+  const [warnCustom, setWarnCustom] = useState("");
+  const [warnLoading, setWarnLoading] = useState(false);
 
   // ── Stats ──
   const [stats, setStats] = useState({
@@ -5986,6 +6049,52 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
     setActionLoading(null);
   };
 
+  // ── Envoi d'un avertissement ──
+  const sendWarning = async (user: AdminProfile) => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setWarnLoading(true);
+    try {
+      const finalReason = warnReason === "Autre motif" && warnCustom.trim()
+        ? warnCustom.trim()
+        : warnReason;
+      const newCount = (user.warning_count || 0) + 1;
+      // 1. Insérer l'avertissement
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          admin_id: auth.userId,
+          reason: finalReason,
+          warning_number: newCount,
+          acknowledged: false,
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => null);
+        showToast(`Erreur : ${err?.message || r.status}`, "error");
+        setWarnLoading(false);
+        return;
+      }
+      // 2. Incrémenter warning_count sur le profil
+      await sb.update(auth.token, "profiles", user.id, { warning_count: newCount });
+      // 3. Mise à jour locale
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, warning_count: newCount } : u));
+      showToast(`Avertissement ${newCount}/3 envoyé à ${user.name}.`, "success");
+      setWarnModal(null);
+      setWarnReason(WARN_REASONS[0]);
+      setWarnCustom("");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setWarnLoading(false);
+  };
+
   // ── Confirmation modale ──
   const confirm = (msg: string, fn: () => void) => setConfirmModal({ msg, onConfirm: fn });
 
@@ -6016,6 +6125,7 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
   const IcoRefresh = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>;
   const IcoArrowLeft = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
   const IcoGear = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+  const IcoWarn = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 
   // ── Rendu d'un badge statut ──
   const StatusBadge = ({ label, active, color, Icon }: { label: string; active: boolean; color: string; Icon: () => React.ReactElement }) => (
@@ -6061,6 +6171,61 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
             <div style={{ display: "flex", gap: 10 }}>
               <Btn variant="ghost" onClick={() => setConfirmModal(null)} style={{ flex: 1, padding: "11px" }}>Annuler</Btn>
               <Btn variant="danger" onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }} style={{ flex: 1, padding: "11px" }}>Confirmer</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal avertissement admin */}
+      {warnModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg, #fff9ec, #fff3cc)", padding: "22px 20px 16px", textAlign: "center", borderBottom: `1px solid rgba(243,156,18,0.2)` }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(243,156,18,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a" }}>Avertir {warnModal.user.name}</div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>
+                Avertissement {(warnModal.user.warning_count || 0) + 1}/3
+              </div>
+            </div>
+            {/* Body */}
+            <div style={{ padding: "18px 20px 20px" }}>
+              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Motif</div>
+              {WARN_REASONS.map(r => (
+                <div key={r} onClick={() => setWarnReason(r)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, marginBottom: 6, cursor: "pointer", background: warnReason === r ? "rgba(243,156,18,0.1)" : G.creme, border: `1.5px solid ${warnReason === r ? "#f39c12" : "transparent"}`, transition: "all 0.15s" }}>
+                  <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${warnReason === r ? "#f39c12" : "#ccc"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {warnReason === r && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f39c12" }} />}
+                  </div>
+                  <span style={{ fontSize: "0.83rem", fontWeight: warnReason === r ? 600 : 400, color: warnReason === r ? "#b7770d" : "#333" }}>{r}</span>
+                </div>
+              ))}
+              {warnReason === "Autre motif" && (
+                <textarea
+                  value={warnCustom}
+                  onChange={e => setWarnCustom(e.target.value)}
+                  placeholder="Précisez le motif…"
+                  rows={3}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `2px solid rgba(243,156,18,0.4)`, fontSize: "0.82rem", resize: "none", outline: "none", marginTop: 4, fontFamily: "inherit" }}
+                />
+              )}
+              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                <button onClick={() => { setWarnModal(null); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
+                  Annuler
+                </button>
+                <button
+                  onClick={() => sendWarning(warnModal.user)}
+                  disabled={warnLoading || (warnReason === "Autre motif" && !warnCustom.trim())}
+                  style={{ flex: 1, background: warnLoading ? "#f9e4a0" : "linear-gradient(135deg,#f39c12,#e67e22)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: warnLoading ? "not-allowed" : "pointer", opacity: warnLoading ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                >
+                  {warnLoading
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                    : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  }
+                  Envoyer
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -6457,6 +6622,13 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
                           <StatusBadge label="Admin" active={!!u.is_admin} color={G.rouge} Icon={IcoGear} />
                           <StatusBadge label="Vérifié" active={!!u.is_verified} color={G.vert} Icon={IcoCheck} />
                           <StatusBadge label="Banni" active={!!u.is_banned} color="#e74c3c" Icon={IcoBan} />
+                          {(u.warning_count || 0) > 0 && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: (u.warning_count || 0) >= 3 ? "rgba(231,76,60,0.12)" : "rgba(243,156,18,0.12)", color: (u.warning_count || 0) >= 3 ? "#e74c3c" : "#e67e22", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>
+                              <IcoWarn />
+                              Avert. {u.warning_count}/3
+                              {(u.warning_count || 0) >= 3 && <span style={{ marginLeft: 2 }}>· Risque bannissement</span>}
+                            </span>
+                          )}
                         </div>
                       </div>
                       {isLoading && (
@@ -6497,6 +6669,8 @@ function Admin({ auth, onBack }: { auth: Auth; onBack: () => void }) {
                       {/* Actions modération */}
                       <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Modération</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || isSelf}
+                          onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} />
                         {!u.is_banned ? (
                           <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || isSelf}
                             onClick={() => {
@@ -6636,6 +6810,7 @@ export default function App() {
   const [likesReceived, setLikesReceived] = useState(0);
   const [viewsReceived, setViewsReceived] = useState(0);
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
+  const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
   const [openConvPartnerId, setOpenConvPartnerId] = useState<string | null>(null);
@@ -6820,6 +6995,43 @@ export default function App() {
       }, 3000);
     }
   };
+  // ── Vérifier les avertissements non lus à chaque connexion ──
+  useEffect(() => {
+    if (!auth?.userId) return;
+    const checkWarnings = async () => {
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${auth.userId}&acknowledged=eq.false&order=created_at.asc&limit=1`,
+          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
+        );
+        if (!r.ok) return;
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data) && data.length > 0) {
+          const w = data[0];
+          setPendingWarning({ id: w.id, warning_number: w.warning_number, reason: w.reason });
+        }
+      } catch {}
+    };
+    checkWarnings();
+  }, [auth?.userId]);
+
+  const acknowledgeWarning = async () => {
+    if (!pendingWarning || !auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${pendingWarning.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({ acknowledged: true, acknowledged_at: new Date().toISOString() }),
+      });
+    } catch {}
+    setPendingWarning(null);
+  };
+
   const handleLogout = () => {
     setAuth(null); setPage("landing"); setUnreadCount(0); setNotifCount(0); setLikesReceived(0);
     try { localStorage.removeItem("moyo_session"); } catch {}
@@ -7099,6 +7311,7 @@ export default function App() {
       {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} />}
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}
+    {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {InstallBanner}
   </div>;
 }
