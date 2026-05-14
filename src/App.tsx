@@ -4818,7 +4818,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       </div>
 
       {/* Barre d'envoi */}
-      <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", gap: 0, flexShrink: 0 }}>
+      <div style={{ padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
         {/* Bandeau répondre style WhatsApp */}
         {replyTo && <ReplyBanner replyTo={replyTo} partnerName={open?.partner?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />}
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
