@@ -7864,7 +7864,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 }
               </div>
             ) : (
-              <div data-role="reports-list"><div>
+              <div data-role="reports-list">
+              <div>
               {filteredReports.map((r, i) => {
                 const cat = classifyReport(r);
                 const statusStyle = reportStatusStyle(r.status);
@@ -8080,7 +8081,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>}
                   </div>
                 );
-              })}</div></div>{/* /reports-list */}
+              })}
+              </div>
+              </div>{/* /reports-list */}
             )}
           </div>
 
