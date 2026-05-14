@@ -388,6 +388,21 @@ const GLOBAL_CSS = `
     background-size: 200px 200px;
   }
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  /* ── Chat textarea : comportement naturel iOS/Android ── */
+  .chat-textarea {
+    -webkit-appearance: none;
+    appearance: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .chat-textarea:focus { outline: none; }
+  /* iOS : empêche le zoom automatique sur focus */
+  @supports (-webkit-touch-callout: none) {
+    .chat-textarea { font-size: 16px !important; }
+  }
   .msg-arrow{opacity:0;transition:opacity 0.15s}
   .msg-row:hover .msg-arrow{opacity:1}
   @media(hover:none){.msg-arrow{opacity:1}}
@@ -4526,6 +4541,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const openRef = useRef<Match | null>(null);
 
   useEffect(() => { openRef.current = open; }, [open]);
@@ -4559,6 +4575,35 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     const t = setTimeout(measure, 30);
     return () => clearTimeout(t);
   }, [replyTo, showEmojiPicker]);
+
+  // Auto-resize textarea + remesure footer à chaque frappe
+  const autoResizeTextarea = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+    // Remesure le footer pour que paddingBottom de la liste suive
+    if (footerRef.current) {
+      setFooterHeight(footerRef.current.offsetHeight);
+    }
+  };
+
+  // Reset la hauteur quand le texte est vidé (après envoi)
+  useEffect(() => {
+    if (text === "") {
+      const el = textareaRef.current;
+      if (el) {
+        el.style.height = "44px";
+      }
+      if (footerRef.current) {
+        setTimeout(() => {
+          if (footerRef.current) setFooterHeight(footerRef.current.offsetHeight);
+        }, 0);
+      }
+    } else {
+      autoResizeTextarea();
+    }
+  }, [text]);
 
   // Realtime - écoute INSERT sur les messages (nouveaux messages)
   useEffect(() => {
@@ -4918,11 +4963,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
             </div>
           </>
         )}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", padding: "10px 12px" }}>
           {/* Bouton image - Premium */}
           <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
           <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
-            style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
             {imgLoading ? <span style={{ fontSize: "0.8rem" }}>⏳</span> : (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
@@ -4932,7 +4977,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           </div>
           {/* Bouton emoji */}
           <div onClick={() => setShowEmojiPicker(prev => !prev)}
-            style={{ width: 40, height: 40, borderRadius: "50%", background: showEmojiPicker ? "rgba(192,57,43,0.12)" : "rgba(44,26,14,0.06)", border: `1.5px solid ${showEmojiPicker ? "rgba(192,57,43,0.35)" : G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.15s" }}>
+            style={{ width: 40, height: 40, borderRadius: "50%", background: showEmojiPicker ? "rgba(192,57,43,0.12)" : "rgba(44,26,14,0.06)", border: `1.5px solid ${showEmojiPicker ? "rgba(192,57,43,0.35)" : G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.15s", marginBottom: 2 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={showEmojiPicker ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
@@ -4940,8 +4985,39 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
               <line x1="15" y1="9" x2="15.01" y2="9"/>
             </svg>
           </div>
-          <textarea value={text} onChange={e => setText(e.target.value)} onFocus={() => setShowEmojiPicker(false)} placeholder="Écris un message..." rows={1} style={{ flex: 1, minWidth: 0, width: "auto", display: "block", boxSizing: "border-box", padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 20, fontSize: "16px", outline: "none", background: G.creme, resize: "none", fontFamily: "inherit", lineHeight: "1.4", height: 44, maxHeight: 120, overflowY: "auto" }} onInput={e => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 120) + "px"; }} />
-          <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+          <textarea
+            ref={textareaRef}
+            className="chat-textarea"
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onFocus={() => setShowEmojiPicker(false)}
+            placeholder="Écris un message..."
+            rows={1}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              width: "auto",
+              display: "block",
+              boxSizing: "border-box",
+              padding: "11px 14px",
+              border: `2px solid ${G.gris}`,
+              borderRadius: 20,
+              fontSize: "16px",
+              outline: "none",
+              background: G.creme,
+              resize: "none",
+              fontFamily: "inherit",
+              lineHeight: "1.4",
+              minHeight: 44,
+              maxHeight: 120,
+              overflowY: "auto",
+              overflowX: "hidden",
+              verticalAlign: "bottom",
+              wordBreak: "break-word",
+              WebkitOverflowScrolling: "touch",
+            }}
+          />
+          <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0, marginBottom: 2 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
         </div>
       </div>
 
