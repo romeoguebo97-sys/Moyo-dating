@@ -4903,16 +4903,20 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         )}
         {/* Palette emojis */}
         {showEmojiPicker && (
-          <div style={{ padding: "10px 12px 4px 12px", borderBottom: `1px solid ${G.gris}` }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 160, overflowY: "auto" }}>
-              {["😊","😍","🥰","😘","😁","😂","🤣","😅","😆","😉","😋","😎","🤩","😏","🥳","😔","😢","😭","😤","😡","🤔","🫠","😶","🫡","🥺","🙏","👏","💪","🤝","👍","❤️","🧡","💛","💚","💙","💜","🖤","💔","💕","💞","💓","💗","💖","💝","🌹","🌸","🌺","🌷","✨","🎉","🎊","🥂","🍀","🌍","🔥","💫","⭐","🌟","🌈","🎶","🎵","💃","🕺","😴","🤗","🫶","🙌","👀","💯","🫀","🥹","🤭","😇","🤠","🥸","😼","🫣","🤫","🫦"].map(em => (
-                <span key={em} onClick={() => { setText(prev => prev + em); }} style={{ fontSize: "1.45rem", cursor: "pointer", lineHeight: 1, padding: "3px 2px", borderRadius: 6, transition: "transform 0.1s", userSelect: "none", WebkitUserSelect: "none" }}
-                  onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.25)")}
-                  onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-                >{em}</span>
-              ))}
+          <>
+            {/* Overlay invisible — ferme la palette si on touche ailleurs */}
+            <div onClick={() => setShowEmojiPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
+            <div style={{ padding: "10px 12px 4px 12px", borderBottom: `1px solid ${G.gris}`, position: "relative", zIndex: 11 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 160, overflowY: "auto" }}>
+                {["😊","😍","🥰","😘","😁","😂","🤣","😅","😆","😉","😋","😎","🤩","😏","🥳","😔","😢","😭","😤","😡","🤔","🫠","😶","🫡","🥺","🙏","👏","💪","🤝","👍","❤️","🧡","💛","💚","💙","💜","🖤","💔","💕","💞","💓","💗","💖","💝","🌹","🌸","🌺","🌷","✨","🎉","🎊","🥂","🍀","🌍","🔥","💫","⭐","🌟","🌈","🎶","🎵","💃","🕺","😴","🤗","🫶","🙌","👀","💯","🫀","🥹","🤭","😇","🤠","🥸","😼","🫣","🤫","🫦"].map(em => (
+                  <span key={em} onClick={() => { setText(prev => prev + em); }} style={{ fontSize: "1.45rem", cursor: "pointer", lineHeight: 1, padding: "3px 2px", borderRadius: 6, transition: "transform 0.1s", userSelect: "none", WebkitUserSelect: "none" }}
+                    onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.25)")}
+                    onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                  >{em}</span>
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
         <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px" }}>
           {/* Bouton image - Premium */}
@@ -4936,7 +4940,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
               <line x1="15" y1="9" x2="15.01" y2="9"/>
             </svg>
           </div>
-          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { send(); setShowEmojiPicker(false); } }} onFocus={() => setShowEmojiPicker(false)} placeholder="Écris un message..." style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 50, fontSize: "16px", outline: "none", background: G.creme }} />
+          <textarea value={text} onChange={e => setText(e.target.value)} onFocus={() => setShowEmojiPicker(false)} placeholder="Écris un message..." rows={1} style={{ flex: 1, minWidth: 0, padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 20, fontSize: "16px", outline: "none", background: G.creme, resize: "none", fontFamily: "inherit", lineHeight: "1.4", maxHeight: 120, overflowY: "auto" }} onInput={e => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 120) + "px"; }} />
           <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
         </div>
       </div>
