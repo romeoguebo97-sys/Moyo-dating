@@ -96,63 +96,68 @@ type Message = { id?: string; match_id: string; sender_id: string; content: stri
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
+const STATUS_BUCKETS = ["statuses", "status"] as const;
+
 const getStatusStoragePath = (url?: string | null): string | null => {
   if (!url) return null;
   try {
-    if (!url.startsWith('http')) return url.replace(/^statuses\//, '').replace(/^\//, '');
-    const markerPublic = '/storage/v1/object/public/statuses/';
-    const markerSign = '/storage/v1/object/sign/statuses/';
-    const marker = url.includes(markerPublic) ? markerPublic : (url.includes(markerSign) ? markerSign : null);
-    if (!marker) return null;
-    return decodeURIComponent(url.split(marker)[1].split('?')[0]);
+    if (!url.startsWith("http")) return url.replace(/^statuses\//, "").replace(/^status\//, "").replace(/^\//, "");
+    const marker = "/storage/v1/object/";
+    const pos = url.indexOf(marker);
+    if (pos < 0) return null;
+    const after = url.slice(pos + marker.length);
+    const parts = after.split("?")[0].split("/").filter(Boolean);
+    if (parts.length < 3) return null;
+    return decodeURIComponent(parts.slice(2).join("/"));
   } catch {
     return null;
   }
 };
 
-const createStatusSignedUrl = async (token: string, path: string, expiresIn = 86400): Promise<string | null> => {
+const createStatusSignedUrl = async (token: string, path: string, expiresIn = 86400, bucket = "statuses"): Promise<string | null> => {
   try {
-    const cleanPath = path.replace(/^statuses\//, '').replace(/^\//, '');
-    const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
-    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/statuses/${encodedPath}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'apikey': SUPABASE_KEY,
-        'Content-Type': 'application/json',
-      },
+    const cleanPath = path.replace(/^statuses\//, "").replace(/^status\//, "").replace(/^\//, "");
+    const encodedPath = cleanPath.split("/").map(encodeURIComponent).join("/");
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${encodedPath}`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ expiresIn }),
     });
     if (!r.ok) return null;
     const data = await r.json().catch(() => null) as any;
     const signed = data?.signedURL || data?.signedUrl || data?.signed_url;
     if (!signed) return null;
-    return signed.startsWith('http') ? signed : `${SUPABASE_URL}/storage/v1${signed}`;
+    return signed.startsWith("http") ? signed : `${SUPABASE_URL}/storage/v1${signed}`;
   } catch {
     return null;
   }
 };
 
-const buildStatusPublicUrl = (path: string): string => {
-  const cleanPath = path.replace(/^statuses\//, "").replace(/^\//, "");
+const buildStatusPublicUrl = (path: string, bucket = "statuses"): string => {
+  const cleanPath = path.replace(/^statuses\//, "").replace(/^status\//, "").replace(/^\//, "");
   const encodedPath = cleanPath.split("/").map(encodeURIComponent).join("/");
-  return `${SUPABASE_URL}/storage/v1/object/public/statuses/${encodedPath}?v=${Date.now()}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${encodedPath}?v=${Date.now()}`;
 };
 
 const resolveStatusImageUrl = async (token: string, url?: string | null): Promise<string | null> => {
   if (!url) return null;
   if (url.startsWith("data:") || url.startsWith("blob:")) return url;
-  const path = getStatusStoragePath(url);
-  if (!path) return url;
-  // Pour éviter les liens signés expirés ou mal recopiés, on privilégie une URL publique stable.
-  // Si le bucket est privé, le onError de l'image tentera ensuite une URL signée.
-  return buildStatusPublicUrl(path);
+  const path = getStatusStoragePath(url) || url;
+  for (const bucket of STATUS_BUCKETS) {
+    const signed = await createStatusSignedUrl(token, path, 86400, bucket);
+    if (signed) return signed;
+  }
+  return buildStatusPublicUrl(path, "statuses");
 };
 
 const getStatusSignedFallbackUrl = async (token: string, url?: string | null): Promise<string | null> => {
-  const path = getStatusStoragePath(url);
+  const path = getStatusStoragePath(url) || url || null;
   if (!path) return null;
-  return createStatusSignedUrl(token, path);
+  for (const bucket of STATUS_BUCKETS) {
+    const signed = await createStatusSignedUrl(token, path, 86400, bucket);
+    if (signed) return signed;
+  }
+  return buildStatusPublicUrl(path, "status");
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3259,8 +3264,9 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     <option value="">Toutes les villes</option>
     {VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}
   </select>
+  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, margin: "2px 0 6px" }}>Genre recherché</div>
   <select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
-    <option value="">Tous les genres</option>
+    <option value="">Homme et Femme</option>
     <option value="Homme">Homme</option>
     <option value="Femme">Femme</option>
   </select>
@@ -3313,6 +3319,32 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       </div>
     </div>
   ))}
+  {showReport && profiles[current] && (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowReport(false)}>
+      <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
+          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1a1a1a" }}>{profiles[current].name}</div>
+          <div onClick={() => setShowReport(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
+        </div>
+        <div style={{ padding: "8px 16px 32px" }}>
+          {auth.isPremium && <div onClick={() => { const target = profiles[current]; setShowReport(false); setViewedProfile(target); recordView(target.id); }} style={{ padding: "16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(26,92,58,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div style={{ fontWeight: 600, fontSize: "0.92rem", color: G.vert }}>Voir le profil</div>
+          </div>}
+          <div onClick={() => { setShowReport(false); setShowBlockConfirm(true); }} style={{ padding: "16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+            <div style={{ fontWeight: 600, fontSize: "0.92rem", color: "#1a1a1a" }}>Bloquer</div>
+          </div>
+          <div onClick={() => { setShowReport(false); setShowSignaler(true); }} style={{ padding: "16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(231,76,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <div style={{ fontWeight: 600, fontSize: "0.92rem", color: "#e74c3c" }}>Signaler</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
   {hasMore && <div onClick={loadMore} style={{ textAlign: "center", padding: "14px", background: G.blanc, borderRadius: 14, margin: "4px 6px 16px", cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", color: G.rouge, border: `1px solid ${G.gris}` }}>{loadingMore ? "Chargement..." : "Voir plus de profils"}</div>}
 </div> : viewMode === "list" ? <div>
   {profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} isPremium={auth.isPremium} onView={auth.isPremium ? () => { setViewedProfile(prof); recordView(prof.id); } : undefined} />)}
