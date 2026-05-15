@@ -118,17 +118,27 @@ const createStatusSignedUrl = async (token: string, path: string, expiresIn = 86
   try {
     const cleanPath = path.replace(/^statuses\//, "").replace(/^status\//, "").replace(/^\//, "");
     const encodedPath = cleanPath.split("/").map(encodeURIComponent).join("/");
+    console.log("[Moyo][storage] createStatusSignedUrl → bucket:", bucket, "| path:", cleanPath);
     const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${encodedPath}`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ expiresIn }),
     });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      console.error("[Moyo][storage] createStatusSignedUrl → ERREUR HTTP", r.status, r.statusText);
+      return null;
+    }
     const data = await r.json().catch(() => null) as any;
     const signed = data?.signedURL || data?.signedUrl || data?.signed_url;
-    if (!signed) return null;
-    return signed.startsWith("http") ? signed : `${SUPABASE_URL}/storage/v1${signed}`;
-  } catch {
+    if (!signed) {
+      console.warn("[Moyo][storage] createStatusSignedUrl → signedURL absent dans la réponse", data);
+      return null;
+    }
+    const finalUrl = signed.startsWith("http") ? signed : `${SUPABASE_URL}/storage/v1${signed}`;
+    console.log("[Moyo][storage] createStatusSignedUrl → URL signée OK:", finalUrl);
+    return finalUrl;
+  } catch (err) {
+    console.error("[Moyo][storage] createStatusSignedUrl → exception:", err);
     return null;
   }
 };
@@ -397,14 +407,23 @@ const sb = {
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${userId}/avatar.${ext}`;
+      console.log("[Moyo][storage] uploadPhoto → bucket: avatars | path:", path, "| taille:", file.size, "octets");
       const r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true", "Cache-Control": "3600" },
         body: file,
       });
-      if (!r.ok) return null;
-      return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
-    } catch { return null; }
+      if (!r.ok) {
+        console.error("[Moyo][storage] uploadPhoto → ERREUR HTTP", r.status, r.statusText);
+        return null;
+      }
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
+      console.log("[Moyo][storage] uploadPhoto → upload OK, URL:", publicUrl);
+      return publicUrl;
+    } catch (err) {
+      console.error("[Moyo][storage] uploadPhoto → exception:", err);
+      return null;
+    }
   },
 
   async markMessagesRead(token: string, matchId: string, userId: string) {
@@ -2020,15 +2039,22 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     try {
       const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${tempUserId}/avatar.${ext}`;
+      console.log("[Moyo][storage] handlePhotoAndContinue → bucket: avatars | path:", path, "| taille:", photoFile.size, "octets");
       const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${tempToken}`, "Content-Type": photoFile.type || "image/jpeg", "x-upsert": "true" },
         body: photoFile,
       });
       if (uploadRes.ok) {
-        setPhotoUrl(`${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`);
+        const avatarUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
+        console.log("[Moyo][storage] handlePhotoAndContinue → upload OK, URL:", avatarUrl);
+        setPhotoUrl(avatarUrl);
+      } else {
+        console.error("[Moyo][storage] handlePhotoAndContinue → ERREUR HTTP", uploadRes.status, uploadRes.statusText);
       }
-    } catch {}
+    } catch (err) {
+      console.error("[Moyo][storage] handlePhotoAndContinue → exception:", err);
+    }
     setUploadingPhoto(false);
     setStep(3);
   };
@@ -5035,12 +5061,17 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     try {
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
       const path = `${auth.userId}/${Date.now()}.${ext}`;
+      console.log("[Moyo][storage] handleStatusFile → bucket: statuses | path:", path, "| taille:", file.size, "octets");
       const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/statuses/${path}`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
         body: file,
       });
-      if (!uploadRes.ok) throw new Error("upload_failed");
+      if (!uploadRes.ok) {
+        console.error("[Moyo][storage] handleStatusFile → ERREUR HTTP", uploadRes.status, uploadRes.statusText);
+        throw new Error("upload_failed");
+      }
+      console.log("[Moyo][storage] handleStatusFile → upload OK, path stocké:", path);
       // On stocke le chemin brut en base. L'URL signée/publique est régénérée à l'affichage,
       // ce qui évite les liens expirés ou mal formés dans Supabase Storage.
       const image_url = path;
@@ -5178,6 +5209,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${auth.userId}/${Date.now()}.${ext}`;
+      console.log("[Moyo][storage] sendImage → bucket: messages | path:", path, "| taille:", file.size, "octets");
       const r = await fetch(`${SUPABASE_URL}/storage/v1/object/messages/${path}`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${auth.token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
@@ -5185,6 +5217,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       });
       if (r.ok) {
         const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
+        console.log("[Moyo][storage] sendImage → upload OK, URL:", url);
         const content = `[img]${url}[/img]`;
         const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
         if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
