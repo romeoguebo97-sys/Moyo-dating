@@ -118,27 +118,17 @@ const createStatusSignedUrl = async (token: string, path: string, expiresIn = 86
   try {
     const cleanPath = path.replace(/^statuses\//, "").replace(/^status\//, "").replace(/^\//, "");
     const encodedPath = cleanPath.split("/").map(encodeURIComponent).join("/");
-    console.log("[Moyo][storage] createStatusSignedUrl → bucket:", bucket, "| path:", cleanPath);
     const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${encodedPath}`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ expiresIn }),
     });
-    if (!r.ok) {
-      console.error("[Moyo][storage] createStatusSignedUrl → ERREUR HTTP", r.status, r.statusText);
-      return null;
-    }
+    if (!r.ok) return null;
     const data = await r.json().catch(() => null) as any;
     const signed = data?.signedURL || data?.signedUrl || data?.signed_url;
-    if (!signed) {
-      console.warn("[Moyo][storage] createStatusSignedUrl → signedURL absent dans la réponse", data);
-      return null;
-    }
-    const finalUrl = signed.startsWith("http") ? signed : `${SUPABASE_URL}/storage/v1${signed}`;
-    console.log("[Moyo][storage] createStatusSignedUrl → URL signée OK:", finalUrl);
-    return finalUrl;
-  } catch (err) {
-    console.error("[Moyo][storage] createStatusSignedUrl → exception:", err);
+    if (!signed) return null;
+    return signed.startsWith("http") ? signed : `${SUPABASE_URL}/storage/v1${signed}`;
+  } catch {
     return null;
   }
 };
@@ -407,23 +397,14 @@ const sb = {
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${userId}/avatar.${ext}`;
-      console.log("[Moyo][storage] uploadPhoto → bucket: avatars | path:", path, "| taille:", file.size, "octets");
       const r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true", "Cache-Control": "3600" },
         body: file,
       });
-      if (!r.ok) {
-        console.error("[Moyo][storage] uploadPhoto → ERREUR HTTP", r.status, r.statusText);
-        return null;
-      }
-      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
-      console.log("[Moyo][storage] uploadPhoto → upload OK, URL:", publicUrl);
-      return publicUrl;
-    } catch (err) {
-      console.error("[Moyo][storage] uploadPhoto → exception:", err);
-      return null;
-    }
+      if (!r.ok) return null;
+      return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
+    } catch { return null; }
   },
 
   async markMessagesRead(token: string, matchId: string, userId: string) {
@@ -2039,22 +2020,15 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     try {
       const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${tempUserId}/avatar.${ext}`;
-      console.log("[Moyo][storage] handlePhotoAndContinue → bucket: avatars | path:", path, "| taille:", photoFile.size, "octets");
       const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${tempToken}`, "Content-Type": photoFile.type || "image/jpeg", "x-upsert": "true" },
         body: photoFile,
       });
       if (uploadRes.ok) {
-        const avatarUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
-        console.log("[Moyo][storage] handlePhotoAndContinue → upload OK, URL:", avatarUrl);
-        setPhotoUrl(avatarUrl);
-      } else {
-        console.error("[Moyo][storage] handlePhotoAndContinue → ERREUR HTTP", uploadRes.status, uploadRes.statusText);
+        setPhotoUrl(`${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`);
       }
-    } catch (err) {
-      console.error("[Moyo][storage] handlePhotoAndContinue → exception:", err);
-    }
+    } catch {}
     setUploadingPhoto(false);
     setStep(3);
   };
@@ -4923,6 +4897,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [myStatuses, setMyStatuses] = useState<StatusPost[]>([]);
   const [showStatusComposer, setShowStatusComposer] = useState(false);
   const [statusUploading, setStatusUploading] = useState(false);
+  const [statusDeleting, setStatusDeleting] = useState(false);
   const [statusPreview, setStatusPreview] = useState<StatusPost | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -5056,37 +5031,81 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     if (!auth.isPremium) { onShowPremium("Les statuts sont réservés aux membres Premium."); return; }
     const hasRealMatch = convs.some(c => c.id !== "__support__" && c.partner?.id);
     if (!hasRealMatch) { setToast({ msg: "Tu dois avoir au moins un match pour publier un statut.", type: "error" }); return; }
-    if (myStatuses.length >= STATUS_LIMIT) { setToast({ msg: `Tu peux publier ${STATUS_LIMIT} statuts maximum sur 24h.`, type: "error" }); return; }
     setStatusUploading(true);
     try {
+      const now = new Date().toISOString();
+      // Vérification serveur obligatoire : évite de publier 2 + 2 statuts si l'état React n'est pas encore synchronisé.
+      const activeMine = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&expires_at=gt.${encodeURIComponent(now)}&select=id`)
+        .catch(() => [] as StatusPost[]);
+      if ((Array.isArray(activeMine) ? activeMine.length : 0) >= STATUS_LIMIT) {
+        setToast({ msg: `Tu as déjà ${STATUS_LIMIT}/${STATUS_LIMIT} statuts actifs. Attends l'expiration ou supprime un statut avant d'en publier un autre.`, type: "error" });
+        return;
+      }
+
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
       const path = `${auth.userId}/${Date.now()}.${ext}`;
-      console.log("[Moyo][storage] handleStatusFile → bucket: statuses | path:", path, "| taille:", file.size, "octets");
       const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/statuses/${path}`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
         body: file,
       });
       if (!uploadRes.ok) {
-        console.error("[Moyo][storage] handleStatusFile → ERREUR HTTP", uploadRes.status, uploadRes.statusText);
+        const err = await uploadRes.text().catch(() => "");
+        console.error("[Moyo][Statuses] Upload impossible", uploadRes.status, err);
         throw new Error("upload_failed");
       }
-      console.log("[Moyo][storage] handleStatusFile → upload OK, path stocké:", path);
-      // On stocke le chemin brut en base. L'URL signée/publique est régénérée à l'affichage,
-      // ce qui évite les liens expirés ou mal formés dans Supabase Storage.
+      // On stocke le chemin brut en base. L'URL publique/signée est régénérée à l'affichage.
       const image_url = path;
       const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const inserted = await sb.insert<StatusPost>(auth.token, "statuses", { user_id: auth.userId, image_url, image_path: path, caption: null, expires_at });
-      if (!inserted || inserted.length === 0) throw new Error("status_insert_empty");
+      await sb.insert<StatusPost>(auth.token, "statuses", { user_id: auth.userId, image_url, image_path: path, caption: null, expires_at });
       setShowStatusComposer(false);
       setToast({ msg: "Statut publié pour 24h.", type: "success" });
       await loadStatuses(convs);
     } catch (err) {
-      console.error("[Moyo][Statuses] Publication impossible:", err);
+      console.error("[Moyo][Statuses] Publication impossible", err);
       setToast({ msg: "Impossible de publier le statut. Vérifie la table/bucket statuses.", type: "error" });
     } finally {
       setStatusUploading(false);
       if (statusInputRef.current) statusInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteStatus = async (status?: StatusPost | null) => {
+    if (!status?.id) return;
+    if (status.user_id !== auth.userId) {
+      setToast({ msg: "Tu ne peux supprimer que tes propres statuts.", type: "error" });
+      return;
+    }
+    const ok = window.confirm("Supprimer ce statut ?");
+    if (!ok) return;
+
+    setStatusDeleting(true);
+    try {
+      const rawPath = status.image_path || getStatusStoragePath(status.image_url);
+      if (rawPath) {
+        const cleanPath = rawPath.replace(/^statuses\//, "").replace(/^status\//, "").replace(/^\//, "");
+        // Supprimer le fichier Storage si possible. Si le fichier est déjà absent, on continue pour supprimer la ligne DB.
+        const storageRes = await fetch(`${SUPABASE_URL}/storage/v1/object/statuses/${cleanPath}`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
+        });
+        if (!storageRes.ok) {
+          const detail = await storageRes.text().catch(() => "");
+          console.warn("[Moyo][Statuses] Suppression fichier statut non bloquante", storageRes.status, detail);
+        }
+      }
+
+      await sb.delete(auth.token, "statuses", `?id=eq.${status.id}&user_id=eq.${auth.userId}`);
+      setMyStatuses(prev => prev.filter(s => s.id !== status.id));
+      setStatuses(prev => prev.filter(s => s.id !== status.id));
+      setStatusPreview(null);
+      setToast({ msg: "Statut supprimé.", type: "success" });
+      await loadStatuses(convs);
+    } catch (err) {
+      console.error("[Moyo][Statuses] Suppression impossible", err);
+      setToast({ msg: "Impossible de supprimer le statut.", type: "error" });
+    } finally {
+      setStatusDeleting(false);
     }
   };
 
@@ -5209,7 +5228,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${auth.userId}/${Date.now()}.${ext}`;
-      console.log("[Moyo][storage] sendImage → bucket: messages | path:", path, "| taille:", file.size, "octets");
       const r = await fetch(`${SUPABASE_URL}/storage/v1/object/messages/${path}`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${auth.token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
@@ -5217,7 +5235,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       });
       if (r.ok) {
         const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
-        console.log("[Moyo][storage] sendImage → upload OK, URL:", url);
         const content = `[img]${url}[/img]`;
         const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
         if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
@@ -5655,10 +5672,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>
     <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 12px", marginBottom: 10, WebkitOverflowScrolling: "touch" }}>
-      <div onClick={() => auth.isPremium ? setShowStatusComposer(true) : onShowPremium("Publier un statut est réservé aux membres Premium.")} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
-        <div style={{ width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", border: `2px dashed rgba(192,57,43,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.05)", color: G.rouge, fontSize: "1.6rem", fontWeight: 800 }}>+</div>
+      <div onClick={() => {
+        if (!auth.isPremium) { onShowPremium("Publier un statut est réservé aux membres Premium."); return; }
+        if (myStatuses.length > 0) { setStatusPreview(myStatuses[0]); return; }
+        setShowStatusComposer(true);
+      }} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
+        <div style={{ position: "relative", width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", padding: myStatuses.length ? 3 : 0, border: myStatuses.length ? `2px solid ${G.rouge}` : `2px dashed rgba(192,57,43,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.05)", color: G.rouge, fontSize: "1.6rem", fontWeight: 800 }}>
+          {myStatuses.length ? <Avatar url={null} gender={""} size={50} premium={auth.isPremium} /> : "+"}
+          {auth.isPremium && myStatuses.length < STATUS_LIMIT && (
+            <button onClick={(e) => { e.stopPropagation(); setShowStatusComposer(true); }} aria-label="Ajouter un statut" style={{ position: "absolute", right: -4, bottom: -2, width: 22, height: 22, borderRadius: "50%", border: "2px solid #fff", background: G.rouge, color: "#fff", fontSize: "1rem", lineHeight: "18px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>+</button>
+          )}
+        </div>
         <div style={{ fontSize: "0.72rem", fontWeight: 700, color: G.rouge }}>Mon statut</div>
-        <div style={{ fontSize: "0.65rem", color: "#999" }}>{myStatuses.length}/{STATUS_LIMIT}</div>
+        <div style={{ fontSize: "0.65rem", color: "#999" }}>{myStatuses.length ? `Voir • ${myStatuses.length}/${STATUS_LIMIT}` : `0/${STATUS_LIMIT}`}</div>
       </div>
       {statuses.slice(0, 12).map(st => (
         <div key={st.id || st.image_url || st.user_id} onClick={() => setStatusPreview(st)} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
@@ -5678,8 +5704,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 650, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowStatusComposer(false)}>
         <div style={{ background: G.blanc, borderRadius: 22, padding: 22, width: "100%", maxWidth: 340, boxShadow: "0 18px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
           <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: 8 }}>Publier un statut</h3>
-          <p style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.5, marginBottom: 16 }}>Tu peux publier {STATUS_LIMIT} statuts maximum. Chaque statut disparaît après 24h et reste visible uniquement par tes matchs.</p>
-          <Btn variant="primary" onClick={() => statusInputRef.current?.click()} loading={statusUploading} style={{ width: "100%" }}>{statusUploading ? "Publication..." : "Ajouter une photo"}</Btn>
+          <p style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.5, marginBottom: 16 }}>Tu peux publier {STATUS_LIMIT} statuts actifs maximum sur 24h. Chaque statut disparaît après 24h et reste visible uniquement par tes matchs.</p>
+          <Btn variant="primary" onClick={() => statusInputRef.current?.click()} loading={statusUploading} disabled={myStatuses.length >= STATUS_LIMIT} style={{ width: "100%" }}>{statusUploading ? "Publication..." : myStatuses.length >= STATUS_LIMIT ? "Limite atteinte" : "Ajouter une photo"}</Btn>
           <Btn variant="ghost" onClick={() => setShowStatusComposer(false)} style={{ width: "100%", marginTop: 10 }}>Annuler</Btn>
         </div>
       </div>
@@ -5689,9 +5715,28 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         <div style={{ position: "absolute", top: 18, left: 18, right: 18, display: "flex", alignItems: "center", gap: 10, color: "#fff" }}>
           <Avatar url={statusPreview.profile?.photo_url} gender={statusPreview.profile?.gender} size={42} premium={statusPreview.profile?.is_premium} />
           <div><div style={{ fontWeight: 800 }}>{statusPreview.profile?.name || "Statut"}</div><div style={{ fontSize: "0.75rem", opacity: 0.8 }}>Statut Moyo</div></div>
-          <button onClick={() => setStatusPreview(null)} style={{ marginLeft: "auto", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: "1.1rem" }}>✕</button>
+          {statusPreview.user_id === auth.userId && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDeleteStatus(statusPreview); }}
+              disabled={statusDeleting}
+              title="Supprimer ce statut"
+              style={{ marginLeft: "auto", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(192,57,43,0.9)", color: "#fff", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center", cursor: statusDeleting ? "wait" : "pointer", opacity: statusDeleting ? 0.65 : 1 }}
+            >
+              {statusDeleting ? "…" : "🗑"}
+            </button>
+          )}
+          <button onClick={() => setStatusPreview(null)} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: "1.1rem", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
         {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 18, objectFit: "contain" }} /> : null}
+        {statusPreview.user_id === auth.userId && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDeleteStatus(statusPreview); }}
+            disabled={statusDeleting}
+            style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", border: "none", borderRadius: 999, padding: "11px 18px", background: "rgba(192,57,43,0.95)", color: "#fff", fontWeight: 800, boxShadow: "0 10px 30px rgba(0,0,0,0.25)", cursor: statusDeleting ? "wait" : "pointer", opacity: statusDeleting ? 0.65 : 1 }}
+          >
+            {statusDeleting ? "Suppression..." : "Supprimer le statut"}
+          </button>
+        )}
       </div>
     )}
     {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
