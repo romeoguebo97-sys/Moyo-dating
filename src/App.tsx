@@ -406,6 +406,7 @@ const GLOBAL_CSS = `
   .msg-arrow{opacity:0;transition:opacity 0.15s}
   .msg-row:hover .msg-arrow{opacity:1}
   @media(hover:none){.msg-arrow{opacity:1}}
+  .msg-row{max-width:100%;box-sizing:border-box;overflow-x:hidden}
   .fu2{animation:fadeUp 0.7s 0.25s both ease-out}
   .fu3{animation:fadeUp 0.7s 0.4s both ease-out}
   .fu4{animation:fadeUp 0.7s 0.55s both ease-out}
@@ -2629,47 +2630,22 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
   const [showMenu, setShowMenu] = useState(false);
   const [showSignalerMenu, setShowSignalerMenu] = useState(false);
   return (
-    <div className="profile-card" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative", minHeight: 86 }}>
-      {/* Avatar — hauteur fixe */}
+    <div className="profile-card" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
       <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)" }}>
         {prof.photo_url
           ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         }
       </div>
-
-      {/* Zone infos — hauteur fixe 62px, jamais plus, jamais moins */}
-      <div style={{ flex: 1, minWidth: 0, height: 62, display: "flex", flexDirection: "column", justifyContent: "space-between", overflow: "hidden" }}>
-
-        {/* Ligne 1 : nom + âge + badges premium/vérifié — hauteur fixe */}
-        <div style={{ height: 20, display: "flex", alignItems: "center", gap: 5, overflow: "hidden" }}>
-          <span style={{ fontWeight: 700, fontSize: "0.95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "#111" }}>
-            {prof.name}, {prof.age} ans
-          </span>
-          {prof.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
-          {prof.is_verified && <VerifiedBadge size={15} />}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {prof.is_verified && <VerifiedBadge size={15} />}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
+          <span style={{ background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{prof.gender === "Femme" ? "Femme" : "Homme"}</span>
+          <span style={{ fontSize: "0.78rem", color: "#555" }}>{prof.city}</span>
+          {prof.religion && <span style={{ fontSize: "0.72rem", color: "#555" }}>· {prof.religion}</span>}
         </div>
-
-        {/* Ligne 2 : genre + ville + religion — hauteur fixe */}
-        <div style={{ height: 20, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-          <span style={{ flexShrink: 0, background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>
-            {prof.gender === "Femme" ? "Femme" : "Homme"}
-          </span>
-          <span style={{ fontSize: "0.78rem", color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {prof.city}{prof.religion ? ` · ${prof.religion}` : ""}
-          </span>
-        </div>
-
-        {/* Ligne 3 : bio — hauteur fixe, toujours présente même si vide */}
-        <div style={{ height: 18, overflow: "hidden" }}>
-          {prof.bio
-            ? <div style={{ fontSize: "0.78rem", color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>
-            : <div style={{ fontSize: "0.78rem", color: "transparent", userSelect: "none" }}>—</div>
-          }
-        </div>
-
+        {prof.bio && <div style={{ fontSize: "0.78rem", color: "#555", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.bio}</div>}
       </div>
-
       {/* Cœur */}
       <div className="icon-btn" onClick={onLike} style={{ width: 42, height: 42, borderRadius: "50%", background: liked ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(192,57,43,0.06)", border: liked ? "none" : `1.5px solid rgba(192,57,43,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill={liked ? "white" : "rgba(192,57,43,0.4)"} stroke={liked ? "white" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2683,6 +2659,7 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
         </div>
         {showMenu && (
           <>
+            {/* Overlay transparent pour fermer au clic extérieur */}
             <div style={{ position: "fixed", inset: 0, zIndex: 49 }} onClick={() => setShowMenu(false)} />
             <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
               {isPremium && onView && <div onClick={() => { setShowMenu(false); onView(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>}
@@ -3219,62 +3196,17 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 8, position: "relative", touchAction: "pan-y" }}>
-  {/* Photo */}
-  <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-    {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
-  </div>
-
-  {/* Zone infos — 4 lignes fixes, hauteur totale figée à 136px */}
-  <div style={{ padding: "10px 14px 10px", height: 136, boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
-
-    {/* Ligne 1 — Nom, âge, badges premium/vérifié + bouton menu (hauteur 26px) */}
-    <div style={{ height: 26, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 5, overflow: "hidden", flex: 1, minWidth: 0 }}>
-        <span style={{ fontWeight: 700, fontSize: "1.15rem", color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {p.name}, {p.age} ans
-        </span>
-        {p.is_premium && <svg width="14" height="14" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
-        {p.is_verified && <VerifiedBadge size={14} />}
-      </div>
-      <div style={{ flexShrink: 0, marginLeft: 6 }}>
-        <div onClick={() => setShowReport(v => !v)} style={{ width: 32, height: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer" }}>
-          {[0,1,2].map(i => <div key={i} style={{ width: 16, height: 2, borderRadius: 2, background: "#888" }} />)}
-        </div>
+  style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 8, position: "relative", touchAction: "pan-y" }}><div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "10px 14px" }}>
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <svg width="18" height="18" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:4,flexShrink:0}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {p.is_verified && <VerifiedBadge size={18} />}</div>
+    {/* 3 traits menu */}
+    <div style={{ position: "relative" }}>
+      <div onClick={() => setShowReport(v => !v)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", padding: 4 }}>
+        {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2, borderRadius: 2, background: "#555" }} />)}
       </div>
     </div>
-
-    {/* Ligne 2 — Champs info groupe 1 : genre + ville (hauteur 24px) */}
-    <div style={{ height: 24, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, overflow: "hidden", marginTop: 4 }}>
-      <span style={{ flexShrink: 0, background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", fontWeight: 600, whiteSpace: "nowrap" }}>
-        {p.gender === "Femme" ? "Femme" : "Homme"}
-      </span>
-      {p.city && <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>}
-      {p.religion && <span style={{ flexShrink: 0, background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.3)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis" }}>{p.religion}</span>}
-    </div>
-
-    {/* Ligne 3 — Champs info groupe 2 : profession + hobbies (hauteur 24px) */}
-    <div style={{ height: 24, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, overflow: "hidden", marginTop: 4 }}>
-      {p.profession && p.profession.trim()
-        ? <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profession.trim()}</span>
-        : <span style={{ height: 20, display: "block" }} />
-      }
-      {p.hobbies && p.hobbies.trim()
-        ? <span style={{ flexShrink: 0, background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#2a5a3a", fontWeight: 500, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.hobbies.trim()}</span>
-        : null
-      }
-    </div>
-
-    {/* Ligne 4 — Bio, une seule ligne, ellipsis si trop long (hauteur restante) */}
-    <div style={{ flex: 1, display: "flex", alignItems: "center", marginTop: 4, overflow: "hidden" }}>
-      <p style={{ margin: 0, fontSize: "0.8rem", color: "#666", lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%" }}>
-        {p.bio || ""}
-      </p>
-    </div>
-
   </div>
-
-  {/* Modals (hors flux) */}
+  {/* Bottom sheet options - en dehors de la carte */}
   {showReport && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowReport(false)}>
       <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
@@ -3301,7 +3233,15 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       </div>
     </div>
   )}
-<div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => navigate("prev")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => navigate("next")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+    <span style={{ background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600 }}>{p.gender === "Femme" ? "Femme" : "Homme"}</span>
+    <span style={{ background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.72rem", color: "#555", fontWeight: 500 }}>{p.city}</span>
+    {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500 }}>{p.religion}</span>}
+    {p.profession && p.profession.trim() && <span style={{ background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>{p.profession.trim()}</span>}
+    {p.hobbies && p.hobbies.trim() && <span style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>{p.hobbies.trim()}</span>}
+  </div>
+  <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 6, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", minHeight: "1.23rem" }}>{p.bio || ""}</p>
+</div></div><div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => navigate("prev")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => navigate("next")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div>{wrapToast && <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#888", marginBottom: 4, animation: "fadeIn 0.3s ease" }}>On repart du début 🔄</div>}<div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
   {profiles.slice(Math.max(0, current - 2), Math.min(profiles.length, current + 3)).map((_, i) => {
     const idx = Math.max(0, current - 2) + i;
     const isActive = idx === current;
@@ -4655,13 +4595,12 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
 
 function getOnlineStatus(lastSeen?: string): { label: string; color: string } {
   if (!lastSeen) return { label: "Hors ligne", color: "#bbb" };
-  const diffSec = (Date.now() - new Date(lastSeen).getTime()) / 1000;
-  const diffMin = diffSec / 60;
-  if (diffSec < 30) return { label: "En ligne", color: "#27ae60" };
-  if (diffMin < 10) return { label: `Vu il y a ${Math.floor(diffMin)} min`, color: "#f39c12" };
-  if (diffMin < 60) return { label: `Vu il y a ${Math.floor(diffMin)} min`, color: "#bbb" };
-  if (diffMin < 1440) return { label: `Vu il y a ${Math.floor(diffMin / 60)}h`, color: "#bbb" };
-  return { label: `Vu il y a ${Math.floor(diffMin / 1440)}j`, color: "#bbb" };
+  const diff = (Date.now() - new Date(lastSeen).getTime()) / 1000 / 60; // en minutes
+  if (diff < 2) return { label: "En ligne", color: "#27ae60" };
+  if (diff < 10) return { label: `Vu il y a ${Math.floor(diff)} min`, color: "#f39c12" };
+  if (diff < 60) return { label: `Vu il y a ${Math.floor(diff)} min`, color: "#bbb" };
+  if (diff < 1440) return { label: `Vu il y a ${Math.floor(diff / 60)}h`, color: "#bbb" };
+  return { label: `Vu il y a ${Math.floor(diff / 1440)}j`, color: "#bbb" };
 }
 
 function TickIcon({ read, isPremium, white = false }: { read: boolean; isPremium: boolean; white?: boolean }) {
@@ -4964,7 +4903,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [showGift, setShowGift] = useState(false);
 
   if (open) return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: 100, maxWidth: 500, margin: "0 auto", overflowX: "hidden" }}>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: 100, maxWidth: 500, margin: "0 auto", overflowX: "hidden", width: "100%" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Header fixe */}
@@ -5028,7 +4967,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       {/* Zone messages */}
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "14px", paddingBottom: `${footerHeight + 14}px`, display: "flex", flexDirection: "column", gap: 10, position: "relative", boxSizing: "border-box", width: "100%" }}>
         <img src="/msg-bg.png" alt="" style={{ position: "fixed", top: 48, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, height: `calc(100% - 48px - ${footerHeight}px)`, objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, width: "100%", overflowX: "hidden" }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
@@ -5036,8 +4975,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
           const reactions = m.reactions || {};
           const reactionEntries = Object.entries(reactions).filter(([, users]) => users.length > 0);
-          // Détection emoji seul : 1-3 emojis, sans autre caractère
-          const isEmojiOnly = !isImg && /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}){1,3}$/u.test(m.content.trim());
           const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
             // Empêcher la sélection de texte native au long press
             if (window.getSelection) window.getSelection()?.removeAllRanges();
@@ -5049,15 +4986,14 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           };
           const handleLongPressEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
           return (
-            <div key={i} className="msg-row" style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", overflowX: "hidden" }}>
+            <div key={i} className="msg-row" style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0, maxWidth: "100%", boxSizing: "border-box", overflowX: "hidden" }}>
               {isImg ? (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row" }}>
-                  {/* Flèche contextuelle — même que les messages texte */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", maxWidth: "100%", boxSizing: "border-box" }}>
                   <div className="msg-arrow" onClick={() => setContextMenu({ msg: m, x: 0, y: 0 })} style={{ marginTop: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
                   <div
-                    style={{ position: "relative", maxWidth: "82%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
+                    style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
                     onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                   >
                     <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
@@ -5092,20 +5028,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   </div>
                 </div>
               ) : (
-                <div style={{ display: "flex", alignItems: "flex-start", flexDirection: isMine ? "row-reverse" : "row", width: "100%", boxSizing: "border-box", paddingLeft: isMine ? 40 : 0, paddingRight: isMine ? 0 : 40 }}>
-                  <div style={{ position: "relative", maxWidth: "82%", minWidth: 0, boxSizing: "border-box", width: "fit-content", overflow: isEmojiOnly ? "visible" : "hidden" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", maxWidth: "100%", boxSizing: "border-box" }}>
+                  {/* Flèche */}
+                  <div className="msg-arrow" onClick={() => setContextMenu({ msg: m, x: 0, y: 0 })} style={{ marginTop: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </div>
+                  <div style={{ position: "relative", maxWidth: "72%", minWidth: 0, boxSizing: "border-box" }}>
                     <div
-                      style={{ background: isMine ? "linear-gradient(135deg,#D84B3E 0%,#C93E32 100%)" : G.blanc, color: isMine ? G.blanc : G.brun, padding: isEmojiOnly ? "6px 14px 5px" : "10px 14px", paddingTop: isEmojiOnly ? "20px" : "22px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: isEmojiOnly ? "2.2rem" : "0.88rem", lineHeight: isEmojiOnly ? 1.2 : 1.5, whiteSpace: isEmojiOnly ? "nowrap" : undefined, userSelect: "none", WebkitUserSelect: "none", wordBreak: isEmojiOnly ? undefined : "break-word", overflowWrap: isEmojiOnly ? undefined : "anywhere", position: "relative" }}
+                      style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", overflowWrap: "anywhere", wordBreak: "break-word", minWidth: 0, boxSizing: "border-box" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
-                      {/* Flèche options — intégrée en haut à droite de la bulle */}
-                      <div
-                        className="msg-arrow"
-                        onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }}
-                        style={{ position: "absolute", top: 5, right: 7, cursor: "pointer", width: 18, height: 18, borderRadius: "50%", background: isMine ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                      >
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={isMine ? "rgba(255,255,255,0.85)" : "#666"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                      </div>
                       {(() => {
                         const replyMatch = m.content.match(/^\[↩ (.+?) : (.+?)\]\n([\s\S]*)$/);
                         if (replyMatch) {
@@ -5129,7 +5061,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                         }
                         return <span>{m.content}</span>;
                       })()}
-                      <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: isEmojiOnly ? 2 : 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
                         <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
                         {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} white />}
                       </div>
@@ -5289,21 +5221,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
               <div onClick={() => { const msg = contextMenu!.msg; setContextMenu(null); setTimeout(() => setReplyTo(msg), 0); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-              </div>
-              <div onClick={() => {
-                const content = contextMenu.msg.content;
-                // Extraire le texte brut sans le préfixe de réponse
-                const replyMatch = content.match(/^\[↩ .+? : .+?\]\n([\s\S]*)$/);
-                const text = replyMatch ? replyMatch[1] : content;
-                navigator.clipboard?.writeText(text).then(() => {
-                  setContextMenu(null);
-                  setToast({ msg: "Message copié", type: "success" });
-                }).catch(() => {
-                  setContextMenu(null);
-                });
-              }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
-                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Copier</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </div>
               <div onClick={async () => {
                 const msgId = contextMenu.msg.id;
@@ -8664,60 +8581,9 @@ export default function App() {
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
-
-    // ── Système last_seen amélioré ──────────────────────────────────────────
-    // Écriture immédiate + heartbeat 15s + écriture sur fermeture/mise en fond
-    const writeLastSeen = () =>
-      sb.update(auth.token, "profiles", auth.userId, { last_seen: new Date().toISOString() }).catch(() => {});
-
-    const writeOffline = () => {
-      // Marquer "hors ligne" en forçant last_seen à 10 minutes dans le passé
-      // → détecté immédiatement comme inactif par tous les clients
-      const past = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-      // sendBeacon : fonctionne même quand la page se ferme (pas de fetch)
-      const body = JSON.stringify({ last_seen: past });
-      const url = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`;
-      const sent = navigator.sendBeacon
-        ? navigator.sendBeacon(
-            url + "&apikey=" + SUPABASE_KEY,
-            new Blob([body], { type: "application/json" })
-          )
-        : false;
-      // Fallback synchrone si sendBeacon échoue ou n'existe pas
-      if (!sent) {
-        try {
-          const xhr = new XMLHttpRequest();
-          xhr.open("PATCH", url, false); // synchrone intentionnel (fermeture de page)
-          xhr.setRequestHeader("Content-Type", "application/json");
-          xhr.setRequestHeader("apikey", SUPABASE_KEY);
-          xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
-          xhr.send(body);
-        } catch {}
-      }
-    };
-
-    // Présence immédiate au montage
-    writeLastSeen();
-
-    // Heartbeat toutes les 15s (au lieu de 30s)
-    const lastSeenInterval = setInterval(writeLastSeen, 15000);
-
-    // Fermeture onglet / navigation sortante
-    const handleBeforeUnload = () => writeOffline();
-    const handlePageHide = () => writeOffline();
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("pagehide", handlePageHide);
-
-    // Mise en arrière-plan (mobile + desktop)
-    const handleVisibilityForPresence = () => {
-      if (document.visibilityState === "hidden") {
-        writeOffline();
-      } else {
-        // Retour au premier plan → mise à jour immédiate
-        writeLastSeen();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityForPresence);
+    const updateLastSeen = () => sb.update(auth.token, "profiles", auth.userId, { last_seen: new Date().toISOString() });
+    updateLastSeen();
+    const lastSeenInterval = setInterval(updateLastSeen, 30000);
 
     // Chargement initial des likes reçus (badge séparé pour likes et vus)
     const loadLikesReceived = async () => {
@@ -8840,11 +8706,6 @@ export default function App() {
       clearInterval(lastSeenInterval);
       clearInterval(sessionCheck);
       document.removeEventListener("visibilitychange", handleVisibility);
-      document.removeEventListener("visibilitychange", handleVisibilityForPresence);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("pagehide", handlePageHide);
-      // Marquer hors ligne au démontage du composant (ex: logout)
-      writeOffline();
     };
   }, [auth?.userId]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
@@ -8879,7 +8740,7 @@ export default function App() {
             </button>
           )}
           <button onClick={() => { setShowInstall(false); localStorage.setItem("moyo_install_dismissed", "1"); }} style={{ width: "100%", background: "transparent", color: "#555", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
-            J'ai compris
+            Non merci
           </button>
         </div>
       </div>
