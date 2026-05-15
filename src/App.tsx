@@ -64,6 +64,7 @@ const MSG_BG_STYLE: React.CSSProperties = {
   position: "relative",
 };
 const FREE_LIMITS = { likes: 5, messages: 3 };
+const STATUS_LIMIT = 2; // Maximum de statuts actifs par utilisateur sur 24h
 
 const SUPPORT_TEAM_ID = "moyo-support-team";
 const SUPPORT_TEAM_NAME = "Assistance Moyo";
@@ -92,6 +93,7 @@ type Auth = {
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
+type StatusPost = { id?: string; user_id: string; image_url?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4751,11 +4753,17 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [footerHeight, setFooterHeight] = useState(65);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [statuses, setStatuses] = useState<StatusPost[]>([]);
+  const [myStatuses, setMyStatuses] = useState<StatusPost[]>([]);
+  const [showStatusComposer, setShowStatusComposer] = useState(false);
+  const [statusUploading, setStatusUploading] = useState(false);
+  const [statusPreview, setStatusPreview] = useState<StatusPost | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const statusInputRef = useRef<HTMLInputElement>(null);
   const openRef = useRef<Match | null>(null);
   const supportProfile: Profile = { id: SUPPORT_TEAM_ID, name: SUPPORT_TEAM_NAME, age: 0, city: "MOYO", gender: "", bio: "Assistance officielle Moyo", photo_url: null, is_premium: true, is_admin: true, is_verified: true };
   const supportMatch: Match = { id: "__support__", user1: auth.userId, user2: SUPPORT_TEAM_ID, partner: supportProfile };
@@ -4852,6 +4860,56 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     return () => clearInterval(readInterval);
   }, [open?.id]);
 
+  const loadStatuses = async (list: Match[] = convs) => {
+    try {
+      const realConvs = list.filter(c => c.id !== "__support__" && c.partner?.id);
+      const partnerIds = Array.from(new Set(realConvs.map(c => c.partner!.id)));
+      const now = new Date().toISOString();
+
+      const mine = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
+      setMyStatuses(Array.isArray(mine) ? mine : []);
+
+      if (!partnerIds.length) { setStatuses([]); return; }
+      const rows = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=in.(${partnerIds.join(",")})&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
+      const byPartner = new Map(realConvs.map(c => [c.partner!.id, c.partner!]));
+      const enriched = (Array.isArray(rows) ? rows : []).map(st => ({ ...st, profile: byPartner.get(st.user_id) })).filter(st => st.profile);
+      setStatuses(enriched);
+    } catch {
+      setStatuses([]);
+      setMyStatuses([]);
+    }
+  };
+
+  const handleStatusFile = async (file?: File | null) => {
+    if (!file) return;
+    if (!auth.isPremium) { onShowPremium("Les statuts sont réservés aux membres Premium."); return; }
+    const hasRealMatch = convs.some(c => c.id !== "__support__" && c.partner?.id);
+    if (!hasRealMatch) { setToast({ msg: "Tu dois avoir au moins un match pour publier un statut.", type: "error" }); return; }
+    if (myStatuses.length >= STATUS_LIMIT) { setToast({ msg: `Tu peux publier ${STATUS_LIMIT} statuts maximum sur 24h.`, type: "error" }); return; }
+    setStatusUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${auth.userId}/${Date.now()}.${ext}`;
+      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/statuses/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error("upload_failed");
+      const image_url = `${SUPABASE_URL}/storage/v1/object/public/statuses/${path}?v=${Date.now()}`;
+      const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      await sb.insert<StatusPost>(auth.token, "statuses", { user_id: auth.userId, image_url, text: null, expires_at });
+      setShowStatusComposer(false);
+      setToast({ msg: "Statut publié pour 24h.", type: "success" });
+      await loadStatuses(convs);
+    } catch {
+      setToast({ msg: "Impossible de publier le statut. Vérifie la table/bucket statuses.", type: "error" });
+    } finally {
+      setStatusUploading(false);
+      if (statusInputRef.current) statusInputRef.current.value = "";
+    }
+  };
+
   const loadConvs = async () => {
     setLoading(true);
     const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})`);
@@ -4859,7 +4917,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     const hasSupport = supportRows.some(r => isSupportReason(r.reason));
     if (!res.length) {
       const onlySupport = hasSupport ? [{ ...supportMatch, lastMsg: supportRows.find(r => isSupportReason(r.reason)) ? { match_id: "__support__", sender_id: supportRows.find(r => isSupportReason(r.reason))!.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId, content: cleanSupportReason(supportRows.find(r => isSupportReason(r.reason))!.reason), is_read: true, created_at: supportRows.find(r => isSupportReason(r.reason))!.created_at } : undefined } as Match] : [];
-      setConvs(onlySupport); onUnreadCount(0); setLoading(false); return onlySupport;
+      setConvs(onlySupport); await loadStatuses(onlySupport); onUnreadCount(0); setLoading(false); return onlySupport;
     }
     const enriched = await Promise.all(res.map(async m => {
       const pid = m.user1 === auth.userId ? m.user2 : m.user1;
@@ -4883,6 +4941,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       ? [{ ...supportMatch, lastMsg: supportLast ? { match_id: "__support__", sender_id: supportLast.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId, content: cleanSupportReason(supportLast.reason), is_read: true, created_at: supportLast.created_at } : undefined } as Match, ...deduped]
       : deduped;
     setConvs(finalConvs);
+    await loadStatuses(finalConvs);
     onUnreadCount(finalConvs.reduce((s, c) => s + (c.unreadCount || 0), 0));
     setLoading(false);
     return finalConvs;
@@ -5412,6 +5471,47 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
   return <div style={{ padding: "12px 16px 16px" }}>
     <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>
+    <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
+    <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 12px", marginBottom: 10, WebkitOverflowScrolling: "touch" }}>
+      <div onClick={() => auth.isPremium ? setShowStatusComposer(true) : onShowPremium("Publier un statut est réservé aux membres Premium.")} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
+        <div style={{ width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", border: `2px dashed rgba(192,57,43,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.05)", color: G.rouge, fontSize: "1.6rem", fontWeight: 800 }}>+</div>
+        <div style={{ fontSize: "0.72rem", fontWeight: 700, color: G.rouge }}>Mon statut</div>
+        <div style={{ fontSize: "0.65rem", color: "#999" }}>{myStatuses.length}/{STATUS_LIMIT}</div>
+      </div>
+      {statuses.slice(0, 12).map(st => (
+        <div key={st.id || st.image_url || st.user_id} onClick={() => setStatusPreview(st)} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
+          <div style={{ position: "relative", width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", padding: 3, border: `2px solid ${st.profile?.is_premium ? G.or : G.rouge}` }}>
+            <Avatar url={st.profile?.photo_url} gender={st.profile?.gender} size={50} premium={false} />
+            <span style={{ position: "absolute", right: -2, bottom: 4, width: 12, height: 12, borderRadius: "50%", background: G.rouge, border: "2px solid #fff" }} />
+          </div>
+          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.profile?.name || "Statut"}</div>
+          <div style={{ fontSize: "0.65rem", color: G.rouge }}>Nouveau</div>
+        </div>
+      ))}
+    </div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.72rem", color: "#999", marginBottom: 14 }}>
+      <span>🔒</span><span>Les statuts sont visibles uniquement par vos matchs</span>
+    </div>
+    {showStatusComposer && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 650, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowStatusComposer(false)}>
+        <div style={{ background: G.blanc, borderRadius: 22, padding: 22, width: "100%", maxWidth: 340, boxShadow: "0 18px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: 8 }}>Publier un statut</h3>
+          <p style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.5, marginBottom: 16 }}>Tu peux publier {STATUS_LIMIT} statuts maximum. Chaque statut disparaît après 24h et reste visible uniquement par tes matchs.</p>
+          <Btn variant="primary" onClick={() => statusInputRef.current?.click()} loading={statusUploading} style={{ width: "100%" }}>{statusUploading ? "Publication..." : "Ajouter une photo"}</Btn>
+          <Btn variant="ghost" onClick={() => setShowStatusComposer(false)} style={{ width: "100%", marginTop: 10 }}>Annuler</Btn>
+        </div>
+      </div>
+    )}
+    {statusPreview && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setStatusPreview(null)}>
+        <div style={{ position: "absolute", top: 18, left: 18, right: 18, display: "flex", alignItems: "center", gap: 10, color: "#fff" }}>
+          <Avatar url={statusPreview.profile?.photo_url} gender={statusPreview.profile?.gender} size={42} premium={statusPreview.profile?.is_premium} />
+          <div><div style={{ fontWeight: 800 }}>{statusPreview.profile?.name || "Statut"}</div><div style={{ fontSize: "0.75rem", opacity: 0.8 }}>Statut Moyo</div></div>
+          <button onClick={() => setStatusPreview(null)} style={{ marginLeft: "auto", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: "1.1rem" }}>✕</button>
+        </div>
+        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 18, objectFit: "contain" }} /> : null}
+      </div>
+    )}
     {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
       ? <div style={{ textAlign: "center", padding: "50px 20px", color: "#555" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><p style={{ fontSize: "0.85rem" }}>Fais des matchs pour commencer à discuter !</p></div>
       : convs.map(c => (
