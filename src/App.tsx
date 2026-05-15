@@ -65,6 +65,13 @@ const MSG_BG_STYLE: React.CSSProperties = {
 };
 const FREE_LIMITS = { likes: 5, messages: 3 };
 
+const SUPPORT_TEAM_ID = "moyo-support-team";
+const SUPPORT_TEAM_NAME = "Assistance Moyo";
+const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
+const SUPPORT_PREFIX_REPLY = "[SUPPORT_REPLY]";
+const isSupportReason = (reason?: string) => !!reason && (reason.startsWith(SUPPORT_PREFIX_USER) || reason.startsWith(SUPPORT_PREFIX_REPLY));
+const cleanSupportReason = (reason?: string) => (reason || "").replace(SUPPORT_PREFIX_USER, "").replace(SUPPORT_PREFIX_REPLY, "").trim();
+
 const G = {
   rouge: "#C0392B", rougeDark: "#922B21", or: "#D4A843",
   vert: "#1A5C3A", creme: "#F0F1F5", cremeDark: "#E4E6ED",
@@ -2185,18 +2192,18 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
     if (!reportText.trim()) return;
     // ── Alerte bot : ce n'est PAS un signalement contre un profil précis.
     // reported_id = null (alerte système, pas d'utilisateur ciblé).
-    console.log(`[Moyo][BotReport] Signalement bot — auteur:${auth.userId}`);
+    console.log(`[Moyo][Support] Message support — auteur:${auth.userId}`);
     try {
       await sb.insert(auth.token, "reports", {
         reporter_id: auth.userId,
         reported_id: null,
-        reason: `[BOT SIGNALEMENT] ${reportText.trim()}`,
+        reason: `${SUPPORT_PREFIX_USER} ${reportText.trim()}`,
         status: "pending",
       });
-      console.log("[Moyo][BotReport] ✅ Signalement bot enregistré");
+      console.log("[Moyo][Support] ✅ Message support enregistré");
     } catch (e: any) {
       // Si reported_id n'accepte pas null → log sans crasher
-      console.warn("[Moyo][BotReport] ⚠️ Signalement bot non enregistré :", e?.message || e);
+      console.warn("[Moyo][Support] ⚠️ Message support non enregistré :", e?.message || e);
     }
     setReportSent(true);
   };
@@ -2241,8 +2248,8 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>Signaler un problème</div>
-                <div style={{ fontSize: "0.75rem", color: "#888" }}>Comportement abusif, arnaque, harcèlement</div>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>Contacter notre équipe</div>
+                <div style={{ fontSize: "0.75rem", color: "#888" }}>Écrire directement à l’assistance Moyo</div>
               </div>
             </div>
           </div>
@@ -2278,16 +2285,16 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
                 <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <div style={{ fontWeight: 700, color: "#1a1a1a", marginBottom: 6 }}>Signalement envoyé</div>
-                <div style={{ fontSize: "0.82rem", color: "#555" }}>Notre équipe traite votre signalement sous 24h.</div>
+                <div style={{ fontWeight: 700, color: "#1a1a1a", marginBottom: 6 }}>Message envoyé</div>
+                <div style={{ fontSize: "0.82rem", color: "#555" }}>L’assistance Moyo vous répondra directement dans votre messagerie.</div>
               </div>
             ) : (
               <>
-                <p style={{ fontSize: "0.85rem", color: "#555", marginBottom: 14 }}>Décris le problème rencontré. Notre équipe intervient sous 24h.</p>
-                <textarea value={reportText} onChange={e => setReportText(e.target.value)} placeholder="Ex: un utilisateur m'a envoyé des messages harcelants..." style={{ width: "100%", minHeight: 100, padding: "12px", borderRadius: 12, border: `1px solid ${G.gris}`, fontSize: "0.85rem", resize: "none", outline: "none", marginBottom: 12 }} />
+                <p style={{ fontSize: "0.85rem", color: "#555", marginBottom: 14 }}>Écris ton message à l’équipe Moyo. La réponse apparaîtra ensuite dans ta messagerie.</p>
+                <textarea value={reportText} onChange={e => setReportText(e.target.value)} placeholder="Ex : Bonjour, j’ai une question concernant mon compte..." style={{ width: "100%", minHeight: 100, padding: "12px", borderRadius: 12, border: `1px solid ${G.gris}`, fontSize: "0.85rem", resize: "none", outline: "none", marginBottom: 12 }} />
                 <div style={{ display: "flex", gap: 10 }}>
                   <Btn variant="ghost" onClick={() => setMode("home")} style={{ flex: 1 }}>Retour</Btn>
-                  <Btn variant="danger" onClick={sendReport} style={{ flex: 2 }} disabled={!reportText.trim()}>Envoyer le signalement</Btn>
+                  <Btn variant="danger" onClick={sendReport} style={{ flex: 2 }} disabled={!reportText.trim()}>Envoyer le message</Btn>
                 </div>
               </>
             )}
@@ -2617,7 +2624,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           <div style={{ background: "#f8f8f8", borderRadius: 14, padding: "16px", textAlign: "center", margin: "12px 16px 16px" }}>
             <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a1a", marginBottom: 4 }}>Un problème ou une question ?</div>
             <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, lineHeight: 1.5 }}>Notre équipe est disponible pour vous aider.</p>
-            <a href="https://www.facebook.com/share/1HssYavG19/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", background: G.rouge, color: G.blanc, borderRadius: 50, padding: "10px 24px", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none" }}>Contacter notre équipe</a>
+            <button onClick={() => { setShowGuide(false); setShowBot(true); }} style={{ display: "inline-block", background: G.rouge, color: G.blanc, borderRadius: 50, padding: "10px 24px", fontSize: "0.85rem", fontWeight: 700, border: "none", cursor: "pointer" }}>Contacter notre équipe</button>
           </div>
         </div>
       </div>
@@ -4699,6 +4706,8 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
   );
 });
 
+type ReportRowLike = { id?: string; reason: string; reporter_id: string; reported_id: string | null; status?: string; created_at?: string };
+
 function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
@@ -4722,6 +4731,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const footerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const openRef = useRef<Match | null>(null);
+  const supportProfile: Profile = { id: SUPPORT_TEAM_ID, name: SUPPORT_TEAM_NAME, age: 0, city: "MOYO", gender: "", bio: "Assistance officielle Moyo", photo_url: null, is_premium: true, is_admin: true, is_verified: true };
+  const supportMatch: Match = { id: "__support__", user1: auth.userId, user2: SUPPORT_TEAM_ID, partner: supportProfile };
 
   useEffect(() => { openRef.current = open; }, [open]);
   useEffect(() => {
@@ -4787,6 +4798,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   // Realtime - écoute INSERT sur les messages (nouveaux messages)
   useEffect(() => {
     if (!open) return;
+    if (open.id === "__support__") {
+      const supportInterval = setInterval(() => loadMsgs(open), 3000);
+      return () => clearInterval(supportInterval);
+    }
     const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, async () => {
       const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
       setMsgs(res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)));
@@ -4799,6 +4814,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     if (!open) return;
     const readInterval = setInterval(async () => {
       try {
+        if (open.id === "__support__") { await loadMsgs(open); return; }
         const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
         const filtered = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId));
         setMsgs(prev => {
@@ -4813,7 +4829,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const loadConvs = async () => {
     setLoading(true);
     const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})`);
-    if (!res.length) { setConvs([]); onUnreadCount(0); setLoading(false); return []; }
+    const supportRows = await sb.query<ReportRowLike>(auth.token, "reports", `?select=id,reason,reporter_id,reported_id,status,created_at&or=(reporter_id.eq.${auth.userId},reported_id.eq.${auth.userId})&order=created_at.desc&limit=50`).catch(() => [] as ReportRowLike[]);
+    const hasSupport = supportRows.some(r => isSupportReason(r.reason));
+    if (!res.length) {
+      const onlySupport = hasSupport ? [{ ...supportMatch, lastMsg: supportRows.find(r => isSupportReason(r.reason)) ? { match_id: "__support__", sender_id: supportRows.find(r => isSupportReason(r.reason))!.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId, content: cleanSupportReason(supportRows.find(r => isSupportReason(r.reason))!.reason), is_read: true, created_at: supportRows.find(r => isSupportReason(r.reason))!.created_at } : undefined } as Match] : [];
+      setConvs(onlySupport); onUnreadCount(0); setLoading(false); return onlySupport;
+    }
     const enriched = await Promise.all(res.map(async m => {
       const pid = m.user1 === auth.userId ? m.user2 : m.user1;
       const [profiles, lastMsgs, unread] = await Promise.all([
@@ -4831,13 +4852,32 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       seenPartners.add(c.partner!.id);
       return true;
     });
-    setConvs(deduped);
-    onUnreadCount(deduped.reduce((s, c) => s + (c.unreadCount || 0), 0));
+    const supportLast = supportRows.find(r => isSupportReason(r.reason));
+    const finalConvs = hasSupport
+      ? [{ ...supportMatch, lastMsg: supportLast ? { match_id: "__support__", sender_id: supportLast.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId, content: cleanSupportReason(supportLast.reason), is_read: true, created_at: supportLast.created_at } : undefined } as Match, ...deduped]
+      : deduped;
+    setConvs(finalConvs);
+    onUnreadCount(finalConvs.reduce((s, c) => s + (c.unreadCount || 0), 0));
     setLoading(false);
-    return deduped;
+    return finalConvs;
   };
 
   const loadMsgs = async (conv: Match) => {
+    if (conv.id === "__support__") {
+      const rows = await sb.query<ReportRowLike>(auth.token, "reports", `?select=id,reason,reporter_id,reported_id,status,created_at&or=(reporter_id.eq.${auth.userId},reported_id.eq.${auth.userId})&order=created_at.asc&limit=200`).catch(() => [] as ReportRowLike[]);
+      const supportMsgs: Message[] = rows.filter(r => isSupportReason(r.reason)).map(r => ({
+        id: r.id,
+        match_id: "__support__",
+        sender_id: r.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId,
+        content: cleanSupportReason(r.reason),
+        is_read: true,
+        created_at: r.created_at,
+      }));
+      setMsgs(supportMsgs);
+      setMsgCount(supportMsgs.filter(m => m.sender_id === auth.userId).length);
+      loadConvs();
+      return;
+    }
     const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
     const visible = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId));
     setMsgs(visible);
@@ -4858,6 +4898,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
   const send = async () => {
     if (!text.trim() || !open) return;
+    if (open.id === "__support__") {
+      const msgText = text.trim();
+      setText("");
+      const res = await sb.insert<ReportRowLike>(auth.token, "reports", { reporter_id: auth.userId, reported_id: null, reason: `${SUPPORT_PREFIX_USER} ${msgText}`, status: "pending" });
+      const saved = res[0];
+      setMsgs(prev => [...prev, { id: saved?.id, match_id: "__support__", sender_id: auth.userId, content: msgText, is_read: true, created_at: saved?.created_at || new Date().toISOString() }]);
+      loadConvs();
+      return;
+    }
     // Modération : insultes, arnaques, contenu interdit
     const mod = moderateMessage(text);
     if (mod.blocked && mod.type) {
@@ -6554,10 +6603,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Reports ──
   const [reports, setReports] = useState<ReportRow[]>([]);
-  const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "archived">("all");
+  const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived">("all");
   const [reportActionLoading, setReportActionLoading] = useState<string | null>(null); // report id en cours
   const [reportProfilePreview, setReportProfilePreview] = useState<AdminProfile | null>(null);
   const [reportProfileLoading, setReportProfileLoading] = useState<string | null>(null);
+  const [supportReply, setSupportReply] = useState<{ report: ReportRow; userId: string } | null>(null);
+  const [supportReplyText, setSupportReplyText] = useState("");
 
   // ── Users ──
   const [users, setUsers] = useState<AdminProfile[]>([]);
@@ -6884,6 +6935,31 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
     setReportActionLoading(null);
   };
 
+  const sendSupportReply = async () => {
+    if (!supportReply || !supportReplyText.trim()) return;
+    setReportActionLoading(supportReply.report.id || "support-reply");
+    try {
+      await sb.insert<ReportRow>(auth.token, "reports", {
+        reporter_id: auth.userId,
+        reported_id: supportReply.userId,
+        reason: `${SUPPORT_PREFIX_REPLY} ${supportReplyText.trim()}`,
+        status: "pending",
+      });
+      if (supportReply.report.id) {
+        await updateReportStatus(supportReply.report.id, "reviewed", "Réponse envoyée à l’utilisateur dans sa messagerie.");
+      } else {
+        showToast("Réponse envoyée à l’utilisateur dans sa messagerie.", "success");
+      }
+      setSupportReply(null);
+      setSupportReplyText("");
+      loadStats();
+    } catch (e: any) {
+      showToast("Impossible d’envoyer la réponse. Vérifiez les policies RLS de la table reports.", "error");
+    } finally {
+      setReportActionLoading(null);
+    }
+  };
+
   const banReportedProfile = async (report: ReportRow) => {
     if (!auth.isAdmin || !report.reported_id || !report.id) return;
     setReportActionLoading(report.id);
@@ -6959,6 +7035,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const classifyReport = (r: ReportRow): { label: string; color: string } => {
     if (r.reason?.startsWith("[AUTO-MOD")) return { label: "Auto-modération", color: "#e67e22" };
     if (r.reason?.startsWith("[BOT SIGNALEMENT]")) return { label: "Alerte bot", color: "#8e44ad" };
+    if (isSupportReason(r.reason)) return { label: "Messagerie", color: G.vert };
     if (!r.reported_id) return { label: "Alerte système", color: "#7f8c8d" };
     return { label: "Signalement profil", color: G.rouge };
   };
@@ -7052,6 +7129,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
 
       {/* Modal avertissement admin */}
+      {supportReply && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 12000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Répondre via {SUPPORT_TEAM_NAME}</h3>
+            <p style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>La réponse apparaîtra directement dans la messagerie de l’utilisateur comme une conversation avec l’assistance Moyo.</p>
+            <div style={{ background: "rgba(26,92,58,0.06)", border: "1px solid rgba(26,92,58,0.15)", borderRadius: 12, padding: 10, fontSize: "0.78rem", color: "#444", lineHeight: 1.5, marginBottom: 12 }}>{cleanSupportReason(supportReply.report.reason)}</div>
+            <textarea value={supportReplyText} onChange={e => setSupportReplyText(e.target.value)} placeholder="Écrire la réponse de l’assistance Moyo..." style={{ width: "100%", minHeight: 110, boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: 12, fontSize: "0.86rem", outline: "none", resize: "vertical", marginBottom: 12 }} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn variant="ghost" onClick={() => { setSupportReply(null); setSupportReplyText(""); }} style={{ flex: 1 }}>Annuler</Btn>
+              <Btn variant="primary" onClick={sendSupportReply} disabled={!supportReplyText.trim()} style={{ flex: 2 }}>Envoyer</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
       {warnModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
@@ -7296,6 +7388,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["En attente (tous)", "Vue par défaut. Affiche tous les signalements non encore traités. Le badge rouge indique le nombre en attente."],
                     ["Profils", "Filtre les signalements manuels d'utilisateurs contre d'autres profils. À examiner en priorité."],
                     ["Système", "Signalements générés automatiquement par la modération (insultes, arnaques, contenus sexuels, alertes techniques)."],
+                    ["Messagerie", "Messages envoyés par les utilisateurs via Guide → Contacter notre équipe. Les admins peuvent répondre directement, la réponse apparaît dans la messagerie utilisateur sous le nom Assistance Moyo."],
                     ["Archivés", "Signalements traités, rejetés ou ayant entraîné un bannissement. Chaque archive peut être supprimée définitivement. Le bouton 'Tout supprimer' nettoie toutes les archives d'un coup."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
@@ -7770,10 +7863,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         <div style={{ padding: "16px" }}>
           {/* Filtres */}
           <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
-            {(["all", "user", "system", "archived"] as const).map(f => {
+            {(["all", "user", "system", "messaging", "archived"] as const).map(f => {
               const isActive = reportFilter === f;
               const isArchived = f === "archived";
-              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : "Archivés";
+              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : f === "messaging" ? "Messagerie" : "Archivés";
               const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : null;
               return (
                 <div
@@ -7842,10 +7935,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {filteredReports.map((r, i) => {
                 const cat = classifyReport(r);
                 const statusStyle = reportStatusStyle(r.status);
-                const isSystemAlert = !r.reported_id;
+                const isSystemAlert = !r.reported_id && !isSupportReason(r.reason);
                 const isLoading = reportActionLoading === r.id;
                 const alreadyHandled = r.status !== "pending";
                 const isArchiveView = reportFilter === "archived";
+                const isSupport = isSupportReason(r.reason);
+                const supportUserId = r.reason?.startsWith(SUPPORT_PREFIX_REPLY) ? r.reported_id : r.reporter_id;
                 return (
                   <div key={r.id || i} style={{ padding: "14px 0", borderBottom: i < filteredReports.length - 1 ? `1px solid ${G.gris}` : "none" }}>
                     {/* Ligne 1 : badges catégorie + statut */}
@@ -7861,7 +7956,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
 
                     {/* Ligne 2 : raison */}
-                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a", marginBottom: 5, lineHeight: 1.4 }}>{r.reason}</div>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a", marginBottom: 5, lineHeight: 1.4 }}>{isSupport ? cleanSupportReason(r.reason) : r.reason}</div>
 
                     {/* Ligne 3 : IDs + date */}
                     <div style={{ fontSize: "0.72rem", color: "#999", display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
@@ -7920,6 +8015,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       </div>
                     )}
                     {!isArchiveView && <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {isSupport && supportUserId && (
+                        <button
+                          onClick={() => { setSupportReply({ report: r, userId: supportUserId }); setSupportReplyText(""); }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            background: "rgba(26,92,58,0.1)", color: G.vert,
+                            border: "1px solid rgba(26,92,58,0.25)", borderRadius: 8,
+                            padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer",
+                          }}
+                        >
+                          Répondre
+                        </button>
+                      )}
                       {/* ── Actions communes (alerte système) ── */}
                       {isSystemAlert && (
                         <>
