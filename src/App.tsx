@@ -90,13 +90,34 @@ type Auth = {
   refreshToken?: string;   // refresh_token Supabase
   expiresAt?: number;      // timestamp ms (Date.now()) d'expiration du access_token
 };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string; warning_count?: number };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
 const STATUS_BUCKETS = ["statuses", "status"] as const;
+const shuffleArray = <T,>(items: T[]): T[] => {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
+const priorityRandomizeProfiles = (items: Profile[]): Profile[] => {
+  const score = (p: Profile) => (p.is_premium ? 4 : 0) + (p.is_verified ? 3 : 0) + ((p as any).is_certified ? 2 : 0);
+  const buckets = new Map<number, Profile[]>();
+  for (const item of items) {
+    const key = score(item);
+    const list = buckets.get(key) || [];
+    list.push(item);
+    buckets.set(key, list);
+  }
+  return Array.from(buckets.keys()).sort((a,b)=>b-a).flatMap(k => shuffleArray(buckets.get(k) || []));
+};
+
 
 const getStatusStoragePath = (url?: string | null): string | null => {
   if (!url) return null;
@@ -3064,6 +3085,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "", religion: "" });
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list" | "full">("card");
+  const fullscreenScrollRef = useRef<HTMLDivElement>(null);
   const swipeStartX = useRef<number | null>(null);
   const [wrapToast, setWrapToast] = useState(false);
   const wrapToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -3098,7 +3120,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     if (pageNum === 0) setLoading(true); else setLoadingMore(true);
     try {
       const offset = pageNum * PAGE_SIZE;
-      let params = `?id=neq.${auth.userId}&is_visible=neq.false&is_complete=eq.true&order=is_premium.desc,created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
+      let params = `?id=neq.${auth.userId}&is_visible=neq.false&is_complete=eq.true&order=is_premium.desc,is_verified.desc,created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
       if (filters.city && !filters.city.startsWith("──")) params += `&city=eq.${encodeURIComponent(filters.city)}`;
       if (filters.gender) params += `&gender=eq.${filters.gender}`;
       if (filters.ageMin) params += `&age=gte.${filters.ageMin}`;
@@ -3120,9 +3142,10 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
         if (seen.has(p.id) || bIds.has(p.id)) return false;
         seen.add(p.id); return true;
       });
+      const orderedUnique = priorityRandomizeProfiles(unique);
       setHasMore(all.length === PAGE_SIZE);
-      if (append) setProfiles(prev => [...prev, ...unique]);
-      else { setProfiles(unique); setCurrent(0); }
+      if (append) setProfiles(prev => [...prev, ...orderedUnique]);
+      else { setProfiles(orderedUnique); setCurrent(0); }
       if (pageNum === 0) {
         const today = new Date().toISOString().split("T")[0];
         const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`);
@@ -3241,7 +3264,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   };
 
   const p = profiles[current];
-  const fullscreenProfiles = profiles.length ? [...profiles, ...profiles, ...profiles] : [];
+  const fullscreenProfiles = profiles.length ? Array.from({ length: 40 }, () => profiles).flat() : [];
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
 
   return <div style={{ padding: "14px 16px 8px" }}>
@@ -3289,7 +3312,14 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     if (filters.ageMin && filters.ageMax && min > max) return;
     setPage(0); loadProfiles(0); setShowFilters(false);
   }} style={{ width: "100%" }}>Appliquer</Btn>
-</div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>Actualiser</Btn></div> : viewMode === "full" ? <div className="no-invert moyo-fullscreen-view" style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 146px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5" }}>
+</div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>Actualiser</Btn></div> : viewMode === "full" ? <div ref={fullscreenScrollRef} className="no-invert moyo-fullscreen-view" onScroll={(e) => {
+  const el = e.currentTarget;
+  if (!profiles.length) return;
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 900) {
+    const approxCycle = Math.max(1, el.scrollHeight / 40);
+    el.scrollTop = Math.max(0, el.scrollTop - approxCycle * 20);
+  }
+}} style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 146px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important}`}</style>
   <div style={{ position: "sticky", top: 8, zIndex: 20, display: "flex", justifyContent: "flex-end", marginBottom: 8, pointerEvents: "none" }}>
     <button onClick={() => setViewMode("card")} style={{ pointerEvents: "auto", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, fontSize: "1.05rem", fontWeight: 800, backdropFilter: "blur(8px)", boxShadow: "0 8px 24px rgba(0,0,0,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
@@ -3300,7 +3330,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)" }} />
       <div style={{ position: "absolute", left: 18, right: 18, bottom: 22, color: G.blanc }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
-          <div style={{ fontSize: "1.85rem", fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{prof.name}, {prof.age}</div>
+          <div style={{ fontSize: "1.85rem", fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{prof.name}, {prof.age} ans</div>
           {prof.is_premium && <PremiumBadge size={20} />}
           {prof.is_verified && <VerifiedBadge size={20} />}
         </div>
@@ -3313,8 +3343,8 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
         </div>
         <div style={{ fontSize: "0.86rem", lineHeight: 1.45, opacity: 0.92, textShadow: "0 1px 8px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", minHeight: 38 }}>{prof.bio || ""}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
-          <button onClick={() => handleLike(prof)} style={{ width: 58, height: 58, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? G.blanc : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer" }}>{likedIds.has(prof.id) ? "❤️" : "♡"}</button>
-          <button onClick={() => { setCurrent(idx % profiles.length); setShowReport(true); }} style={{ width: 58, height: 58, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.45)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.55rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer", backdropFilter: "blur(8px)" }}>☰</button>
+          <button onClick={() => handleLike(prof)} style={{ width: 58, height: 58, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? G.blanc : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer" }}><svg width="26" height="26" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <button onClick={() => { setCurrent(idx % profiles.length); setShowReport(true); }} style={{ width: 58, height: 58, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.45)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.55rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer", backdropFilter: "blur(8px)" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
         </div>
       </div>
     </div>
@@ -5149,6 +5179,18 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     return convs.find(c => c.id !== "__support__" && c.partner?.id === userId) || null;
   };
 
+  const insertStatusInteraction = async (table: "status_status_views" | "status_status_likes", payload: object) => {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: "POST",
+      headers: { ...sb.h(auth.token), "Prefer": "return=minimal,resolution=ignore-duplicates" },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok && r.status !== 409) {
+      const detail = await r.text().catch(() => "");
+      console.warn(`[Moyo][Statuses] interaction ${table} non enregistrée`, r.status, detail);
+    }
+  };
+
   const loadStatusEngagement = async (st?: StatusPost | null) => {
     if (!st?.id) return;
     try {
@@ -5166,10 +5208,13 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     if (!st?.id || st.user_id === auth.userId) return;
     const key = `moyo_status_view_${st.id}_${auth.userId}`;
     if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, "1");
     try {
-      await sb.insert(auth.token, "status_status_views", { status_id: st.id, viewer_id: auth.userId });
-    } catch {}
+      await insertStatusInteraction("status_status_views", { status_id: st.id, viewer_id: auth.userId });
+      sessionStorage.setItem(key, "1");
+      await loadStatusEngagement(st);
+    } catch (e) {
+      console.warn("[Moyo][Statuses] vue non enregistrée", e);
+    }
   };
 
   const toggleStatusLike = async (st?: StatusPost | null) => {
@@ -5189,6 +5234,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     } catch {
       setToast({ msg: "Impossible d’enregistrer le j’aime pour ce statut.", type: "error" });
     } finally {
+      await loadStatusEngagement(st);
       setStatusActionLoading(false);
     }
   };
@@ -5873,14 +5919,26 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     )}
     {statusPreview && (
       <div
-        onPointerDown={(e) => {
+        onPointerDownCapture={(e) => {
           const target = e.target as HTMLElement;
-          if (!target.closest("button") && !target.closest("input")) setStatusPaused(true);
+          if (!target.closest("button") && !target.closest("input")) {
+            e.preventDefault();
+            setStatusPaused(true);
+          }
+        }}
+        onTouchStart={(e) => {
+          const target = e.target as HTMLElement;
+          if (!target.closest("button") && !target.closest("input")) {
+            e.preventDefault();
+            setStatusPaused(true);
+          }
         }}
         onPointerUp={() => setStatusPaused(false)}
         onPointerCancel={() => setStatusPaused(false)}
         onPointerLeave={() => setStatusPaused(false)}
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "88px 18px 22px", touchAction: "manipulation" }}
+        onTouchEnd={() => setStatusPaused(false)}
+        onTouchCancel={() => setStatusPaused(false)}
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "88px 18px 22px", touchAction: "none", overscrollBehavior: "contain" }}
       >
         <div style={{ position: "absolute", top: 10, left: 12, right: 12, display: "flex", gap: 4, zIndex: 3 }}>
           {(statusPreviewList.length ? statusPreviewList : [statusPreview]).map((st, i) => (
@@ -5907,8 +5965,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           )}
           <button onClick={(e) => { e.stopPropagation(); closeStatusViewer(); }} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 40, height: 40, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.16)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, boxShadow: "0 6px 16px rgba(0,0,0,0.18)" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
-        <button aria-label="Statut précédent" onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
-        <button aria-label="Statut suivant" onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
+        <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
+        <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
         {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : "68vh", borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
         {statusPreview.user_id === auth.userId ? (
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 28, zIndex: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
