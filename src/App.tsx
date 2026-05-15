@@ -4630,6 +4630,20 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   };
 
   const p = selectedMatch?.partner;
+  const statusGroups = Array.from(
+    statuses.reduce((acc, st) => {
+      if (!st.user_id) return acc;
+      const current = acc.get(st.user_id) || [];
+      current.push(st);
+      acc.set(st.user_id, current);
+      return acc;
+    }, new Map<string, StatusPost[]>())
+  ).map(([userId, items]) => ({
+    userId,
+    items: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()),
+    first: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0],
+  })).filter(g => !!g.first);
+
   return <div style={{ padding: "12px 16px 16px" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
       <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>Matchs</h2>
@@ -4906,6 +4920,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [statusStats, setStatusStats] = useState<Record<string, { views: number; likes: number }>>({});
   const [statusLikedByMe, setStatusLikedByMe] = useState<Record<string, boolean>>({});
   const [statusActionLoading, setStatusActionLoading] = useState(false);
+  const [statusPaused, setStatusPaused] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -5120,13 +5135,17 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
 
   const openStatusViewer = (list: StatusPost[], startIndex = 0) => {
-    const clean = (Array.isArray(list) ? list : []).filter(st => !!st.image_url);
-    if (!clean.length) return;
-    const index = Math.max(0, Math.min(startIndex, clean.length - 1));
-    setStatusPreviewList(clean);
-    setStatusPreviewIndex(index);
+    const raw = (Array.isArray(list) ? list : []).filter(st => !!st.image_url);
+    if (!raw.length) return;
+    const sorted = [...raw].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+    const wanted = raw[startIndex];
+    const index = wanted ? Math.max(0, sorted.findIndex(x => (x.id || x.image_url) === (wanted.id || wanted.image_url))) : Math.max(0, Math.min(startIndex, sorted.length - 1));
+    const safeIndex = index >= 0 ? index : 0;
+    setStatusPreviewList(sorted);
+    setStatusPreviewIndex(safeIndex);
     setStatusProgress(0);
-    setStatusPreview(clean[index]);
+    setStatusPaused(false);
+    setStatusPreview(sorted[safeIndex]);
   };
 
   const closeStatusViewer = () => {
@@ -5134,6 +5153,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     setStatusPreviewList([]);
     setStatusPreviewIndex(0);
     setStatusProgress(0);
+    setStatusPaused(false);
     setStatusReplyText("");
   };
 
@@ -5146,9 +5166,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     if (!st?.id) return;
     try {
       const [views, likes, myLike] = await Promise.all([
-        sb.query<any>(auth.token, "status_views", `?status_id=eq.${st.id}&select=id`).catch(() => []),
-        sb.query<any>(auth.token, "status_likes", `?status_id=eq.${st.id}&select=id,user_id`).catch(() => []),
-        sb.query<any>(auth.token, "status_likes", `?status_id=eq.${st.id}&user_id=eq.${auth.userId}&select=id&limit=1`).catch(() => []),
+        sb.query<any>(auth.token, "status_status_views", `?status_id=eq.${st.id}&select=id`).catch(() => []),
+        sb.query<any>(auth.token, "status_status_likes", `?status_id=eq.${st.id}&select=id,user_id`).catch(() => []),
+        sb.query<any>(auth.token, "status_status_likes", `?status_id=eq.${st.id}&user_id=eq.${auth.userId}&select=id&limit=1`).catch(() => []),
       ]);
       setStatusStats(prev => ({ ...prev, [st.id!]: { views: Array.isArray(views) ? views.length : 0, likes: Array.isArray(likes) ? likes.length : 0 } }));
       setStatusLikedByMe(prev => ({ ...prev, [st.id!]: Array.isArray(myLike) && myLike.length > 0 }));
@@ -5161,7 +5181,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
     try {
-      await sb.insert(auth.token, "status_views", { status_id: st.id, viewer_id: auth.userId, user_id: auth.userId });
+      await sb.insert(auth.token, "status_status_views", { status_id: st.id, viewer_id: auth.userId });
     } catch {}
   };
 
@@ -5169,13 +5189,13 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     if (!st?.id || st.user_id === auth.userId || statusActionLoading) return;
     setStatusActionLoading(true);
     try {
-      const existing = await sb.query<any>(auth.token, "status_likes", `?status_id=eq.${st.id}&user_id=eq.${auth.userId}&select=id&limit=1`).catch(() => []);
+      const existing = await sb.query<any>(auth.token, "status_status_likes", `?status_id=eq.${st.id}&user_id=eq.${auth.userId}&select=id&limit=1`).catch(() => []);
       if (Array.isArray(existing) && existing[0]?.id) {
-        await sb.delete(auth.token, "status_likes", `?id=eq.${existing[0].id}`);
+        await sb.delete(auth.token, "status_status_likes", `?id=eq.${existing[0].id}`);
         setStatusLikedByMe(prev => ({ ...prev, [st.id!]: false }));
         setStatusStats(prev => ({ ...prev, [st.id!]: { views: prev[st.id!]?.views || 0, likes: Math.max(0, (prev[st.id!]?.likes || 1) - 1) } }));
       } else {
-        await sb.insert(auth.token, "status_likes", { status_id: st.id, user_id: auth.userId, owner_id: st.user_id });
+        await sb.insert(auth.token, "status_status_likes", { status_id: st.id, user_id: auth.userId });
         setStatusLikedByMe(prev => ({ ...prev, [st.id!]: true }));
         setStatusStats(prev => ({ ...prev, [st.id!]: { views: prev[st.id!]?.views || 0, likes: (prev[st.id!]?.likes || 0) + 1 } }));
       }
@@ -5219,6 +5239,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     setStatusPreviewIndex(next);
     setStatusPreview(list[next]);
     setStatusProgress(0);
+    setStatusPaused(false);
   };
 
   useEffect(() => {
@@ -5228,6 +5249,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     const step = 100;
     const timer = setInterval(() => {
       setStatusProgress(prev => {
+        if (statusPaused) return prev;
         const next = prev + (step / duration) * 100;
         if (next >= 100) {
           setTimeout(() => goStatusStep(1), 0);
@@ -5237,7 +5259,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       });
     }, step);
     return () => clearInterval(timer);
-  }, [statusPreview?.id, statusPreviewList.length]);
+  }, [statusPreview?.id, statusPreviewList.length, statusPaused]);
 
   useEffect(() => {
     if (!statusPreview?.id) return;
@@ -5804,6 +5826,20 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     </div>
   );
 
+  const statusGroups = Array.from(
+    statuses.reduce((acc, st) => {
+      if (!st.user_id) return acc;
+      const current = acc.get(st.user_id) || [];
+      current.push(st);
+      acc.set(st.user_id, current);
+      return acc;
+    }, new Map<string, StatusPost[]>())
+  ).map(([userId, items]) => ({
+    userId,
+    items: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()),
+    first: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0],
+  })).filter(g => !!g.first);
+
   return <div style={{ padding: "12px 16px 16px" }}>
     <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>
     <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
@@ -5816,22 +5852,24 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         <div style={{ position: "relative", width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", padding: myStatuses.length ? 3 : 0, border: myStatuses.length ? `2px solid ${G.rouge}` : `2px dashed rgba(192,57,43,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.05)", color: G.rouge, fontSize: "1.6rem", fontWeight: 800 }}>
           {myStatuses.length ? <Avatar url={myStatuses[0]?.profile?.photo_url} gender={myStatuses[0]?.profile?.gender} size={50} premium={auth.isPremium} /> : "+"}
           {auth.isPremium && myStatuses.length < STATUS_LIMIT && (
-            <button onClick={(e) => { e.stopPropagation(); setShowStatusComposer(true); }} aria-label="Ajouter un statut" style={{ position: "absolute", right: -4, bottom: -2, width: 22, height: 22, borderRadius: "50%", border: "2px solid #fff", background: G.rouge, color: "#fff", fontSize: "1rem", lineHeight: "18px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>+</button>
+            <button onClick={(e) => { e.stopPropagation(); setShowStatusComposer(true); }} aria-label="Ajouter un statut" style={{ position: "absolute", right: -4, bottom: -2, width: 24, height: 24, borderRadius: "50%", border: "2px solid #fff", background: G.rouge, color: "#fff", fontSize: "1rem", lineHeight: 1, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.18)", WebkitTapHighlightColor: "transparent" }}>+</button>
           )}
         </div>
         <div style={{ fontSize: "0.72rem", fontWeight: 700, color: G.rouge }}>Mon statut</div>
         <div style={{ fontSize: "0.65rem", color: "#999" }}>{myStatuses.length ? `Voir • ${myStatuses.length}/${STATUS_LIMIT}` : `0/${STATUS_LIMIT}`}</div>
       </div>
-      {statuses.slice(0, 12).map(st => (
-        <div key={st.id || st.image_url || st.user_id} onClick={() => { const group = statuses.filter(x => x.user_id === st.user_id); openStatusViewer(group, Math.max(0, group.findIndex(x => (x.id || x.image_url) === (st.id || st.image_url)))); }} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
+      {statusGroups.slice(0, 12).map(group => {
+        const st = group.first;
+        return (
+        <div key={group.userId} onClick={() => openStatusViewer(group.items, 0)} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
           <div style={{ position: "relative", width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", padding: 3, border: `2px solid ${st.profile?.is_premium ? G.or : G.rouge}` }}>
             <Avatar url={st.profile?.photo_url} gender={st.profile?.gender} size={50} premium={false} />
             <span style={{ position: "absolute", right: -2, bottom: 4, width: 12, height: 12, borderRadius: "50%", background: G.rouge, border: "2px solid #fff" }} />
           </div>
           <div style={{ fontSize: "0.72rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.profile?.name || "Statut"}</div>
-          <div style={{ fontSize: "0.65rem", color: G.rouge }}>Nouveau</div>
+          <div style={{ fontSize: "0.65rem", color: G.rouge }}>{group.items.length > 1 ? `${group.items.length} photos` : "Nouveau"}</div>
         </div>
-      ))}
+      );})}
     </div>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.72rem", color: "#999", marginBottom: 14 }}>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Les statuts sont visibles uniquement par vos matchs</span>
@@ -5847,7 +5885,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       </div>
     )}
     {statusPreview && (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "88px 18px 22px" }}>
+      <div
+        onPointerDown={(e) => {
+          const target = e.target as HTMLElement;
+          if (!target.closest("button") && !target.closest("input")) setStatusPaused(true);
+        }}
+        onPointerUp={() => setStatusPaused(false)}
+        onPointerCancel={() => setStatusPaused(false)}
+        onPointerLeave={() => setStatusPaused(false)}
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "88px 18px 22px", touchAction: "manipulation" }}
+      >
         <div style={{ position: "absolute", top: 10, left: 12, right: 12, display: "flex", gap: 4, zIndex: 3 }}>
           {(statusPreviewList.length ? statusPreviewList : [statusPreview]).map((st, i) => (
             <div key={st.id || st.image_url || i} style={{ flex: 1, height: 3, borderRadius: 999, background: "rgba(255,255,255,0.35)", overflow: "hidden" }}>
@@ -5866,12 +5913,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
               onClick={(e) => { e.stopPropagation(); handleDeleteStatus(statusPreview); }}
               disabled={statusDeleting}
               title="Supprimer ce statut"
-              style={{ marginLeft: "auto", width: 42, height: 42, borderRadius: "50%", border: "none", background: "rgba(192,57,43,0.92)", color: "#fff", fontSize: "1.15rem", display: "flex", alignItems: "center", justifyContent: "center", cursor: statusDeleting ? "wait" : "pointer", opacity: statusDeleting ? 0.65 : 1 }}
+              style={{ marginLeft: "auto", width: 40, height: 40, borderRadius: "50%", border: "none", background: "rgba(192,57,43,0.92)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: statusDeleting ? "wait" : "pointer", opacity: statusDeleting ? 0.65 : 1, padding: 0, boxShadow: "0 6px 16px rgba(0,0,0,0.22)" }}
             >
               {statusDeleting ? "…" : <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>}
             </button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); closeStatusViewer(); }} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 42, height: 42, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.16)", color: "#fff", fontSize: "1.35rem", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button onClick={(e) => { e.stopPropagation(); closeStatusViewer(); }} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 40, height: 40, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.16)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, boxShadow: "0 6px 16px rgba(0,0,0,0.18)" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
         <button aria-label="Statut précédent" onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
         <button aria-label="Statut suivant" onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
