@@ -96,6 +96,51 @@ type Message = { id?: string; match_id: string; sender_id: string; content: stri
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
+const getStatusStoragePath = (url?: string | null): string | null => {
+  if (!url) return null;
+  try {
+    if (!url.startsWith('http')) return url.replace(/^statuses\//, '').replace(/^\//, '');
+    const markerPublic = '/storage/v1/object/public/statuses/';
+    const markerSign = '/storage/v1/object/sign/statuses/';
+    const marker = url.includes(markerPublic) ? markerPublic : (url.includes(markerSign) ? markerSign : null);
+    if (!marker) return null;
+    return decodeURIComponent(url.split(marker)[1].split('?')[0]);
+  } catch {
+    return null;
+  }
+};
+
+const createStatusSignedUrl = async (token: string, path: string, expiresIn = 86400): Promise<string | null> => {
+  try {
+    const cleanPath = path.replace(/^statuses\//, '').replace(/^\//, '');
+    const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/statuses/${encodedPath}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': SUPABASE_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ expiresIn }),
+    });
+    if (!r.ok) return null;
+    const data = await r.json().catch(() => null) as any;
+    const signed = data?.signedURL || data?.signedUrl || data?.signed_url;
+    if (!signed) return null;
+    return signed.startsWith('http') ? signed : `${SUPABASE_URL}/storage/v1${signed}`;
+  } catch {
+    return null;
+  }
+};
+
+const resolveStatusImageUrl = async (token: string, url?: string | null): Promise<string | null> => {
+  if (!url) return null;
+  const path = getStatusStoragePath(url);
+  if (!path) return url;
+  const signed = await createStatusSignedUrl(token, path);
+  return signed || url;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CLIENT SUPABASE — v2 avec refresh automatique JWT
 // Stratégie :
@@ -3267,15 +3312,27 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       </div>
     </div>
   )}
-  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-    <span style={{ background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600 }}>{p.gender === "Femme" ? "Femme" : "Homme"}</span>
-    <span style={{ background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.72rem", color: "#555", fontWeight: 500 }}>{p.city}</span>
-    {p.religion && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500 }}>{p.religion}</span>}
-    {p.profession && p.profession.trim() && <span style={{ background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>{p.profession.trim()}</span>}
-    {p.hobbies && p.hobbies.trim() && <span style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>{p.hobbies.trim()}</span>}
+  <div style={{ minHeight: 88, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 4 }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap", overflow: "hidden", minHeight: 24 }}>
+    <span style={{ background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.gender === "Femme" ? "Femme" : "Homme"}</span>
+    <span style={{ background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.72rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 70 }}>{p.city || ""}</span>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {p.religion ? <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-block", maxWidth: "100%" }}>{p.religion}</span> : <div style={{ height: 22 }} />}
+    </div>
   </div>
-  <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 6, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", minHeight: "1.23rem" }}>{p.bio || ""}</p>
-</div></div><div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => navigate("prev")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => navigate("next")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div>{wrapToast && <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#888", marginBottom: 4, animation: "fadeIn 0.3s ease" }}>On repart du début 🔄</div>}<div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
+
+  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap", overflow: "hidden", minHeight: 24 }}>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {p.profession && p.profession.trim() ? <span style={{ background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", maxWidth: "100%" }}>{p.profession.trim()}</span> : <div style={{ height: 22 }} />}
+    </div>
+    <div style={{ flex: 1, minWidth: 0, display: "flex", justifyContent: "flex-start" }}>
+      {p.hobbies && p.hobbies.trim() ? <span style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", maxWidth: "100%" }}>{p.hobbies.trim()}</span> : <div style={{ height: 22 }} />}
+    </div>
+  </div>
+
+  <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 2, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", minHeight: "1.23rem" }}>{p.bio || ""}</p>
+</div>
+</div></div><div style={{ display: "flex", justifyContent: "center", gap: 16, alignItems: "center", marginTop: 14, marginBottom: 12 }}><div onClick={() => navigate("prev")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 67, height: 67, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.73rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => navigate("next")} style={{ width: 48, height: 48, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>→</div></div><div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 12 }}>
   {profiles.slice(Math.max(0, current - 2), Math.min(profiles.length, current + 3)).map((_, i) => {
     const idx = Math.max(0, current - 2) + i;
     const isActive = idx === current;
@@ -4866,13 +4923,18 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       const partnerIds = Array.from(new Set(realConvs.map(c => c.partner!.id)));
       const now = new Date().toISOString();
 
-      const mine = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
-      setMyStatuses(Array.isArray(mine) ? mine : []);
+      const mineRaw = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
+      const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
+      setMyStatuses(mine);
 
       if (!partnerIds.length) { setStatuses([]); return; }
       const rows = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=in.(${partnerIds.join(",")})&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
       const byPartner = new Map(realConvs.map(c => [c.partner!.id, c.partner!]));
-      const enriched = (Array.isArray(rows) ? rows : []).map(st => ({ ...st, profile: byPartner.get(st.user_id) })).filter(st => st.profile);
+      const enriched = await Promise.all((Array.isArray(rows) ? rows : [])
+        .map(st => ({ ...st, profile: byPartner.get(st.user_id) }))
+        .filter(st => st.profile)
+        .map(async st => ({ ...st, image_url: await resolveStatusImageUrl(auth.token, st.image_url) }))
+      );
       setStatuses(enriched);
     } catch {
       setStatuses([]);
@@ -4896,7 +4958,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         body: file,
       });
       if (!uploadRes.ok) throw new Error("upload_failed");
-      const image_url = `${SUPABASE_URL}/storage/v1/object/public/statuses/${path}?v=${Date.now()}`;
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/statuses/${path}?v=${Date.now()}`;
+      const signedUrl = await createStatusSignedUrl(auth.token, path);
+      const image_url = signedUrl || publicUrl;
       const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       await sb.insert<StatusPost>(auth.token, "statuses", { user_id: auth.userId, image_url, text: null, expires_at });
       setShowStatusComposer(false);
@@ -5509,7 +5573,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           <div><div style={{ fontWeight: 800 }}>{statusPreview.profile?.name || "Statut"}</div><div style={{ fontSize: "0.75rem", opacity: 0.8 }}>Statut Moyo</div></div>
           <button onClick={() => setStatusPreview(null)} style={{ marginLeft: "auto", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: "1.1rem" }}>✕</button>
         </div>
-        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 18, objectFit: "contain" }} /> : null}
+        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const fixed = await resolveStatusImageUrl(auth.token, statusPreview.image_url); if (fixed && fixed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = fixed; setStatusPreview(prev => prev ? { ...prev, image_url: fixed } : prev); } }} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 18, objectFit: "contain" }} /> : null}
       </div>
     )}
     {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
