@@ -5834,7 +5834,11 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef2 = useRef<HTMLImageElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const SIZE = 280;
+
+  // Format portrait pensé pour la 3e vue plein écran.
+  // L’utilisateur charge une seule photo, mais on lui fait cadrer le visage dans un format vertical propre.
+  const CROP_W = 252;
+  const CROP_H = 448; // ratio 9:16
 
   // Tout l'état de transform dans des refs pour éviter les re-renders pendant le drag/pinch
   const stateRef = useRef({ scale: 1, minScale: 1, offset: { x: 0, y: 0 } });
@@ -5854,8 +5858,15 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   useEffect(() => {
     const img = new Image();
     img.onload = () => {
-      const s = Math.max(SIZE / img.width, SIZE / img.height);
-      stateRef.current = { scale: s, minScale: s, offset: { x: (SIZE - img.width * s) / 2, y: (SIZE - img.height * s) / 2 } };
+      const s = Math.max(CROP_W / img.width, CROP_H / img.height);
+      stateRef.current = {
+        scale: s,
+        minScale: s,
+        offset: {
+          x: (CROP_W - img.width * s) / 2,
+          y: (CROP_H - img.height * s) / 2,
+        }
+      };
       setScaleUI(s);
       draw();
     };
@@ -5867,20 +5878,14 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
     const ctx = canvas.getContext("2d"); if (!ctx) return;
     const img = imgRef2.current; if (!img || !img.complete) return;
     const { scale, offset } = stateRef.current;
-    ctx.clearRect(0, 0, SIZE, SIZE);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
-    ctx.clip();
+    ctx.clearRect(0, 0, CROP_W, CROP_H);
     ctx.drawImage(img, offset.x, offset.y, img.naturalWidth * scale, img.naturalHeight * scale);
-    ctx.restore();
   };
 
   // ── Zoom centré sur un point (pinch mid ou centre) ──
   const applyZoom = (newScale: number, pivotX: number, pivotY: number) => {
     const { scale: oldScale, minScale, offset } = stateRef.current;
     const clamped = Math.min(Math.max(newScale, minScale), minScale * 4);
-    // Zoom centré sur le pivot : on translate pour garder le point sous les doigts
     const ratio = clamped / oldScale;
     const newOffsetX = pivotX - (pivotX - offset.x) * ratio;
     const newOffsetY = pivotY - (pivotY - offset.y) * ratio;
@@ -5897,14 +5902,12 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
     const onTouchStart = (e: TouchEvent) => {
       e.preventDefault();
       if (e.touches.length === 1) {
-        // Drag simple
         pinchingRef.current = false;
         draggingRef.current = true;
         setDragging(true);
         const t = e.touches[0];
         dragStartRef.current = { x: t.clientX - stateRef.current.offset.x, y: t.clientY - stateRef.current.offset.y };
       } else if (e.touches.length === 2) {
-        // Pinch
         draggingRef.current = false;
         pinchingRef.current = true;
         const t0 = e.touches[0]; const t1 = e.touches[1];
@@ -5945,7 +5948,6 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
         pinchingRef.current = false;
         setDragging(false);
       } else if (e.touches.length === 1) {
-        // Passage de pinch → drag : réinitialise l'ancre drag
         pinchingRef.current = false;
         draggingRef.current = true;
         const t = e.touches[0];
@@ -5991,67 +5993,58 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   // ── Slider ──
   const onSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newScale = parseFloat(e.target.value);
-    applyZoom(newScale, SIZE / 2, SIZE / 2);
+    applyZoom(newScale, CROP_W / 2, CROP_H / 2);
   };
 
-  // ── Export ──
+  // ── Export portrait haute qualité ──
   const handleConfirm = () => {
     const img = imgRef2.current; if (!img || !img.complete) return;
-    const EXPORT_SIZE = 1200;
-    const ratio = EXPORT_SIZE / SIZE;
+    const EXPORT_W = 1080;
+    const EXPORT_H = 1920;
+    const ratio = EXPORT_W / CROP_W;
     const { scale, offset } = stateRef.current;
     const exportCanvas = document.createElement("canvas");
-    exportCanvas.width = EXPORT_SIZE;
-    exportCanvas.height = EXPORT_SIZE;
+    exportCanvas.width = EXPORT_W;
+    exportCanvas.height = EXPORT_H;
     const ctx = exportCanvas.getContext("2d"); if (!ctx) return;
     ctx.drawImage(img, offset.x * ratio, offset.y * ratio, img.naturalWidth * scale * ratio, img.naturalHeight * scale * ratio);
-    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.95);
+    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.92);
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ background: G.blanc, borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
+      <div style={{ background: G.blanc, borderRadius: 24, padding: "18px 18px", width: "100%", maxWidth: 340, maxHeight: "92vh", overflowY: "auto", textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
-        <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Pince pour zoomer</div>
-        <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
+        <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14 }}>Glisse pour placer ton visage · Pince pour zoomer</div>
+        <div ref={canvasContainerRef} style={{ position: "relative", width: CROP_W, height: CROP_H, margin: "0 auto 14px", borderRadius: 20, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none", boxShadow: "0 8px 22px rgba(0,0,0,0.18)" }}
           onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onWheel={onWheel}
         >
           <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
-          <canvas ref={canvasRef} width={SIZE} height={SIZE} style={{ display: "block" }} />
-          {/* Overlay : rectangle carte + grille des tiers + cercle avatar */}
-          <svg style={{ position: "absolute", inset: 0, pointerEvents: "none", width: "100%", height: "100%" }} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-            {(() => {
-              const rW = SIZE;
-              const rH = Math.round(SIZE * (270 / 358));
-              const rX = 0;
-              const rY = Math.round((SIZE - rH) / 2);
-              return <>
-                <rect x={0} y={0} width={SIZE} height={rY} fill="rgba(0,0,0,0.35)" />
-                <rect x={0} y={rY + rH} width={SIZE} height={SIZE - rY - rH} fill="rgba(0,0,0,0.35)" />
-                <rect x={rX} y={rY} width={rW} height={rH} fill="none" stroke={G.or} strokeWidth="2" strokeDasharray="6 3" />
-                <line x1={rW/3} y1={rY} x2={rW/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
-                <line x1={rW*2/3} y1={rY} x2={rW*2/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
-                <line x1={0} y1={rY+rH/3} x2={rW} y2={rY+rH/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
-                <line x1={0} y1={rY+rH*2/3} x2={rW} y2={rY+rH*2/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
-                <circle cx={SIZE/2} cy={SIZE/2} r={SIZE*0.28} fill="none" stroke="white" strokeWidth="1.5" strokeDasharray="4 3" />
-              </>;
-            })()}
+          <canvas ref={canvasRef} width={CROP_W} height={CROP_H} style={{ display: "block" }} />
+          {/* Overlay : grille portrait + cercle indicatif avatar */}
+          <svg style={{ position: "absolute", inset: 0, pointerEvents: "none", width: "100%", height: "100%" }} viewBox={`0 0 ${CROP_W} ${CROP_H}`}>
+            <rect x="1" y="1" width={CROP_W - 2} height={CROP_H - 2} fill="none" stroke={G.or} strokeWidth="2" strokeDasharray="6 3" />
+            <line x1={CROP_W/3} y1="0" x2={CROP_W/3} y2={CROP_H} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
+            <line x1={CROP_W*2/3} y1="0" x2={CROP_W*2/3} y2={CROP_H} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
+            <line x1="0" y1={CROP_H/3} x2={CROP_W} y2={CROP_H/3} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
+            <line x1="0" y1={CROP_H*2/3} x2={CROP_W} y2={CROP_H*2/3} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
+            <circle cx={CROP_W/2} cy={CROP_H*0.30} r={CROP_W*0.28} fill="none" stroke="white" strokeWidth="1.6" strokeDasharray="4 3" />
           </svg>
         </div>
         {/* Légende */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 14, marginTop: 8 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 14, marginBottom: 12, marginTop: 4, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
-            <svg width="14" height="9" viewBox="0 0 14 9"><rect x="1" y="1" width="12" height="7" fill="none" stroke={G.or} strokeWidth="1.5" strokeDasharray="3 1.5"/></svg>
-            Zone carte
+            <svg width="10" height="16" viewBox="0 0 10 16"><rect x="1" y="1" width="8" height="14" fill="none" stroke={G.or} strokeWidth="1.5" strokeDasharray="3 1.5"/></svg>
+            Vue plein écran
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
             <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#555" strokeWidth="1.5" strokeDasharray="3 2"/></svg>
-            Avatar rond
+            Visage/avatar
           </div>
         </div>
         <input type="range" min={stateRef.current.minScale} max={stateRef.current.minScale * 4} step={0.01} value={scale}
           onChange={onSliderChange}
-          style={{ width: "100%", marginBottom: 18, accentColor: G.rouge }}
+          style={{ width: "100%", marginBottom: 16, accentColor: G.rouge }}
         />
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={onCancel} style={{ flex: 1 }}>Annuler</Btn>
