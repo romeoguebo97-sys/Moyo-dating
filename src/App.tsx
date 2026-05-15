@@ -3058,9 +3058,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
         next = c + 1 >= profiles.length ? 0 : c + 1;
         // Toast discret une seule fois au wrap vers 0
         if (c + 1 >= profiles.length) {
-          if (wrapToastTimer.current) clearTimeout(wrapToastTimer.current);
-          setWrapToast(true);
-          wrapToastTimer.current = setTimeout(() => setWrapToast(false), 2200);
+          // Boucle silencieuse : aucun message “On repart du début”.
         }
       } else {
         next = c - 1 < 0 ? profiles.length - 1 : c - 1;
@@ -3314,20 +3312,14 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   )}
   <div style={{ minHeight: 88, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 4 }}>
   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap", overflow: "hidden", minHeight: 24 }}>
-    <span style={{ background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.gender === "Femme" ? "Femme" : "Homme"}</span>
-    <span style={{ background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.72rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 70 }}>{p.city || ""}</span>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      {p.religion ? <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-block", maxWidth: "100%" }}>{p.religion}</span> : <div style={{ height: 22 }} />}
-    </div>
+    {p.gender && <span style={{ background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 10px", fontSize: "0.72rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0 }}>{p.gender === "Femme" ? "Femme" : "Homme"}</span>}
+    {p.city && p.city.trim() && <span style={{ background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.72rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 1, minWidth: 0, maxWidth: 130 }}>{p.city.trim()}</span>}
+    {p.religion && p.religion.trim() && <span style={{ background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-block", flexShrink: 1, minWidth: 0, maxWidth: 160 }}>{p.religion.trim()}</span>}
   </div>
 
   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap", overflow: "hidden", minHeight: 24 }}>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      {p.profession && p.profession.trim() ? <span style={{ background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", maxWidth: "100%" }}>{p.profession.trim()}</span> : <div style={{ height: 22 }} />}
-    </div>
-    <div style={{ flex: 1, minWidth: 0, display: "flex", justifyContent: "flex-start" }}>
-      {p.hobbies && p.hobbies.trim() ? <span style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", maxWidth: "100%" }}>{p.hobbies.trim()}</span> : <div style={{ height: 22 }} />}
-    </div>
+    {p.profession && p.profession.trim() && <span style={{ background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", flexShrink: 1, minWidth: 0, maxWidth: "48%" }}>{p.profession.trim()}</span>}
+    {p.hobbies && p.hobbies.trim() && <span style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", flexShrink: 1, minWidth: 0, maxWidth: "48%" }}>{p.hobbies.trim()}</span>}
   </div>
 
   <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 2, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", minHeight: "1.23rem" }}>{p.bio || ""}</p>
