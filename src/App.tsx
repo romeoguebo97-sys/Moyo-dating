@@ -135,10 +135,14 @@ const createStatusSignedUrl = async (token: string, path: string, expiresIn = 86
 
 const resolveStatusImageUrl = async (token: string, url?: string | null): Promise<string | null> => {
   if (!url) return null;
+  if (url.startsWith("data:") || url.startsWith("blob:")) return url;
   const path = getStatusStoragePath(url);
   if (!path) return url;
-  const signed = await createStatusSignedUrl(token, path);
-  return signed || url;
+  const cleanPath = path.replace(/^statuses\//, "").replace(/^\//, "");
+  const encodedPath = cleanPath.split("/").map(encodeURIComponent).join("/");
+  const signed = await createStatusSignedUrl(token, cleanPath);
+  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/statuses/${encodedPath}?v=${Date.now()}`;
+  return signed || publicUrl;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3226,7 +3230,20 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
 
   return <div style={{ padding: "4px 16px 8px" }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}><h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Découvrir</h2><div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>{!auth.isPremium && <div onClick={() => onShowPremium("")} style={{ background: "rgba(212,168,67,0.12)", border: `1px solid ${G.or}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", color: "#555" }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}</div>}<div onClick={() => setViewMode("card")} style={{ background: viewMode === "card" ? G.rouge : G.blanc, color: viewMode === "card" ? G.blanc : "#111", border: `2px solid ${viewMode === "card" ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>Carte</div><div onClick={() => setViewMode("full")} style={{ background: viewMode === "full" ? G.rouge : G.blanc, color: viewMode === "full" ? G.blanc : "#111", border: `2px solid ${viewMode === "full" ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>Plein écran</div><div onClick={() => setViewMode("list")} style={{ background: viewMode === "list" ? G.rouge : G.blanc, color: viewMode === "list" ? G.blanc : "#111", border: `2px solid ${viewMode === "list" ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>Liste</div><div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>Filtres</div></div></div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10, width: "100%" }}>
+      <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, flexShrink: 0 }}>Découvrir</h2>
+      <div style={{ display: "flex", gap: 5, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
+        <div onClick={() => setViewMode(viewMode === "list" ? "card" : "list")} style={{ background: viewMode === "list" ? G.rouge : G.blanc, color: viewMode === "list" ? G.blanc : "#111", border: `2px solid ${viewMode === "list" ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+          {viewMode === "list" ? "Carte" : "Liste"}
+        </div>
+        <div onClick={() => setViewMode("full")} style={{ background: viewMode === "full" ? G.rouge : G.blanc, color: viewMode === "full" ? G.blanc : "#111", border: `2px solid ${viewMode === "full" ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+          Plein écran
+        </div>
+        <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+          Filtres
+        </div>
+      </div>
+    </div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
   <select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
     <option value="">Toutes les villes</option>
     {VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}
@@ -4980,9 +4997,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         body: file,
       });
       if (!uploadRes.ok) throw new Error("upload_failed");
-      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/statuses/${path}?v=${Date.now()}`;
-      const signedUrl = await createStatusSignedUrl(auth.token, path);
-      const image_url = signedUrl || publicUrl;
+      // On stocke le chemin brut en base. L'URL signée/publique est régénérée à l'affichage,
+      // ce qui évite les liens expirés ou mal formés dans Supabase Storage.
+      const image_url = path;
       const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       await sb.insert<StatusPost>(auth.token, "statuses", { user_id: auth.userId, image_url, text: null, expires_at });
       setShowStatusComposer(false);
