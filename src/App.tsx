@@ -93,7 +93,7 @@ type Auth = {
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; last_seen?: string; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
-type StatusPost = { id?: string; user_id: string; image_url?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
+type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; text?: string | null; caption?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
 const STATUS_BUCKETS = ["statuses", "status"] as const;
@@ -5007,7 +5007,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       const now = new Date().toISOString();
 
       const mineRaw = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
-      const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, profile: { id: auth.userId, name: auth.name, age: 0, city: "", gender: "", bio: "", photo_url: null, is_premium: auth.isPremium }, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
+      const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, profile: { id: auth.userId, name: auth.name, age: 0, city: "", gender: "", bio: "", photo_url: null, is_premium: auth.isPremium }, image_url: await resolveStatusImageUrl(auth.token, st.image_url || st.image_path) })));
       setMyStatuses(mine);
 
       if (!partnerIds.length) { setStatuses([]); return; }
@@ -5016,7 +5016,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       const enriched = await Promise.all((Array.isArray(rows) ? rows : [])
         .map(st => ({ ...st, profile: byPartner.get(st.user_id) }))
         .filter(st => st.profile)
-        .map(async st => ({ ...st, image_url: await resolveStatusImageUrl(auth.token, st.image_url) }))
+        .map(async st => ({ ...st, image_url: await resolveStatusImageUrl(auth.token, st.image_url || st.image_path) }))
       );
       setStatuses(enriched);
     } catch {
@@ -5031,26 +5031,62 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     const hasRealMatch = convs.some(c => c.id !== "__support__" && c.partner?.id);
     if (!hasRealMatch) { setToast({ msg: "Tu dois avoir au moins un match pour publier un statut.", type: "error" }); return; }
     if (myStatuses.length >= STATUS_LIMIT) { setToast({ msg: `Tu peux publier ${STATUS_LIMIT} statuts maximum sur 24h.`, type: "error" }); return; }
+    if (!auth.userId || !auth.token) { setToast({ msg: "Session invalide. Reconnecte-toi puis réessaie.", type: "error" }); return; }
+
     setStatusUploading(true);
     try {
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `${auth.userId}/${Date.now()}.${ext}`;
-      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/statuses/${path}`, {
+      const extFromMime = file.type?.includes("png") ? "png" : file.type?.includes("webp") ? "webp" : file.type?.includes("gif") ? "gif" : "jpg";
+      const ext = ((file.name.split(".").pop() || extFromMime).toLowerCase().replace(/[^a-z0-9]/g, "") || extFromMime);
+      const safeName = `status-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const image_path = `${auth.userId}/${safeName}`;
+      const encodedPath = image_path.split("/").map(encodeURIComponent).join("/");
+
+      // 1) Upload réel dans Supabase Storage / bucket statuses
+      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/statuses/${encodedPath}`, {
         method: "POST",
-        headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
+        headers: {
+          "Authorization": `Bearer ${auth.token}`,
+          "apikey": SUPABASE_KEY,
+          "Content-Type": file.type || "image/jpeg",
+          "Cache-Control": "3600",
+          "x-upsert": "true",
+        },
         body: file,
       });
-      if (!uploadRes.ok) throw new Error("upload_failed");
-      // On stocke le chemin brut en base. L'URL signée/publique est régénérée à l'affichage,
-      // ce qui évite les liens expirés ou mal formés dans Supabase Storage.
-      const image_url = path;
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text().catch(() => "");
+        console.error("[Moyo][Status] Upload Storage échoué", uploadRes.status, errText);
+        throw new Error(`storage_upload_failed_${uploadRes.status}`);
+      }
+
+      // 2) Insertion explicite dans public.statuses
+      // On enregistre le chemin + l'URL publique pour que l'affichage fonctionne même après refresh.
+      const image_url = buildStatusPublicUrl(image_path, "statuses");
       const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      await sb.insert<StatusPost>(auth.token, "statuses", { user_id: auth.userId, image_url, text: null, expires_at });
+      const insertPayload = { user_id: auth.userId, image_url, image_path, caption: null, text: null, expires_at };
+      const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/statuses`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify(insertPayload),
+      });
+      const inserted = await insertRes.json().catch(() => null);
+      if (!insertRes.ok) {
+        console.error("[Moyo][Status] Insert table statuses échoué", insertRes.status, inserted);
+        throw new Error(`status_insert_failed_${insertRes.status}`);
+      }
+      console.log("[Moyo][Status] Statut publié", inserted);
+
       setShowStatusComposer(false);
       setToast({ msg: "Statut publié pour 24h.", type: "success" });
       await loadStatuses(convs);
-    } catch {
-      setToast({ msg: "Impossible de publier le statut. Vérifie la table/bucket statuses.", type: "error" });
+    } catch (e) {
+      console.error("[Moyo][Status] Publication impossible", e);
+      setToast({ msg: "Impossible de publier le statut. Vérifie Storage/Table statuses ou reconnecte-toi.", type: "error" });
     } finally {
       setStatusUploading(false);
       if (statusInputRef.current) statusInputRef.current.value = "";
