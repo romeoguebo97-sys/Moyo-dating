@@ -133,16 +133,26 @@ const createStatusSignedUrl = async (token: string, path: string, expiresIn = 86
   }
 };
 
+const buildStatusPublicUrl = (path: string): string => {
+  const cleanPath = path.replace(/^statuses\//, "").replace(/^\//, "");
+  const encodedPath = cleanPath.split("/").map(encodeURIComponent).join("/");
+  return `${SUPABASE_URL}/storage/v1/object/public/statuses/${encodedPath}?v=${Date.now()}`;
+};
+
 const resolveStatusImageUrl = async (token: string, url?: string | null): Promise<string | null> => {
   if (!url) return null;
   if (url.startsWith("data:") || url.startsWith("blob:")) return url;
   const path = getStatusStoragePath(url);
   if (!path) return url;
-  const cleanPath = path.replace(/^statuses\//, "").replace(/^\//, "");
-  const encodedPath = cleanPath.split("/").map(encodeURIComponent).join("/");
-  const signed = await createStatusSignedUrl(token, cleanPath);
-  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/statuses/${encodedPath}?v=${Date.now()}`;
-  return signed || publicUrl;
+  // Pour éviter les liens signés expirés ou mal recopiés, on privilégie une URL publique stable.
+  // Si le bucket est privé, le onError de l'image tentera ensuite une URL signée.
+  return buildStatusPublicUrl(path);
+};
+
+const getStatusSignedFallbackUrl = async (token: string, url?: string | null): Promise<string | null> => {
+  const path = getStatusStoragePath(url);
+  if (!path) return null;
+  return createStatusSignedUrl(token, path);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3226,20 +3236,21 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   };
 
   const p = profiles[current];
+  const fullscreenProfiles = profiles.length ? [...profiles, ...profiles, ...profiles] : [];
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
 
-  return <div style={{ padding: "4px 16px 8px" }}>
+  return <div style={{ padding: "14px 16px 8px" }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10, width: "100%" }}>
-      <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, flexShrink: 0 }}>Découvrir</h2>
-      <div style={{ display: "flex", gap: 5, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
-        <div onClick={() => setViewMode(viewMode === "list" ? "card" : "list")} style={{ background: viewMode === "list" ? G.rouge : G.blanc, color: viewMode === "list" ? G.blanc : "#111", border: `2px solid ${viewMode === "list" ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
+      <h2 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, flexShrink: 0 }}>Découvrir</h2>
+      <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
+        <div onClick={() => setViewMode(viewMode === "list" ? "card" : "list")} style={{ background: viewMode === "list" ? G.rouge : G.blanc, color: viewMode === "list" ? G.blanc : "#111", border: `2px solid ${viewMode === "list" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           {viewMode === "list" ? "Carte" : "Liste"}
         </div>
-        <div onClick={() => setViewMode("full")} style={{ background: viewMode === "full" ? G.rouge : G.blanc, color: viewMode === "full" ? G.blanc : "#111", border: `2px solid ${viewMode === "full" ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+        <div onClick={() => setViewMode("full")} style={{ background: viewMode === "full" ? G.rouge : G.blanc, color: viewMode === "full" ? G.blanc : "#111", border: `2px solid ${viewMode === "full" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           Plein écran
         </div>
-        <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "4px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+        <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           Filtres
         </div>
       </div>
@@ -3272,12 +3283,13 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     if (filters.ageMin && filters.ageMax && min > max) return;
     setPage(0); loadProfiles(0); setShowFilters(false);
   }} style={{ width: "100%" }}>Appliquer</Btn>
-</div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>Actualiser</Btn></div> : viewMode === "full" ? <div style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 132px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch" }}>
+</div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>Actualiser</Btn></div> : viewMode === "full" ? <div className="no-invert moyo-fullscreen-view" style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 146px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5" }}>
+  <style>{`.moyo-fullscreen-view img{filter:none!important}`}</style>
   <div style={{ position: "sticky", top: 8, zIndex: 20, display: "flex", justifyContent: "flex-end", marginBottom: 8, pointerEvents: "none" }}>
-    <button onClick={() => setViewMode("card")} style={{ pointerEvents: "auto", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, fontSize: "1.1rem", fontWeight: 800, backdropFilter: "blur(8px)", boxShadow: "0 8px 24px rgba(0,0,0,0.25)", cursor: "pointer" }}>✕</button>
+    <button onClick={() => setViewMode("card")} style={{ pointerEvents: "auto", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, fontSize: "1.05rem", fontWeight: 800, backdropFilter: "blur(8px)", boxShadow: "0 8px 24px rgba(0,0,0,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}>✕</button>
   </div>
-  {profiles.map((prof, idx) => (
-    <div key={prof.id} style={{ position: "relative", height: "calc(100dvh - 155px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 16, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start" }}>
+  {fullscreenProfiles.map((prof, idx) => (
+    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 155px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 16, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start" }}>
       {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)" }} />
       <div style={{ position: "absolute", left: 18, right: 18, bottom: 22, color: G.blanc }}>
@@ -3296,7 +3308,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
         <div style={{ fontSize: "0.86rem", lineHeight: 1.45, opacity: 0.92, textShadow: "0 1px 8px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", minHeight: 38 }}>{prof.bio || ""}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
           <button onClick={() => handleLike(prof)} style={{ width: 58, height: 58, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? G.blanc : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer" }}>{likedIds.has(prof.id) ? "❤️" : "♡"}</button>
-          <button onClick={() => { setCurrent(idx); setShowReport(true); }} style={{ width: 58, height: 58, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.45)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.55rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer", backdropFilter: "blur(8px)" }}>☰</button>
+          <button onClick={() => { setCurrent(idx % profiles.length); setShowReport(true); }} style={{ width: 58, height: 58, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.45)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.55rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer", backdropFilter: "blur(8px)" }}>☰</button>
         </div>
       </div>
     </div>
@@ -4963,7 +4975,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       const now = new Date().toISOString();
 
       const mineRaw = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
-      const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
+      const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, profile: { id: auth.userId, name: auth.name, age: 0, city: "", gender: "", bio: "", photo_url: null, is_premium: auth.isPremium }, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
       setMyStatuses(mine);
 
       if (!partnerIds.length) { setStatuses([]); return; }
@@ -5612,7 +5624,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           <div><div style={{ fontWeight: 800 }}>{statusPreview.profile?.name || "Statut"}</div><div style={{ fontSize: "0.75rem", opacity: 0.8 }}>Statut Moyo</div></div>
           <button onClick={() => setStatusPreview(null)} style={{ marginLeft: "auto", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: "1.1rem" }}>✕</button>
         </div>
-        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const fixed = await resolveStatusImageUrl(auth.token, statusPreview.image_url); if (fixed && fixed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = fixed; setStatusPreview(prev => prev ? { ...prev, image_url: fixed } : prev); } }} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 18, objectFit: "contain" }} /> : null}
+        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 18, objectFit: "contain" }} /> : null}
       </div>
     )}
     {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
