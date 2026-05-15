@@ -599,9 +599,35 @@ function ModerationModal({ type, onClose }: { type: "insult" | "scam" | "sexual"
 
 function VerifiedBadge({ size = 16 }: { size?: number }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#1d9bf0", borderRadius: "50%", width: size, height: size, flexShrink: 0 }}>
+    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#1d9bf0", borderRadius: "50%", width: size, height: size, flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }}>
       <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+  );
+}
+
+
+
+function PremiumBadge({ size = 16 }: { size?: number }) {
+  return (
+    <div
+      aria-label="Profil premium"
+      title="Profil premium"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#D4A843",
+        borderRadius: "50%",
+        width: size,
+        height: size,
+        flexShrink: 0,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+      }}
+    >
+      <svg width={size * 0.58} height={size * 0.58} viewBox="0 0 24 24" fill="#111" stroke="none" aria-hidden="true">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
       </svg>
     </div>
   );
@@ -2644,7 +2670,7 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
         }
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {prof.is_verified && <VerifiedBadge size={15} />}</div>
+        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>} {prof.is_verified && <VerifiedBadge size={15} />}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
           <span style={{ background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{prof.gender === "Femme" ? "Femme" : "Homme"}</span>
           <span style={{ fontSize: "0.78rem", color: "#555" }}>{prof.city}</span>
@@ -3204,7 +3230,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   }}
   style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 8, position: "relative", touchAction: "pan-y" }}><div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "10px 14px" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <svg width="18" height="18" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:4,flexShrink:0}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} {p.is_verified && <VerifiedBadge size={18} />}</div>
+    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={18} /></span>} {p.is_verified && <VerifiedBadge size={18} />}</div>
     {/* 3 traits menu */}
     <div style={{ position: "relative" }}>
       <div onClick={() => setShowReport(v => !v)} style={{ width: 36, height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", padding: 4 }}>
@@ -3262,7 +3288,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
           {viewedProfile.photo_url ? <img src={viewedProfile.photo_url} alt={viewedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
           <div onClick={() => setViewedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{viewedProfile.name}, {viewedProfile.age} ans {viewedProfile.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}{viewedProfile.is_verified && <VerifiedBadge size={14} />}</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{viewedProfile.name}, {viewedProfile.age} ans {viewedProfile.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>}{viewedProfile.is_verified && <VerifiedBadge size={14} />}</div>
             <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{viewedProfile.city}</div>
           </div>
         </div>
@@ -3449,7 +3475,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
               }
               <div onClick={() => setSelectedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
               <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{selectedProfile.name}, {selectedProfile.age} ans {selectedProfile.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}{selectedProfile.is_verified && <VerifiedBadge size={14} />}</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{selectedProfile.name}, {selectedProfile.age} ans {selectedProfile.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>}{selectedProfile.is_verified && <VerifiedBadge size={14} />}</div>
                 <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{selectedProfile.city}</div>
               </div>
             </div>
@@ -4304,7 +4330,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
               <div style={{ position: "absolute", bottom: 14, left: 16 }}>
                 <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
                   {selectedProfile.name}, {selectedProfile.age} ans
-                  {selectedProfile.is_premium && <svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{display:"inline",verticalAlign:"middle",marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
+                  {selectedProfile.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>}
                   {selectedProfile.is_verified && <VerifiedBadge size={14} />}
                 </div>
                 <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{selectedProfile.city}</div>
@@ -6943,7 +6969,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         reporter_id: auth.userId,
         reported_id: supportReply.userId,
         reason: `${SUPPORT_PREFIX_REPLY} ${supportReplyText.trim()}`,
-        status: "pending",
+        // Une réponse admin est déjà traitée côté back-office : elle doit apparaître chez l’utilisateur,
+        // mais ne doit pas revenir comme un nouveau message en attente dans l’onglet Messagerie admin.
+        status: "reviewed",
       });
       if (supportReply.report.id) {
         await updateReportStatus(supportReply.report.id, "reviewed", "Réponse envoyée à l’utilisateur dans sa messagerie.");
@@ -7043,6 +7071,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const ARCHIVED_STATUSES = ["reviewed", "rejected", "banned"];
   const isPending = (r: ReportRow) => !ARCHIVED_STATUSES.includes(r.status);
   const isSupportReport = (r: ReportRow) => isSupportReason(r.reason);
+  const isSupportUserMessage = (r: ReportRow) => !!r.reason?.startsWith(SUPPORT_PREFIX_USER);
+  const isSupportAdminReply = (r: ReportRow) => !!r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
   const isSystemReport = (r: ReportRow) => !isSupportReport(r) && (r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id);
   const isProfileReport = (r: ReportRow) => !isSupportReport(r) && !isSystemReport(r) && !!r.reported_id;
 
@@ -7052,7 +7082,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
     if (!isPending(r)) return false;
     if (reportFilter === "user") return isProfileReport(r);
     if (reportFilter === "system") return isSystemReport(r);
-    if (reportFilter === "messaging") return isSupportReport(r);
+    if (reportFilter === "messaging") return isSupportUserMessage(r);
     return true; // "all" = tous les éléments en attente, toutes catégories confondues
   });
 
@@ -7060,7 +7090,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const pendingCount = reports.filter(isPending).length;
   const profilePendingCount = reports.filter(r => isPending(r) && isProfileReport(r)).length;
   const systemPendingCount = reports.filter(r => isPending(r) && isSystemReport(r)).length;
-  const messagingPendingCount = reports.filter(r => isPending(r) && isSupportReport(r)).length;
+  const messagingPendingCount = reports.filter(r => isPending(r) && isSupportUserMessage(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   const adminBadgeCount = pendingCount + unreadReviewsCount;
   // Sync badge vers App parent
@@ -8065,6 +8095,25 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           Voir profil
                         </button>
                       )}
+                      {isSupport && r.id && (
+                        <button
+                          onClick={() => !alreadyHandled && updateReportStatus(r.id!, "reviewed", "Message archivé.")}
+                          disabled={isLoading || alreadyHandled}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            background: alreadyHandled ? "rgba(108,117,125,0.06)" : "rgba(108,117,125,0.1)",
+                            color: "#6c757d", border: "1px solid rgba(108,117,125,0.25)", borderRadius: 8,
+                            padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                            cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                            opacity: alreadyHandled ? 0.5 : 1,
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+                          </svg>
+                          Archiver
+                        </button>
+                      )}
                       {/* ── Actions communes (alerte système) ── */}
                       {isSystemAlert && (
                         <>
@@ -8626,8 +8675,20 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    setAuth(null); setPage("landing"); setUnreadCount(0); setNotifCount(0); setLikesReceived(0);
+    setAuth(null);
+    setPage("landing");
+    setUnreadCount(0);
+    setNotifCount(0);
+    setLikesReceived(0);
     try { localStorage.removeItem("moyo_session"); } catch {}
+    // Après déconnexion, revenir en haut de la page d'accueil, au niveau du header.
+    setTimeout(() => {
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      } catch {}
+    }, 0);
   };
   useEffect(() => {
     if (!auth) return;
