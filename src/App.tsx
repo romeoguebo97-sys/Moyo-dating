@@ -7042,18 +7042,25 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
   const ARCHIVED_STATUSES = ["reviewed", "rejected", "banned"];
   const isPending = (r: ReportRow) => !ARCHIVED_STATUSES.includes(r.status);
+  const isSupportReport = (r: ReportRow) => isSupportReason(r.reason);
+  const isSystemReport = (r: ReportRow) => !isSupportReport(r) && (r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id);
+  const isProfileReport = (r: ReportRow) => !isSupportReport(r) && !isSystemReport(r) && !!r.reported_id;
 
   const filteredReports = reports.filter(r => {
     if (reportFilter === "archived") return ARCHIVED_STATUSES.includes(r.status);
     // Vues actives : exclure les archivés
     if (!isPending(r)) return false;
-    if (reportFilter === "user") return !r.reason?.startsWith("[AUTO-MOD") && !r.reason?.startsWith("[BOT") && !!r.reported_id;
-    if (reportFilter === "system") return r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id;
-    return true; // "all"
+    if (reportFilter === "user") return isProfileReport(r);
+    if (reportFilter === "system") return isSystemReport(r);
+    if (reportFilter === "messaging") return isSupportReport(r);
+    return true; // "all" = tous les éléments en attente, toutes catégories confondues
   });
 
   const archivedCount = reports.filter(r => ARCHIVED_STATUSES.includes(r.status)).length;
   const pendingCount = reports.filter(isPending).length;
+  const profilePendingCount = reports.filter(r => isPending(r) && isProfileReport(r)).length;
+  const systemPendingCount = reports.filter(r => isPending(r) && isSystemReport(r)).length;
+  const messagingPendingCount = reports.filter(r => isPending(r) && isSupportReport(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   const adminBadgeCount = pendingCount + unreadReviewsCount;
   // Sync badge vers App parent
@@ -7867,7 +7874,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               const isActive = reportFilter === f;
               const isArchived = f === "archived";
               const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : f === "messaging" ? "Messagerie" : "Archivés";
-              const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : null;
+              const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : f === "user" ? profilePendingCount : f === "system" ? systemPendingCount : f === "messaging" ? messagingPendingCount : null;
               return (
                 <div
                   key={f}
@@ -7909,7 +7916,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
                 {reportFilter === "archived"
                   ? `Archivés (${archivedCount})`
-                  : `En attente (${filteredReports.length})`
+                  : reportFilter === "user"
+                    ? `Profils (${filteredReports.length})`
+                    : reportFilter === "system"
+                      ? `Système (${filteredReports.length})`
+                      : reportFilter === "messaging"
+                        ? `Messagerie (${filteredReports.length})`
+                        : `En attente (${filteredReports.length})`
                 }
               </h3>
               {reportFilter === "archived" && archivedCount > 0 && (
@@ -7935,12 +7948,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {filteredReports.map((r, i) => {
                 const cat = classifyReport(r);
                 const statusStyle = reportStatusStyle(r.status);
-                const isSystemAlert = !r.reported_id && !isSupportReason(r.reason);
+                const isSupport = isSupportReport(r);
+                const isSystemAlert = isSystemReport(r);
+                const isProfileAlert = isProfileReport(r);
                 const isLoading = reportActionLoading === r.id;
                 const alreadyHandled = r.status !== "pending";
                 const isArchiveView = reportFilter === "archived";
-                const isSupport = isSupportReason(r.reason);
                 const supportUserId = r.reason?.startsWith(SUPPORT_PREFIX_REPLY) ? r.reported_id : r.reporter_id;
+                const targetProfileId = isSupport ? supportUserId : (r.reported_id || r.reporter_id);
                 return (
                   <div key={r.id || i} style={{ padding: "14px 0", borderBottom: i < filteredReports.length - 1 ? `1px solid ${G.gris}` : "none" }}>
                     {/* Ligne 1 : badges catégorie + statut */}
@@ -7964,12 +7979,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         {r.reporter_id?.slice(0, 12)}…
                       </span>
-                      {r.reported_id
-                        ? <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                            {r.reported_id?.slice(0, 12)}…
-                          </span>
-                        : <span style={{ color: "#ccc" }}>Alerte système</span>
+                      {isSupport
+                        ? <span style={{ color: G.vert }}>Conversation support</span>
+                        : r.reported_id
+                          ? <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                              {r.reported_id?.slice(0, 12)}…
+                            </span>
+                          : <span style={{ color: "#ccc" }}>Alerte système</span>
                       }
                       {r.created_at && (
                         <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -8028,6 +8045,26 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           Répondre
                         </button>
                       )}
+                      {targetProfileId && (
+                        <button
+                          onClick={() => loadReportedProfile(targetProfileId)}
+                          disabled={reportProfileLoading === targetProfileId}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            background: "rgba(52,152,219,0.1)", color: "#2980b9",
+                            border: "1px solid rgba(52,152,219,0.25)", borderRadius: 8,
+                            padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                            cursor: reportProfileLoading === targetProfileId ? "not-allowed" : "pointer",
+                            opacity: reportProfileLoading === targetProfileId ? 0.65 : 1,
+                          }}
+                        >
+                          {reportProfileLoading === targetProfileId
+                            ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                            : <IcoEye size={12} />
+                          }
+                          Voir profil
+                        </button>
+                      )}
                       {/* ── Actions communes (alerte système) ── */}
                       {isSystemAlert && (
                         <>
@@ -8062,27 +8099,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </>
                       )}
 
-                      {/* ── Actions profil (reported_id existe) ── */}
-                      {!isSystemAlert && (
+                      {/* ── Actions profil uniquement (vrais signalements de profil) ── */}
+                      {isProfileAlert && r.reported_id && (
                         <>
-                          {/* Voir profil */}
-                          <button
-                            onClick={() => r.reported_id && loadReportedProfile(r.reported_id)}
-                            disabled={reportProfileLoading === r.reported_id}
-                            style={{
-                              display: "flex", alignItems: "center", gap: 4,
-                              background: "rgba(52,152,219,0.1)", color: "#2980b9",
-                              border: "1px solid rgba(52,152,219,0.25)", borderRadius: 8,
-                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer",
-                            }}
-                          >
-                            {reportProfileLoading === r.reported_id
-                              ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
-                              : <IcoEye size={12} />
-                            }
-                            Voir profil
-                          </button>
-
                           {/* Avertir */}
                           <button
                             onClick={() => {
