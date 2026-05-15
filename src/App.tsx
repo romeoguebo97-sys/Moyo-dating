@@ -4630,19 +4630,6 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   };
 
   const p = selectedMatch?.partner;
-  const statusGroups = Array.from(
-    statuses.reduce((acc, st) => {
-      if (!st.user_id) return acc;
-      const current = acc.get(st.user_id) || [];
-      current.push(st);
-      acc.set(st.user_id, current);
-      return acc;
-    }, new Map<string, StatusPost[]>())
-  ).map(([userId, items]) => ({
-    userId,
-    items: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()),
-    first: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0],
-  })).filter(g => !!g.first);
 
   return <div style={{ padding: "12px 16px 16px" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
