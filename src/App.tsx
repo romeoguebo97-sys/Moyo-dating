@@ -3292,7 +3292,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
 </div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>Actualiser</Btn></div> : viewMode === "full" ? <div className="no-invert moyo-fullscreen-view" style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 146px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important}`}</style>
   <div style={{ position: "sticky", top: 8, zIndex: 20, display: "flex", justifyContent: "flex-end", marginBottom: 8, pointerEvents: "none" }}>
-    <button onClick={() => setViewMode("card")} style={{ pointerEvents: "auto", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, fontSize: "1.05rem", fontWeight: 800, backdropFilter: "blur(8px)", boxShadow: "0 8px 24px rgba(0,0,0,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}>✕</button>
+    <button onClick={() => setViewMode("card")} style={{ pointerEvents: "auto", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, fontSize: "1.05rem", fontWeight: 800, backdropFilter: "blur(8px)", boxShadow: "0 8px 24px rgba(0,0,0,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
   </div>
   {fullscreenProfiles.map((prof, idx) => (
     <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 155px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 16, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start" }}>
@@ -4902,6 +4902,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [statusPreviewList, setStatusPreviewList] = useState<StatusPost[]>([]);
   const [statusPreviewIndex, setStatusPreviewIndex] = useState(0);
   const [statusProgress, setStatusProgress] = useState(0);
+  const [statusReplyText, setStatusReplyText] = useState("");
+  const [statusStats, setStatusStats] = useState<Record<string, { views: number; likes: number }>>({});
+  const [statusLikedByMe, setStatusLikedByMe] = useState<Record<string, boolean>>({});
+  const [statusActionLoading, setStatusActionLoading] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -5130,6 +5134,74 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     setStatusPreviewList([]);
     setStatusPreviewIndex(0);
     setStatusProgress(0);
+    setStatusReplyText("");
+  };
+
+  const getMatchWithUser = (userId?: string | null) => {
+    if (!userId) return null;
+    return convs.find(c => c.id !== "__support__" && c.partner?.id === userId) || null;
+  };
+
+  const loadStatusEngagement = async (st?: StatusPost | null) => {
+    if (!st?.id) return;
+    try {
+      const [views, likes, myLike] = await Promise.all([
+        sb.query<any>(auth.token, "status_views", `?status_id=eq.${st.id}&select=id`).catch(() => []),
+        sb.query<any>(auth.token, "status_likes", `?status_id=eq.${st.id}&select=id,user_id`).catch(() => []),
+        sb.query<any>(auth.token, "status_likes", `?status_id=eq.${st.id}&user_id=eq.${auth.userId}&select=id&limit=1`).catch(() => []),
+      ]);
+      setStatusStats(prev => ({ ...prev, [st.id!]: { views: Array.isArray(views) ? views.length : 0, likes: Array.isArray(likes) ? likes.length : 0 } }));
+      setStatusLikedByMe(prev => ({ ...prev, [st.id!]: Array.isArray(myLike) && myLike.length > 0 }));
+    } catch {}
+  };
+
+  const recordStatusView = async (st?: StatusPost | null) => {
+    if (!st?.id || st.user_id === auth.userId) return;
+    const key = `moyo_status_view_${st.id}_${auth.userId}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    try {
+      await sb.insert(auth.token, "status_views", { status_id: st.id, viewer_id: auth.userId, user_id: auth.userId });
+    } catch {}
+  };
+
+  const toggleStatusLike = async (st?: StatusPost | null) => {
+    if (!st?.id || st.user_id === auth.userId || statusActionLoading) return;
+    setStatusActionLoading(true);
+    try {
+      const existing = await sb.query<any>(auth.token, "status_likes", `?status_id=eq.${st.id}&user_id=eq.${auth.userId}&select=id&limit=1`).catch(() => []);
+      if (Array.isArray(existing) && existing[0]?.id) {
+        await sb.delete(auth.token, "status_likes", `?id=eq.${existing[0].id}`);
+        setStatusLikedByMe(prev => ({ ...prev, [st.id!]: false }));
+        setStatusStats(prev => ({ ...prev, [st.id!]: { views: prev[st.id!]?.views || 0, likes: Math.max(0, (prev[st.id!]?.likes || 1) - 1) } }));
+      } else {
+        await sb.insert(auth.token, "status_likes", { status_id: st.id, user_id: auth.userId, owner_id: st.user_id });
+        setStatusLikedByMe(prev => ({ ...prev, [st.id!]: true }));
+        setStatusStats(prev => ({ ...prev, [st.id!]: { views: prev[st.id!]?.views || 0, likes: (prev[st.id!]?.likes || 0) + 1 } }));
+      }
+    } catch {
+      setToast({ msg: "Impossible d’enregistrer le j’aime pour ce statut.", type: "error" });
+    } finally {
+      setStatusActionLoading(false);
+    }
+  };
+
+  const sendStatusReply = async (st?: StatusPost | null) => {
+    const content = statusReplyText.trim();
+    if (!st?.id || st.user_id === auth.userId || !content || statusActionLoading) return;
+    const match = getMatchWithUser(st.user_id);
+    if (!match) { setToast({ msg: "Vous devez avoir un match actif pour répondre à ce statut.", type: "error" }); return; }
+    setStatusActionLoading(true);
+    try {
+      const prefix = `[↩ Statut Moyo : ${st.caption || "Photo"}]\n`;
+      await sb.insert<Message>(auth.token, "messages", { match_id: match.id, sender_id: auth.userId, content: prefix + content, is_read: false });
+      setStatusReplyText("");
+      setToast({ msg: "Réponse envoyée dans la conversation.", type: "success" });
+    } catch {
+      setToast({ msg: "Impossible d’envoyer la réponse au statut.", type: "error" });
+    } finally {
+      setStatusActionLoading(false);
+    }
   };
 
   const goStatusStep = (dir: 1 | -1) => {
@@ -5166,6 +5238,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     }, step);
     return () => clearInterval(timer);
   }, [statusPreview?.id, statusPreviewList.length]);
+
+  useEffect(() => {
+    if (!statusPreview?.id) return;
+    loadStatusEngagement(statusPreview);
+    recordStatusView(statusPreview);
+  }, [statusPreview?.id]);
 
   const loadConvs = async () => {
     setLoading(true);
@@ -5756,7 +5834,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       ))}
     </div>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.72rem", color: "#999", marginBottom: 14 }}>
-      <span>🔒</span><span>Les statuts sont visibles uniquement par vos matchs</span>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Les statuts sont visibles uniquement par vos matchs</span>
     </div>
     {showStatusComposer && (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 650, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowStatusComposer(false)}>
@@ -5790,14 +5868,36 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
               title="Supprimer ce statut"
               style={{ marginLeft: "auto", width: 42, height: 42, borderRadius: "50%", border: "none", background: "rgba(192,57,43,0.92)", color: "#fff", fontSize: "1.15rem", display: "flex", alignItems: "center", justifyContent: "center", cursor: statusDeleting ? "wait" : "pointer", opacity: statusDeleting ? 0.65 : 1 }}
             >
-              {statusDeleting ? "…" : "🗑"}
+              {statusDeleting ? "…" : <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>}
             </button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); closeStatusViewer(); }} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 42, height: 42, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.16)", color: "#fff", fontSize: "1.35rem", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>✕</button>
+          <button onClick={(e) => { e.stopPropagation(); closeStatusViewer(); }} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 42, height: 42, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.16)", color: "#fff", fontSize: "1.35rem", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
         <button aria-label="Statut précédent" onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
         <button aria-label="Statut suivant" onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
-        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
+        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : "68vh", borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
+        {statusPreview.user_id === auth.userId ? (
+          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 28, zIndex: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ borderRadius: 18, padding: "12px 14px", background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", display: "flex", alignItems: "center", gap: 10 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              <div><div style={{ fontSize: "0.72rem", opacity: 0.75 }}>Vues</div><div style={{ fontWeight: 900 }}>{statusStats[statusPreview.id || ""]?.views || 0}</div></div>
+            </div>
+            <div style={{ borderRadius: 18, padding: "12px 14px", background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", display: "flex", alignItems: "center", gap: 10 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <div><div style={{ fontSize: "0.72rem", opacity: 0.75 }}>J’aime</div><div style={{ fontWeight: 900 }}>{statusStats[statusPreview.id || ""]?.likes || 0}</div></div>
+            </div>
+          </div>
+        ) : (
+          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 26, zIndex: 5, display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={() => toggleStatusLike(statusPreview)} disabled={statusActionLoading} aria-label="Aimer ce statut" style={{ height: 48, minWidth: 54, borderRadius: 999, border: "1px solid rgba(255,255,255,0.22)", background: statusLikedByMe[statusPreview.id || ""] ? "rgba(192,57,43,0.92)" : "rgba(255,255,255,0.13)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={statusLikedByMe[statusPreview.id || ""] ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </button>
+            <input value={statusReplyText} onChange={e => setStatusReplyText(e.target.value)} onKeyDown={e => { if (e.key === "Enter") sendStatusReply(statusPreview); }} placeholder="Envoyer un message…" style={{ flex: 1, minWidth: 0, height: 48, borderRadius: 999, border: "1px solid rgba(255,255,255,0.22)", background: "rgba(255,255,255,0.13)", color: "#fff", padding: "0 16px", outline: "none", fontSize: "0.95rem" }} />
+            <button onClick={() => sendStatusReply(statusPreview)} disabled={!statusReplyText.trim() || statusActionLoading} aria-label="Envoyer la réponse" style={{ height: 48, width: 50, borderRadius: "50%", border: "none", background: statusReplyText.trim() ? G.rouge : "rgba(255,255,255,0.12)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: statusReplyText.trim() ? "pointer" : "default" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        )}
       </div>
     )}
     {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
@@ -5834,11 +5934,7 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef2 = useRef<HTMLImageElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-
-  // Format portrait pensé pour la 3e vue plein écran.
-  // L’utilisateur charge une seule photo, mais on lui fait cadrer le visage dans un format vertical propre.
-  const CROP_W = 252;
-  const CROP_H = 448; // ratio 9:16
+  const SIZE = 280;
 
   // Tout l'état de transform dans des refs pour éviter les re-renders pendant le drag/pinch
   const stateRef = useRef({ scale: 1, minScale: 1, offset: { x: 0, y: 0 } });
@@ -5858,15 +5954,8 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   useEffect(() => {
     const img = new Image();
     img.onload = () => {
-      const s = Math.max(CROP_W / img.width, CROP_H / img.height);
-      stateRef.current = {
-        scale: s,
-        minScale: s,
-        offset: {
-          x: (CROP_W - img.width * s) / 2,
-          y: (CROP_H - img.height * s) / 2,
-        }
-      };
+      const s = Math.max(SIZE / img.width, SIZE / img.height);
+      stateRef.current = { scale: s, minScale: s, offset: { x: (SIZE - img.width * s) / 2, y: (SIZE - img.height * s) / 2 } };
       setScaleUI(s);
       draw();
     };
@@ -5878,14 +5967,20 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
     const ctx = canvas.getContext("2d"); if (!ctx) return;
     const img = imgRef2.current; if (!img || !img.complete) return;
     const { scale, offset } = stateRef.current;
-    ctx.clearRect(0, 0, CROP_W, CROP_H);
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
+    ctx.clip();
     ctx.drawImage(img, offset.x, offset.y, img.naturalWidth * scale, img.naturalHeight * scale);
+    ctx.restore();
   };
 
   // ── Zoom centré sur un point (pinch mid ou centre) ──
   const applyZoom = (newScale: number, pivotX: number, pivotY: number) => {
     const { scale: oldScale, minScale, offset } = stateRef.current;
     const clamped = Math.min(Math.max(newScale, minScale), minScale * 4);
+    // Zoom centré sur le pivot : on translate pour garder le point sous les doigts
     const ratio = clamped / oldScale;
     const newOffsetX = pivotX - (pivotX - offset.x) * ratio;
     const newOffsetY = pivotY - (pivotY - offset.y) * ratio;
@@ -5902,12 +5997,14 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
     const onTouchStart = (e: TouchEvent) => {
       e.preventDefault();
       if (e.touches.length === 1) {
+        // Drag simple
         pinchingRef.current = false;
         draggingRef.current = true;
         setDragging(true);
         const t = e.touches[0];
         dragStartRef.current = { x: t.clientX - stateRef.current.offset.x, y: t.clientY - stateRef.current.offset.y };
       } else if (e.touches.length === 2) {
+        // Pinch
         draggingRef.current = false;
         pinchingRef.current = true;
         const t0 = e.touches[0]; const t1 = e.touches[1];
@@ -5948,6 +6045,7 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
         pinchingRef.current = false;
         setDragging(false);
       } else if (e.touches.length === 1) {
+        // Passage de pinch → drag : réinitialise l'ancre drag
         pinchingRef.current = false;
         draggingRef.current = true;
         const t = e.touches[0];
@@ -5993,58 +6091,67 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   // ── Slider ──
   const onSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newScale = parseFloat(e.target.value);
-    applyZoom(newScale, CROP_W / 2, CROP_H / 2);
+    applyZoom(newScale, SIZE / 2, SIZE / 2);
   };
 
-  // ── Export portrait haute qualité ──
+  // ── Export ──
   const handleConfirm = () => {
     const img = imgRef2.current; if (!img || !img.complete) return;
-    const EXPORT_W = 1080;
-    const EXPORT_H = 1920;
-    const ratio = EXPORT_W / CROP_W;
+    const EXPORT_SIZE = 1200;
+    const ratio = EXPORT_SIZE / SIZE;
     const { scale, offset } = stateRef.current;
     const exportCanvas = document.createElement("canvas");
-    exportCanvas.width = EXPORT_W;
-    exportCanvas.height = EXPORT_H;
+    exportCanvas.width = EXPORT_SIZE;
+    exportCanvas.height = EXPORT_SIZE;
     const ctx = exportCanvas.getContext("2d"); if (!ctx) return;
     ctx.drawImage(img, offset.x * ratio, offset.y * ratio, img.naturalWidth * scale * ratio, img.naturalHeight * scale * ratio);
-    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.92);
+    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.95);
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
-      <div style={{ background: G.blanc, borderRadius: 24, padding: "18px 18px", width: "100%", maxWidth: 340, maxHeight: "92vh", overflowY: "auto", textAlign: "center" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: G.blanc, borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
-        <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14 }}>Glisse pour placer ton visage · Pince pour zoomer</div>
-        <div ref={canvasContainerRef} style={{ position: "relative", width: CROP_W, height: CROP_H, margin: "0 auto 14px", borderRadius: 20, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none", boxShadow: "0 8px 22px rgba(0,0,0,0.18)" }}
+        <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Pince pour zoomer</div>
+        <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
           onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onWheel={onWheel}
         >
           <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
-          <canvas ref={canvasRef} width={CROP_W} height={CROP_H} style={{ display: "block" }} />
-          {/* Overlay : grille portrait + cercle indicatif avatar */}
-          <svg style={{ position: "absolute", inset: 0, pointerEvents: "none", width: "100%", height: "100%" }} viewBox={`0 0 ${CROP_W} ${CROP_H}`}>
-            <rect x="1" y="1" width={CROP_W - 2} height={CROP_H - 2} fill="none" stroke={G.or} strokeWidth="2" strokeDasharray="6 3" />
-            <line x1={CROP_W/3} y1="0" x2={CROP_W/3} y2={CROP_H} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
-            <line x1={CROP_W*2/3} y1="0" x2={CROP_W*2/3} y2={CROP_H} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
-            <line x1="0" y1={CROP_H/3} x2={CROP_W} y2={CROP_H/3} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
-            <line x1="0" y1={CROP_H*2/3} x2={CROP_W} y2={CROP_H*2/3} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
-            <circle cx={CROP_W/2} cy={CROP_H*0.30} r={CROP_W*0.28} fill="none" stroke="white" strokeWidth="1.6" strokeDasharray="4 3" />
+          <canvas ref={canvasRef} width={SIZE} height={SIZE} style={{ display: "block" }} />
+          {/* Overlay : rectangle carte + grille des tiers + cercle avatar */}
+          <svg style={{ position: "absolute", inset: 0, pointerEvents: "none", width: "100%", height: "100%" }} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+            {(() => {
+              const rW = SIZE;
+              const rH = Math.round(SIZE * (270 / 358));
+              const rX = 0;
+              const rY = Math.round((SIZE - rH) / 2);
+              return <>
+                <rect x={0} y={0} width={SIZE} height={rY} fill="rgba(0,0,0,0.35)" />
+                <rect x={0} y={rY + rH} width={SIZE} height={SIZE - rY - rH} fill="rgba(0,0,0,0.35)" />
+                <rect x={rX} y={rY} width={rW} height={rH} fill="none" stroke={G.or} strokeWidth="2" strokeDasharray="6 3" />
+                <line x1={rW/3} y1={rY} x2={rW/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1={rW*2/3} y1={rY} x2={rW*2/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1={0} y1={rY+rH/3} x2={rW} y2={rY+rH/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1={0} y1={rY+rH*2/3} x2={rW} y2={rY+rH*2/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <circle cx={SIZE/2} cy={SIZE/2} r={SIZE*0.28} fill="none" stroke="white" strokeWidth="1.5" strokeDasharray="4 3" />
+              </>;
+            })()}
           </svg>
         </div>
         {/* Légende */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 14, marginBottom: 12, marginTop: 4, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 14, marginTop: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
-            <svg width="10" height="16" viewBox="0 0 10 16"><rect x="1" y="1" width="8" height="14" fill="none" stroke={G.or} strokeWidth="1.5" strokeDasharray="3 1.5"/></svg>
-            Vue plein écran
+            <svg width="14" height="9" viewBox="0 0 14 9"><rect x="1" y="1" width="12" height="7" fill="none" stroke={G.or} strokeWidth="1.5" strokeDasharray="3 1.5"/></svg>
+            Zone carte
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
             <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#555" strokeWidth="1.5" strokeDasharray="3 2"/></svg>
-            Visage/avatar
+            Avatar rond
           </div>
         </div>
         <input type="range" min={stateRef.current.minScale} max={stateRef.current.minScale * 4} step={0.01} value={scale}
           onChange={onSliderChange}
-          style={{ width: "100%", marginBottom: 16, accentColor: G.rouge }}
+          style={{ width: "100%", marginBottom: 18, accentColor: G.rouge }}
         />
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={onCancel} style={{ flex: 1 }}>Annuler</Btn>
