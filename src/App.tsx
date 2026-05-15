@@ -361,7 +361,7 @@ const sb = {
         try {
           const msg = JSON.parse(e.data);
           if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") callback();
-        } catch (_e) {}
+        } catch {}
       };
       ws.onerror = () => {};
       return ws;
@@ -1929,7 +1929,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       if (uploadRes.ok) {
         setPhotoUrl(`${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`);
       }
-    } catch (_e) {}
+    } catch {}
     setUploadingPhoto(false);
     setStep(3);
   };
@@ -2323,7 +2323,7 @@ function AdminDesktopPage() {
         const a: Auth = JSON.parse(saved);
         if (a?.token && a?.userId && a?.isAdmin) setAuth(a);
       }
-    } catch (_e) {}
+    } catch {}
     setChecked(true);
   }, []);
 
@@ -3081,7 +3081,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     if (profileId === auth.userId) return;
     try {
       await sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: profileId });
-    } catch (_e) {}
+    } catch {}
   };
 
   const handleLike = async (p: Profile) => {
@@ -3113,7 +3113,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
           // Supprimer les vues mutuelles
           sb.delete(auth.token, "profile_views", `?viewer_id=eq.${auth.userId}&viewed_id=eq.${p.id}`),
         ]);
-      } catch (_e) {}
+      } catch {}
       return;
     }
     if (!auth.isPremium && likesToday >= FREE_LIMITS.likes) { onShowPremium(`Tu as utilisé tes ${FREE_LIMITS.likes} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !`); return; }
@@ -3225,13 +3225,13 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
   </div>
 
-  {/* Zone infos — 4 lignes fixes, hauteur totale figée à 140px */}
-  <div style={{ padding: "10px 14px 10px", height: 140, boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
+  {/* Zone infos — 4 lignes fixes, hauteur totale figée à 136px */}
+  <div style={{ padding: "10px 14px 10px", height: 136, boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
 
     {/* Ligne 1 — Nom, âge, badges premium/vérifié + bouton menu (hauteur 26px) */}
     <div style={{ height: 26, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5, overflow: "hidden", flex: 1, minWidth: 0 }}>
-        <span style={{ fontWeight: 700, fontSize: "1.05rem", color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <span style={{ fontWeight: 700, fontSize: "1.15rem", color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {p.name}, {p.age} ans
         </span>
         {p.is_premium && <svg width="14" height="14" viewBox="0 0 24 24" fill="#D4A843" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
@@ -3244,23 +3244,29 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       </div>
     </div>
 
-    {/* Ligne 2 — genre + ville + religion (hauteur 26px, jamais de retour à la ligne) */}
-    <div style={{ height: 26, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, flexWrap: "nowrap", overflow: "hidden", marginTop: 4 }}>
+    {/* Ligne 2 — Champs info groupe 1 : genre + ville (hauteur 24px) */}
+    <div style={{ height: 24, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, overflow: "hidden", marginTop: 4 }}>
       <span style={{ flexShrink: 0, background: p.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: p.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", fontWeight: 600, whiteSpace: "nowrap" }}>
         {p.gender === "Femme" ? "Femme" : "Homme"}
       </span>
-      {p.city && <span style={{ flexShrink: 1, minWidth: 0, background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>}
-      {p.religion && <span style={{ flexShrink: 1, minWidth: 0, background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.3)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.religion}</span>}
+      {p.city && <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.06)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>}
+      {p.religion && <span style={{ flexShrink: 0, background: "rgba(212,168,67,0.12)", border: `1px solid rgba(212,168,67,0.3)`, borderRadius: 50, padding: "2px 8px", fontSize: "0.7rem", color: "#555", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis" }}>{p.religion}</span>}
     </div>
 
-    {/* Ligne 3 — profession + hobbies (hauteur 26px, toujours présente) */}
-    <div style={{ height: 26, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, flexWrap: "nowrap", overflow: "hidden", marginTop: 4 }}>
-      {p.profession && p.profession.trim() && <span style={{ flexShrink: 1, minWidth: 0, background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profession.trim()}</span>}
-      {p.hobbies && p.hobbies.trim() && <span style={{ flexShrink: 1, minWidth: 0, background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#2a5a3a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.hobbies.trim()}</span>}
+    {/* Ligne 3 — Champs info groupe 2 : profession + hobbies (hauteur 24px) */}
+    <div style={{ height: 24, display: "flex", alignItems: "center", gap: 5, flexShrink: 0, overflow: "hidden", marginTop: 4 }}>
+      {p.profession && p.profession.trim()
+        ? <span style={{ flexShrink: 0, background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#555", fontWeight: 500, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profession.trim()}</span>
+        : <span style={{ height: 20, display: "block" }} />
+      }
+      {p.hobbies && p.hobbies.trim()
+        ? <span style={{ flexShrink: 0, background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 9px", fontSize: "0.7rem", color: "#2a5a3a", fontWeight: 500, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.hobbies.trim()}</span>
+        : null
+      }
     </div>
 
-    {/* Ligne 4 — Bio, une seule ligne, ellipsis si trop long */}
-    <div style={{ flex: 1, minHeight: 22, display: "flex", alignItems: "center", marginTop: 4, overflow: "hidden" }}>
+    {/* Ligne 4 — Bio, une seule ligne, ellipsis si trop long (hauteur restante) */}
+    <div style={{ flex: 1, display: "flex", alignItems: "center", marginTop: 4, overflow: "hidden" }}>
       <p style={{ margin: 0, fontSize: "0.8rem", color: "#666", lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%" }}>
         {p.bio || ""}
       </p>
@@ -3303,7 +3309,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       <div key={idx} style={{ width: isActive ? 23 : 7, height: 7, borderRadius: 99, background: isActive ? G.rouge : "#E0D5CC", transition: "width 0.25s ease, background 0.25s ease" }} />
     );
   })}
-</div></>}{viewedProfile && (
+</div><div style={{ marginTop: 12 }}><PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} /></div></>}{viewedProfile && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
@@ -3388,7 +3394,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
       if (Array.isArray(mutual) && mutual.length > 0) {
         await sb.insert(auth.token, "matches", { user1: auth.userId, user2: p.id });
       }
-    } catch (_e) {}
+    } catch {}
     setLiking(false);
     setSelectedProfile(null);
   };
@@ -3415,7 +3421,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
             setVisitors(Array.isArray(vProfiles) ? vProfiles : []);
           }
         }
-      } catch (_e) {}
+      } catch {}
       setLoading(false);
     };
     load();
@@ -3713,7 +3719,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       const dismissed = await sb.query<{ dismissed_id: string }>(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}&select=dismissed_id`);
       dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
       setDismissedIds(dIds);
-    } catch (_e) {}
+    } catch {}
 
     // 2. Matches actuels (pour croiser)
     let matchedUserIds = new Set<string>();
@@ -3724,7 +3730,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           matchedUserIds.add(m.user1 === auth.userId ? m.user2 : m.user1);
         });
       }
-    } catch (_e) {}
+    } catch {}
 
     // ── LIKES REÇUS ──
     try {
@@ -3759,7 +3765,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           });
           setSentLikesMeta(smeta);
         }
-      } catch (_e) {}
+      } catch {}
     }
 
     // ── VISITEURS (qui m'ont vu) ──
@@ -3781,7 +3787,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           }
         }
       }
-    } catch (_e) {}
+    } catch {}
 
     // ── PROFILS VUS PAR MOI ──
     if (isPrem) {
@@ -3797,7 +3803,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           seenVisited.forEach((date, id) => { pvmeta[id] = { date }; });
           setVisitedMeta(pvmeta);
         }
-      } catch (_e) {}
+      } catch {}
     }
 
     setLoading(false);
@@ -3816,8 +3822,8 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => { loadData(); });
     const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => { loadData(); });
     return () => {
-      try { wsLikes?.close(); } catch (_e) {}
-      try { wsViews?.close(); } catch (_e) {}
+      try { wsLikes?.close(); } catch {}
+      try { wsViews?.close(); } catch {}
     };
   }, []);
 
@@ -3833,7 +3839,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
         headers: { ...sb.h(auth.token), "Prefer": "return=minimal,resolution=ignore-duplicates" },
         body: JSON.stringify({ user_id: auth.userId, dismissed_id: profileId }),
       });
-    } catch (_e) {}
+    } catch {}
     if (onBadgeUpdate) onBadgeUpdate();
   };
 
@@ -3847,7 +3853,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       if (Array.isArray(mutual) && mutual.length > 0) {
         await sb.insert(auth.token, "matches", { user1: auth.userId, user2: p.id });
       }
-    } catch (_e) {}
+    } catch {}
     setLiking(false);
     setSelectedProfile(null);
     loadData();
@@ -3860,7 +3866,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     try {
       await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${p.id}`);
       setSentLikes(prev => prev.filter(s => s.id !== p.id));
-    } catch (_e) {}
+    } catch {}
     setConfirmUnlike(null);
   };
 
@@ -4475,7 +4481,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       try {
         await sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`);
         await sb.delete(auth.token, "matches", `?id=eq.${m.id}`);
-      } catch (_e) {}
+      } catch {}
     } finally {
       setTimeout(() => {
         isUnmatching.current = false;
@@ -4490,7 +4496,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     await handleUnmatch(m);
     // Bloquer la personne
     if (m.partner?.id) {
-      try { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: m.partner.id }); } catch (_e) {}
+      try { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: m.partner.id }); } catch {}
     }
   };
 
@@ -4832,7 +4838,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
       setMsgs(res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)));
     });
-    return () => { try { ws?.close(); } catch (_e) {} };
+    return () => { try { ws?.close(); } catch {} };
   }, [open?.id]);
 
   // Polling dédié toutes les 2s pour détecter les changements de is_read
@@ -4846,7 +4852,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           const hasChange = filtered.some((m, i) => prev[i]?.is_read !== m.is_read || prev[i]?.id !== m.id || prev[i]?.reactions !== m.reactions);
           return hasChange ? filtered : prev;
         });
-      } catch (_e) {}
+      } catch {}
     }, 2000);
     return () => clearInterval(readInterval);
   }, [open?.id]);
@@ -4947,7 +4953,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
         if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
       }
-    } catch (_e) {}
+    } catch {}
     setImgLoading(false);
     e.target.value = "";
   };
@@ -5689,7 +5695,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         setRatingComment(res[0].comment || "");
         setRatingSubmitted(true);
       }
-    } catch (_e) {}
+    } catch {}
   };
 
   const handleSubmitRating = async () => {
@@ -6562,7 +6568,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       } else {
         setReviewsStats({ total: 0, avg: 0 });
       }
-    } catch (_e) {}
+    } catch {}
     setReviewsLoading(false);
   };
 
@@ -8372,7 +8378,7 @@ export default function App() {
       if (!prev) return prev;
       const updated: Auth = { ...prev, token: newToken, refreshToken: newRefreshToken, expiresAt: newExpiresAt };
       authRef.current = updated;
-      try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
+      try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
       console.log("[Moyo][Session] Auth state mis à jour avec le nouveau token");
       return updated;
     });
@@ -8445,7 +8451,7 @@ export default function App() {
                 const newExpiresAt = Date.now() + refreshed.expires_in * 1000;
                 const updated: Auth = { ...a, token: refreshed.access_token, refreshToken: refreshed.refresh_token, expiresAt: newExpiresAt };
                 authRef.current = updated;
-                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
+                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
                 setAuth(updated);
               } else {
                 // Refresh échoué → pas de session utilisable
@@ -8490,7 +8496,7 @@ export default function App() {
                   const updated = { ...a, isPremium: p.is_premium, isAdmin: p.is_admin || false };
                   authRef.current = updated;
                   setAuth(updated);
-                  try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
+                  try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
                 }
               }
             })
@@ -8508,7 +8514,7 @@ export default function App() {
   const handleAuth = (a: Auth) => {
     authRef.current = a;
     setAuth(a); setPage("app"); setTab("discover");
-    try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch (_e) {}
+    try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch {}
     // Demander permission notifications push
     if ('Notification' in window && Notification.permission === 'default') {
       setTimeout(() => {
@@ -8538,7 +8544,7 @@ export default function App() {
           const w = data[0];
           setPendingWarning({ id: w.id, warning_number: w.warning_number, reason: w.reason });
         }
-      } catch (_e) {}
+      } catch {}
     };
     checkWarnings();
   }, [auth?.userId]);
@@ -8556,13 +8562,13 @@ export default function App() {
         },
         body: JSON.stringify({ acknowledged: true, acknowledged_at: new Date().toISOString() }),
       });
-    } catch (_e) {}
+    } catch {}
     setPendingWarning(null);
   };
 
   const handleLogout = () => {
     setAuth(null); setPage("landing"); setUnreadCount(0); setNotifCount(0); setLikesReceived(0);
-    try { localStorage.removeItem("moyo_session"); } catch (_e) {}
+    try { localStorage.removeItem("moyo_session"); } catch {}
   };
   useEffect(() => {
     if (!auth) return;
@@ -8599,7 +8605,7 @@ export default function App() {
           const updated = { ...auth, isPremium: p.is_premium, isAdmin: p.is_admin || false };
           authRef.current = updated;
           setAuth(updated);
-          try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
+          try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
         }
         return true;
       } catch (e) {
@@ -8647,7 +8653,7 @@ export default function App() {
                 const updated = { ...cur, isPremium: p.is_premium, isAdmin: p.is_admin || false };
                 authRef.current = updated;
                 setAuth(updated);
-                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch (_e) {}
+                try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
               }
             }
           })
@@ -8686,7 +8692,7 @@ export default function App() {
           xhr.setRequestHeader("apikey", SUPABASE_KEY);
           xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
           xhr.send(body);
-        } catch (_e) {}
+        } catch {}
       }
     };
 
@@ -8719,7 +8725,7 @@ export default function App() {
       try {
         const dismissed = await sb.query<{ dismissed_id: string }>(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}&select=dismissed_id`);
         dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
-      } catch (_e) {}
+      } catch {}
       try {
         const [likes, views] = await Promise.all([
           sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`),
@@ -8729,7 +8735,7 @@ export default function App() {
         const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
         setLikesReceived(likesCount);
         setViewsReceived(viewsCount);
-      } catch (_e) {}
+      } catch {}
     };
     loadLikesReceived();
     refreshBadgesRef.current = loadLikesReceived;
@@ -8770,7 +8776,7 @@ export default function App() {
           }
           return count;
         });
-      } catch (_e) {}
+      } catch {}
     };
     checkUnread();
 
@@ -8784,7 +8790,7 @@ export default function App() {
         ]);
         const parseCount = (r: Response) => { const h = r.headers.get("content-range"); return h ? parseInt(h.split("/")[1]) || 0 : 0; };
         setAdminBadgeCount(parseCount(rPending) + parseCount(rUnreadReviews));
-      } catch (_e) {}
+      } catch {}
     };
     checkAdminBadge();
     const adminBadgeInterval = setInterval(checkAdminBadge, 1500);
@@ -8824,11 +8830,11 @@ export default function App() {
     }, 3000);
 
     return () => {
-      try { wsMessages?.close(); } catch (_e) {}
-      try { wsLikes?.close(); } catch (_e) {}
-      try { wsMatches?.close(); } catch (_e) {}
-      try { wsMatches2?.close(); } catch (_e) {}
-      try { wsViews?.close(); } catch (_e) {}
+      try { wsMessages?.close(); } catch {}
+      try { wsLikes?.close(); } catch {}
+      try { wsMatches?.close(); } catch {}
+      try { wsMatches2?.close(); } catch {}
+      try { wsViews?.close(); } catch {}
       clearInterval(fallbackInterval);
       clearInterval(adminBadgeInterval);
       clearInterval(lastSeenInterval);
