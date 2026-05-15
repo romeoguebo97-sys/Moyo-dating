@@ -961,7 +961,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Puis-je voir le profil de quelqu'un depuis les messages ?", desc: "Oui. Dans une conversation, appuyez sur la photo de profil de votre match en haut de l'écran pour voir sa fiche complète." },
       { icon: "Q", titre: "Comment répondre à un message précis ?", desc: "Appuyez longuement sur le message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler la réponse." },
       { icon: "Q", titre: "Comment supprimer un message ?", desc: "Appuyez longuement sur le message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté, sans affecter l'autre personne)." },
-      { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Elle détaille le motif. Vous devez cliquer \"OK, j'ai compris\" pour continuer à utiliser l'application. Plusieurs avertissements peuvent entraîner la suspension du compte." },
+      { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Elle détaille le motif. Vous devez cliquer \"OK, j\'ai compris\" pour continuer à utiliser l'application. Plusieurs avertissements peuvent entraîner la suspension du compte." },
     ]},
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
       { icon: "shield", titre: "Données sécurisées", desc: "Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers." },
@@ -2247,7 +2247,7 @@ const BOT_FAQ = [
   { q: ["annuler", "unmatch", "fin"], r: "Dans Matchs → 3 traits → Annuler le match. La conversation et les messages sont supprimés. L'autre personne n'est pas notifiée." },
   { q: ["répondre", "citer", "reply", "bandeau", "réponse message"], r: "Appuyez longuement sur un message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
   { q: ["supprimer message", "effacer message", "pour moi", "pour tous"], r: "Appuyez longuement sur un message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté)." },
-  { q: ["avertissement", "sanction", "notification officielle", "banni", "suspension"], r: "Un avertissement est une notification officielle MOYO qui apparaît à votre connexion. Vous devez cliquer \"OK, j'ai compris\" pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
+  { q: ["avertissement", "sanction", "notification officielle", "banni", "suspension"], r: "Un avertissement est une notification officielle MOYO qui apparaît à votre connexion. Vous devez cliquer \"OK, j\'ai compris\" pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
 ];
 
 function getBotResponse(input: string): string {
@@ -4899,6 +4899,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [statusUploading, setStatusUploading] = useState(false);
   const [statusDeleting, setStatusDeleting] = useState(false);
   const [statusPreview, setStatusPreview] = useState<StatusPost | null>(null);
+  const [statusPreviewList, setStatusPreviewList] = useState<StatusPost[]>([]);
+  const [statusPreviewIndex, setStatusPreviewIndex] = useState(0);
+  const [statusProgress, setStatusProgress] = useState(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -5008,7 +5011,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       const now = new Date().toISOString();
 
       const mineRaw = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
-      const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, profile: { id: auth.userId, name: auth.name, age: 0, city: "", gender: "", bio: "", photo_url: null, is_premium: auth.isPremium }, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
+      const ownProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified&limit=1`).catch(() => [] as Profile[]);
+      const ownProfile: Profile = ownProfiles?.[0] || { id: auth.userId, name: auth.name, age: 0, city: "", gender: "", bio: "", photo_url: null, is_premium: auth.isPremium };
+      const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, profile: { ...ownProfile, is_premium: ownProfile.is_premium ?? auth.isPremium }, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
       setMyStatuses(mine);
 
       if (!partnerIds.length) { setStatuses([]); return; }
@@ -5098,7 +5103,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       await sb.delete(auth.token, "statuses", `?id=eq.${status.id}&user_id=eq.${auth.userId}`);
       setMyStatuses(prev => prev.filter(s => s.id !== status.id));
       setStatuses(prev => prev.filter(s => s.id !== status.id));
-      setStatusPreview(null);
+      closeStatusViewer();
       setToast({ msg: "Statut supprimé.", type: "success" });
       await loadStatuses(convs);
     } catch (err) {
@@ -5108,6 +5113,59 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       setStatusDeleting(false);
     }
   };
+
+
+  const openStatusViewer = (list: StatusPost[], startIndex = 0) => {
+    const clean = (Array.isArray(list) ? list : []).filter(st => !!st.image_url);
+    if (!clean.length) return;
+    const index = Math.max(0, Math.min(startIndex, clean.length - 1));
+    setStatusPreviewList(clean);
+    setStatusPreviewIndex(index);
+    setStatusProgress(0);
+    setStatusPreview(clean[index]);
+  };
+
+  const closeStatusViewer = () => {
+    setStatusPreview(null);
+    setStatusPreviewList([]);
+    setStatusPreviewIndex(0);
+    setStatusProgress(0);
+  };
+
+  const goStatusStep = (dir: 1 | -1) => {
+    const list = statusPreviewList.length ? statusPreviewList : (statusPreview ? [statusPreview] : []);
+    if (!list.length) return;
+    const next = statusPreviewIndex + dir;
+    if (next < 0) {
+      setStatusProgress(0);
+      return;
+    }
+    if (next >= list.length) {
+      closeStatusViewer();
+      return;
+    }
+    setStatusPreviewIndex(next);
+    setStatusPreview(list[next]);
+    setStatusProgress(0);
+  };
+
+  useEffect(() => {
+    if (!statusPreview || !statusPreviewList.length) return;
+    setStatusProgress(0);
+    const duration = 5200;
+    const step = 100;
+    const timer = setInterval(() => {
+      setStatusProgress(prev => {
+        const next = prev + (step / duration) * 100;
+        if (next >= 100) {
+          setTimeout(() => goStatusStep(1), 0);
+          return 100;
+        }
+        return next;
+      });
+    }, step);
+    return () => clearInterval(timer);
+  }, [statusPreview?.id, statusPreviewList.length]);
 
   const loadConvs = async () => {
     setLoading(true);
@@ -5674,11 +5732,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 12px", marginBottom: 10, WebkitOverflowScrolling: "touch" }}>
       <div onClick={() => {
         if (!auth.isPremium) { onShowPremium("Publier un statut est réservé aux membres Premium."); return; }
-        if (myStatuses.length > 0) { setStatusPreview(myStatuses[0]); return; }
+        if (myStatuses.length > 0) { openStatusViewer(myStatuses, 0); return; }
         setShowStatusComposer(true);
       }} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
         <div style={{ position: "relative", width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", padding: myStatuses.length ? 3 : 0, border: myStatuses.length ? `2px solid ${G.rouge}` : `2px dashed rgba(192,57,43,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.05)", color: G.rouge, fontSize: "1.6rem", fontWeight: 800 }}>
-          {myStatuses.length ? <Avatar url={null} gender={""} size={50} premium={auth.isPremium} /> : "+"}
+          {myStatuses.length ? <Avatar url={myStatuses[0]?.profile?.photo_url} gender={myStatuses[0]?.profile?.gender} size={50} premium={auth.isPremium} /> : "+"}
           {auth.isPremium && myStatuses.length < STATUS_LIMIT && (
             <button onClick={(e) => { e.stopPropagation(); setShowStatusComposer(true); }} aria-label="Ajouter un statut" style={{ position: "absolute", right: -4, bottom: -2, width: 22, height: 22, borderRadius: "50%", border: "2px solid #fff", background: G.rouge, color: "#fff", fontSize: "1rem", lineHeight: "18px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>+</button>
           )}
@@ -5687,7 +5745,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         <div style={{ fontSize: "0.65rem", color: "#999" }}>{myStatuses.length ? `Voir • ${myStatuses.length}/${STATUS_LIMIT}` : `0/${STATUS_LIMIT}`}</div>
       </div>
       {statuses.slice(0, 12).map(st => (
-        <div key={st.id || st.image_url || st.user_id} onClick={() => setStatusPreview(st)} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
+        <div key={st.id || st.image_url || st.user_id} onClick={() => { const group = statuses.filter(x => x.user_id === st.user_id); openStatusViewer(group, Math.max(0, group.findIndex(x => (x.id || x.image_url) === (st.id || st.image_url)))); }} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
           <div style={{ position: "relative", width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", padding: 3, border: `2px solid ${st.profile?.is_premium ? G.or : G.rouge}` }}>
             <Avatar url={st.profile?.photo_url} gender={st.profile?.gender} size={50} premium={false} />
             <span style={{ position: "absolute", right: -2, bottom: 4, width: 12, height: 12, borderRadius: "50%", background: G.rouge, border: "2px solid #fff" }} />
@@ -5711,32 +5769,35 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       </div>
     )}
     {statusPreview && (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setStatusPreview(null)}>
-        <div style={{ position: "absolute", top: 18, left: 18, right: 18, display: "flex", alignItems: "center", gap: 10, color: "#fff" }}>
-          <Avatar url={statusPreview.profile?.photo_url} gender={statusPreview.profile?.gender} size={42} premium={statusPreview.profile?.is_premium} />
-          <div><div style={{ fontWeight: 800 }}>{statusPreview.profile?.name || "Statut"}</div><div style={{ fontSize: "0.75rem", opacity: 0.8 }}>Statut Moyo</div></div>
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "88px 18px 22px" }}>
+        <div style={{ position: "absolute", top: 10, left: 12, right: 12, display: "flex", gap: 4, zIndex: 3 }}>
+          {(statusPreviewList.length ? statusPreviewList : [statusPreview]).map((st, i) => (
+            <div key={st.id || st.image_url || i} style={{ flex: 1, height: 3, borderRadius: 999, background: "rgba(255,255,255,0.35)", overflow: "hidden" }}>
+              <div style={{ width: `${i < statusPreviewIndex ? 100 : i === statusPreviewIndex ? statusProgress : 0}%`, height: "100%", background: "#fff", borderRadius: 999, transition: "width 100ms linear" }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ position: "absolute", top: 24, left: 18, right: 18, display: "flex", alignItems: "center", gap: 10, color: "#fff", zIndex: 3 }}>
+          <Avatar url={statusPreview.profile?.photo_url} gender={statusPreview.profile?.gender} size={44} premium={statusPreview.profile?.is_premium} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 900, fontSize: "1.02rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{statusPreview.profile?.name || "Statut"}</div>
+            <div style={{ fontSize: "0.78rem", opacity: 0.82 }}>Statut Moyo</div>
+          </div>
           {statusPreview.user_id === auth.userId && (
             <button
               onClick={(e) => { e.stopPropagation(); handleDeleteStatus(statusPreview); }}
               disabled={statusDeleting}
               title="Supprimer ce statut"
-              style={{ marginLeft: "auto", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(192,57,43,0.9)", color: "#fff", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center", cursor: statusDeleting ? "wait" : "pointer", opacity: statusDeleting ? 0.65 : 1 }}
+              style={{ marginLeft: "auto", width: 42, height: 42, borderRadius: "50%", border: "none", background: "rgba(192,57,43,0.92)", color: "#fff", fontSize: "1.15rem", display: "flex", alignItems: "center", justifyContent: "center", cursor: statusDeleting ? "wait" : "pointer", opacity: statusDeleting ? 0.65 : 1 }}
             >
               {statusDeleting ? "…" : "🗑"}
             </button>
           )}
-          <button onClick={() => setStatusPreview(null)} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: "1.1rem", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          <button onClick={(e) => { e.stopPropagation(); closeStatusViewer(); }} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 42, height: 42, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.16)", color: "#fff", fontSize: "1.35rem", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>✕</button>
         </div>
-        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 18, objectFit: "contain" }} /> : null}
-        {statusPreview.user_id === auth.userId && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handleDeleteStatus(statusPreview); }}
-            disabled={statusDeleting}
-            style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", border: "none", borderRadius: 999, padding: "11px 18px", background: "rgba(192,57,43,0.95)", color: "#fff", fontWeight: 800, boxShadow: "0 10px 30px rgba(0,0,0,0.25)", cursor: statusDeleting ? "wait" : "pointer", opacity: statusDeleting ? 0.65 : 1 }}
-          >
-            {statusDeleting ? "Suppression..." : "Supprimer le statut"}
-          </button>
-        )}
+        <button aria-label="Statut précédent" onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
+        <button aria-label="Statut suivant" onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
+        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
       </div>
     )}
     {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
