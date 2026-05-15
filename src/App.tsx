@@ -3838,17 +3838,17 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             </span>
           )}
         </div>
-        {/* Badges vérifiés + premium — en bas à droite de la photo */}
+        {/* Badges vérifiés + premium — bas à droite, fidèles au design de référence */}
         {(p.is_verified || p.is_premium) && (
-          <div style={{ position: "absolute", bottom: 7, right: 7, display: "flex", gap: 5, alignItems: "center" }}>
+          <div style={{ position: "absolute", bottom: 8, right: 8, display: "flex", gap: 6, alignItems: "center" }}>
             {p.is_verified && (
-              <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#1d9bf0", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.25)", border: "2px solid #fff" }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#4AABDB", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.22)", border: "2.5px solid #fff", flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
             )}
             {p.is_premium && (
-              <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#D4A843", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.25)", border: "2px solid #fff" }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#C9A84C", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.22)", border: "2.5px solid #fff", flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#1a1a1a" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               </div>
             )}
           </div>
