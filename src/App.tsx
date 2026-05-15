@@ -403,7 +403,7 @@ const GLOBAL_CSS = `
   @supports (-webkit-touch-callout: none) {
     .chat-textarea { font-size: 16px !important; }
   }
-  .msg-arrow{opacity:0;transition:opacity 0.15s}
+  .msg-arrow{opacity:0;transition:opacity 0.15s;pointer-events:auto}
   .msg-row:hover .msg-arrow{opacity:1}
   @media(hover:none){.msg-arrow{opacity:1}}
   .msg-row{max-width:100%;box-sizing:border-box;overflow-x:hidden}
@@ -4986,16 +4986,17 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           };
           const handleLongPressEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
           return (
-            <div key={i} className="msg-row" style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0, maxWidth: "100%", boxSizing: "border-box", overflowX: "hidden" }}>
+            <div key={i} className="msg-row" style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0, maxWidth: "100%", boxSizing: "border-box" }}>
               {isImg ? (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", maxWidth: "100%", boxSizing: "border-box" }}>
-                  <div className="msg-arrow" onClick={() => setContextMenu({ msg: m, x: 0, y: 0 })} style={{ marginTop: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                  </div>
+                <div style={{ display: "flex", alignItems: "flex-start", flexDirection: isMine ? "row-reverse" : "row", maxWidth: "100%", boxSizing: "border-box" }}>
                   <div
-                    style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
+                    style={{ position: "relative", maxWidth: "72%", minWidth: 0, boxSizing: "border-box", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
                     onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                   >
+                    {/* Flèche intégrée dans la bulle image */}
+                    <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 6, right: 6, zIndex: 2, cursor: "pointer", width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.30)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
                     <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
                     <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: isMine ? "flex-end" : "flex-start" }}>
                       <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
@@ -5028,16 +5029,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                   </div>
                 </div>
               ) : (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", maxWidth: "100%", boxSizing: "border-box" }}>
-                  {/* Flèche */}
-                  <div className="msg-arrow" onClick={() => setContextMenu({ msg: m, x: 0, y: 0 })} style={{ marginTop: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                  </div>
+                <div style={{ display: "flex", alignItems: "flex-start", flexDirection: isMine ? "row-reverse" : "row", maxWidth: "100%", boxSizing: "border-box" }}>
                   <div style={{ position: "relative", maxWidth: "72%", minWidth: 0, boxSizing: "border-box" }}>
                     <div
-                      style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", overflowWrap: "anywhere", wordBreak: "break-word", minWidth: 0, boxSizing: "border-box" }}
+                      style={{ position: "relative", background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "10px 36px 10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", overflowWrap: "anywhere", wordBreak: "break-word", minWidth: 0, boxSizing: "border-box" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
+                      {/* Flèche intégrée dans la bulle texte */}
+                      <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 6, right: 8, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: isMine ? "rgba(255,255,255,0.20)" : "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isMine ? "#fff" : "#666"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      </div>
                       {(() => {
                         const replyMatch = m.content.match(/^\[↩ (.+?) : (.+?)\]\n([\s\S]*)$/);
                         if (replyMatch) {
@@ -5221,6 +5222,17 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
               <div onClick={() => { const msg = contextMenu!.msg; setContextMenu(null); setTimeout(() => setReplyTo(msg), 0); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+              </div>
+              <div onClick={() => {
+                const raw = contextMenu.msg.content;
+                const replyMatch = raw.match(/^\[↩ .+? : .+?\]\n([\s\S]*)$/);
+                const text = replyMatch ? replyMatch[1] : raw;
+                navigator.clipboard?.writeText(text).catch(() => {});
+                setContextMenu(null);
+                setToast({ msg: "Message copié", type: "success" });
+              }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Copier</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </div>
               <div onClick={async () => {
                 const msgId = contextMenu.msg.id;
@@ -8740,7 +8752,7 @@ export default function App() {
             </button>
           )}
           <button onClick={() => { setShowInstall(false); localStorage.setItem("moyo_install_dismissed", "1"); }} style={{ width: "100%", background: "transparent", color: "#555", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
-            Non merci
+            J'ai compris
           </button>
         </div>
       </div>
