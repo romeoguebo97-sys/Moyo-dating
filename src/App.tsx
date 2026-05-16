@@ -7206,6 +7206,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [warnReason, setWarnReason] = useState(WARN_REASONS[0]);
   const [msgModal, setMsgModal] = useState<{ user: Profile } | null>(null);
   const [msgText, setMsgText] = useState("");
+  const [broadcastModal, setBroadcastModal] = useState(false);
+  const [broadcastText, setBroadcastText] = useState("");
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
   const [warnCustom, setWarnCustom] = useState("");
   const [warnLoading, setWarnLoading] = useState(false);
 
@@ -7772,6 +7775,57 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {broadcastModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg,#fef3e2,#fde8c0)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(230,126,34,0.15)" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a" }}>📢 Diffusion générale</div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>Ce message sera affiché à tous les utilisateurs connectés</div>
+            </div>
+            <div style={{ padding: "16px 20px 20px" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                {[
+                  "Moyo est en maintenance ce soir de [H] à [H]. Merci de votre compréhension.",
+                  "Nouvelle fonctionnalité disponible : [PRÉCISION]",
+                  "Une mise à jour est disponible. Rechargez l'application pour en profiter.",
+                  "Un incident technique a été résolu. Tout fonctionne normalement.",
+                  "Profitez de -50% sur le Premium ce weekend uniquement !",
+                  "Offre spéciale : 1 mois Premium offert pour tout parrainage !",
+                  "Rappel : Moyo est une plateforme de rencontre respectueuse. Soyons bienveillants ❤️",
+                  "La communauté Moyo grandit ! Invitez vos amis à nous rejoindre.",
+                  "Pour votre sécurité, ne partagez jamais vos informations personnelles.",
+                  "Moyo ne vous demandera jamais d'argent. Signalez toute tentative d'arnaque.",
+                ].map(t => (
+                  <button key={t} onClick={() => setBroadcastText(t)} style={{ fontSize: "0.72rem", background: broadcastText === t ? "rgba(230,126,34,0.12)" : G.creme, border: `1.5px solid ${broadcastText === t ? "#e67e22" : "transparent"}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: "#333", textAlign: "left", lineHeight: 1.3 }}>{t.length > 48 ? t.slice(0, 48) + "…" : t}</button>
+                ))}
+              </div>
+              <textarea value={broadcastText} onChange={e => setBroadcastText(e.target.value)} placeholder="Écrivez votre message de diffusion…" rows={4} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "2px solid rgba(230,126,34,0.3)", fontSize: "0.84rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <button onClick={() => setBroadcastModal(false)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                <button disabled={broadcastLoading} onClick={async () => {
+                  if (!broadcastText.trim()) return;
+                  setBroadcastLoading(true);
+                  try {
+                    await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+                      body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId }),
+                    });
+                    showToast("Message diffusé à tous les utilisateurs ✓", "success");
+                    setBroadcastModal(false); setBroadcastText("");
+                  } catch { showToast("Erreur lors de la diffusion", "error"); }
+                  setBroadcastLoading(false);
+                }} style={{ flex: 1, background: broadcastLoading ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading ? "not-allowed" : "pointer" }}>
+                  {broadcastLoading ? "Envoi…" : "Envoyer à tous"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {msgModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
@@ -7784,7 +7838,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             </div>
             <div style={{ padding: "16px 20px 20px" }}>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                {["Votre abonnement Premium expire dans [X] jours.", "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo."].map(t => (
+                {[
+                  "Votre abonnement Premium expire dans [X] jours.",
+                  "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.",
+                  "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo.",
+                  "Bienvenue sur Moyo ! N'hésitez pas à compléter votre profil pour plus de visibilité.",
+                  "Votre demande de vérification est en cours d'examen. Merci de patienter.",
+                  "Votre profil a été vérifié avec succès ! ✓",
+                  "Profitez de -50% sur le Premium ce weekend uniquement !",
+                ].map(t => (
                   <button key={t} onClick={() => setMsgText(t)} style={{ fontSize: "0.72rem", background: msgText === t ? "rgba(41,128,185,0.12)" : G.creme, border: `1.5px solid ${msgText === t ? "#2980b9" : "transparent"}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: "#333", textAlign: "left", lineHeight: 1.3 }}>{t.length > 48 ? t.slice(0, 48) + "…" : t}</button>
                 ))}
               </div>
@@ -8392,6 +8454,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           ) : (
             <>
               <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 10, fontWeight: 600 }}>{users.length} utilisateur(s) affichés</div>
+              <button onClick={() => { setBroadcastModal(true); setBroadcastText(""); }} style={{ width: "100%", background: `linear-gradient(135deg,#e67e22,#d35400)`, color: G.blanc, border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                📢 Diffusion générale
+              </button>
               <div data-admlist="">
               {users.map(u => {
                 const isLoading = actionLoading === u.id;
@@ -9079,6 +9145,7 @@ export default function App() {
   const [viewsReceived, setViewsReceived] = useState(0);
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
+  const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
   const [openConvPartnerId, setOpenConvPartnerId] = useState<string | null>(null);
@@ -9282,6 +9349,26 @@ export default function App() {
       } catch {}
     };
     checkWarnings();
+  }, [auth?.userId]);
+
+  // ── Vérifier les broadcasts non vus à chaque connexion ──
+  useEffect(() => {
+    if (!auth?.userId) return;
+    const checkBroadcast = async () => {
+      try {
+        const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${lastSeen}&order=created_at.desc&limit=1`,
+          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
+        );
+        if (!r.ok) return;
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data) && data.length > 0) {
+          setPendingBroadcast({ id: data[0].id, message: data[0].message });
+        }
+      } catch {}
+    };
+    checkBroadcast();
   }, [auth?.userId]);
 
   const acknowledgeWarning = async () => {
@@ -9614,6 +9701,7 @@ export default function App() {
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
+    {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
     {InstallBanner}
   </div>;
 }
