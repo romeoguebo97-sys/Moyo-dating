@@ -8780,7 +8780,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             onClick={() => {
                               // Cherche le user dans la liste locale ou crée un objet minimal
                               const knownUser = users.find(u => u.id === r.reported_id);
-                              setWarnModal({ user: knownUser || { id: r.reported_id!, name: r.reported_id!.slice(0, 8) + "…", age: 0, city: "", gender: "", is_premium: false } });
+                              setWarnModal({ user: knownUser || { id: r.reported_id!, name: r.reported_id!.slice(0, 8) + "…", age: 0, city: "", gender: "", bio: "", is_premium: false } });
                             }}
                             style={{
                               display: "flex", alignItems: "center", gap: 4,
