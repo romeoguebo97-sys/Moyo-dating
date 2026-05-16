@@ -724,7 +724,12 @@ function Avatar({ url, gender, size = 54, border = false, premium = false }: { u
   return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: border ? `3px solid ${G.rouge}` : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.45 }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (gender === "Femme" ? "👩🏿" : "👨🏿")}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", border: `2px solid ${G.blanc}` }}>⭐</div>}</div>;
 }
 
-function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string }) {
+function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void; reason: string; userId: string; token: string }) {
+  const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "proof">("offer");
+  const [txRef, setTxRef] = useState("");
+  const [txSent, setTxSent] = useState(false);
+  const [txLoading, setTxLoading] = useState(false);
+
   const avantages = [
     { icon: "msg", titre: "Messages illimités", desc: `Discute sans limite (gratuit = ${FREE_LIMITS.messages}/match)` },
     { icon: "phone", titre: "Partage tes coordonnées", desc: "Envoie ton numéro, email librement" },
@@ -755,13 +760,11 @@ function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string
     return svgs[id] || <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
   };
 
-  return (
+  // ── Étape offre ──
+  if (step === "offer") return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto", display: "flex", flexDirection: "column" }}>
-
-        {/* Header */}
         <div style={{ background: `linear-gradient(135deg,#D4A843,#B8922E)`, padding: "14px 20px 20px", position: "relative", flexShrink: 0 }}>
-          {/* Ligne fermeture */}
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
             <div onClick={onClose} style={{ cursor: "pointer", opacity: 0.85, background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -781,16 +784,11 @@ function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string
             </div>
           </div>
           {reason && <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: "0.8rem", color: G.blanc, fontWeight: 600 }}>{reason}</div>}
-          <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.75)", marginTop: 8 }}>MTN MoMo · Airtel Money · Orange Money</div>
         </div>
-
-        {/* Liste avantages - style Guide */}
         <div style={{ padding: "8px 0", flex: 1 }}>
-          {avantages.map((a, i) => (
+          {avantages.map((a) => (
             <div key={a.titre} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", borderBottom: `1px solid ${G.gris}` }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: `linear-gradient(135deg,${G.or},#B8922E)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {getIcon(a.icon)}
-              </div>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: `linear-gradient(135deg,${G.or},#B8922E)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{getIcon(a.icon)}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#111" }}>{a.titre}</div>
                 <div style={{ fontSize: "0.78rem", color: "#555", marginTop: 1 }}>{a.desc}</div>
@@ -799,21 +797,83 @@ function PremiumModal({ onClose, reason }: { onClose: () => void; reason: string
             </div>
           ))}
         </div>
-
-        {/* Boutons */}
         <div style={{ padding: "16px 20px 32px", flexShrink: 0 }}>
-          <Btn variant="gold" onClick={() => {}} style={{ width: "100%", padding: "16px", fontSize: "1rem", marginBottom: 10 }}>
-            Activer Premium - 3 500 FCFA/mois
-          </Btn>
-          <button onClick={onClose} style={{ width: "100%", fontSize: "0.88rem", color: "#555", cursor: "pointer", fontWeight: 600, padding: "13px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, transition: "all 0.2s" }}
-            onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#999"; }}
-            onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = G.gris; }}>
+          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>Choisissez votre opérateur</div>
+          <button onClick={() => setStep("mtn")} style={{ width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(245,166,35,0.35)" }}>
+            <span style={{ fontSize: "1.4rem" }}>💛</span> MTN Mobile Money
+          </button>
+          <button disabled style={{ width: "100%", background: "#f5f5f5", color: "#aaa", border: "2px solid #e0e0e0", borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "not-allowed", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <span style={{ fontSize: "1.4rem" }}>❤️</span> Airtel Money — Bientôt disponible
+          </button>
+          <button onClick={onClose} style={{ width: "100%", fontSize: "0.88rem", color: "#555", cursor: "pointer", fontWeight: 600, padding: "13px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc }}>
             Non merci, plus tard
           </button>
         </div>
       </div>
     </div>
   );
+
+  // ── Étape MTN ──
+  if (step === "mtn") return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto" }}>
+        <div style={{ background: "linear-gradient(135deg,#FFCC00,#F5A623)", padding: "20px 20px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+            <div onClick={() => setStep("offer")} style={{ cursor: "pointer", background: "rgba(0,0,0,0.1)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1a1a1a" }}>💛 MTN Mobile Money</div>
+          </div>
+          <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>Paiement sécurisé — 3 500 FCFA / 1 mois</div>
+        </div>
+        <div style={{ padding: "20px 20px 32px" }}>
+          {/* Étape 1 */}
+          <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
+            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>① Composez ce code sur votre téléphone</div>
+            <div style={{ background: "#1a1a1a", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <span style={{ color: "#FFCC00", fontWeight: 800, fontSize: "1.1rem", letterSpacing: 1 }}>*105*2*1*065132012*3500#</span>
+            </div>
+            <a href="tel:*105*2*1*065132012*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              Appuyer pour composer
+            </a>
+          </div>
+          {/* Étape 2 */}
+          <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
+            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
+            <div style={{ fontSize: "0.78rem", color: "#777", marginBottom: 10, lineHeight: 1.5 }}>Après validation du paiement MTN, vous recevrez un SMS avec un numéro de transaction. Entrez-le ci-dessous.</div>
+            <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex: MP241234567" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${txRef ? "#FFCC00" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
+          </div>
+          {/* Bouton envoyer */}
+          {!txSent ? (
+            <button disabled={!txRef.trim() || txLoading} onClick={async () => {
+              setTxLoading(true);
+              try {
+                await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" },
+                  body: JSON.stringify({ user_id: userId, operator: "MTN", tx_ref: txRef.trim(), amount: 3500, status: "pending" }),
+                });
+                setTxSent(true);
+              } catch { setTxSent(true); }
+              setTxLoading(false);
+            }} style={{ width: "100%", background: !txRef.trim() || txLoading ? "#ccc" : "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !txRef.trim() ? "not-allowed" : "pointer", boxShadow: txRef.trim() ? "0 4px 14px rgba(245,166,35,0.35)" : "none" }}>
+              {txLoading ? "Envoi en cours…" : "✓ J'ai payé — Envoyer la preuve"}
+            </button>
+          ) : (
+            <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: "18px", textAlign: "center" }}>
+              <div style={{ fontSize: "2rem", marginBottom: 8 }}>✅</div>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>Preuve envoyée avec succès !</div>
+              <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier votre paiement et activer votre Premium dans les plus brefs délais. Vous recevrez une notification dès l'activation.</div>
+              <button onClick={onClose} style={{ marginTop: 14, background: "#27ae60", color: G.blanc, border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return null;
 }
 
 function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
@@ -7140,12 +7200,38 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Onglet actif ──
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments">("stats");
 
   // ── Avis utilisateurs ──
   type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; profile?: { name: string } };
+  const [payments, setPayments] = useState<PaymentRequest[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+  const loadPayments = async () => {
+    setPaymentsLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at&order=created_at.desc&limit=50`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data)) {
+        setPayments(data);
+        setPendingPaymentsCount(data.filter((p: PaymentRequest) => p.status === "pending").length);
+      }
+    } catch {}
+    setPaymentsLoading(false);
+  };
+  const activatePayment = async (p: PaymentRequest) => {
+    await adminAction(p.user_id, { is_premium: true }, `Premium activé pour l'utilisateur.`);
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved" }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", warning_number: 0, acknowledged: false }) });
+    loadPayments();
+  };
+  const rejectPayment = async (p: PaymentRequest) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "rejected" }) });
+    loadPayments();
+  };
   const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
   const [hiddenReviews, setHiddenReviews] = useState<Set<string>>(new Set());
 
@@ -8264,6 +8350,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["users", "Utilisateurs", IcoUsers],
             ["reports", "Signalements", IcoAlert],
             ["reviews", "Avis", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
+            ["payments", "Paiements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
             <div
               key={key}
@@ -8271,12 +8358,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 setActiveTab(key as any);
                 if (key === "users" && users.length === 0) loadUsers("", 0);
                 if (key === "reviews" && reviews.length === 0) loadReviews();
+                if (key === "payments") loadPayments();
               }}
               style={{
                 flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                 padding: "10px 0 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
-                color: activeTab === key ? (key === "reviews" ? "#B8860B" : G.rouge) : "#999",
-                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : G.rouge}` : "2.5px solid transparent",
+                color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : G.rouge) : "#999",
+                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : G.rouge}` : "2.5px solid transparent",
                 transition: "all 0.2s",
               }}
             >
@@ -8291,6 +8379,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {key === "reviews" && unreadReviewsCount > 0 && (
                   <span style={{ background: G.blanc, color: "#B8860B", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(184,134,11,0.2)", border: "1px solid rgba(184,134,11,0.15)" }}>
                     {unreadReviewsCount > 99 ? "99+" : unreadReviewsCount}
+                  </span>
+                )}
+                {key === "payments" && pendingPaymentsCount > 0 && (
+                  <span style={{ background: G.blanc, color: "#27ae60", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(39,174,96,0.2)", border: "1px solid rgba(39,174,96,0.15)" }}>
+                    {pendingPaymentsCount > 99 ? "99+" : pendingPaymentsCount}
                   </span>
                 )}
               </div>
@@ -9130,6 +9223,55 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           )}
         </div>
       )}
+
+      {/* ═══════════════════════════════════════════ ONGLET PAIEMENTS */}
+      {activeTab === "payments" && (
+        <div style={{ padding: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>💳 Demandes de paiement</div>
+            <Btn variant="ghost" onClick={loadPayments} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
+          </div>
+          {paymentsLoading ? (
+            <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+          ) : payments.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#DDD" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 12px", display: "block" }}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              <div style={{ fontSize: "0.88rem" }}>Aucune demande de paiement</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {payments.map(p => {
+                const isPending = p.status === "pending";
+                const isApproved = p.status === "approved";
+                return (
+                  <div key={p.id} style={{ background: G.blanc, borderRadius: 14, padding: "14px 16px", boxShadow: isPending ? "0 2px 10px rgba(39,174,96,0.12)" : "0 1px 6px rgba(0,0,0,0.05)", border: `1.5px solid ${isPending ? "rgba(39,174,96,0.3)" : isApproved ? "rgba(39,174,96,0.15)" : "rgba(231,76,60,0.15)"}` }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>💛 {p.operator}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>{new Date(p.created_at).toLocaleString("fr-FR")}</div>
+                      </div>
+                      <div style={{ background: isPending ? "rgba(39,174,96,0.1)" : isApproved ? "rgba(39,174,96,0.08)" : "rgba(231,76,60,0.08)", color: isPending ? "#27ae60" : isApproved ? "#27ae60" : "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                        {isPending ? "En attente" : isApproved ? "Approuvé ✓" : "Rejeté"}
+                      </div>
+                    </div>
+                    <div style={{ background: G.creme, borderRadius: 8, padding: "8px 12px", marginBottom: isPending ? 10 : 0 }}>
+                      <div style={{ fontSize: "0.7rem", color: "#888", marginBottom: 2 }}>Réf. transaction</div>
+                      <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", letterSpacing: 0.5 }}>{p.tx_ref}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 4 }}>Montant : <strong>{p.amount.toLocaleString()} FCFA</strong> · ID user : {p.user_id.slice(0, 12)}…</div>
+                    </div>
+                    {isPending && (
+                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                        <button onClick={() => activatePayment(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: G.blanc, border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✓ Activer Premium</button>
+                        <button onClick={() => rejectPayment(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -9699,7 +9841,7 @@ export default function App() {
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
       {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
     </AppShell>
-    {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} />}
+    {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} />}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
     {InstallBanner}
