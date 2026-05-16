@@ -3321,9 +3321,6 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   }
 }} style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 146px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important}`}</style>
-  <div style={{ position: "sticky", top: 8, zIndex: 20, display: "flex", justifyContent: "flex-end", marginBottom: 8, pointerEvents: "none" }}>
-    <button onClick={() => setViewMode("card")} style={{ pointerEvents: "auto", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, fontSize: "1.05rem", fontWeight: 800, backdropFilter: "blur(8px)", boxShadow: "0 8px 24px rgba(0,0,0,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-  </div>
   {fullscreenProfiles.map((prof, idx) => (
     <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 155px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 16, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start" }}>
       {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
@@ -3343,8 +3340,9 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
         </div>
         <div style={{ fontSize: "0.86rem", lineHeight: 1.45, opacity: 0.92, textShadow: "0 1px 8px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", minHeight: 38 }}>{prof.bio || ""}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
-          <button onClick={() => handleLike(prof)} style={{ width: 58, height: 58, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? G.blanc : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer" }}><svg width="26" height="26" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
-          <button onClick={() => { setCurrent(idx % profiles.length); setShowReport(true); }} style={{ width: 58, height: 58, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.45)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.55rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer", backdropFilter: "blur(8px)" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
+          <button onClick={() => handleLike(prof)} style={{ width: 58, height: 58, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? G.blanc : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.7rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer" }}><svg width="28" height="28" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          {idx === 0 && <button onClick={() => setViewMode("card")} style={{ width: 58, height: 58, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer", backdropFilter: "blur(8px)" }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>}
+          <button onClick={() => { setCurrent(idx % profiles.length); setShowReport(true); }} style={{ width: 58, height: 58, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.45)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.55rem", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer", backdropFilter: "blur(8px)" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
         </div>
       </div>
     </div>
@@ -7206,6 +7204,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   ];
   const [warnModal, setWarnModal] = useState<WarnModal>(null);
   const [warnReason, setWarnReason] = useState(WARN_REASONS[0]);
+  const [msgModal, setMsgModal] = useState<{ user: Profile } | null>(null);
+  const [msgText, setMsgText] = useState("");
   const [warnCustom, setWarnCustom] = useState("");
   const [warnLoading, setWarnLoading] = useState(false);
 
@@ -7772,6 +7772,36 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {msgModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(41,128,185,0.15)" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a" }}>Message à {msgModal.user.name}</div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>Le message sera visible dans sa messagerie Assistance Moyo</div>
+            </div>
+            <div style={{ padding: "16px 20px 20px" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                {["Votre abonnement Premium expire dans [X] jours.", "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo."].map(t => (
+                  <button key={t} onClick={() => setMsgText(t)} style={{ fontSize: "0.72rem", background: msgText === t ? "rgba(41,128,185,0.12)" : G.creme, border: `1.5px solid ${msgText === t ? "#2980b9" : "transparent"}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: "#333", textAlign: "left", lineHeight: 1.3 }}>{t.length > 48 ? t.slice(0, 48) + "…" : t}</button>
+                ))}
+              </div>
+              <textarea value={msgText} onChange={e => setMsgText(e.target.value)} placeholder="Écrivez votre message ici…" rows={4} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.84rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <button onClick={() => setMsgModal(null)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                <button onClick={async () => {
+                  if (!msgText.trim()) return;
+                  await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: msgModal.user.id, reason: `${SUPPORT_PREFIX_REPLY} ${msgText.trim()}`, status: "open" });
+                  showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
+                  setMsgModal(null); setMsgText("");
+                }} style={{ flex: 1, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Envoyer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {warnModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
@@ -8448,6 +8478,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
                             confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
                           }} />
+                        <ActionBtn label="✉ Message" color="#2980b9" disabled={isLoading || isSelf}
+                          onClick={() => { setMsgModal({ user: u }); setMsgText(""); }} />
                       </div>
                     </div>
                   </div>
