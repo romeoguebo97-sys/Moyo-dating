@@ -7130,6 +7130,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     age: number;
     city: string;
     gender: string;
+    bio: string;
     is_premium: boolean;
     is_admin?: boolean;
     is_verified?: boolean;
