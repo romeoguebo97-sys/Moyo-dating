@@ -829,13 +829,10 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
         <div style={{ padding: "20px 20px 32px" }}>
           {/* Étape 1 */}
           <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>① Composez ce code sur votre téléphone</div>
-            <div style={{ background: "#1a1a1a", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <span style={{ color: "#FFCC00", fontWeight: 800, fontSize: "1.1rem", letterSpacing: 1 }}>*105*2*1*065132012*3500#</span>
-            </div>
-            <a href="tel:*105*2*1*065132012*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              Appuyer pour composer
+            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez le paiement MTN Mobile Money</div>
+            <a href="tel:*105*2*1*065132012*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              Appuyer pour payer — 3 500 FCFA
             </a>
           </div>
           {/* Étape 2 */}
@@ -7165,6 +7162,69 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
+type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; profile?: { name: string } };
+function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onReject }: { p: PaymentRequest; isPending: boolean; isApproved: boolean; isRejected: boolean; onActivate: (p: PaymentRequest) => void; onReject: (p: PaymentRequest) => void }) {
+  const [adminRef, setAdminRef] = useState("");
+  const [verified, setVerified] = useState<null | "match" | "mismatch">(null);
+  const match = adminRef.trim().toLowerCase() === p.tx_ref.trim().toLowerCase();
+  return (
+    <div style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", boxShadow: isPending ? "0 2px 10px rgba(39,174,96,0.12)" : "0 1px 6px rgba(0,0,0,0.05)", border: `1.5px solid ${isPending ? "rgba(39,174,96,0.3)" : isApproved ? "rgba(39,174,96,0.15)" : "rgba(231,76,60,0.15)"}` }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>💛 {p.operator}</div>
+            <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {p.amount.toLocaleString()} FCFA</div>
+          </div>
+        </div>
+        <div style={{ background: isPending ? "rgba(39,174,96,0.1)" : isApproved ? "rgba(39,174,96,0.08)" : "rgba(231,76,60,0.08)", color: isPending ? "#27ae60" : isApproved ? "#27ae60" : "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+          {isPending ? "En attente" : isApproved ? "Approuvé ✓" : "Rejeté ✕"}
+        </div>
+      </div>
+      {/* Réfs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: isPending ? 10 : 0 }}>
+        <div style={{ flex: 1, background: G.creme, borderRadius: 8, padding: "8px 10px" }}>
+          <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. client</div>
+          <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#888", letterSpacing: 0.5 }}>{p.tx_ref}</div>
+        </div>
+        {!isApproved && !isRejected && (
+          <div style={{ flex: 1, background: verified === "match" ? "rgba(39,174,96,0.07)" : verified === "mismatch" ? "rgba(231,76,60,0.07)" : G.creme, borderRadius: 8, padding: "8px 10px", border: `1.5px solid ${verified === "match" ? "rgba(39,174,96,0.3)" : verified === "mismatch" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
+            <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. MTN reçue</div>
+            <input value={adminRef} onChange={e => { setAdminRef(e.target.value); setVerified(null); }} placeholder="Entrez ici…" style={{ width: "100%", border: "none", background: "transparent", fontSize: "0.82rem", fontWeight: 700, outline: "none", color: "#1a1a1a", letterSpacing: 0.5, fontFamily: "inherit" }} />
+          </div>
+        )}
+      </div>
+      {/* Résultat vérification */}
+      {verified === "match" && (
+        <div style={{ background: "rgba(39,174,96,0.08)", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#27ae60" }}>✅ Les références correspondent — vous pouvez activer</div>
+      )}
+      {verified === "mismatch" && (
+        <div style={{ background: "rgba(231,76,60,0.07)", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#e74c3c" }}>❌ Les références ne correspondent pas</div>
+      )}
+      {/* Boutons */}
+      {isPending && (
+        <div style={{ display: "flex", gap: 8 }}>
+          {verified === null && (
+            <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim()} style={{ flex: 1, background: adminRef.trim() ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: adminRef.trim() ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: adminRef.trim() ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>
+          )}
+          {verified === "match" && (
+            <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: G.blanc, border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✓ Activer Premium</button>
+          )}
+          {verified === "mismatch" && (
+            <button onClick={() => onReject(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter & notifier</button>
+          )}
+          {verified !== null && (
+            <button onClick={() => { setVerified(null); setAdminRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
@@ -7206,7 +7266,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; profile?: { name: string } };
   const [payments, setPayments] = useState<PaymentRequest[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
@@ -7230,6 +7289,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const rejectPayment = async (p: PaymentRequest) => {
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "rejected" }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre preuve de paiement n'a pas pu être vérifiée. Le numéro de transaction ne correspond pas. Veuillez vérifier vos informations de paiement.", warning_number: 0, acknowledged: false }) });
     loadPayments();
   };
   const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
@@ -9243,30 +9303,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {payments.map(p => {
                 const isPending = p.status === "pending";
                 const isApproved = p.status === "approved";
-                return (
-                  <div key={p.id} style={{ background: G.blanc, borderRadius: 14, padding: "14px 16px", boxShadow: isPending ? "0 2px 10px rgba(39,174,96,0.12)" : "0 1px 6px rgba(0,0,0,0.05)", border: `1.5px solid ${isPending ? "rgba(39,174,96,0.3)" : isApproved ? "rgba(39,174,96,0.15)" : "rgba(231,76,60,0.15)"}` }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>💛 {p.operator}</div>
-                        <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>{new Date(p.created_at).toLocaleString("fr-FR")}</div>
-                      </div>
-                      <div style={{ background: isPending ? "rgba(39,174,96,0.1)" : isApproved ? "rgba(39,174,96,0.08)" : "rgba(231,76,60,0.08)", color: isPending ? "#27ae60" : isApproved ? "#27ae60" : "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
-                        {isPending ? "En attente" : isApproved ? "Approuvé ✓" : "Rejeté"}
-                      </div>
-                    </div>
-                    <div style={{ background: G.creme, borderRadius: 8, padding: "8px 12px", marginBottom: isPending ? 10 : 0 }}>
-                      <div style={{ fontSize: "0.7rem", color: "#888", marginBottom: 2 }}>Réf. transaction</div>
-                      <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", letterSpacing: 0.5 }}>{p.tx_ref}</div>
-                      <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 4 }}>Montant : <strong>{p.amount.toLocaleString()} FCFA</strong> · ID user : {p.user_id.slice(0, 12)}…</div>
-                    </div>
-                    {isPending && (
-                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                        <button onClick={() => activatePayment(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: G.blanc, border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✓ Activer Premium</button>
-                        <button onClick={() => rejectPayment(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter</button>
-                      </div>
-                    )}
-                  </div>
-                );
+                const isRejected = p.status === "rejected";
+                return <PaymentCard key={p.id} p={p} isPending={isPending} isApproved={isApproved} isRejected={isRejected} onActivate={activatePayment} onReject={rejectPayment} />;
               })}
             </div>
           )}
