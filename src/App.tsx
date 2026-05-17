@@ -7472,7 +7472,17 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const activatePayment = async (p: PaymentRequest) => {
     const premiumUntil = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
-    await adminAction(p.user_id, { is_premium: true, premium_until: premiumUntil }, `Premium activé pour l'utilisateur.`);
+    // 1. Activer is_premium (toujours fonctionnel, comme avant)
+    await adminAction(p.user_id, { is_premium: true }, `Premium activé pour l'utilisateur.`);
+    // 2. Écrire premium_until séparément (ne bloque pas si la colonne n'existe pas encore)
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${p.user_id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+        body: JSON.stringify({ premium_until: premiumUntil }),
+      });
+    } catch {}
+    // 3. Marquer la demande comme approuvée
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
     await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", warning_number: 0, acknowledged: false }) });
     loadPayments();
