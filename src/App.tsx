@@ -782,19 +782,27 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
 
   const avantages = [
     { icon: "msg", titre: "Messages illimités", desc: `Discute sans limite (gratuit = ${FREE_LIMITS.messages}/match)` },
-    { icon: "phone", titre: "Partage tes coordonnées", desc: "Envoie ton numéro, email librement" },
     { icon: "heart", titre: "Likes illimités", desc: `Like sans limite (gratuit = ${FREE_LIMITS.likes}/jour)` },
-    { icon: "eye", titre: "Voir qui t'a liké", desc: "Découvre tes admirateurs secrets" },
+    { icon: "eye", titre: "Voir qui t'a liké", desc: "Découvre tous tes admirateurs secrets" },
+    { icon: "visitors", titre: "Voir qui a visité ton profil", desc: "Accède à la liste complète de tes Vues" },
+    { icon: "photo", titre: "Envoi de photos", desc: "Partage des photos dans tes conversations" },
+    { icon: "status", titre: "Publier des statuts", desc: "Partage jusqu'à 2 photos visibles 24h" },
     { icon: "star2", titre: "Profil mis en avant", desc: "Apparais en premier dans Découvrir" },
     { icon: "check2", titre: "Messages lus", desc: "Vois quand tes messages ont été lus" },
-    { icon: "filter", titre: "Filtres avancés", desc: "Filtre par ville, âge, situation" },
-    { icon: "visitors", titre: "Visiteurs du profil", desc: "Vois toutes les personnes qui t'ont consulté" },
-    { icon: "verified", titre: "Profil vérifié", desc: "Badge de confiance visible" },
+    { icon: "filter", titre: "Filtres avancés", desc: "Filtre par ville, âge, religion" },
+    { icon: "phone", titre: "Partage tes coordonnées", desc: "Envoie ton numéro ou email librement" },
+    { icon: "gift", titre: "Offrir Premium", desc: "Offre 1 mois de Premium à un match" },
+    { icon: "referral", titre: "Parrainer & gagner", desc: "+7 jours offerts pour chaque ami abonné" },
+    { icon: "verified", titre: "Profil vérifié", desc: "Badge de confiance visible sur ton profil" },
     { icon: "support", titre: "Support prioritaire", desc: "Assistance rapide 7j/7" },
   ];
 
   const getIcon = (id: string) => {
     const svgs: Record<string, React.ReactElement> = {
+      photo: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
+      status: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      gift: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
+      referral: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
       msg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
       phone: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
       heart: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
@@ -833,7 +841,19 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
               <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>/mois</div>
             </div>
           </div>
-          {reason && <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: "0.8rem", color: G.blanc, fontWeight: 600 }}>{reason}</div>}
+          {reason && <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: "0.8rem", color: G.blanc, fontWeight: 600, marginBottom: 12 }}>{reason}</div>}
+          {/* Boutons opérateurs dans le header */}
+          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.8)", textAlign: "center", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>Payez avec</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => setStep("mtn")} style={{ flex: 1, background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "12px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 14px rgba(0,0,0,0.15)" }}>
+              <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
+              MTN MoMo
+            </button>
+            <button onClick={() => setStep("airtel")} style={{ flex: 1, background: "white", color: "#c0392b", border: "2px solid #e74c3c", borderRadius: 14, padding: "12px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <svg viewBox="0 0 80 60" width="28" height="21" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="60" fill="white" rx="4"/><path d="M12 38 Q8 18 22 12 Q36 6 38 20 Q40 34 28 36 Q16 38 14 30" fill="#e74c3c" stroke="none"/><text x="44" y="28" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#e74c3c">airtel</text><text x="44" y="44" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#D4A843">money</text></svg>
+              Airtel Money
+            </button>
+          </div>
         </div>
         <div style={{ padding: "8px 0", flex: 1 }}>
           {avantages.map((a) => (
@@ -848,29 +868,6 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
           ))}
         </div>
         <div style={{ padding: "16px 20px 32px", flexShrink: 0 }}>
-          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>Choisissez votre opérateur</div>
-          <button onClick={() => setStep("mtn")} style={{ width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 14px rgba(245,166,35,0.35)" }}>
-            {/* Logo MTN SVG - 18% largeur */}
-            <div style={{ width: "18%", display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
-              <svg viewBox="0 0 120 60" width="54" height="27" xmlns="http://www.w3.org/2000/svg">
-                <rect width="120" height="60" fill="#FFCC00" rx="4"/>
-                <ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/>
-                <text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text>
-              </svg>
-            </div>
-            <span style={{ flex: 1, textAlign: "center" }}>MTN Mobile Money</span>
-          </button>
-          <button onClick={() => setStep("airtel")} style={{ width: "100%", background: "linear-gradient(135deg,#e8f4f8,#d0e8f0)", color: "#c0392b", border: "2px solid #e74c3c", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 14px rgba(231,76,60,0.15)" }}>
-            <div style={{ width: "18%", display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
-              <svg viewBox="0 0 80 60" width="40" height="30" xmlns="http://www.w3.org/2000/svg">
-                <rect width="80" height="60" fill="#fff0f0" rx="4"/>
-                <path d="M12 38 Q8 18 22 12 Q36 6 38 20 Q40 34 28 36 Q16 38 14 30" fill="#e74c3c" stroke="none"/>
-                <text x="44" y="28" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#e74c3c">airtel</text>
-                <text x="44" y="44" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#D4A843">money</text>
-              </svg>
-            </div>
-            <span style={{ flex: 1, textAlign: "center" }}>Airtel Money</span>
-          </button>
           <button onClick={onClose} style={{ width: "100%", fontSize: "0.88rem", color: "#555", cursor: "pointer", fontWeight: 600, padding: "13px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc }}>
             Non merci, plus tard
           </button>
