@@ -90,7 +90,7 @@ type Auth = {
   refreshToken?: string;   // refresh_token Supabase
   expiresAt?: number;      // timestamp ms (Date.now()) d'expiration du access_token
 };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; warning_count?: number; premium_until?: string | null };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
@@ -4257,6 +4257,17 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
               </span>
             </span>
           )}
+          {isPremiumReal && (() => {
+            const stored = localStorage.getItem(`moyo_premium_until_${auth.userId}`);
+            if (!stored) return null;
+            const cd = getPremiumCountdown(new Date(new Date(stored).getTime() - 31 * 24 * 60 * 60 * 1000).toISOString());
+            if (!cd.label) return null;
+            return (
+              <span style={{ background: cd.expired ? "rgba(231,76,60,0.1)" : "rgba(39,174,96,0.1)", color: cd.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, border: `1px solid ${cd.expired ? "rgba(231,76,60,0.2)" : "rgba(39,174,96,0.2)"}` }}>
+                {cd.expired ? "⏰ Expiré" : `⏱ ${cd.label}`}
+              </span>
+            );
+          })()}
         </div>
       </div>
 
@@ -6385,44 +6396,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const [ratingError, setRatingError] = useState("");
   const [existingRatingId, setExistingRatingId] = useState<string | null>(null);
 
-  // ── PAIEMENTS & COMPTEUR PREMIUM ──
-  const [myPayments, setMyPayments] = useState<{ id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string | null }[]>([]);
-  const [premiumTimeLeft, setPremiumTimeLeft] = useState<string | null>(null);
-  const [premiumExpired, setPremiumExpired] = useState(false);
-
-  const loadMyPayments = async () => {
-    try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?user_id=eq.${auth.userId}&select=id,operator,tx_ref,amount,status,created_at,approved_at&order=created_at.desc`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-      });
-      if (r.ok) { const data = await r.json(); setMyPayments(Array.isArray(data) ? data : []); }
-    } catch {}
-  };
-
-  const checkPremiumExpiry = async () => {
-    try {
-      const res = await sb.query<{ premium_until?: string | null }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=premium_until`);
-      const until = res[0]?.premium_until;
-      if (!until) { setPremiumTimeLeft(null); return; }
-      const diff = new Date(until).getTime() - Date.now();
-      if (diff <= 0) {
-        // Abonnement expiré → on repasse is_premium = false automatiquement
-        setPremiumExpired(true);
-        setPremiumTimeLeft(null);
-        await sb.update(auth.token, "profiles", auth.userId, { is_premium: false, premium_until: null });
-        setProfile(p => p ? { ...p, is_premium: false, premium_until: null } : null);
-      } else {
-        setPremiumExpired(false);
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        if (days > 0) setPremiumTimeLeft(`${days}j ${hours}h restants`);
-        else if (hours > 0) setPremiumTimeLeft(`${hours}h ${mins}min restants`);
-        else setPremiumTimeLeft(`${mins} min restants`);
-      }
-    } catch {}
-  };
-
   const loadExistingRating = async () => {
     try {
       const res = await sb.query<{ id: string; rating: number; comment: string }>(
@@ -6469,16 +6442,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     }
   };
 
-  useEffect(() => {
-    loadProfile();
-    loadBlocked();
-    loadExistingRating();
-    loadMyPayments();
-    checkPremiumExpiry();
-    // Mise à jour du compteur toutes les minutes
-    const timer = setInterval(checkPremiumExpiry, 60000);
-    return () => clearInterval(timer);
-  }, []);
+  useEffect(() => { loadProfile(); loadBlocked(); loadExistingRating(); }, []);
   const loadProfile = async () => {
     const res = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`);
     if (res[0]) { setProfile(res[0]); setForm(res[0]); }
@@ -6602,11 +6566,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             </div>
           </div>
           {profile?.is_premium ? (
-            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>
-              ⭐ Premium{premiumTimeLeft ? ` · ${premiumTimeLeft}` : ""}
-            </div>
-          ) : premiumExpired ? (
-            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,#888,#555)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.blanc, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>Expiré</div>
+            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>Premium</div>
           ) : (
             <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.blanc, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(192,57,43,0.35)" }}>Gratuit</div>
           )}
@@ -6817,91 +6777,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
               <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.75)" }}>Messages illimités · Likes illimités · Voir qui vous like</div>
             </div>
             <div style={{  fontSize: "1.2rem", fontWeight: 800, color: G.or, marginLeft: 12, flexShrink: 0 }}>3 500<br/><span style={{ fontSize: "0.65rem",  fontWeight: 600 }}>FCFA/mois</span></div>
-          </div>
-        )}
-
-        {/* ── COMPTEUR PREMIUM ACTIF ── */}
-        {auth.isPremium && premiumTimeLeft && (
-          <div style={{
-            background: `linear-gradient(135deg,#1a5c3a 0%,#0f3d26 100%)`,
-            borderRadius: 18, padding: "16px 20px",
-            boxShadow: "0 6px 22px rgba(26,92,58,0.35)",
-            display: "flex", alignItems: "center", gap: 14,
-          }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(212,168,67,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: G.or, marginBottom: 2 }}>⭐ Abonnement Premium actif</div>
-              <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>⏳ {premiumTimeLeft}</div>
-              {(() => {
-                // Calcul barre de progression
-                const approvedPayment = myPayments.find(p => p.status === "approved");
-                const startDate = approvedPayment?.approved_at || approvedPayment?.created_at;
-                if (!startDate) return null;
-                const total = 31 * 24 * 60 * 60 * 1000;
-                const elapsed = Date.now() - new Date(startDate).getTime();
-                const pct = Math.max(0, Math.min(100, 100 - (elapsed / total) * 100));
-                return (
-                  <div style={{ marginTop: 8, background: "rgba(255,255,255,0.15)", borderRadius: 50, height: 5, overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 50, background: G.or, width: `${pct}%`, transition: "width 0.5s ease" }} />
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        )}
-
-        {/* ── MES DEMANDES DE PAIEMENT ── */}
-        {myPayments.length > 0 && (
-          <div style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
-            <div style={{ padding: "14px 20px 10px", borderBottom: `1px solid #F0F0F0`, display: "flex", alignItems: "center", gap: 10 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-              <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>Mes demandes de paiement</div>
-            </div>
-            {myPayments.map(p => {
-              const isApproved = p.status === "approved";
-              const isPending = p.status === "pending";
-              const isRejected = p.status === "rejected";
-              // Calcul expiration
-              const startDate = p.approved_at || (isApproved ? p.created_at : null);
-              const expiredDate = startDate ? new Date(new Date(startDate).getTime() + 31 * 24 * 60 * 60 * 1000) : null;
-              const isExpired = expiredDate ? expiredDate.getTime() < Date.now() : false;
-              return (
-                <div key={p.id} style={{ padding: "12px 20px", borderBottom: `1px solid #F7F7F7`, display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  {/* Icône opérateur */}
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: p.operator === "MTN" ? "#FDD835" : p.operator === "Airtel" ? "#E53935" : "#F0F0F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.6rem", fontWeight: 800, color: p.operator === "MTN" ? "#1a1a1a" : "#fff" }}>
-                    {p.operator}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a" }}>{p.operator} · {p.amount?.toLocaleString()} FCFA</div>
-                      <span style={{
-                        fontSize: "0.7rem", fontWeight: 700, borderRadius: 50, padding: "2px 10px",
-                        background: isExpired ? "#f5f5f5" : isApproved ? "rgba(39,174,96,0.1)" : isPending ? "rgba(243,156,18,0.1)" : "rgba(231,76,60,0.1)",
-                        color: isExpired ? "#999" : isApproved ? "#27ae60" : isPending ? "#f39c12" : "#e74c3c",
-                      }}>
-                        {isExpired ? "Expiré" : isApproved ? "Approuvé ✓" : isPending ? "En attente…" : "Rejeté"}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: isApproved && !isExpired && expiredDate ? 4 : 0 }}>
-                      {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      {p.tx_ref && <span style={{ marginLeft: 6, fontFamily: "monospace", background: "#F5F5F5", padding: "1px 5px", borderRadius: 4 }}>{p.tx_ref}</span>}
-                    </div>
-                    {isApproved && !isExpired && expiredDate && (
-                      <div style={{ fontSize: "0.72rem", color: "#27ae60", fontWeight: 600 }}>
-                        Expire le {expiredDate.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
-                      </div>
-                    )}
-                    {isExpired && expiredDate && (
-                      <div style={{ fontSize: "0.72rem", color: "#999" }}>
-                        Abonnement terminé le {expiredDate.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
           </div>
         )}
 
@@ -7343,36 +7218,43 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string | null; profile?: { name: string } };
-function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onReject }: { p: PaymentRequest; isPending: boolean; isApproved: boolean; isRejected: boolean; onActivate: (p: PaymentRequest) => void; onReject: (p: PaymentRequest) => void }) {
+type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
+function getPremiumCountdown(approvedAt?: string): { label: string; color: string; expired: boolean } {
+  if (!approvedAt) return { label: "", color: "#888", expired: false };
+  const expiry = new Date(new Date(approvedAt).getTime() + 31 * 24 * 60 * 60 * 1000);
+  const diffMs = expiry.getTime() - Date.now();
+  if (diffMs <= 0) return { label: "Expiré", color: "#e74c3c", expired: true };
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  return { label: days > 0 ? `${days}j ${hours}h restants` : `${hours}h restantes`, color: days <= 3 ? "#e67e22" : "#27ae60", expired: false };
+}
+function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onReject, onDelete, onViewProfile }: { p: PaymentRequest; isPending: boolean; isApproved: boolean; isRejected: boolean; onActivate: (p: PaymentRequest) => void; onReject: (p: PaymentRequest) => void; onDelete: (p: PaymentRequest) => void; onViewProfile: (userId: string) => void }) {
   const [adminRef, setAdminRef] = useState("");
   const [verified, setVerified] = useState<null | "match" | "mismatch">(null);
   const match = adminRef.trim().toLowerCase() === p.tx_ref.trim().toLowerCase();
+  const countdown = getPremiumCountdown(p.approved_at);
+  const isExpired = isApproved && countdown.expired;
   return (
-    <div style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", boxShadow: isPending ? "0 2px 10px rgba(39,174,96,0.12)" : "0 1px 6px rgba(0,0,0,0.05)", border: `1.5px solid ${isPending ? "rgba(39,174,96,0.3)" : isApproved ? "rgba(39,174,96,0.15)" : "rgba(231,76,60,0.15)"}` }}>
-      {/* Header */}
+    <div style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", boxShadow: isPending ? "0 2px 10px rgba(39,174,96,0.12)" : "0 1px 6px rgba(0,0,0,0.05)", border: `1.5px solid ${isPending ? "rgba(39,174,96,0.3)" : isExpired ? "rgba(231,76,60,0.3)" : isApproved ? "rgba(39,174,96,0.15)" : "rgba(231,76,60,0.15)"}` }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div onClick={() => onViewProfile(p.user_id)} title="Voir le profil" style={{ width: 36, height: 36, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", border: "2px solid transparent" }} onMouseOver={e => (e.currentTarget as HTMLDivElement).style.borderColor = G.rouge} onMouseOut={e => (e.currentTarget as HTMLDivElement).style.borderColor = "transparent"}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
-                <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="120" height="60" fill="#FFCC00" rx="4"/>
-                  <ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/>
-                  <text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text>
-                </svg>
-                {p.operator}
-              </div>
+              <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
+              {p.operator}
+            </div>
             <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {p.amount.toLocaleString()} FCFA</div>
           </div>
         </div>
-        <div style={{ background: isPending ? "rgba(39,174,96,0.1)" : isApproved ? "rgba(39,174,96,0.08)" : "rgba(231,76,60,0.08)", color: isPending ? "#27ae60" : isApproved ? "#27ae60" : "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
-          {isPending ? "En attente" : isApproved ? "Approuvé ✓" : "Rejeté ✕"}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {isApproved && countdown.label && <div style={{ background: isExpired ? "rgba(231,76,60,0.1)" : "rgba(39,174,96,0.08)", color: countdown.color, borderRadius: 50, padding: "3px 8px", fontSize: "0.68rem", fontWeight: 700, border: `1px solid ${isExpired ? "rgba(231,76,60,0.2)" : "rgba(39,174,96,0.2)"}` }}>{isExpired ? "⏰ Expiré" : `⏱ ${countdown.label}`}</div>}
+          <div style={{ background: isPending ? "rgba(39,174,96,0.1)" : isExpired ? "rgba(231,76,60,0.08)" : isApproved ? "rgba(39,174,96,0.08)" : "rgba(231,76,60,0.08)", color: isPending ? "#27ae60" : isExpired ? "#e74c3c" : isApproved ? "#27ae60" : "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{isPending ? "En attente" : isExpired ? "Expiré" : isApproved ? "Approuvé ✓" : "Rejeté ✕"}</div>
+          <button onClick={() => onDelete(p)} title="Supprimer" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
-      {/* Réfs */}
       <div style={{ display: "flex", gap: 8, marginBottom: isPending ? 10 : 0 }}>
         <div style={{ flex: 1, background: G.creme, borderRadius: 8, padding: "8px 10px" }}>
           <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. client</div>
@@ -7385,28 +7267,14 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
           </div>
         )}
       </div>
-      {/* Résultat vérification */}
-      {verified === "match" && (
-        <div style={{ background: "rgba(39,174,96,0.08)", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#27ae60" }}>✅ Les références correspondent — vous pouvez activer</div>
-      )}
-      {verified === "mismatch" && (
-        <div style={{ background: "rgba(231,76,60,0.07)", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#e74c3c" }}>❌ Les références ne correspondent pas</div>
-      )}
-      {/* Boutons */}
+      {verified === "match" && <div style={{ background: "rgba(39,174,96,0.08)", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#27ae60" }}>✅ Les références correspondent — vous pouvez activer</div>}
+      {verified === "mismatch" && <div style={{ background: "rgba(231,76,60,0.07)", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#e74c3c" }}>❌ Les références ne correspondent pas</div>}
       {isPending && (
         <div style={{ display: "flex", gap: 8 }}>
-          {verified === null && (
-            <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim()} style={{ flex: 1, background: adminRef.trim() ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: adminRef.trim() ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: adminRef.trim() ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>
-          )}
-          {verified === "match" && (
-            <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: G.blanc, border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✓ Activer Premium</button>
-          )}
-          {verified === "mismatch" && (
-            <button onClick={() => onReject(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter & notifier</button>
-          )}
-          {verified !== null && (
-            <button onClick={() => { setVerified(null); setAdminRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>
-          )}
+          {verified === null && <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim()} style={{ flex: 1, background: adminRef.trim() ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: adminRef.trim() ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: adminRef.trim() ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>}
+          {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: G.blanc, border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✓ Activer Premium</button>}
+          {verified === "mismatch" && <button onClick={() => onReject(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter & notifier</button>}
+          {verified !== null && <button onClick={() => { setVerified(null); setAdminRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>}
         </div>
       )}
     </div>
@@ -7439,13 +7307,14 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     gender: string;
     bio: string;
     is_premium: boolean;
+    premium_until?: string;
+    admin_pin?: string | null;
     is_admin?: boolean;
     is_verified?: boolean;
     is_banned?: boolean;
     is_visible?: boolean;
     created_at?: string;
     warning_count?: number;
-    premium_until?: string | null;
   };
 
   // ── Onglet actif ──
@@ -7472,17 +7341,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const activatePayment = async (p: PaymentRequest) => {
     const premiumUntil = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
-    // 1. Activer is_premium (toujours fonctionnel, comme avant)
-    await adminAction(p.user_id, { is_premium: true }, `Premium activé pour l'utilisateur.`);
-    // 2. Écrire premium_until séparément (ne bloque pas si la colonne n'existe pas encore)
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${p.user_id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
-        body: JSON.stringify({ premium_until: premiumUntil }),
-      });
-    } catch {}
-    // 3. Marquer la demande comme approuvée
+    await adminAction(p.user_id, { is_premium: true, premium_until: premiumUntil }, `Premium activé pour l'utilisateur.`);
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
     await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", warning_number: 0, acknowledged: false }) });
     loadPayments();
@@ -7490,6 +7349,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const rejectPayment = async (p: PaymentRequest) => {
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "rejected" }) });
     await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre preuve de paiement n'a pas pu être vérifiée. Le numéro de transaction ne correspond pas. Veuillez vérifier vos informations de paiement.", warning_number: 0, acknowledged: false }) });
+    loadPayments();
+  };
+  const deletePayment = async (p: PaymentRequest) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
     loadPayments();
   };
   const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
@@ -8579,13 +8442,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
                     ["Badge vert", "Le badge vert sur l'onglet Paiements indique le nombre de demandes en attente de validation."],
+                    ["Silhouette cliquable", "Cliquez sur la silhouette à gauche de chaque carte pour accéder directement au profil de l'utilisateur dans l'onglet Utilisateurs."],
                     ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN (ex: MP241234567)."],
                     ["Réf. MTN reçue", "Numéro que vous entrez après avoir vérifié votre SMS ou application MTN. Doit correspondre à la réf. client."],
                     ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert 'Activer Premium'. Si elles ne correspondent pas → bouton rouge 'Rejeter & notifier'."],
-                    ["Activer Premium", "Active l'abonnement Premium de l'utilisateur ET lui envoie automatiquement un message 'Votre Premium est actif, reconnectez-vous'."],
-                    ["Rejeter & notifier", "Marque la demande comme rejetée ET envoie un modal à l'utilisateur : 'Votre preuve de paiement n'a pas pu être vérifiée. Le numéro de transaction ne correspond pas. Veuillez vérifier vos informations de paiement.'"],
+                    ["Activer Premium", "Active l'abonnement Premium pour 31 jours ET envoie automatiquement un message 'Votre Premium est actif, reconnectez-vous'. Le compteur démarre immédiatement."],
+                    ["Compteur ⏱", "Affiché en vert sur la carte après activation : '28j 14h restants'. Passe en orange sous 3 jours. Affiche '⏰ Expiré' en rouge à l'échéance."],
+                    ["Expiration automatique", "À l'échéance des 31 jours, le statut Premium de l'utilisateur repasse automatiquement à gratuit dès sa prochaine connexion. Le compteur affiche 'Expiré'."],
+                    ["Rejeter & notifier", "Marque la demande comme rejetée ET envoie un modal à l'utilisateur l'informant que sa preuve de paiement n'a pas pu être vérifiée."],
                     ["Bouton ↩", "Réinitialise la vérification pour recommencer la saisie si vous avez fait une erreur de frappe."],
-                    ["Statuts des demandes", "En attente (orange) = à traiter. Approuvé ✓ (vert) = Premium activé. Rejeté ✕ (rouge) = demande refusée."],
+                    ["Bouton ✕ supprimer", "Supprime définitivement la carte de paiement de la liste. Utile pour nettoyer les anciennes demandes traitées ou expirées."],
+                    ["Statuts des demandes", "En attente = à traiter. Approuvé ✓ = Premium activé (31j). Rejeté ✕ = demande refusée. Expiré = 31 jours écoulés."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
@@ -8937,12 +8804,26 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         )}
                         {!u.is_admin ? (
                           <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
-                            onClick={() => confirm(`Rendre ${u.name} administrateur(trice) ?`, () => adminAction(u.id, { is_admin: true }, `${u.name} est maintenant admin.`))} />
+                            onClick={() => {
+                              const pin = window.prompt(`Définir un PIN à 4 chiffres pour ${u.name} :`);
+                              if (!pin) return;
+                              if (!/^\d{4}$/.test(pin)) { showToast("Le PIN doit être exactement 4 chiffres.", "error"); return; }
+                              confirm(`Rendre ${u.name} administrateur(trice) avec le PIN ${pin} ?`, () => adminAction(u.id, { is_admin: true, admin_pin: pin }, `${u.name} est maintenant admin.`));
+                            }} />
                         ) : (
                           <ActionBtn label="— Admin" color="#c0392b" disabled={isLoading || isSelf}
                             onClick={() => {
                               if (isSelf) { showToast("Vous ne pouvez pas retirer vos propres droits admin.", "error"); return; }
-                              confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false }, `Droits admin retirés pour ${u.name}.`));
+                              confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`));
+                            }} />
+                        )}
+                        {u.is_admin && !isSelf && (
+                          <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
+                            onClick={() => {
+                              const pin = window.prompt(`Nouveau PIN à 4 chiffres pour ${u.name} :`);
+                              if (!pin) return;
+                              if (!/^\d{4}$/.test(pin)) { showToast("Le PIN doit être exactement 4 chiffres.", "error"); return; }
+                              adminAction(u.id, { admin_pin: pin }, `PIN de ${u.name} réinitialisé.`);
                             }} />
                         )}
                         {!u.is_verified ? (
@@ -9577,7 +9458,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 const isPending = p.status === "pending";
                 const isApproved = p.status === "approved";
                 const isRejected = p.status === "rejected";
-                return <PaymentCard key={p.id} p={p} isPending={isPending} isApproved={isApproved} isRejected={isRejected} onActivate={activatePayment} onReject={rejectPayment} />;
+                return <PaymentCard key={p.id} p={p} isPending={isPending} isApproved={isApproved} isRejected={isRejected} onActivate={activatePayment} onReject={rejectPayment} onDelete={deletePayment} onViewProfile={(uid) => { setActiveTab("users"); setUserSearch(uid); loadUsers(uid, 0); }} />;
               })}
             </div>
           )}
@@ -9822,6 +9703,24 @@ export default function App() {
       } catch {}
     };
     checkBroadcast();
+  }, [auth?.userId]);
+
+  // ── Vérifier expiration Premium au login ──
+  useEffect(() => {
+    if (!auth?.userId || !auth.isPremium) return;
+    const checkPremiumExpiry = async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=premium_until`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        if (!Array.isArray(data) || !data[0]?.premium_until) return;
+        const until = new Date(data[0].premium_until);
+        localStorage.setItem(`moyo_premium_until_${auth.userId}`, until.toISOString());
+        if (until < new Date()) {
+          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: false }) });
+        }
+      } catch {}
+    };
+    checkPremiumExpiry();
   }, [auth?.userId]);
 
   const acknowledgeWarning = async () => {
@@ -10150,7 +10049,48 @@ export default function App() {
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
-      {tab === "admin" && <Admin auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
+      {tab === "admin" && (() => {
+        const [pinVerified, setPinVerified] = React.useState(false);
+        const [pinInput, setPinInput] = React.useState("");
+        const [pinError, setPinError] = React.useState("");
+        const [pinLoading, setPinLoading] = React.useState(false);
+        const verifyPin = async () => {
+          if (pinInput.length < 4) return;
+          setPinLoading(true);
+          try {
+            const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=admin_pin`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+            const data = await r.json().catch(() => []);
+            if (Array.isArray(data) && data[0]?.admin_pin === pinInput) {
+              setPinVerified(true); setPinError("");
+            } else {
+              setPinError("PIN incorrect. Réessayez."); setPinInput("");
+            }
+          } catch { setPinError("Erreur réseau. Réessayez."); }
+          setPinLoading(false);
+        };
+        if (!pinVerified) return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+              <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
+                <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1.05rem" }}>Accès Admin</div>
+                <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.75rem", marginTop: 4 }}>Entrez votre PIN à 4 chiffres</div>
+              </div>
+              <div style={{ padding: "20px 20px 24px" }}>
+                <input value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4)); setPinError(""); }} onKeyDown={e => e.key === "Enter" && verifyPin()} type="password" inputMode="numeric" maxLength={4} placeholder="• • • •" style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "14px", borderRadius: 12, border: `2px solid ${pinError ? "#e74c3c" : pinInput.length === 4 ? G.rouge : G.gris}`, fontSize: "1.4rem", letterSpacing: 8, outline: "none", fontFamily: "inherit" }} autoFocus />
+                {pinError && <div style={{ color: "#e74c3c", fontSize: "0.78rem", fontWeight: 600, textAlign: "center", marginTop: 8 }}>{pinError}</div>}
+                <button onClick={verifyPin} disabled={pinInput.length < 4 || pinLoading} style={{ width: "100%", marginTop: 14, background: pinInput.length === 4 ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "#ddd", color: pinInput.length === 4 ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: pinInput.length === 4 ? "pointer" : "not-allowed" }}>
+                  {pinLoading ? "Vérification…" : "Accéder au panel"}
+                </button>
+                <button onClick={() => setTab("discover")} style={{ width: "100%", marginTop: 8, background: "transparent", color: "#888", border: "none", fontSize: "0.82rem", cursor: "pointer", padding: "8px" }}>Annuler</button>
+              </div>
+            </div>
+          </div>
+        );
+        return <Admin auth={auth} onBack={() => { setPinVerified(false); setTab("discover"); }} onBadgeCount={setAdminBadgeCount} />;
+      })()}
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} />}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
