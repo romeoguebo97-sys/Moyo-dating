@@ -6605,6 +6605,8 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>
               ⭐ Premium{premiumTimeLeft ? ` · ${premiumTimeLeft}` : ""}
             </div>
+          ) : premiumExpired ? (
+            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,#888,#555)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.blanc, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>Expiré</div>
           ) : (
             <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.blanc, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(192,57,43,0.35)" }}>Gratuit</div>
           )}
@@ -6891,9 +6893,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                         Expire le {expiredDate.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
                       </div>
                     )}
-                    {isExpired && (
+                    {isExpired && expiredDate && (
                       <div style={{ fontSize: "0.72rem", color: "#999" }}>
-                        Abonnement terminé le {expiredDate?.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+                        Abonnement terminé le {expiredDate.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
                       </div>
                     )}
                   </div>
@@ -7443,6 +7445,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     is_visible?: boolean;
     created_at?: string;
     warning_count?: number;
+    premium_until?: string | null;
   };
 
   // ── Onglet actif ──
