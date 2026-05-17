@@ -640,20 +640,42 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
 
 function Toast({ msg, type = "success", onClose }: { msg: string; type?: string; onClose: () => void }) {
   useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, []);
-  const bg = type === "error"
-    ? "rgba(192,57,43,0.88)"
-    : type === "premium"
-    ? "rgba(184,134,11,0.88)"
-    : "rgba(26,92,58,0.88)";
+  const borderColor = type === "error" ? "rgba(192,57,43,0.4)" : type === "premium" ? "rgba(212,168,67,0.4)" : "rgba(26,92,58,0.4)";
+  const iconColor = type === "error" ? "#ff6b6b" : type === "premium" ? G.or : "#52d68a";
   const icon = type === "error"
-    ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     : type === "premium"
-    ? <svg width="15" height="15" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+    ? <svg width="15" height="15" viewBox="0 0 24 24" fill={iconColor} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
   return (
-    <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: bg, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", color: "white", padding: "11px 20px", borderRadius: 50, fontSize: "0.84rem", fontWeight: 600, zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", maxWidth: "88vw", textAlign: "center", display: "flex", alignItems: "center", gap: 8, border: "1px solid rgba(255,255,255,0.15)", animation: "fadeUp 0.25s ease" }}>
+    <div style={{
+      position: "fixed",
+      bottom: "calc(env(safe-area-inset-bottom) + 76px)",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: "rgba(20, 20, 20, 0.55)",
+      backdropFilter: "blur(24px)",
+      WebkitBackdropFilter: "blur(24px)",
+      color: "rgba(255,255,255,0.92)",
+      padding: "11px 18px",
+      borderRadius: 50,
+      fontSize: "0.84rem",
+      fontWeight: 600,
+      zIndex: 9999,
+      boxShadow: "0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12)",
+      maxWidth: "88vw",
+      textAlign: "center",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      border: `1px solid ${borderColor}`,
+      animation: "fadeUp 0.25s ease",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    }}>
       {icon}
-      {msg}
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{msg}</span>
     </div>
   );
 }
