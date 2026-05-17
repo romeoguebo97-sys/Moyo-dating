@@ -653,7 +653,7 @@ function Toast({ msg, type = "success", onClose }: { msg: string; type?: string;
       bottom: "calc(env(safe-area-inset-bottom) + 76px)",
       left: "50%",
       transform: "translateX(-50%)",
-      background: "rgba(20, 20, 20, 0.55)",
+      background: "rgba(20, 20, 20, 0.75)",
       backdropFilter: "blur(24px)",
       WebkitBackdropFilter: "blur(24px)",
       color: "rgba(255,255,255,0.92)",
@@ -1166,7 +1166,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment rendre mon profil invisible ?", desc: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
       { icon: "Q", titre: "Pourquoi je ne vois pas mon profil dans Découvrir ?", desc: "Votre profil doit être complet jusqu'à la dernière étape de l'inscription pour apparaître dans Découvrir. Vérifiez aussi que votre profil est bien visible dans les paramètres." },
       { icon: "Q", titre: "À quoi servent les onglets Likes et Vus ?", desc: "Deux onglets séparés : Likes (personnes qui vous ont liké) et Vus (personnes qui ont visité votre profil). Tout le monde voit le compteur. Premium requis pour voir les cartes et l'identité des personnes. Vous pouvez retirer une carte sans affecter les matchs." },
-      { icon: "Q", titre: "Qui apparaît dans mes Vus ?", desc: "Uniquement les membres Premium qui ont consulté votre profil. Les membres gratuits ne génèrent pas de vues et n'apparaissent pas dans votre liste Vus." },
+      { icon: "Q", titre: "Qui apparaît dans mes Vues ?", desc: "Uniquement les membres Premium qui ont consulté votre profil. Les membres gratuits ne génèrent pas de vues et n'apparaissent pas dans votre liste Vues." },
       { icon: "Q", titre: "Comment suis-je informé d'un nouveau match ?", desc: "Dès qu'un match est créé, un message de bienvenue apparaît automatiquement dans la conversation : \"🎉 Vous avez un match avec [Prénom] ! Dites-lui bonjour 👋\". Le badge rouge sur l'onglet Messages se met également à jour en temps réel." },
       { icon: "Q", titre: "Si je unlike quelqu'un, que se passe-t-il ?", desc: "Le like disparait des deux côtés instantanément. Si vous aviez un match, la conversation et tous les messages sont supprimés." },
       { icon: "Q", titre: "Que se passe-t-il si j'envoie un message irrespectueux ?", desc: "Moyo bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement automatique est envoyé à notre équipe. Les comportements répétés entraînent la suppression du compte." },
@@ -2766,7 +2766,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     },
     {
       id: "visitors",
-      label: "Vus",
+      label: "Vues",
       icon: (active: boolean) => (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -2923,14 +2923,25 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Votre lien de parrainage est unique et permanent, disponible depuis votre page Profil.",
             ]},
             { title: "Statuts", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, items: [
-              "Les statuts sont des publications temporaires visibles pendant 24h par tous les membres. Ils apparaissent en haut de l'onglet Découvrir.",
-              "Pour publier un statut : appuyez sur votre avatar dans la barre des statuts → choisissez une photo ou écrivez un texte.",
-              "Chaque membre peut publier jusqu'à 2 statuts actifs en même temps sur 24h.",
-              "Les statuts expirent automatiquement après 24h. Vous pouvez aussi supprimer un statut manuellement depuis votre profil.",
+              "Les statuts sont réservés aux membres Premium. Ils apparaissent en haut de l'onglet Messages.",
+              "Pour publier un statut : appuyez sur votre avatar dans la barre des statuts en haut de l'onglet Messages → choisissez une photo (photos uniquement).",
+              "Chaque membre Premium peut publier jusqu'à 2 photos actives en même temps sur 24h.",
+              "Les statuts expirent automatiquement après 24h. Vous pouvez aussi supprimer un statut manuellement.",
               "Appuyez sur le statut d'un autre membre pour le voir en plein écran.",
+              "Sur votre propre statut, appuyez sur le compteur Vues ou Likes pour voir exactement qui a vu ou aimé votre statut.",
             ]},
-            { title: "Likes & Visiteurs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Deux onglets séparés dans la barre de navigation : Likes (coeur) et Vus (oeil). Les badges se mettent à jour instantanément.", "En Premium, tu vois les cartes complètes des personnes qui t'ont liké ou visité. Tu peux retirer une carte sans affecter les matchs ni les messages.", "Important : seuls les membres Premium génèrent des vues. Un membre gratuit qui consulte ton profil n'apparaît pas dans tes Vus.", "Si tu unlikes un profil, ton like disparait aussi de sa liste à lui instantanément.", "Vue carte ou liste disponible via le bouton en haut à droite."] },
-      { title: "Inviter un ami", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>, items: ["Dans Profil, appuyez sur Inviter un ami. Un message pré-rempli s'ouvre via WhatsApp ou le partage natif de votre téléphone.", "Le lien pointe directement vers moyo-congo.com pour que votre ami puisse s'inscrire facilement."] },
+            { title: "Likes", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: [
+              "L'onglet Likes (coeur) affiche les profils qui vous ont liké. Le badge rouge se met à jour en temps réel.",
+              "En Premium, vous voyez les cartes complètes des personnes qui vous ont liké. En gratuit, vous voyez uniquement le compteur.",
+              "Cliquez sur un profil pour le voir en détail et liker en retour — ce qui crée un match automatiquement.",
+              "Si vous retirez un like, il disparait aussi de la liste de l'autre personne instantanément.",
+            ]},
+            { title: "Vues", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>, items: [
+              "L'onglet Vues (oeil) affiche les profils qui ont visité votre profil. Le badge se met à jour en temps réel.",
+              "En Premium, vous voyez les cartes complètes des personnes qui ont consulté votre profil.",
+              "Important : seuls les membres Premium génèrent des vues. Un membre gratuit qui consulte votre profil n'apparait pas dans vos Vues.",
+              "Vue carte ou liste disponible via le bouton en haut à droite.",
+            ]},
       { title: "Mode sombre", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>, items: ["Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes. Votre choix est mémorisé automatiquement.", "Le mode sombre s'applique à toutes les pages sauf la page d'accueil."] },
       { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo est réservé aux personnes majeures de 18 ans et plus.", "La modération automatique bloque les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement est automatiquement transmis à notre équipe.", "Si votre comportement enfreint les règles, un administrateur peut vous envoyer un avertissement officiel. Une notification apparaît à votre prochaine connexion. Après plusieurs avertissements, le compte peut être banni.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
       { title: "Assistant Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/></svg>, items: ["L'icône verte en forme de robot à côté du bouton Guide ouvre l'Assistant Moyo.", "Il propose deux options : Besoin d'aide (répond instantanément à vos questions sur l'app) et Signaler un problème (comportement abusif, arnaque, harcèlement).", "Les signalements sont traités par notre équipe sous 24h."] },
@@ -3833,7 +3844,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
       {/* Onglets likes / visiteurs - Premium uniquement */}
       {auth.isPremium && (likers.length > 0 || visitors.length > 0) && (
         <div style={{ display: "flex", background: G.gris, borderRadius: 50, padding: 3, gap: 2, marginBottom: 10 }}>
-          {[{ id: "likes", label: <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{`Likes (${likers.length})`}</span> }, { id: "visitors", label: <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{`Visiteurs (${visitors.length})`}</span> }].map(t => (
+          {[{ id: "likes", label: <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{`Likes (${likers.length})`}</span> }, { id: "visitors", label: <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{`Vues (${visitors.length})`}</span> }].map(t => (
             <div key={t.id} onClick={() => setActiveTab(t.id as "likes" | "visitors")} style={{ flex: 1, padding: "6px 10px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", textAlign: "center", background: activeTab === t.id ? G.blanc : "transparent", color: activeTab === t.id ? G.rouge : "#888", boxShadow: activeTab === t.id ? "0 2px 6px rgba(0,0,0,0.1)" : "none", transition: "all 0.2s" }}>
               {t.label}
             </div>
@@ -4607,7 +4618,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             value={visitorsSubTab}
             onChange={v => setVisitorsSubTab(v as "visitors"|"visited")}
             options={[
-              { id: "visitors", label: `Visiteurs${viewsCount > 0 ? ` (${viewsCount})` : ""}`,
+              { id: "visitors", label: `Vues${viewsCount > 0 ? ` (${viewsCount})` : ""}`,
                 icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
               { id: "visited", label: "Profils vus",
                 icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
@@ -7097,24 +7108,15 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           const isExpired = !auth.isPremium && stored && countdown.expired;
           if (isActive) return (
             <div style={{ background: "linear-gradient(135deg,#D4A843 0%,#B8860B 60%,#8B6914 100%)", borderRadius: 20, padding: "18px 20px", boxShadow: "0 10px 32px rgba(184,134,11,0.45)", border: "1px solid rgba(255,220,100,0.3)", position: "relative", overflow: "hidden" }}>
-              {/* Reflet subtil */}
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(180deg,rgba(255,255,255,0.12) 0%,transparent 100%)", borderRadius: "20px 20px 0 0", pointerEvents: "none" }} />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#1a1a1a" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <span style={{ fontSize: "1rem", fontWeight: 900, color: "#1a1a1a", letterSpacing: "0.01em" }}>Abonnement Premium actif</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <div>
+                  <div style={{ fontSize: "1rem", fontWeight: 900, color: G.blanc, letterSpacing: "0.01em" }}>Abonnement Premium actif</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>{countdown.label}</span>
                   </div>
-                  {stored && <div style={{ fontSize: "0.72rem", color: "rgba(0,0,0,0.55)", marginBottom: 6, fontWeight: 500 }}>Activé le {new Date(new Date(stored).getTime() - 31 * 24 * 60 * 60 * 1000 + 1000).toLocaleDateString("fr-FR")}</div>}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.12)", borderRadius: 50, padding: "5px 12px", width: "fit-content" }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: countdown.expired ? "#8B0000" : countdown.color === "#e67e22" ? "#7B3F00" : "#1a5c3a" }}>{countdown.label}</span>
-                  </div>
-                </div>
-                <div style={{ textAlign: "center", flexShrink: 0, marginLeft: 16, background: "rgba(0,0,0,0.12)", borderRadius: 14, padding: "10px 16px" }}>
-                  <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "rgba(0,0,0,0.55)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>Statut</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#1a1a1a", lineHeight: 1 }}>Premium</div>
-                  <div style={{ fontSize: "0.62rem", color: "rgba(0,0,0,0.5)", marginTop: 2 }}>31 jours</div>
                 </div>
               </div>
             </div>
@@ -7139,6 +7141,51 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             </div>
           );
         })()}
+
+
+        {/* Parrainage — mis en avant */}
+        <div onClick={() => {
+          const refLink = `https://moyo-congo.com?ref=${auth.userId}`;
+          const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ?\nCrée ton compte gratuitement ici : ${refLink}`);
+          if (navigator.share) {
+            navigator.share({ title: "Moyo Congo", text: `Salut ! Les célibataires congolais sont déjà sur MOYO. Crée ton compte gratuitement :`, url: refLink });
+          } else {
+            window.open(`https://wa.me/?text=${msg}`, "_blank");
+          }
+        }} style={{ background: `linear-gradient(135deg,${G.vert} 0%,#0f3d25 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(26,92,58,0.35)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Parrainer un ami</div>
+            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.or }}>7 jours Premium offerts</span> pour chaque ami qui s'abonne</div>
+          </div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+
+
+        {/* Demande de vérification */}
+        {!profile?.is_verified ? (
+          <a href="https://wa.me/242065132012?text=Bonjour%2C%20je%20souhaite%20faire%20vérifier%20mon%20compte%20Moyo.%20Mon%20email%20%3A%20" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+            <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
+              <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(29,155,240,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <VerifiedBadge size={22} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Faire vérifier mon compte</div>
+                <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Obtenir le badge de confiance</div>
+              </div>
+              <div style={{ color: "#ccc", fontSize: "1rem" }}>›</div>
+            </div>
+          </a>
+        ) : (
+          <div style={{ background: "rgba(29,155,240,0.06)", borderRadius: 16, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, border: `1px solid rgba(29,155,240,0.2)` }}>
+            <VerifiedBadge size={22} />
+            <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1d9bf0", display: "flex", alignItems: "center", gap: 8 }}>Compte vérifié
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+        )}
 
         {/* Toggle Visible / Invisible */}
         <div style={{
@@ -7168,6 +7215,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           </div>
         </div>
 
+
         {/* Mode sombre */}
         <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -7189,25 +7237,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           </div>
         </div>
 
-        {/* Parrainage — mis en avant */}
-        <div onClick={() => {
-          const refLink = `https://moyo-congo.com?ref=${auth.userId}`;
-          const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ?\nCrée ton compte gratuitement ici : ${refLink}`);
-          if (navigator.share) {
-            navigator.share({ title: "Moyo Congo", text: `Salut ! Les célibataires congolais sont déjà sur MOYO. Crée ton compte gratuitement :`, url: refLink });
-          } else {
-            window.open(`https://wa.me/?text=${msg}`, "_blank");
-          }
-        }} style={{ background: `linear-gradient(135deg,${G.vert} 0%,#0f3d25 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(26,92,58,0.35)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)" }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Parrainer un ami</div>
-            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.or }}>7 jours Premium offerts</span> pour chaque ami qui s'abonne</div>
-          </div>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </div>
 
         {/* ── Carte Noter Moyo ── */}
         <div>
@@ -7324,6 +7353,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           )}
         </div>
 
+
         {/* ── Carte Avertissements ── */}
         {(() => {
           const wc = profile?.warning_count ?? 0;
@@ -7387,28 +7417,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           );
         })()}
 
-        {/* Demande de vérification */}
-        {!profile?.is_verified ? (
-          <a href="https://wa.me/242065132012?text=Bonjour%2C%20je%20souhaite%20faire%20vérifier%20mon%20compte%20Moyo.%20Mon%20email%20%3A%20" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-            <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
-              <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(29,155,240,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <VerifiedBadge size={22} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Faire vérifier mon compte</div>
-                <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Obtenir le badge de confiance</div>
-              </div>
-              <div style={{ color: "#ccc", fontSize: "1rem" }}>›</div>
-            </div>
-          </a>
-        ) : (
-          <div style={{ background: "rgba(29,155,240,0.06)", borderRadius: 16, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, border: `1px solid rgba(29,155,240,0.2)` }}>
-            <VerifiedBadge size={22} />
-            <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1d9bf0", display: "flex", alignItems: "center", gap: 8 }}>Compte vérifié
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-          </div>
-        )}
+
 
         {/* Email de connexion - grisé, non modifiable */}
         <div style={{ marginTop: 4, background: G.blanc, borderRadius: 16, padding: "14px 18px", border: `1px solid #E8E8E8`, display: "flex", alignItems: "center", gap: 14 }}>
@@ -7993,6 +8002,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     "Autre motif",
   ];
   const [warnModal, setWarnModal] = useState<WarnModal>(null);
+  const [pinModal, setPinModal] = useState<{ user: AdminProfile; mode: "set" | "reset" } | null>(null);
+  const [pinModalInput, setPinModalInput] = useState("");
   const [warnReason, setWarnReason] = useState(WARN_REASONS[0]);
   const [msgModal, setMsgModal] = useState<{ user: Profile } | null>(null);
   const [msgText, setMsgText] = useState("");
@@ -8693,6 +8704,35 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         </div>
       )}
+      {/* Modale PIN */}
+      {pinModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
+              <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1rem" }}>
+                {pinModal.mode === "set" ? `Définir le PIN de ${pinModal.user.name}` : `Réinitialiser le PIN de ${pinModal.user.name}`}
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.72rem", marginTop: 4 }}>PIN à 4 chiffres - communiquez-le par WhatsApp</div>
+            </div>
+            <div style={{ padding: "20px 20px 24px" }}>
+              <input value={pinModalInput} onChange={e => setPinModalInput(e.target.value.replace(/\D/g, "").slice(0, 4))} type="password" inputMode="numeric" maxLength={4} placeholder="• • • •" style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "14px", borderRadius: 12, border: `2px solid ${pinModalInput.length === 4 ? "#8e44ad" : G.gris}`, fontSize: "1.4rem", letterSpacing: 8, outline: "none", fontFamily: "inherit" }} autoFocus />
+              <button onClick={() => {
+                if (pinModalInput.length < 4) return;
+                if (pinModal.mode === "set") adminAction(pinModal.user.id, { is_admin: true, admin_pin: pinModalInput }, `${pinModal.user.name} est maintenant admin.`);
+                else adminAction(pinModal.user.id, { admin_pin: pinModalInput }, `PIN de ${pinModal.user.name} réinitialisé.`);
+                setPinModal(null); setPinModalInput("");
+              }} disabled={pinModalInput.length < 4} style={{ width: "100%", marginTop: 12, background: pinModalInput.length === 4 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ddd", color: pinModalInput.length === 4 ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: pinModalInput.length === 4 ? "pointer" : "not-allowed" }}>
+                {pinModal.mode === "set" ? "Rendre admin avec ce PIN" : "Mettre à jour le PIN"}
+              </button>
+              <button onClick={() => { setPinModal(null); setPinModalInput(""); }} style={{ width: "100%", marginTop: 8, background: "transparent", color: "#888", border: "none", fontSize: "0.82rem", cursor: "pointer", padding: "8px" }}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {warnModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
@@ -9463,10 +9503,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         {!u.is_admin ? (
                           <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
                             onClick={() => {
-                              const pin = window.prompt(`Définir un PIN à 4 chiffres pour ${u.name} :`);
-                              if (!pin) return;
-                              if (!/^\d{4}$/.test(pin)) { showToast("Le PIN doit être exactement 4 chiffres.", "error"); return; }
-                              confirm(`Rendre ${u.name} administrateur(trice) avec le PIN ${pin} ?`, () => adminAction(u.id, { is_admin: true, admin_pin: pin }, `${u.name} est maintenant admin.`));
+                              if (auth.userId !== SUPER_ADMIN_ID) { showToast("Seul l'administrateur principal peut attribuer le statut admin.", "error"); return; }
+                              setPinModalInput(""); setPinModal({ user: u, mode: "set" });
                             }} />
                         ) : (
                           <ActionBtn label="— Admin" color="#c0392b" disabled={isLoading || isSelf}
@@ -9475,14 +9513,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`));
                             }} />
                         )}
-                        {u.is_admin && !isSelf && (
+                        {u.is_admin && !isSelf && auth.userId === SUPER_ADMIN_ID && (
                           <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
-                            onClick={() => {
-                              const pin = window.prompt(`Nouveau PIN à 4 chiffres pour ${u.name} :`);
-                              if (!pin) return;
-                              if (!/^\d{4}$/.test(pin)) { showToast("Le PIN doit être exactement 4 chiffres.", "error"); return; }
-                              adminAction(u.id, { admin_pin: pin }, `PIN de ${u.name} réinitialisé.`);
-                            }} />
+                            onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "reset" }); }} />
                         )}
                         {!u.is_verified ? (
                           <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading}
