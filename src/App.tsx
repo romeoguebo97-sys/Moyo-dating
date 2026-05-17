@@ -2476,7 +2476,7 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
     try {
       await sb.insert(auth.token, "reports", {
         reporter_id: auth.userId,
-        reported_id: null,
+        reported_id: auth.userId,
         reason: `${SUPPORT_PREFIX_USER} ${reportText.trim()}`,
         status: "pending",
       });
@@ -7686,11 +7686,11 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
   );
 }
 
-function logAdminAction(adminId: string, adminName: string, action: string, targetUserId?: string) {
+function logAdminAction(token: string, adminId: string, adminName: string, action: string, targetUserId?: string) {
   try {
     fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=minimal" },
       body: JSON.stringify({ admin_id: adminId, admin_name: adminName, action, target_user_id: targetUserId || null, created_at: new Date().toISOString() }),
     });
   } catch {}
@@ -7829,6 +7829,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const premiumUntil = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
     const targetId = p.gift_for || p.user_id;
     await adminAction(targetId, { is_premium: true, premium_until: premiumUntil }, `Premium activé.`);
+    logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} — payé par ${p.user_id}` : `Premium activé — réf: ${p.tx_ref}`, targetId);
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
     // Bonus parrainage — vérifier si le filleul a un parrain
     try {
@@ -7866,6 +7867,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const rejectPayment = async (p: PaymentRequest) => {
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "rejected" }) });
+    logAdminAction(auth.token, auth.userId, auth.name, `Paiement rejeté — réf: ${p.tx_ref} — ${p.operator}`, p.user_id);
     await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre preuve de paiement n'a pas pu être vérifiée. Le numéro de transaction ne correspond pas. Veuillez vérifier vos informations de paiement.", warning_number: 0, acknowledged: false }) });
     loadPayments();
   };
@@ -8120,7 +8122,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       console.log("[Moyo][Admin][Action] ✅", successMsg, updates);
       showToast(successMsg, "success");
       // Log historique admin
-      logAdminAction(auth.userId, auth.name, successMsg, userId);
+      logAdminAction(auth.token, auth.userId, auth.name, successMsg, userId);
       // Mise à jour locale immédiate
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
     } catch (e: any) {
@@ -8140,6 +8142,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       await sb.delete(auth.token, "profiles", `?id=eq.${user.id}`);
       console.log("[Moyo][Admin][Delete] ✅ Profil supprimé :", user.id);
       showToast(`Profil de ${user.name} supprimé.`, "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Compte supprimé : ${user.name}`, user.id);
       setUsers(prev => prev.filter(u => u.id !== user.id));
       setStats(s => ({ ...s, users: s.users - 1 }));
     } catch (e: any) {
@@ -8186,6 +8189,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       // 3. Mise à jour locale
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, warning_count: newCount } : u));
       showToast(`Avertissement ${newCount}/3 envoyé à ${user.name}.`, "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Avertissement ${newCount}/3 envoyé à ${user.name} — Motif : ${finalReason}`, user.id);
       setWarnModal(null);
       setWarnReason(WARN_REASONS[0]);
       setWarnCustom("");
