@@ -6209,7 +6209,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       </div>
     )}
     {statusPeopleModal && (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 600, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setStatusPeopleModal(null)}>
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 800, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setStatusPeopleModal(null)}>
         <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "60vh", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom)" }} onClick={e => e.stopPropagation()}>
           <div style={{ padding: "16px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
