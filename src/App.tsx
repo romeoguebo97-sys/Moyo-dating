@@ -90,7 +90,7 @@ type Auth = {
   refreshToken?: string;   // refresh_token Supabase
   expiresAt?: number;      // timestamp ms (Date.now()) d'expiration du access_token
 };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; warning_count?: number };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; warning_count?: number; premium_until?: string | null };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
@@ -6385,6 +6385,44 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const [ratingError, setRatingError] = useState("");
   const [existingRatingId, setExistingRatingId] = useState<string | null>(null);
 
+  // ── PAIEMENTS & COMPTEUR PREMIUM ──
+  const [myPayments, setMyPayments] = useState<{ id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string | null }[]>([]);
+  const [premiumTimeLeft, setPremiumTimeLeft] = useState<string | null>(null);
+  const [premiumExpired, setPremiumExpired] = useState(false);
+
+  const loadMyPayments = async () => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?user_id=eq.${auth.userId}&select=id,operator,tx_ref,amount,status,created_at,approved_at&order=created_at.desc`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      if (r.ok) { const data = await r.json(); setMyPayments(Array.isArray(data) ? data : []); }
+    } catch {}
+  };
+
+  const checkPremiumExpiry = async () => {
+    try {
+      const res = await sb.query<{ premium_until?: string | null }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=premium_until`);
+      const until = res[0]?.premium_until;
+      if (!until) { setPremiumTimeLeft(null); return; }
+      const diff = new Date(until).getTime() - Date.now();
+      if (diff <= 0) {
+        // Abonnement expiré → on repasse is_premium = false automatiquement
+        setPremiumExpired(true);
+        setPremiumTimeLeft(null);
+        await sb.update(auth.token, "profiles", auth.userId, { is_premium: false, premium_until: null });
+        setProfile(p => p ? { ...p, is_premium: false, premium_until: null } : null);
+      } else {
+        setPremiumExpired(false);
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        if (days > 0) setPremiumTimeLeft(`${days}j ${hours}h restants`);
+        else if (hours > 0) setPremiumTimeLeft(`${hours}h ${mins}min restants`);
+        else setPremiumTimeLeft(`${mins} min restants`);
+      }
+    } catch {}
+  };
+
   const loadExistingRating = async () => {
     try {
       const res = await sb.query<{ id: string; rating: number; comment: string }>(
@@ -6431,7 +6469,16 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     }
   };
 
-  useEffect(() => { loadProfile(); loadBlocked(); loadExistingRating(); }, []);
+  useEffect(() => {
+    loadProfile();
+    loadBlocked();
+    loadExistingRating();
+    loadMyPayments();
+    checkPremiumExpiry();
+    // Mise à jour du compteur toutes les minutes
+    const timer = setInterval(checkPremiumExpiry, 60000);
+    return () => clearInterval(timer);
+  }, []);
   const loadProfile = async () => {
     const res = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}`);
     if (res[0]) { setProfile(res[0]); setForm(res[0]); }
@@ -6555,7 +6602,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             </div>
           </div>
           {profile?.is_premium ? (
-            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>Premium</div>
+            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>
+              ⭐ Premium{premiumTimeLeft ? ` · ${premiumTimeLeft}` : ""}
+            </div>
           ) : (
             <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.blanc, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(192,57,43,0.35)" }}>Gratuit</div>
           )}
@@ -6766,6 +6815,91 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
               <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.75)" }}>Messages illimités · Likes illimités · Voir qui vous like</div>
             </div>
             <div style={{  fontSize: "1.2rem", fontWeight: 800, color: G.or, marginLeft: 12, flexShrink: 0 }}>3 500<br/><span style={{ fontSize: "0.65rem",  fontWeight: 600 }}>FCFA/mois</span></div>
+          </div>
+        )}
+
+        {/* ── COMPTEUR PREMIUM ACTIF ── */}
+        {auth.isPremium && premiumTimeLeft && (
+          <div style={{
+            background: `linear-gradient(135deg,#1a5c3a 0%,#0f3d26 100%)`,
+            borderRadius: 18, padding: "16px 20px",
+            boxShadow: "0 6px 22px rgba(26,92,58,0.35)",
+            display: "flex", alignItems: "center", gap: 14,
+          }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(212,168,67,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: G.or, marginBottom: 2 }}>⭐ Abonnement Premium actif</div>
+              <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>⏳ {premiumTimeLeft}</div>
+              {(() => {
+                // Calcul barre de progression
+                const approvedPayment = myPayments.find(p => p.status === "approved");
+                const startDate = approvedPayment?.approved_at || approvedPayment?.created_at;
+                if (!startDate) return null;
+                const total = 31 * 24 * 60 * 60 * 1000;
+                const elapsed = Date.now() - new Date(startDate).getTime();
+                const pct = Math.max(0, Math.min(100, 100 - (elapsed / total) * 100));
+                return (
+                  <div style={{ marginTop: 8, background: "rgba(255,255,255,0.15)", borderRadius: 50, height: 5, overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 50, background: G.or, width: `${pct}%`, transition: "width 0.5s ease" }} />
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* ── MES DEMANDES DE PAIEMENT ── */}
+        {myPayments.length > 0 && (
+          <div style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
+            <div style={{ padding: "14px 20px 10px", borderBottom: `1px solid #F0F0F0`, display: "flex", alignItems: "center", gap: 10 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>Mes demandes de paiement</div>
+            </div>
+            {myPayments.map(p => {
+              const isApproved = p.status === "approved";
+              const isPending = p.status === "pending";
+              const isRejected = p.status === "rejected";
+              // Calcul expiration
+              const startDate = p.approved_at || (isApproved ? p.created_at : null);
+              const expiredDate = startDate ? new Date(new Date(startDate).getTime() + 31 * 24 * 60 * 60 * 1000) : null;
+              const isExpired = expiredDate ? expiredDate.getTime() < Date.now() : false;
+              return (
+                <div key={p.id} style={{ padding: "12px 20px", borderBottom: `1px solid #F7F7F7`, display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  {/* Icône opérateur */}
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: p.operator === "MTN" ? "#FDD835" : p.operator === "Airtel" ? "#E53935" : "#F0F0F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.6rem", fontWeight: 800, color: p.operator === "MTN" ? "#1a1a1a" : "#fff" }}>
+                    {p.operator}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a" }}>{p.operator} · {p.amount?.toLocaleString()} FCFA</div>
+                      <span style={{
+                        fontSize: "0.7rem", fontWeight: 700, borderRadius: 50, padding: "2px 10px",
+                        background: isExpired ? "#f5f5f5" : isApproved ? "rgba(39,174,96,0.1)" : isPending ? "rgba(243,156,18,0.1)" : "rgba(231,76,60,0.1)",
+                        color: isExpired ? "#999" : isApproved ? "#27ae60" : isPending ? "#f39c12" : "#e74c3c",
+                      }}>
+                        {isExpired ? "Expiré" : isApproved ? "Approuvé ✓" : isPending ? "En attente…" : "Rejeté"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: isApproved && !isExpired && expiredDate ? 4 : 0 }}>
+                      {new Date(p.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {p.tx_ref && <span style={{ marginLeft: 6, fontFamily: "monospace", background: "#F5F5F5", padding: "1px 5px", borderRadius: 4 }}>{p.tx_ref}</span>}
+                    </div>
+                    {isApproved && !isExpired && expiredDate && (
+                      <div style={{ fontSize: "0.72rem", color: "#27ae60", fontWeight: 600 }}>
+                        Expire le {expiredDate.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+                      </div>
+                    )}
+                    {isExpired && (
+                      <div style={{ fontSize: "0.72rem", color: "#999" }}>
+                        Abonnement terminé le {expiredDate?.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -7207,7 +7341,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; profile?: { name: string } };
+type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string | null; profile?: { name: string } };
 function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onReject }: { p: PaymentRequest; isPending: boolean; isApproved: boolean; isRejected: boolean; onActivate: (p: PaymentRequest) => void; onReject: (p: PaymentRequest) => void }) {
   const [adminRef, setAdminRef] = useState("");
   const [verified, setVerified] = useState<null | "match" | "mismatch">(null);
@@ -7324,7 +7458,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const loadPayments = async () => {
     setPaymentsLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at&order=created_at.desc&limit=50`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at&order=created_at.desc&limit=50`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) {
         setPayments(data);
@@ -7334,8 +7468,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setPaymentsLoading(false);
   };
   const activatePayment = async (p: PaymentRequest) => {
-    await adminAction(p.user_id, { is_premium: true }, `Premium activé pour l'utilisateur.`);
-    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved" }) });
+    const premiumUntil = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
+    await adminAction(p.user_id, { is_premium: true, premium_until: premiumUntil }, `Premium activé pour l'utilisateur.`);
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
     await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", warning_number: 0, acknowledged: false }) });
     loadPayments();
   };
