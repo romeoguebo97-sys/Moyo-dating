@@ -907,6 +907,7 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               Appuyer pour payer - 3 500 FCFA
             </a>
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*105*1*1*065132012*3500#</div>
           </div>
           {/* Étape 2 */}
           <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
@@ -971,6 +972,7 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               Appuyer pour payer - 3 500 FCFA
             </a>
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*128*2*1*1*056230067*3500#</div>
           </div>
           <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
             <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -5827,6 +5829,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       Appuyer pour payer - 3 500 FCFA
                     </a>
+                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*105*1*1*065132012*3500#</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -5877,6 +5880,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       Appuyer pour payer - 3 500 FCFA
                     </a>
+                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*128*2*1*1*056230067*3500#</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -7103,9 +7107,10 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         {/* CTA Premium - rouge si gratuit, doré si actif, rouge si expiré */}
         {(() => {
           const stored = localStorage.getItem(`moyo_premium_until_${auth.userId}`);
-          const countdown = getPremiumCountdown(stored ? new Date(new Date(stored).getTime() - 31 * 24 * 60 * 60 * 1000).toISOString() : undefined);
-          const isActive = auth.isPremium && !countdown.expired;
-          const isExpired = !auth.isPremium && stored && countdown.expired;
+          // stored = premium_until (date d'expiration directe)
+          const daysLeft = stored ? Math.floor((new Date(stored).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
+          const isActive = auth.isPremium && daysLeft > 0;
+          const isExpired = !auth.isPremium && stored && daysLeft <= 0;
           if (isActive) return (
             <div style={{ background: "linear-gradient(135deg,#D4A843 0%,#B8860B 60%,#8B6914 100%)", borderRadius: 20, padding: "18px 20px", boxShadow: "0 10px 32px rgba(184,134,11,0.45)", border: "1px solid rgba(255,220,100,0.3)", position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(180deg,rgba(255,255,255,0.13) 0%,transparent 100%)", borderRadius: "20px 20px 0 0", pointerEvents: "none" }} />
@@ -7116,7 +7121,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                 </div>
                 <div style={{ width: 1, height: 44, background: "rgba(255,255,255,0.3)", marginLeft: 18, marginRight: 18, flexShrink: 0 }} />
                 <div style={{ textAlign: "center", flexShrink: 0 }}>
-                  <div style={{ fontSize: "1.75rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>{countdown.label.replace(/[^\d]/g, '') || "—"}</div>
+                  <div style={{ fontSize: "1.75rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>{daysLeft > 0 ? daysLeft : "0"}</div>
                   <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>jours</div>
                 </div>
               </div>
