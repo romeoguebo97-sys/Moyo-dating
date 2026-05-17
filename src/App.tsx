@@ -639,9 +639,23 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
 }
 
 function Toast({ msg, type = "success", onClose }: { msg: string; type?: string; onClose: () => void }) {
-  useEffect(() => { const t = setTimeout(onClose, 5000); return () => clearTimeout(t); }, []);
-  const bg = type === "error" ? "#e74c3c" : type === "premium" ? `linear-gradient(135deg,${G.or},#B8860B)` : G.vert;
-  return <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: bg, color: type === "premium" ? G.brun : G.blanc, padding: "12px 22px", borderRadius: 50, fontSize: "0.85rem", fontWeight: 600, zIndex: 9999, boxShadow: "0 8px 30px rgba(0,0,0,0.2)", maxWidth: "88vw", textAlign: "center" }}>{type === "error" ? "❌" : type === "premium" ? "⭐" : "✅"} {msg}</div>;
+  useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, []);
+  const bg = type === "error"
+    ? "rgba(192,57,43,0.88)"
+    : type === "premium"
+    ? "rgba(184,134,11,0.88)"
+    : "rgba(26,92,58,0.88)";
+  const icon = type === "error"
+    ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    : type === "premium"
+    ? <svg width="15" height="15" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+  return (
+    <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: bg, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", color: "white", padding: "11px 20px", borderRadius: 50, fontSize: "0.84rem", fontWeight: 600, zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", maxWidth: "88vw", textAlign: "center", display: "flex", alignItems: "center", gap: 8, border: "1px solid rgba(255,255,255,0.15)", animation: "fadeUp 0.25s ease" }}>
+      {icon}
+      {msg}
+    </div>
+  );
 }
 
 function ErrorModal({ msg, onClose }: { msg: string; onClose: () => void }) {
@@ -10140,7 +10154,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ display: "flex", gap: 8 }}>
               <Btn variant="ghost" onClick={loadAdminLogs} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
               {auth.userId === SUPER_ADMIN_ID && adminLogs.length > 0 && (
-                <button onClick={() => { if (window.confirm("Supprimer définitivement tout l'historique ? Action irréversible.")) clearAdminLogs(); }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={() => confirm("Supprimer définitivement tout l'historique ? Cette action est irréversible.", clearAdminLogs)} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
                   Tout effacer
                 </button>
               )}
