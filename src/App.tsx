@@ -1064,8 +1064,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment répondre à un message précis ?", desc: "Appuyez longuement sur le message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler la réponse." },
       { icon: "Q", titre: "Comment supprimer un message ?", desc: "Appuyez longuement sur le message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté, sans affecter l'autre personne)." },
       { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Elle détaille le motif. Vous devez cliquer \"OK, j\'ai compris\" pour continuer à utiliser l'application. Plusieurs avertissements peuvent entraîner la suspension du compte." },
-      { icon: "Q", titre: "Comment payer le Premium via MTN ?", desc: "Appuyez sur 'Passer Premium' → MTN Mobile Money → bouton jaune pour composer le code → validez sur votre téléphone → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'. L'activation est manuelle sous 24h." },
-      { icon: "Q", titre: "Où trouver mon numéro de transaction MTN ?", desc: "Après validation du paiement, MTN vous envoie un SMS de confirmation contenant un numéro de transaction (ex: MP241234567). Entrez ce numéro exactement tel quel dans le champ prévu." },
+      { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → choisissez votre opérateur (MTN Mobile Money disponible, Airtel Money bientôt) → bouton pour composer le code → validez sur votre téléphone → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'. L'activation est manuelle sous 24h." },
+      { icon: "Q", titre: "Où trouver mon numéro de transaction MTN ou Airtel ?", desc: "Après validation du paiement, votre opérateur vous envoie un SMS de confirmation contenant un numéro de transaction (ex: MP241234567 pour MTN). Entrez ce numéro exactement tel quel dans le champ prévu." },
       { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "L'activation est manuelle par notre équipe. Délai habituel : quelques minutes à 24h. Si après 24h vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo. Une fois activé, déconnectez-vous et reconnectez-vous." },
       { icon: "Q", titre: "J'ai reçu un message 'Vérifiez vos informations de paiement', que faire ?", desc: "Cela signifie que le numéro de transaction saisi ne correspond pas à celui reçu par notre équipe. Vérifiez votre SMS MTN et soumettez à nouveau une demande avec le bon numéro." },
       { icon: "Q", titre: "Qu'est-ce qu'un message informatif de Moyo ?", desc: "Notre équipe peut vous envoyer des notifications importantes (activation Premium, rappels, informations) qui apparaissent sous forme de modal bleu à votre connexion. Appuyez sur 'OK, J'AI COMPRIS' pour les fermer." },
@@ -2791,7 +2791,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe."] },
             { title: "Premium - 3 500 FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
               "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.",
-              "Paiement uniquement via MTN Mobile Money. Airtel Money sera disponible prochainement.",
+              "Paiement via MTN Mobile Money ou Airtel Money. Airtel Money sera disponible prochainement (en attente de la SIM Airtel Moyo).",
               "Comment payer : appuyez sur 'Passer Premium' → choisissez MTN Mobile Money → appuyez sur le bouton jaune pour composer automatiquement le code de paiement sur votre téléphone → validez le paiement → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'.",
               "Le numéro de transaction est reçu par SMS de MTN après validation du paiement. Il ressemble à : MP241234567. Entrez-le exactement tel quel.",
               "L'activation Premium est manuelle par notre équipe. Délai : quelques minutes à 24h. Vous recevrez une notification dans l'application dès l'activation.",
@@ -3422,7 +3422,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     el.scrollTop = Math.max(0, el.scrollTop - approxCycle * 20);
   }
 }} style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 146px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
-  <style>{`.moyo-fullscreen-view img{filter:none!important}`}</style>
+  <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
     <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 155px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 16, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
       {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
@@ -5050,6 +5050,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [statusReplyText, setStatusReplyText] = useState("");
   const [statusStats, setStatusStats] = useState<Record<string, { views: number; likes: number }>>({});
   const [statusLikedByMe, setStatusLikedByMe] = useState<Record<string, boolean>>({});
+  const [statusPeopleModal, setStatusPeopleModal] = useState<{ type: "views" | "likes"; people: Profile[] } | null>(null);
+  const [statusPeopleLoading, setStatusPeopleLoading] = useState(false);
   const [statusActionLoading, setStatusActionLoading] = useState(false);
   const [statusPaused, setStatusPaused] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -5291,6 +5293,22 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const getMatchWithUser = (userId?: string | null) => {
     if (!userId) return null;
     return convs.find(c => c.id !== "__support__" && c.partner?.id === userId) || null;
+  };
+
+  const loadStatusPeople = async (statusId: string, type: "views" | "likes") => {
+    setStatusPeopleLoading(true);
+    setStatusPeopleModal({ type, people: [] });
+    try {
+      const table = type === "views" ? "status_status_views" : "status_status_likes";
+      const field = type === "views" ? "viewer_id" : "user_id";
+      const rows = await sb.query<any>(auth.token, table, `?status_id=eq.${statusId}&select=${field}&limit=50`).catch(() => []);
+      if (!Array.isArray(rows) || rows.length === 0) { setStatusPeopleLoading(false); return; }
+      const ids = rows.map((r: any) => r[field]).filter(Boolean);
+      if (ids.length === 0) { setStatusPeopleLoading(false); return; }
+      const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids.join(",")})&select=id,name,age,photo_url,gender,is_premium,is_verified&limit=50`).catch(() => []);
+      setStatusPeopleModal({ type, people: Array.isArray(profiles) ? profiles : [] });
+    } catch {}
+    setStatusPeopleLoading(false);
   };
 
   const insertStatusInteraction = async (table: "status_status_views" | "status_status_likes", payload: object) => {
@@ -5553,6 +5571,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const getImageUrl = (content: string) => content.slice(5, -6);
 
   const [showGift, setShowGift] = useState(false);
+  const [giftStep, setGiftStep] = useState<"operator" | "mtn" | "airtel">("operator");
+  const [giftTxRef, setGiftTxRef] = useState("");
+  const [giftTxSent, setGiftTxSent] = useState(false);
+  const [giftTxLoading, setGiftTxLoading] = useState(false);
 
   if (open) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: 100, maxWidth: 500, margin: "0 auto" }}>
@@ -5592,26 +5614,105 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
       {/* Modal Offrir Premium */}
       {showGift && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
-            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#D4A843" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Offrir Premium à {open.partner?.name}</h3>
-            <p style={{ fontSize: "0.85rem", color: "#666", marginBottom: 6, lineHeight: 1.6 }}>
-              Offre 1 mois de Premium à <strong>{open.partner?.name}</strong> pour <strong style={{ color: G.rouge }}>3 500 FCFA</strong>.
-            </p>
-            <p style={{ fontSize: "0.78rem", color: "#aaa", marginBottom: 20, lineHeight: 1.5 }}>
-              Tu seras redirigé vers notre service client pour finaliser le paiement via MTN MoMo ou Airtel MoMo.
-            </p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <Btn variant="ghost" onClick={() => setShowGift(false)} style={{ flex: 1 }}>Annuler</Btn>
-              <a
-                href={`https://wa.me/242065132012?text=Bonjour%2C%20je%20souhaite%20offrir%201%20mois%20de%20Premium%20%C3%A0%20${encodeURIComponent(open.partner?.name || "")}%20(${encodeURIComponent(open.partner?.age + " ans")}%2C%20${encodeURIComponent(open.partner?.city || "")})%20sur%20Moyo.%20ID%20du%20profil%20%3A%20${encodeURIComponent(open.partner?.id || "")}%20%7C%20Mon%20email%20%3A%20${encodeURIComponent(auth.email)}`}
-                target="_blank" rel="noopener noreferrer" style={{ flex: 1, textDecoration: "none" }}
-                onClick={() => setShowGift(false)}
-              >
-                <Btn variant="gold" style={{ width: "100%" }}>Offrir 🎁</Btn>
-              </a>
-            </div>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom)" }}>
+
+            {/* ── Étape choix opérateur ── */}
+            {giftStep === "operator" && (
+              <>
+                <div style={{ background: `linear-gradient(135deg,#D4A843,#B8922E)`, padding: "20px 20px 18px" }}>
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                    <div onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ cursor: "pointer", background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                    </div>
+                    <div>
+                      <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.72rem", fontWeight: 600 }}>Offrir à</div>
+                      <div style={{ color: G.blanc, fontSize: "1.2rem", fontWeight: 800 }}>{open.partner?.name} 🎁</div>
+                    </div>
+                    <div style={{ marginLeft: "auto", textAlign: "right" }}>
+                      <div style={{ color: G.blanc, fontSize: "1.4rem", fontWeight: 800 }}>3 500 FCFA</div>
+                      <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>1 mois Premium</div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ padding: "20px 20px 28px" }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 14, textTransform: "uppercase", letterSpacing: 0.5 }}>Choisissez votre opérateur</div>
+                  <button onClick={() => setGiftStep("mtn")} style={{ width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 14px rgba(245,166,35,0.35)" }}>
+                    <div style={{ width: "18%", display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
+                      <svg viewBox="0 0 120 60" width="54" height="27" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
+                    </div>
+                    <span style={{ flex: 1, textAlign: "center" }}>MTN Mobile Money</span>
+                  </button>
+                  <button disabled style={{ width: "100%", background: "#f5f5f5", color: "#aaa", border: "2px solid #e0e0e0", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: "not-allowed", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ width: "18%", display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
+                      <svg viewBox="0 0 80 60" width="40" height="30" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="60" fill="#f5f5f5" rx="4"/><path d="M12 38 Q8 18 22 12 Q36 6 38 20 Q40 34 28 36 Q16 38 14 30" fill="#ccc" stroke="none"/><text x="44" y="28" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#bbb">airtel</text><text x="44" y="44" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#ccc">money</text></svg>
+                    </div>
+                    <span style={{ flex: 1, textAlign: "center" }}>Airtel Money — Bientôt disponible</span>
+                  </button>
+                  <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ width: "100%", fontSize: "0.88rem", color: "#555", cursor: "pointer", fontWeight: 600, padding: "13px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc }}>Non merci, plus tard</button>
+                </div>
+              </>
+            )}
+
+            {/* ── Étape MTN ── */}
+            {giftStep === "mtn" && (
+              <>
+                <div style={{ background: "linear-gradient(135deg,#FFCC00,#F5A623)", padding: "20px 20px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                    <div onClick={() => setGiftStep("operator")} style={{ cursor: "pointer", background: "rgba(0,0,0,0.1)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    </div>
+                    <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 8 }}>
+                      <svg viewBox="0 0 120 60" width="42" height="21" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
+                      Cadeau Premium pour {open.partner?.name}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>3 500 FCFA · 1 mois</div>
+                </div>
+                <div style={{ padding: "20px 20px 32px" }}>
+                  <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez le paiement MTN Mobile Money</div>
+                    <a href="tel:*105*2*1*065132012*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                      Appuyer pour payer — 3 500 FCFA
+                    </a>
+                  </div>
+                  <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
+                    <div style={{ fontSize: "0.78rem", color: "#777", marginBottom: 10, lineHeight: 1.5 }}>Après validation, MTN vous enverra un SMS avec le numéro de transaction.</div>
+                    <input value={giftTxRef} onChange={e => setGiftTxRef(e.target.value)} placeholder="Ex: MP241234567" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${giftTxRef ? "#FFCC00" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
+                  </div>
+                  {!giftTxSent ? (
+                    <button disabled={!giftTxRef.trim() || giftTxLoading} onClick={async () => {
+                      setGiftTxLoading(true);
+                      try {
+                        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+                          body: JSON.stringify({ user_id: auth.userId, operator: "MTN", tx_ref: giftTxRef.trim(), amount: 3500, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
+                        });
+                        setGiftTxSent(true);
+                      } catch { setGiftTxSent(true); }
+                      setGiftTxLoading(false);
+                    }} style={{ width: "100%", background: !giftTxRef.trim() || giftTxLoading ? "#ccc" : "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !giftTxRef.trim() ? "not-allowed" : "pointer" }}>
+                      {giftTxLoading ? "Envoi en cours…" : "🎁 J'ai payé — Envoyer la preuve"}
+                    </button>
+                  ) : (
+                    <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: "18px", textAlign: "center" }}>
+                      <div style={{ fontSize: "2rem", marginBottom: 8 }}>✅</div>
+                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>Preuve envoyée !</div>
+                      <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier et activer le Premium de {open.partner?.name} rapidement.</div>
+                      <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ marginTop: 14, background: "#27ae60", color: G.blanc, border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -6053,6 +6154,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         onTouchEnd={() => setStatusPaused(false)}
         onTouchCancel={() => setStatusPaused(false)}
         style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "88px 18px 22px", touchAction: "none", overscrollBehavior: "contain" }}
+        className="moyo-status-view"
       >
         <div style={{ position: "absolute", top: 10, left: 12, right: 12, display: "flex", gap: 4, zIndex: 3 }}>
           {(statusPreviewList.length ? statusPreviewList : [statusPreview]).map((st, i) => (
@@ -6079,16 +6181,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           )}
           <button onClick={(e) => { e.stopPropagation(); closeStatusViewer(); }} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 40, height: 40, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.16)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, boxShadow: "0 6px 16px rgba(0,0,0,0.18)" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
-        <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
-        <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer" }} />
+        <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
+        <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
         {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : "68vh", borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
         {statusPreview.user_id === auth.userId ? (
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 28, zIndex: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div style={{ borderRadius: 18, padding: "12px 14px", background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ borderRadius: 18, padding: "12px 14px", background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => loadStatusPeople(statusPreview.id || "", "views")}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
               <div><div style={{ fontSize: "0.72rem", opacity: 0.75 }}>Vues</div><div style={{ fontWeight: 900 }}>{statusStats[statusPreview.id || ""]?.views || 0}</div></div>
             </div>
-            <div style={{ borderRadius: 18, padding: "12px 14px", background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ borderRadius: 18, padding: "12px 14px", background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => loadStatusPeople(statusPreview.id || "", "likes")}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
               <div><div style={{ fontSize: "0.72rem", opacity: 0.75 }}>J’aime</div><div style={{ fontWeight: 900 }}>{statusStats[statusPreview.id || ""]?.likes || 0}</div></div>
             </div>
@@ -6106,6 +6208,45 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         )}
       </div>
     )}
+    {statusPeopleModal && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 600, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setStatusPeopleModal(null)}>
+        <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "60vh", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom)" }} onClick={e => e.stopPropagation()}>
+          <div style={{ padding: "16px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {statusPeopleModal.type === "views"
+                ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                : <svg width="18" height="18" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              }
+              <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "#1a1a1a" }}>
+                {statusPeopleModal.type === "views" ? "Vues par" : "Aimé par"} ({statusPeopleModal.people.length})
+              </span>
+            </div>
+            <div onClick={() => setStatusPeopleModal(null)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.2rem", lineHeight: 1 }}>✕</div>
+          </div>
+          <div style={{ overflowY: "auto", flex: 1 }}>
+            {statusPeopleLoading ? (
+              <div style={{ textAlign: "center", padding: 30 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+            ) : statusPeopleModal.people.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 20px", color: "#aaa", fontSize: "0.85rem" }}>
+                {statusPeopleModal.type === "views" ? "Personne n'a encore vu ce statut" : "Personne n'a encore aimé ce statut"}
+              </div>
+            ) : statusPeopleModal.people.map(person => (
+              <div key={person.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: `1px solid ${G.gris}` }}>
+                <Avatar url={person.photo_url} gender={person.gender} size={42} premium={person.is_premium} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
+                    {person.name}
+                    {person.is_verified && <VerifiedBadge size={13} />}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#888" }}>{person.age} ans · {person.city}</div>
+                </div>
+                {statusPeopleModal.type === "likes" && <svg width="16" height="16" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}<br />
     {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
       ? <div style={{ textAlign: "center", padding: "50px 20px", color: "#555" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><p style={{ fontSize: "0.85rem" }}>Fais des matchs pour commencer à discuter !</p></div>
       : convs.map(c => (
@@ -7181,6 +7322,43 @@ function UserWarningModal({ warning, onAcknowledge }: {
   onAcknowledge: () => void;
 }) {
   const isInfo = warning.warning_number === 0;
+  const isGift = isInfo && warning.reason.startsWith("🎁 Vous avez reçu");
+
+  // ── Modal cadeau spécial ──
+  if (isGift) return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: G.blanc, borderRadius: 28, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 28px 80px rgba(0,0,0,0.35)" }}>
+        {/* Header festif */}
+        <div style={{ background: "linear-gradient(135deg,#D4A843,#B8922E)", padding: "30px 22px 22px", textAlign: "center", position: "relative" }}>
+          {/* Confettis SVG */}
+          <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.35 }} viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg">
+            {[[20,15,"#fff"],[60,30,"#FFE"],[100,10,"#fff"],[150,25,"#FFE"],[200,8,"#fff"],[250,20,"#FFE"],[290,35,"#fff"],[320,12,"#FFE"],[40,60,"#fff"],[130,55,"#FFE"],[220,65,"#fff"],[300,50,"#FFE"]].map(([x,y,c], i) => (
+              <circle key={i} cx={x as number} cy={y as number} r="3" fill={c as string} />
+            ))}
+            {[[80,45,"#fff"],[170,15,"#FFE"],[260,40,"#fff"],[50,80,"#FFE"],[180,75,"#fff"],[310,70,"#FFE"]].map(([x,y,c], i) => (
+              <rect key={i} x={(x as number)-3} y={(y as number)-3} width="6" height="6" fill={c as string} transform={`rotate(45,${x},${y})`} />
+            ))}
+          </svg>
+          <div style={{ fontSize: "3.5rem", marginBottom: 10, lineHeight: 1 }}>🎁</div>
+          <div style={{ color: G.blanc, fontWeight: 900, fontSize: "1.3rem", letterSpacing: "0.01em", textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>Vous avez un cadeau !</div>
+          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.78rem", marginTop: 6 }}>Quelqu'un pense à vous sur Moyo 💛</div>
+        </div>
+        {/* Body */}
+        <div style={{ padding: "22px 22px 26px", textAlign: "center" }}>
+          <div style={{ background: "rgba(212,168,67,0.08)", border: "1.5px solid rgba(212,168,67,0.25)", borderRadius: 14, padding: "14px 16px", marginBottom: 18 }}>
+            <p style={{ fontSize: "0.92rem", color: "#333", lineHeight: 1.7, margin: 0, fontWeight: 500 }}>{warning.reason.replace("🎁 ", "")}</p>
+          </div>
+          <div style={{ fontSize: "0.78rem", color: "#aaa", marginBottom: 18, lineHeight: 1.6 }}>
+            Déconnectez-vous puis reconnectez-vous pour profiter de toutes les fonctionnalités Premium 🌟
+          </div>
+          <button onClick={onAcknowledge} style={{ width: "100%", background: "linear-gradient(135deg,#D4A843,#B8922E)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 6px 20px rgba(212,168,67,0.45)", letterSpacing: "0.02em" }}>
+            🎉 Merci ! J'en profite
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 28px 80px rgba(0,0,0,0.28)" }}>
@@ -7218,7 +7396,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
+type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
 function getPremiumCountdown(approvedAt?: string): { label: string; color: string; expired: boolean } {
   if (!approvedAt) return { label: "", color: "#888", expired: false };
   const expiry = new Date(new Date(approvedAt).getTime() + 31 * 24 * 60 * 60 * 1000);
@@ -7231,6 +7409,7 @@ function getPremiumCountdown(approvedAt?: string): { label: string; color: strin
 function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onReject, onDelete, onViewProfile }: { p: PaymentRequest; isPending: boolean; isApproved: boolean; isRejected: boolean; onActivate: (p: PaymentRequest) => void; onReject: (p: PaymentRequest) => void; onDelete: (p: PaymentRequest) => void; onViewProfile: (userId: string) => void }) {
   const [adminRef, setAdminRef] = useState("");
   const [verified, setVerified] = useState<null | "match" | "mismatch">(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const match = adminRef.trim().toLowerCase() === p.tx_ref.trim().toLowerCase();
   const countdown = getPremiumCountdown(p.approved_at);
   const isExpired = isApproved && countdown.expired;
@@ -7245,6 +7424,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
             <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
               <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
               {p.operator}
+              {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>🎁 Cadeau pour {p.gift_for_name || "un match"}</span>}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {p.amount.toLocaleString()} FCFA</div>
             <div style={{ fontSize: "0.62rem", color: "#bbb", fontFamily: "monospace", marginTop: 2 }}>{p.user_id}</div>
@@ -7253,7 +7433,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {isApproved && countdown.label && <div style={{ background: isExpired ? "rgba(231,76,60,0.1)" : "rgba(39,174,96,0.08)", color: countdown.color, borderRadius: 50, padding: "3px 8px", fontSize: "0.68rem", fontWeight: 700, border: `1px solid ${isExpired ? "rgba(231,76,60,0.2)" : "rgba(39,174,96,0.2)"}` }}>{isExpired ? "⏰ Expiré" : `⏱ ${countdown.label}`}</div>}
           <div style={{ background: isPending ? "rgba(39,174,96,0.1)" : isExpired ? "rgba(231,76,60,0.08)" : isApproved ? "rgba(39,174,96,0.08)" : "rgba(231,76,60,0.08)", color: isPending ? "#27ae60" : isExpired ? "#e74c3c" : isApproved ? "#27ae60" : "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{isPending ? "En attente" : isExpired ? "Expiré" : isApproved ? "Approuvé ✓" : "Rejeté ✕"}</div>
-          <button onClick={() => onDelete(p)} title="Supprimer" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button onClick={() => setConfirmDelete(true)} title="Supprimer" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: isPending ? 10 : 0 }}>
@@ -7276,6 +7456,46 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
           {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: G.blanc, border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✓ Activer Premium</button>}
           {verified === "mismatch" && <button onClick={() => onReject(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter & notifier</button>}
           {verified !== null && <button onClick={() => { setVerified(null); setAdminRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>}
+        </div>
+      )}
+      {confirmDelete && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            <div style={{ background: "linear-gradient(135deg,#fdecea,#fbd0cc)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(231,76,60,0.15)" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(231,76,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#c0392b" }}>Confirmer la suppression</div>
+            </div>
+            <div style={{ padding: "16px 20px 20px" }}>
+              <div style={{ background: "rgba(231,76,60,0.06)", border: "1px solid rgba(231,76,60,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#c0392b", marginBottom: 6 }}>⚠️ Risques de cette action :</div>
+                {isApproved ? (
+                  <ul style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.7, paddingLeft: 16, margin: 0 }}>
+                    <li>Le statut Premium de l'utilisateur sera <strong>retiré immédiatement</strong></li>
+                    <li>L'utilisateur perdra l'accès à toutes les fonctionnalités Premium</li>
+                    <li>Si ce retrait n'est pas justifié (ex: faux remboursement), cela peut générer un litige avec le client</li>
+                    <li>La preuve de paiement sera définitivement archivée</li>
+                  </ul>
+                ) : (
+                  <ul style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.7, paddingLeft: 16, margin: 0 }}>
+                    <li>La demande de paiement sera archivée et masquée</li>
+                    <li>L'utilisateur ne recevra aucune notification</li>
+                    <li>Cette action est irréversible depuis l'interface</li>
+                  </ul>
+                )}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 14, textAlign: "center" }}>
+                Réf: <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{p.tx_ref}</span>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                <button onClick={() => { setConfirmDelete(false); onDelete(p); }} style={{ flex: 1, background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>
+                  {isApproved ? "Supprimer & retirer Premium" : "Confirmer la suppression"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -7370,6 +7590,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [payments, setPayments] = useState<PaymentRequest[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [archivedPayments, setArchivedPayments] = useState<PaymentRequest[]>([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [viewPaymentProfile, setViewPaymentProfile] = useState<Profile | null>(null);
   const openPaymentProfile = async (userId: string) => {
     try {
@@ -7382,7 +7605,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const loadPayments = async () => {
     setPaymentsLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at&status=neq.deleted&order=created_at.desc&limit=50`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name&status=neq.deleted&order=created_at.desc&limit=50`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) {
         setPayments(data);
@@ -7393,9 +7616,24 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const activatePayment = async (p: PaymentRequest) => {
     const premiumUntil = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
-    await adminAction(p.user_id, { is_premium: true, premium_until: premiumUntil }, `Premium activé pour l'utilisateur.`);
+    const targetId = p.gift_for || p.user_id;
+    await adminAction(targetId, { is_premium: true, premium_until: premiumUntil }, `Premium activé.`);
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
-    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", warning_number: 0, acknowledged: false }) });
+    // Notifier le destinataire
+    // Récupérer le nom de l'acheteur pour personnaliser le message cadeau
+    let giftSenderName = p.gift_for_name ? "" : "";
+    if (p.gift_for) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${p.user_id}&select=name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const d = await r.json().catch(() => []);
+        if (Array.isArray(d) && d[0]?.name) giftSenderName = d[0].name;
+      } catch {}
+    }
+    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `🎁 Vous avez reçu 1 mois de Premium en cadeau offert par ${giftSenderName || "un membre Moyo"} ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.` : "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", warning_number: 0, acknowledged: false }) });
+    // Si cadeau, notifier aussi l'acheteur
+    if (p.gift_for) {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: `🎁 Votre cadeau Premium pour ${p.gift_for_name || "votre match"} a bien été activé !`, warning_number: 0, acknowledged: false }) });
+    }
     loadPayments();
   };
   const rejectPayment = async (p: PaymentRequest) => {
@@ -7412,6 +7650,25 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       showToast("Carte supprimée.", "success");
     }
     loadPayments();
+  };
+  const loadArchived = async () => {
+    setArchivedLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at&status=eq.deleted&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data)) setArchivedPayments(data);
+    } catch {}
+    setArchivedLoading(false);
+  };
+  const deleteArchivedOne = async (p: PaymentRequest) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+    setArchivedPayments(prev => prev.filter(a => a.id !== p.id));
+    showToast("Entrée supprimée définitivement.", "success");
+  };
+  const deleteArchivedAll = async () => {
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?status=eq.deleted`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+    setArchivedPayments([]);
+    showToast("Tous les archivés supprimés définitivement.", "success");
   };
   const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
   const [hiddenReviews, setHiddenReviews] = useState<Set<string>>(new Set());
@@ -8532,7 +8789,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   {([
                     ["Badge vert", "Le badge vert sur l'onglet Paiements indique le nombre de demandes en attente de validation."],
                     ["Silhouette cliquable", "Cliquez sur la silhouette à gauche de chaque carte pour voir le profil complet de l'utilisateur (photo, nom, âge, ville, bio, badges). L'ID est affiché grisé en bas de la carte et dans la modale."],
-                    ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN (ex: MP241234567)."],
+                    ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN ou Airtel (ex: MP241234567)."],
                     ["Réf. MTN reçue", "Numéro que vous entrez après avoir vérifié votre SMS ou application MTN. Doit correspondre à la réf. client."],
                     ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert 'Activer Premium'. Si elles ne correspondent pas → bouton rouge 'Rejeter & notifier'."],
                     ["Activer Premium", "Active l'abonnement Premium pour 31 jours ET envoie automatiquement un message 'Votre Premium est actif, reconnectez-vous'. Le compteur démarre immédiatement."],
@@ -9559,8 +9816,53 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>💳 Demandes de paiement</div>
-            <Btn variant="ghost" onClick={loadPayments} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn variant="ghost" onClick={() => { setShowArchived(!showArchived); if (!showArchived) loadArchived(); }} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6, color: showArchived ? G.rouge : "#888" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                Archivés
+              </Btn>
+              <Btn variant="ghost" onClick={loadPayments} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
+            </div>
           </div>
+
+          {/* Section Archivés */}
+          {showArchived && (
+            <div style={{ background: "#fff8f0", borderRadius: 14, padding: "14px", marginBottom: 16, border: "1.5px solid rgba(230,126,34,0.2)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#e67e22" }}>📦 Archivés ({archivedPayments.length})</div>
+                {archivedPayments.length > 0 && (
+                  <button onClick={() => {
+                    if (window.confirm(`Supprimer définitivement les ${archivedPayments.length} entrées archivées ? Cette action est irréversible.`)) deleteArchivedAll();
+                  }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>
+                    🗑 Tout supprimer
+                  </button>
+                )}
+              </div>
+              {archivedLoading ? (
+                <div style={{ textAlign: "center", padding: 20 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : archivedPayments.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "16px 0", fontSize: "0.82rem", color: "#bbb" }}>Aucun archivé</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {archivedPayments.map(a => (
+                    <div key={a.id} style={{ background: G.blanc, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: "1px solid rgba(230,126,34,0.1)" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555" }}>{a.operator} · {a.amount.toLocaleString()} FCFA</div>
+                        <div style={{ fontSize: "0.68rem", color: "#aaa", fontFamily: "monospace", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.tx_ref}</div>
+                        <div style={{ fontSize: "0.65rem", color: "#ccc", marginTop: 1 }}>{new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
+                      </div>
+                      <button onClick={() => {
+                        if (window.confirm(`Supprimer définitivement cette entrée (${a.tx_ref}) ? Action irréversible.`)) deleteArchivedOne(a);
+                      }} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {paymentsLoading ? (
             <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
           ) : payments.length === 0 ? (
