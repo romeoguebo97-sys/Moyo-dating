@@ -7098,7 +7098,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         </svg>
 
         {/* ── ACTIONS (cartes empilées) ── */}
-        <div style={{ padding: "80px 16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ padding: "20px 16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
 
         {/* CTA Premium - rouge si gratuit, doré si actif, rouge si expiré */}
         {(() => {
@@ -7108,15 +7108,16 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           const isExpired = !auth.isPremium && stored && countdown.expired;
           if (isActive) return (
             <div style={{ background: "linear-gradient(135deg,#D4A843 0%,#B8860B 60%,#8B6914 100%)", borderRadius: 20, padding: "18px 20px", boxShadow: "0 10px 32px rgba(184,134,11,0.45)", border: "1px solid rgba(255,220,100,0.3)", position: "relative", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(180deg,rgba(255,255,255,0.12) 0%,transparent 100%)", borderRadius: "20px 20px 0 0", pointerEvents: "none" }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <div>
-                  <div style={{ fontSize: "1rem", fontWeight: 900, color: G.blanc, letterSpacing: "0.01em" }}>Abonnement Premium actif</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>{countdown.label}</span>
-                  </div>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(180deg,rgba(255,255,255,0.13) 0%,transparent 100%)", borderRadius: "20px 20px 0 0", pointerEvents: "none" }} />
+              <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <div style={{ fontSize: "1rem", fontWeight: 900, color: G.blanc, lineHeight: 1.3 }}>Abonnement<br/>Premium actif</div>
+                </div>
+                <div style={{ width: 1, height: 44, background: "rgba(255,255,255,0.3)", marginLeft: 18, marginRight: 18, flexShrink: 0 }} />
+                <div style={{ textAlign: "center", flexShrink: 0 }}>
+                  <div style={{ fontSize: "1.75rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>{countdown.label.replace(/[^\d]/g, '') || "—"}</div>
+                  <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>jours</div>
                 </div>
               </div>
             </div>
