@@ -63,6 +63,8 @@ const getModerationMessage = (type: "insult" | "scam" | "sexual"): string => {
 const MSG_BG_STYLE: React.CSSProperties = {
   position: "relative",
 };
+const SUPER_ADMIN_ID = "2b70da16-9e1e-48b0-802e-580d8d150b44";
+const REFERRAL_BONUS_DAYS = 7;
 const FREE_LIMITS = { likes: 5, messages: 3 };
 const STATUS_LIMIT = 2; // Maximum de statuts actifs par utilisateur sur 24h
 
@@ -100,7 +102,7 @@ const STATUS_BUCKETS = ["statuses", "status"] as const;
 // ── Envoie un message automatique de bienvenue dans un nouveau match ──
 const sendMatchWelcomeMessage = async (token: string, matchId: string, myName: string, partnerName: string) => {
   try {
-    const content = `🎉 Vous avez un match avec ${partnerName} ! Dites-lui bonjour 👋`;
+    const content = `Nouveau match avec ${partnerName} ! Dites-lui bonjour`;
     await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=minimal" },
@@ -869,7 +871,6 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               Appuyer pour payer - 3 500 FCFA
             </a>
-            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*105*1*1*065132012*3500#</div>
           </div>
           {/* Étape 2 */}
           <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
@@ -934,7 +935,6 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               Appuyer pour payer - 3 500 FCFA
             </a>
-            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*128*2*1*1*056230067*3500#</div>
           </div>
           <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
             <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -1140,12 +1140,13 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment répondre à un message précis ?", desc: "Appuyez longuement sur le message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler la réponse." },
       { icon: "Q", titre: "Comment supprimer un message ?", desc: "Appuyez longuement sur le message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté, sans affecter l'autre personne)." },
       { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Elle détaille le motif. Vous devez cliquer \"OK, j\'ai compris\" pour continuer à utiliser l'application. Plusieurs avertissements peuvent entraîner la suspension du compte." },
-      { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → choisissez votre opérateur (MTN Mobile Money ou Airtel Money) → appuyez sur le bouton pour composer le code USSD sur votre téléphone → validez le paiement → entrez le numéro de transaction (ID) reçu par SMS → appuyez sur 'J'ai payé'. L'activation est manuelle sous 24h." },
+      { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → choisissez votre opérateur (MTN Mobile Money ou Airtel Money) → appuyez sur le bouton pour effectuer le paiement sur votre téléphone → validez → entrez le numéro de transaction (ID) reçu par SMS → appuyez sur 'J'ai payé'. L'activation est manuelle sous 24h." },
       { icon: "Q", titre: "Où trouver mon numéro de transaction MTN ou Airtel ?", desc: "Après validation du paiement, votre opérateur vous envoie un SMS contenant un numéro de transaction ID (ex: 7753031542 pour Airtel, 7753031542 pour MTN). Entrez ce numéro ID exactement tel quel dans le champ prévu." },
       { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "L'activation est manuelle par notre équipe. Délai habituel : quelques minutes à 24h. Si après 24h vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo. Une fois activé, déconnectez-vous et reconnectez-vous." },
       { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche un compteur en temps réel : vert si vous avez plus de 3 jours, orange sous 3 jours, rouge si expiré. À expiration, le statut repasse automatiquement en gratuit." },
       { icon: "Q", titre: "J'ai reçu un message 'Vérifiez vos informations de paiement', que faire ?", desc: "Cela signifie que le numéro de transaction saisi ne correspond pas à celui reçu par notre équipe. Vérifiez votre SMS MTN et soumettez à nouveau une demande avec le bon numéro." },
       { icon: "Q", titre: "Qu'est-ce qu'un message informatif de Moyo ?", desc: "Notre équipe peut vous envoyer des notifications importantes (activation Premium, rappels, informations) qui apparaissent sous forme de modal bleu à votre connexion. Appuyez sur 'OK, J'AI COMPRIS' pour les fermer." },
+      { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: "Depuis votre page Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez automatiquement 7 jours de Premium offerts sur votre compte. Plus vous parrainez, plus vous cumulez des jours gratuits." },
       { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Découvrir → choisissez une photo ou écrivez un texte. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
     ]},
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
@@ -2247,6 +2248,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           hobbies: form.hobbies.trim() || null,
           photo_url: photoUrl,
           is_complete: true,
+          ...((() => { const ref = new URLSearchParams(window.location.search).get("ref"); return ref ? { referred_by: ref } : {}; })()),
         }),
       });
       setLoading(false);
@@ -2416,6 +2418,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 // ── FAQ pour le bot ──
 const BOT_FAQ = [
   { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: "Le Premium coûte 3 500 FCFA/mois. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money ou Airtel Money. Activation manuelle sous 24h." },
+  { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: "Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez automatiquement 7 jours Premium offerts. Pas de limite !" },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
   { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: "Compte gratuit : 5 likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément." },
   { q: ["message", "envoyer", "écrire", "conversation"], r: "Compte gratuit : 3 messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message." },
@@ -2874,6 +2877,14 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "L'activation Premium est manuelle par notre équipe. Délai : quelques minutes à 24h. Vous recevrez une notification dans l'application dès l'activation.",
               "Après activation, déconnectez-vous et reconnectez-vous pour que les changements prennent effet. Le bouton Premium sur votre page Profil devient doré et affiche le compteur de jours restants.",
               "Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation (bouton cadeau, réservé aux membres Premium).",
+            ]},
+            { title: "Parrainage — 7 jours offerts", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: [
+              "Le parrainage est notre programme de récompense : parrainez vos amis et gagnez des jours Premium gratuits.",
+              "Comment parrainer : allez sur votre page Profil → appuyez sur le bouton vert 'Parrainer un ami' → partagez votre lien unique par WhatsApp, SMS ou tout autre canal.",
+              "Récompense : pour chaque ami qui s'inscrit via votre lien ET passe Premium, vous gagnez automatiquement 7 jours Premium offerts sur votre compte.",
+              "Les 7 jours sont ajoutés à votre Premium actuel ou démarrent immédiatement si vous n'êtes pas abonné.",
+              "Pas de limite : plus vous parrainez, plus vous cumulez. 3 filleuls Premium = 21 jours offerts.",
+              "Votre lien de parrainage est unique et permanent, disponible depuis votre page Profil.",
             ]},
             { title: "Statuts", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, items: [
               "Les statuts sont des publications temporaires visibles pendant 24h par tous les membres. Ils apparaissent en haut de l'onglet Découvrir.",
@@ -5769,7 +5780,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       Appuyer pour payer - 3 500 FCFA
                     </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*105*1*1*065132012*3500#</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -5820,7 +5830,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       Appuyer pour payer - 3 500 FCFA
                     </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*128*2*1*1*056230067*3500#</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -7051,30 +7060,40 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           const isActive = auth.isPremium && !countdown.expired;
           const isExpired = !auth.isPremium && stored && countdown.expired;
           if (isActive) return (
-            <div style={{ background: `linear-gradient(135deg,${G.or} 0%,#B8860B 100%)`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 8px 28px rgba(212,168,67,0.4)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#1a1a1a" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  Abonnement Premium actif
+            <div style={{ background: "linear-gradient(135deg,#D4A843 0%,#B8860B 60%,#8B6914 100%)", borderRadius: 20, padding: "18px 20px", boxShadow: "0 10px 32px rgba(184,134,11,0.45)", border: "1px solid rgba(255,220,100,0.3)", position: "relative", overflow: "hidden" }}>
+              {/* Reflet subtil */}
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(180deg,rgba(255,255,255,0.12) 0%,transparent 100%)", borderRadius: "20px 20px 0 0", pointerEvents: "none" }} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#1a1a1a" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span style={{ fontSize: "1rem", fontWeight: 900, color: "#1a1a1a", letterSpacing: "0.01em" }}>Abonnement Premium actif</span>
+                  </div>
+                  {stored && <div style={{ fontSize: "0.72rem", color: "rgba(0,0,0,0.55)", marginBottom: 6, fontWeight: 500 }}>Activé le {new Date(new Date(stored).getTime() - 31 * 24 * 60 * 60 * 1000 + 1000).toLocaleDateString("fr-FR")}</div>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.12)", borderRadius: 50, padding: "5px 12px", width: "fit-content" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: countdown.expired ? "#8B0000" : countdown.color === "#e67e22" ? "#7B3F00" : "#1a5c3a" }}>{countdown.label}</span>
+                  </div>
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "rgba(0,0,0,0.6)", marginBottom: 2 }}>
-                  {stored ? `Activé le ${new Date(new Date(stored).getTime() - 31 * 24 * 60 * 60 * 1000 + 1000).toLocaleDateString("fr-FR")}` : ""}
+                <div style={{ textAlign: "center", flexShrink: 0, marginLeft: 16, background: "rgba(0,0,0,0.12)", borderRadius: 14, padding: "10px 16px" }}>
+                  <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "rgba(0,0,0,0.55)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>Statut</div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#1a1a1a", lineHeight: 1 }}>Premium</div>
+                  <div style={{ fontSize: "0.62rem", color: "rgba(0,0,0,0.5)", marginTop: 2 }}>31 jours</div>
                 </div>
-                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: countdown.color === "#e67e22" ? "#c0392b" : "#1a5c3a" }}>
-                  ⏱ {countdown.label}
-                </div>
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
-                <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#1a1a1a" }}>Premium</div>
-                <div style={{ fontSize: "0.65rem", color: "rgba(0,0,0,0.55)", fontWeight: 600 }}>31 jours</div>
               </div>
             </div>
           );
           return (
             <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge} 0%,${G.rougeDark} 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(192,57,43,0.35)", display: "flex", alignItems: "center", justifyContent: "space-between", transition: "transform 0.15s, box-shadow 0.15s" }}>
               <div>
-                <div style={{ fontSize: "1rem", fontWeight: 700, color: G.blanc, marginBottom: 3 }}>
-                  {isExpired ? "⏰ Votre Premium a expiré - Renouveler" : "✨ Passer à Moyo Premium"}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  {isExpired
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.blanc} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    : <svg width="16" height="16" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  }
+                  <span style={{ fontSize: "1rem", fontWeight: 700, color: G.blanc }}>
+                    {isExpired ? "Votre Premium a expiré — Renouveler" : "Passer à Moyo Premium"}
+                  </span>
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.75)" }}>
                   {isExpired ? "Réabonnez-vous pour retrouver tous vos avantages" : "Messages illimités · Likes illimités · Voir qui vous like"}
@@ -7134,23 +7153,24 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           </div>
         </div>
 
-        {/* Inviter un ami */}
+        {/* Parrainage — mis en avant */}
         <div onClick={() => {
-          const msg = encodeURIComponent("Salut 😊\nLes célibataires congolais sont déjà sur MOYO...\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ? ❤️\nCrée ton compte gratuitement ici 👇\nhttps://moyo-congo.com");
+          const refLink = `https://moyo-congo.com?ref=${auth.userId}`;
+          const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ?\nCrée ton compte gratuitement ici : ${refLink}`);
           if (navigator.share) {
-            navigator.share({ title: "Moyo Congo", text: "Salut 😊\nLes célibataires congolais sont déjà sur MOYO...\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ? ❤️\nCrée ton compte gratuitement ici 👇", url: "https://moyo-congo.com" });
+            navigator.share({ title: "Moyo Congo", text: `Salut ! Les célibataires congolais sont déjà sur MOYO. Crée ton compte gratuitement :`, url: refLink });
           } else {
             window.open(`https://wa.me/?text=${msg}`, "_blank");
           }
-        }} style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8`, cursor: "pointer" }}>
-          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        }} style={{ background: `linear-gradient(135deg,${G.vert} 0%,#0f3d25 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(26,92,58,0.35)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Inviter un ami</div>
-            <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>Partage Moyo avec tes proches</div>
+            <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Parrainer un ami</div>
+            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.or }}>7 jours Premium offerts</span> pour chaque ami qui s'abonne</div>
           </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
 
         {/* ── Carte Noter Moyo ── */}
@@ -7486,7 +7506,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   onAcknowledge: () => void;
 }) {
   const isInfo = warning.warning_number === 0;
-  const isGift = isInfo && warning.reason.startsWith("🎁 Vous avez reçu");
+  const isGift = isInfo && warning.reason.startsWith("Vous avez reçu");
 
   // ── Modal cadeau spécial ──
   if (isGift) return (
@@ -7666,6 +7686,16 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
   );
 }
 
+function logAdminAction(adminId: string, adminName: string, action: string, targetUserId?: string) {
+  try {
+    fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      body: JSON.stringify({ admin_id: adminId, admin_name: adminName, action, target_user_id: targetUserId || null, created_at: new Date().toISOString() }),
+    });
+  } catch {}
+}
+
 function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount: (n: number) => void }) {
   const [pinVerified, setPinVerified] = useState(false);
   const [pinInput, setPinInput] = useState("");
@@ -7747,7 +7777,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Onglet actif ──
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs">("stats");
 
   // ── Avis utilisateurs ──
   type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
@@ -7758,6 +7788,22 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [archivedPayments, setArchivedPayments] = useState<PaymentRequest[]>([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  type AdminLog = { id: string; admin_id: string; admin_name: string; action: string; target_user_id?: string; target_user_name?: string; created_at: string };
+  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const loadAdminLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_logs?select=id,admin_id,admin_name,action,target_user_id,created_at&order=created_at.desc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data)) setAdminLogs(data);
+    } catch {}
+    setLogsLoading(false);
+  };
+  const clearAdminLogs = async () => {
+    await fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+    setAdminLogs([]);
+  };
   const [viewPaymentProfile, setViewPaymentProfile] = useState<Profile | null>(null);
   const openPaymentProfile = async (userId: string) => {
     try {
@@ -7784,6 +7830,23 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const targetId = p.gift_for || p.user_id;
     await adminAction(targetId, { is_premium: true, premium_until: premiumUntil }, `Premium activé.`);
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
+    // Bonus parrainage — vérifier si le filleul a un parrain
+    try {
+      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${targetId}&select=referred_by,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const profileData = await profileRes.json().catch(() => []);
+      if (Array.isArray(profileData) && profileData[0]?.referred_by) {
+        const parrain = profileData[0].referred_by;
+        const filleulName = profileData[0].name || "votre filleul";
+        const parrainRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}&select=premium_until,is_premium`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const parrainData = await parrainRes.json().catch(() => []);
+        if (Array.isArray(parrainData) && parrainData[0]) {
+          const base = parrainData[0].premium_until && new Date(parrainData[0].premium_until) > new Date() ? new Date(parrainData[0].premium_until) : new Date();
+          const newUntil = new Date(base.getTime() + REFERRAL_BONUS_DAYS * 24 * 60 * 60 * 1000).toISOString();
+          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: true, premium_until: newUntil }) });
+          await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: parrain, admin_id: auth.userId, reason: `Votre filleul ${filleulName} vient de passer Premium ! Vous gagnez ${REFERRAL_BONUS_DAYS} jours de Premium offerts. Reconnectez-vous pour en profiter.`, warning_number: 0, acknowledged: false }) });
+        }
+      }
+    } catch {}
     // Notifier le destinataire
     // Récupérer le nom de l'acheteur pour personnaliser le message cadeau
     let giftSenderName = p.gift_for_name ? "" : "";
@@ -7794,10 +7857,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         if (Array.isArray(d) && d[0]?.name) giftSenderName = d[0].name;
       } catch {}
     }
-    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `🎁 Vous avez reçu 1 mois de Premium en cadeau offert par ${giftSenderName || "un membre Moyo"} ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.` : "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", warning_number: 0, acknowledged: false }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `Vous avez reçu 1 mois de Premium en cadeau offert par ${giftSenderName || "un membre Moyo"} ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.` : "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", warning_number: 0, acknowledged: false }) });
     // Si cadeau, notifier aussi l'acheteur
     if (p.gift_for) {
-      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: `🎁 Votre cadeau Premium pour ${p.gift_for_name || "votre match"} a bien été activé !`, warning_number: 0, acknowledged: false }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: `Votre cadeau Premium pour ${p.gift_for_name || "votre match"} a bien été activé !`, warning_number: 0, acknowledged: false }) });
     }
     loadPayments();
   };
@@ -8056,6 +8119,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       }
       console.log("[Moyo][Admin][Action] ✅", successMsg, updates);
       showToast(successMsg, "success");
+      // Log historique admin
+      logAdminAction(auth.userId, auth.name, successMsg, userId);
       // Mise à jour locale immédiate
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
     } catch (e: any) {
@@ -9089,6 +9154,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["reports", "Signalements", IcoAlert],
             ["reviews", "Avis", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["payments", "Paiements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>],
+            ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
             <div
               key={key}
@@ -9097,12 +9163,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "users" && users.length === 0) loadUsers("", 0);
                 if (key === "reviews" && reviews.length === 0) loadReviews();
                 if (key === "payments") loadPayments();
+                if (key === "logs") loadAdminLogs();
               }}
               style={{
                 flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                 padding: "10px 0 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
-                color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : G.rouge) : "#999",
-                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : G.rouge}` : "2.5px solid transparent",
+                color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge) : "#999",
+                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge}` : "2.5px solid transparent",
                 transition: "all 0.2s",
               }}
             >
@@ -9406,7 +9473,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
                             confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
                           }} />
-                        <ActionBtn label="✉ Message" color="#2980b9" disabled={isLoading || isSelf}
+                        <ActionBtn label="Message" color="#2980b9" disabled={isLoading || isSelf}
                           onClick={() => { setMsgModal({ user: u }); setMsgText(""); }} />
                       </div>
                     </div>
@@ -10056,6 +10123,48 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 const isRejected = p.status === "rejected";
                 return <PaymentCard key={p.id} p={p} isPending={isPending} isApproved={isApproved} isRejected={isRejected} onActivate={activatePayment} onReject={rejectPayment} onDelete={deletePayment} onViewProfile={openPaymentProfile} />;
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET HISTORIQUE */}
+      {activeTab === "logs" && (
+        <div style={{ padding: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Historique des actions</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn variant="ghost" onClick={loadAdminLogs} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
+              {auth.userId === SUPER_ADMIN_ID && adminLogs.length > 0 && (
+                <button onClick={() => { if (window.confirm("Supprimer définitivement tout l'historique ? Action irréversible.")) clearAdminLogs(); }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                  Tout effacer
+                </button>
+              )}
+            </div>
+          </div>
+          {logsLoading ? (
+            <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+          ) : adminLogs.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune action enregistrée</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {adminLogs.map(log => (
+                <div key={log.id} style={{ background: G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 3 }}>
+                      <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#1a1a1a" }}>{log.admin_name}</span>
+                      <span style={{ fontSize: "0.68rem", color: "#aaa" }}>{new Date(log.created_at).toLocaleString("fr-FR")}</span>
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.4 }}>{log.action}</div>
+                    {log.target_user_id && (
+                      <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3, fontFamily: "monospace" }}>Utilisateur : {log.target_user_id.slice(0, 16)}…</div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
