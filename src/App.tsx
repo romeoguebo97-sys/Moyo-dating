@@ -2286,6 +2286,14 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           ...((() => { const ref = new URLSearchParams(window.location.search).get("ref"); return ref ? { referred_by: ref } : {}; })()),
         }),
       });
+      // Mettre à jour le display_name dans Supabase Auth
+      try {
+        await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${tempToken}` },
+          body: JSON.stringify({ data: { display_name: form.name.trim() } }),
+        });
+      } catch {}
       setLoading(false);
       setSuccessMsg("Compte créé avec succès !");
       setTimeout(() => { onNav("login"); }, 2500);
@@ -3508,7 +3516,15 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   return <div style={{ padding: "14px 16px 8px" }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
-      <h2 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, flexShrink: 0 }}>Découvrir</h2>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <h2 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0 }}>Découvrir</h2>
+        {!auth.isPremium && (
+          <div style={{ display: "flex", alignItems: "center", gap: 5, background: likesToday >= FREE_LIMITS.likes ? "rgba(231,76,60,0.1)" : "rgba(39,174,96,0.1)", borderRadius: 50, padding: "4px 10px", border: `1.5px solid ${likesToday >= FREE_LIMITS.likes ? "rgba(231,76,60,0.3)" : "rgba(39,174,96,0.3)"}` }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill={likesToday >= FREE_LIMITS.likes ? "#e74c3c" : "#27ae60"} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <span style={{ fontSize: "0.72rem", fontWeight: 800, color: likesToday >= FREE_LIMITS.likes ? "#e74c3c" : "#27ae60" }}>{FREE_LIMITS.likes - likesToday}/{FREE_LIMITS.likes}</span>
+          </div>
+        )}
+      </div>
       <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
         <div onClick={() => setViewMode(viewMode === "list" ? "card" : "list")} style={{ background: viewMode === "list" ? G.rouge : G.blanc, color: viewMode === "list" ? G.blanc : "#111", border: `2px solid ${viewMode === "list" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           {viewMode === "list" ? "Carte" : "Liste"}
@@ -6053,6 +6069,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
       {/* Barre d'envoi */}
       <div ref={footerRef} style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        {/* Compteur messages gratuits */}
+        {!auth.isPremium && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "6px 16px 0", background: msgCount >= FREE_LIMITS.messages ? "rgba(231,76,60,0.04)" : "transparent" }}>
+            <div style={{ display: "flex", gap: 4 }}>
+              {Array.from({ length: FREE_LIMITS.messages }).map((_, i) => (
+                <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < msgCount ? "#e74c3c" : "rgba(39,174,96,0.4)", transition: "background 0.3s" }} />
+              ))}
+            </div>
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: msgCount >= FREE_LIMITS.messages ? "#e74c3c" : "#888" }}>
+              {msgCount >= FREE_LIMITS.messages ? "Limite atteinte — Passe Premium !" : `${msgCount}/${FREE_LIMITS.messages} messages gratuits`}
+            </span>
+          </div>
+        )}
         {/* Bandeau répondre style WhatsApp - visible immédiatement au-dessus du champ */}
         {replyTo && (
           <div style={{ padding: "8px 12px 0 12px" }}>
