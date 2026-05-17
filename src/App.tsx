@@ -9504,17 +9504,22 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false }, `Premium retiré pour ${u.name}.`))} />
                         )}
                         {!u.is_admin ? (
+                          auth.userId === SUPER_ADMIN_ID && (
                           <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
                             onClick={() => {
                               if (auth.userId !== SUPER_ADMIN_ID) { showToast("Seul l'administrateur principal peut attribuer le statut admin.", "error"); return; }
                               setPinModalInput(""); setPinModal({ user: u, mode: "set" });
                             }} />
+                          )
                         ) : (
+                          auth.userId === SUPER_ADMIN_ID && !isSelf && (
                           <ActionBtn label="— Admin" color="#c0392b" disabled={isLoading || isSelf}
                             onClick={() => {
                               if (isSelf) { showToast("Vous ne pouvez pas retirer vos propres droits admin.", "error"); return; }
+                              if (auth.userId !== SUPER_ADMIN_ID) { showToast("Seul l'administrateur principal peut retirer le statut admin.", "error"); return; }
                               confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`));
                             }} />
+                          )
                         )}
                         {u.is_admin && !isSelf && auth.userId === SUPER_ADMIN_ID && (
                           <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
