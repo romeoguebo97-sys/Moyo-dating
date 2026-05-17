@@ -7247,6 +7247,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
               {p.operator}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {p.amount.toLocaleString()} FCFA</div>
+            <div style={{ fontSize: "0.62rem", color: "#bbb", fontFamily: "monospace", marginTop: 2 }}>{p.user_id}</div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -7277,6 +7278,49 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
           {verified !== null && <button onClick={() => { setVerified(null); setAdminRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>}
         </div>
       )}
+    </div>
+  );
+}
+
+function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount: (n: number) => void }) {
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [pinLoading, setPinLoading] = useState(false);
+  const verifyPin = async () => {
+    if (pinInput.length < 4) return;
+    setPinLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=admin_pin`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data) && data[0]?.admin_pin === pinInput) {
+        setPinVerified(true); setPinError("");
+      } else {
+        setPinError("PIN incorrect. Réessayez."); setPinInput("");
+      }
+    } catch { setPinError("Erreur réseau. Réessayez."); }
+    setPinLoading(false);
+  };
+  if (pinVerified) return <Admin auth={auth} onBack={() => { setPinVerified(false); onBack(); }} onBadgeCount={onBadgeCount} />;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+        <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
+          <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1.05rem" }}>Accès Admin</div>
+          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.75rem", marginTop: 4 }}>Entrez votre PIN à 4 chiffres</div>
+        </div>
+        <div style={{ padding: "20px 20px 24px" }}>
+          <input value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4)); setPinError(""); }} onKeyDown={e => e.key === "Enter" && verifyPin()} type="password" inputMode="numeric" maxLength={4} placeholder="• • • •" style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "14px", borderRadius: 12, border: `2px solid ${pinError ? "#e74c3c" : pinInput.length === 4 ? G.rouge : G.gris}`, fontSize: "1.4rem", letterSpacing: 8, outline: "none", fontFamily: "inherit" }} autoFocus />
+          {pinError && <div style={{ color: "#e74c3c", fontSize: "0.78rem", fontWeight: 600, textAlign: "center", marginTop: 8 }}>{pinError}</div>}
+          <button onClick={verifyPin} disabled={pinInput.length < 4 || pinLoading} style={{ width: "100%", marginTop: 14, background: pinInput.length === 4 ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "#ddd", color: pinInput.length === 4 ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: pinInput.length === 4 ? "pointer" : "not-allowed" }}>
+            {pinLoading ? "Vérification…" : "Accéder au panel"}
+          </button>
+          <button onClick={onBack} style={{ width: "100%", marginTop: 8, background: "transparent", color: "#888", border: "none", fontSize: "0.82rem", cursor: "pointer", padding: "8px" }}>Annuler</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -7326,6 +7370,14 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [payments, setPayments] = useState<PaymentRequest[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [viewPaymentProfile, setViewPaymentProfile] = useState<Profile | null>(null);
+  const openPaymentProfile = async (userId: string) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data) && data[0]) setViewPaymentProfile(data[0]);
+    } catch {}
+  };
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
   const loadPayments = async () => {
     setPaymentsLoading(true);
@@ -7353,6 +7405,13 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const deletePayment = async (p: PaymentRequest) => {
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+    // Si approuvé → stopper le Premium aussi
+    if (p.status === "approved") {
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${p.user_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: false, premium_until: null }) });
+      showToast("Carte supprimée et Premium retiré.", "success");
+    } else {
+      showToast("Carte supprimée.", "success");
+    }
     loadPayments();
   };
   const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
@@ -7984,6 +8043,37 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {viewPaymentProfile && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewPaymentProfile(null)}>
+          <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ height: 240, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden", borderRadius: "24px 24px 0 0" }}>
+              {viewPaymentProfile.photo_url ? <img src={viewPaymentProfile.photo_url} alt={viewPaymentProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }} />
+              <div style={{ position: "absolute", bottom: 16, left: 18, right: 18, color: G.blanc }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: "1.4rem", fontWeight: 800 }}>{viewPaymentProfile.name}, {viewPaymentProfile.age} ans</span>
+                  {viewPaymentProfile.is_premium && <PremiumBadge size={16} />}
+                  {viewPaymentProfile.is_verified && <VerifiedBadge size={16} />}
+                </div>
+                <div style={{ fontSize: "0.82rem", opacity: 0.85, marginTop: 2 }}>{viewPaymentProfile.city}</div>
+              </div>
+              <button onClick={() => setViewPaymentProfile(null)} style={{ position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.45)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ padding: "16px 20px 24px" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                {viewPaymentProfile.gender && <span style={{ background: G.creme, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600, color: "#555" }}>{viewPaymentProfile.gender}</span>}
+                {viewPaymentProfile.religion && <span style={{ background: "rgba(212,168,67,0.12)", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600, color: "#555" }}>{viewPaymentProfile.religion}</span>}
+                {viewPaymentProfile.profession && <span style={{ background: G.creme, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600, color: "#555" }}>{viewPaymentProfile.profession}</span>}
+                {viewPaymentProfile.hobbies && <span style={{ background: "rgba(26,92,58,0.07)", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600, color: "#2a5a3a" }}>{viewPaymentProfile.hobbies}</span>}
+              </div>
+              {viewPaymentProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.65, marginBottom: 12 }}>{viewPaymentProfile.bio}</p>}
+              <div style={{ background: G.creme, borderRadius: 8, padding: "6px 10px", fontSize: "0.68rem", color: "#aaa", fontFamily: "monospace", wordBreak: "break-all" }}>{viewPaymentProfile.id}</div>
+            </div>
+          </div>
+        </div>
+      )}
       {broadcastModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
@@ -8442,7 +8532,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
                     ["Badge vert", "Le badge vert sur l'onglet Paiements indique le nombre de demandes en attente de validation."],
-                    ["Silhouette cliquable", "Cliquez sur la silhouette à gauche de chaque carte pour accéder directement au profil de l'utilisateur dans l'onglet Utilisateurs."],
+                    ["Silhouette cliquable", "Cliquez sur la silhouette à gauche de chaque carte pour voir le profil complet de l'utilisateur (photo, nom, âge, ville, bio, badges). L'ID est affiché grisé en bas de la carte et dans la modale."],
                     ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN (ex: MP241234567)."],
                     ["Réf. MTN reçue", "Numéro que vous entrez après avoir vérifié votre SMS ou application MTN. Doit correspondre à la réf. client."],
                     ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert 'Activer Premium'. Si elles ne correspondent pas → bouton rouge 'Rejeter & notifier'."],
@@ -8451,11 +8541,38 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Expiration automatique", "À l'échéance des 31 jours, le statut Premium de l'utilisateur repasse automatiquement à gratuit dès sa prochaine connexion. Le compteur affiche 'Expiré'."],
                     ["Rejeter & notifier", "Marque la demande comme rejetée ET envoie un modal à l'utilisateur l'informant que sa preuve de paiement n'a pas pu être vérifiée."],
                     ["Bouton ↩", "Réinitialise la vérification pour recommencer la saisie si vous avez fait une erreur de frappe."],
-                    ["Bouton ✕ supprimer", "Supprime définitivement la carte de paiement de la liste. Utile pour nettoyer les anciennes demandes traitées ou expirées."],
+                    ["Bouton ✕ supprimer", "Supprime la carte de paiement de la liste. Si la demande était approuvée (Premium actif), cette action retire aussi automatiquement le statut Premium de l'utilisateur et remet son abonnement à gratuit. Utile en cas de remboursement."],
                     ["Statuts des demandes", "En attente = à traiter. Approuvé ✓ = Premium activé (31j). Rejeté ✕ = demande refusée. Expiré = 31 jours écoulés."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section — PIN Admin */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Accès Admin — PIN de sécurité</span>
+                </div>
+                <div style={{ background: "#f9f0ff", borderRadius: 10, padding: "9px 12px", marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start", border: "1px solid rgba(142,68,173,0.2)" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span style={{ fontSize: "0.79rem", color: "#5b2c6f" }}>Ne communiquez jamais votre PIN à un tiers. Il est personnel et confidentiel.</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Accès au panel", "À chaque ouverture du panel Admin, une modale demande votre PIN à 4 chiffres. Sans PIN correct, l'accès est refusé."],
+                    ["Création du PIN", "Lors de l'attribution du statut admin à un utilisateur (bouton '+ Admin'), un PIN à 4 chiffres est demandé. Ce PIN est communiqué à la personne par un canal sécurisé (SMS, WhatsApp)."],
+                    ["Bouton 🔑 PIN", "Visible sur les cartes des admins existants (sauf la vôtre). Permet de réinitialiser le PIN d'un admin à tout moment."],
+                    ["Retrait du statut admin", "Le bouton '— Admin' retire les droits admin ET supprime le PIN de la personne. Elle ne peut plus accéder au panel."],
+                    ["PIN oublié", "Seul l'administrateur principal peut réinitialiser un PIN via le bouton 🔑 PIN dans l'onglet Utilisateurs. Pour votre propre PIN, modifiez-le directement dans Supabase."],
+                    ["Sécurité renforcée", "Le PIN est vérifié en temps réel dans Supabase à chaque tentative d'accès. Un mauvais PIN affiche un message d'erreur et vide le champ."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
                       <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
                     </div>
                   ))}
@@ -9458,7 +9575,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 const isPending = p.status === "pending";
                 const isApproved = p.status === "approved";
                 const isRejected = p.status === "rejected";
-                return <PaymentCard key={p.id} p={p} isPending={isPending} isApproved={isApproved} isRejected={isRejected} onActivate={activatePayment} onReject={rejectPayment} onDelete={deletePayment} onViewProfile={(uid) => { setActiveTab("users"); setUserSearch(uid); loadUsers(uid, 0); }} />;
+                return <PaymentCard key={p.id} p={p} isPending={isPending} isApproved={isApproved} isRejected={isRejected} onActivate={activatePayment} onReject={rejectPayment} onDelete={deletePayment} onViewProfile={openPaymentProfile} />;
               })}
             </div>
           )}
@@ -10049,48 +10166,7 @@ export default function App() {
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
-      {tab === "admin" && (() => {
-        const [pinVerified, setPinVerified] = React.useState(false);
-        const [pinInput, setPinInput] = React.useState("");
-        const [pinError, setPinError] = React.useState("");
-        const [pinLoading, setPinLoading] = React.useState(false);
-        const verifyPin = async () => {
-          if (pinInput.length < 4) return;
-          setPinLoading(true);
-          try {
-            const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=admin_pin`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-            const data = await r.json().catch(() => []);
-            if (Array.isArray(data) && data[0]?.admin_pin === pinInput) {
-              setPinVerified(true); setPinError("");
-            } else {
-              setPinError("PIN incorrect. Réessayez."); setPinInput("");
-            }
-          } catch { setPinError("Erreur réseau. Réessayez."); }
-          setPinLoading(false);
-        };
-        if (!pinVerified) return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
-              <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
-                <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
-                <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1.05rem" }}>Accès Admin</div>
-                <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.75rem", marginTop: 4 }}>Entrez votre PIN à 4 chiffres</div>
-              </div>
-              <div style={{ padding: "20px 20px 24px" }}>
-                <input value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4)); setPinError(""); }} onKeyDown={e => e.key === "Enter" && verifyPin()} type="password" inputMode="numeric" maxLength={4} placeholder="• • • •" style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "14px", borderRadius: 12, border: `2px solid ${pinError ? "#e74c3c" : pinInput.length === 4 ? G.rouge : G.gris}`, fontSize: "1.4rem", letterSpacing: 8, outline: "none", fontFamily: "inherit" }} autoFocus />
-                {pinError && <div style={{ color: "#e74c3c", fontSize: "0.78rem", fontWeight: 600, textAlign: "center", marginTop: 8 }}>{pinError}</div>}
-                <button onClick={verifyPin} disabled={pinInput.length < 4 || pinLoading} style={{ width: "100%", marginTop: 14, background: pinInput.length === 4 ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "#ddd", color: pinInput.length === 4 ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: pinInput.length === 4 ? "pointer" : "not-allowed" }}>
-                  {pinLoading ? "Vérification…" : "Accéder au panel"}
-                </button>
-                <button onClick={() => setTab("discover")} style={{ width: "100%", marginTop: 8, background: "transparent", color: "#888", border: "none", fontSize: "0.82rem", cursor: "pointer", padding: "8px" }}>Annuler</button>
-              </div>
-            </div>
-          </div>
-        );
-        return <Admin auth={auth} onBack={() => { setPinVerified(false); setTab("discover"); }} onBadgeCount={setAdminBadgeCount} />;
-      })()}
+      {tab === "admin" && <AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} />}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
