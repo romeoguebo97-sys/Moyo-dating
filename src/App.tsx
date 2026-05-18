@@ -3696,7 +3696,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       <button onClick={() => { setViewMode("card"); window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } })); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
-      <div style={{ position: "absolute", left: 18, right: 18, bottom: "env(safe-area-inset-bottom, 18px)", color: G.blanc }}>
+      <div style={{ position: "absolute", left: 18, right: 18, bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)", color: G.blanc }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
           <div style={{ fontSize: "1.85rem", fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{prof.name}, {prof.age} ans</div>
           {prof.is_premium && <PremiumBadge size={20} />}
