@@ -3573,10 +3573,10 @@ function Discover({ auth, onShowPremium, onFullscreen }: { auth: Auth; onShowPre
     const approxCycle = Math.max(1, el.scrollHeight / 40);
     el.scrollTop = Math.max(0, el.scrollTop - approxCycle * 20);
   }
-}} style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 146px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+}} style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 60px)", height: "calc(100dvh - 60px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
-    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 155px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 16, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
+    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 130px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 16, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
       {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)" }} />
       {/* ✕ haut droite - sur chaque carte */}
@@ -10523,15 +10523,19 @@ export default function App() {
 
   // ── Vérifier expiration Premium au login ──
   useEffect(() => {
-    if (!auth?.userId || !auth.isPremium) return;
+    if (!auth?.userId) return;
     const checkPremiumExpiry = async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=premium_until`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=premium_until,is_premium`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const data = await r.json().catch(() => []);
-        if (!Array.isArray(data) || !data[0]?.premium_until) return;
-        const until = new Date(data[0].premium_until);
-        localStorage.setItem(`moyo_premium_until_${auth.userId}`, until.toISOString());
-        if (until < new Date()) {
+        if (!Array.isArray(data) || !data[0]) return;
+        const { premium_until, is_premium } = data[0];
+        if (premium_until) {
+          localStorage.setItem(`moyo_premium_until_${auth.userId}`, new Date(premium_until).toISOString());
+        } else {
+          localStorage.removeItem(`moyo_premium_until_${auth.userId}`);
+        }
+        if (is_premium && premium_until && new Date(premium_until) < new Date()) {
           await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: false }) });
         }
       } catch {}
