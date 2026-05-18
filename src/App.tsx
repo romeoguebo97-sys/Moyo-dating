@@ -2762,6 +2762,13 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     return () => window.removeEventListener("moyo-fullscreen", handleFullscreen);
   }, []);
 
+  // Réinitialise le fullscreen dès qu'on quitte l'onglet Découvrir
+  useEffect(() => {
+    if (tab !== "discover") {
+      setIsFullscreen(false);
+    }
+  }, [tab]);
+
   const tabs = [
     {
       id: "discover",
@@ -2862,7 +2869,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       {tabs.map(t => {
         const active = tab === t.id;
         return (
-          <div key={t.id} onClick={() => setTab(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", position: "relative", flex: 1 }}>
+          <div key={t.id} onClick={() => { setIsFullscreen(false); setTab(t.id); }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", position: "relative", flex: 1 }}>
             <div style={{
               display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
               padding: "5px 8px", borderRadius: 12,
@@ -3677,17 +3684,17 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     const approxCycle = Math.max(1, el.scrollHeight / 40);
     el.scrollTop = Math.max(0, el.scrollTop - approxCycle * 20);
   }
-}} style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 65px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+}} style={{ margin: "0 -16px", padding: 0, maxHeight: "calc(100dvh - 100px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#000", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
-    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 80px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 12, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
+    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 100px)", minHeight: 560, borderRadius: 0, overflow: "hidden", marginBottom: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
       {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)" }} />
       {/* ✕ haut droite - sur chaque carte */}
       <button onClick={() => { setViewMode("card"); window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } })); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
-      <div style={{ position: "absolute", left: 18, right: 18, bottom: 22, color: G.blanc }}>
+      <div style={{ position: "absolute", left: 18, right: 18, bottom: "env(safe-area-inset-bottom, 18px)", color: G.blanc }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
           <div style={{ fontSize: "1.85rem", fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{prof.name}, {prof.age} ans</div>
           {prof.is_premium && <PremiumBadge size={20} />}
@@ -3702,12 +3709,12 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
         </div>
         <div style={{ fontSize: "0.86rem", lineHeight: 1.45, opacity: 0.92, textShadow: "0 1px 8px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", minHeight: 38 }}>{prof.bio || ""}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
-          <button onClick={() => handleLike(prof)} style={{ width: 58, height: 58, minWidth: 58, minHeight: 58, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? G.blanc : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer", padding: 0, flexShrink: 0 }}><svg width="28" height="28" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <button onClick={() => handleLike(prof)} style={{ width: 68, height: 68, minWidth: 68, minHeight: 68, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? G.blanc : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", padding: 0, flexShrink: 0 }}><svg width="32" height="32" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
           <button
             onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); openBottomSheet(prof); }}
-            style={{ width: 58, height: 58, minWidth: 58, minHeight: 58, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.45)", color: G.blanc, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: "0 10px 28px rgba(0,0,0,0.28)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0, WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
+            style={{ width: 68, height: 68, minWidth: 68, minHeight: 68, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.55)", color: G.blanc, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0, WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
           >
-            {[0,1,2].map(i => <div key={i} style={{ width: 20, height: 2.5, borderRadius: 2, background: "white" }} />)}
+            {[0,1,2].map(i => <div key={i} style={{ width: 22, height: 2.5, borderRadius: 2, background: "white" }} />)}
           </button>
         </div>
       </div>
