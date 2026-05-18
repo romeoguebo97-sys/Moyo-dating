@@ -3596,16 +3596,13 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
           {/* Options */}
           <div style={{ padding: "8px 0 8px" }}>
             <div
-              onPointerDown={() => { closeBottomSheet(); if (auth.isPremium) { setViewedProfile(bottomSheetProfile); recordView(bottomSheetProfile.id); } else { onShowPremium("Passe Premium pour voir les profils complets !"); } }}
+              onPointerDown={() => { closeBottomSheet(); setViewedProfile(bottomSheetProfile); recordView(bottomSheetProfile.id); }}
               style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}
             >
               <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(26,92,58,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: "#1a1a1a" }}>Voir le profil</div>
-                {!auth.isPremium && <div style={{ fontSize: "0.72rem", color: G.or, fontWeight: 600, marginTop: 1 }}>Premium requis</div>}
-              </div>
+              <div style={{ fontWeight: 700, fontSize: "0.93rem", color: "#1a1a1a" }}>Voir le profil</div>
             </div>
             <div
               onPointerDown={() => { closeBottomSheet(); setTimeout(() => setShowBlockConfirm(true), 50); }}
@@ -3631,6 +3628,15 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     )}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
       <h2 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, flexShrink: 0 }}>Découvrir</h2>
+      {/* Compteur likes gratuits — visible uniquement pour les non-premium */}
+      {!auth.isPremium && (
+        <div style={{ display: "flex", alignItems: "center", gap: 5, background: likesToday >= FREE_LIMITS.likes ? "rgba(231,76,60,0.1)" : "rgba(26,92,58,0.08)", borderRadius: 50, padding: "4px 10px 4px 8px", border: `1.5px solid ${likesToday >= FREE_LIMITS.likes ? "#e74c3c" : G.vert}`, flexShrink: 0 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill={likesToday >= FREE_LIMITS.likes ? "#e74c3c" : G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span style={{ fontSize: "0.72rem", fontWeight: 800, color: likesToday >= FREE_LIMITS.likes ? "#e74c3c" : G.vert, letterSpacing: 0.2 }}>
+            {Math.max(0, FREE_LIMITS.likes - likesToday)}/{FREE_LIMITS.likes}
+          </span>
+        </div>
+      )}
       <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
         <div onClick={() => {
           const next = viewMode === "list" ? "card" : "list";
