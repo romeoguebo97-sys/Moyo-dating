@@ -3413,47 +3413,50 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const loadProfiles = async (pageNum = 0, append = false) => {
     if (pageNum === 0) setLoading(true); else setLoadingMore(true);
     try {
-      const offset = pageNum * PAGE_SIZE;
-      let params = `?id=neq.${auth.userId}&is_visible=neq.false&is_complete=eq.true&order=is_premium.desc,is_verified.desc,created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
-      if (filters.city && !filters.city.startsWith("──")) params += `&city=eq.${encodeURIComponent(filters.city)}`;
-      if (filters.gender) params += `&gender=eq.${filters.gender}`;
-      if (filters.ageMin) params += `&age=gte.${filters.ageMin}`;
-      if (filters.ageMax) params += `&age=lte.${filters.ageMax}`;
-      if (filters.religion) params += `&religion=eq.${encodeURIComponent(filters.religion)}`;
-      const [all, liked, blocked] = await Promise.all([
-        sb.query<Profile>(auth.token, "profiles", params),
-        pageNum === 0 ? sb.query<{ to_user: string }>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user`) : Promise.resolve([] as { to_user: string }[]),
-        pageNum === 0 ? sb.query<{ blocked_id: string }>(auth.token, "blocks", `?blocker_id=eq.${auth.userId}&select=blocked_id`) : Promise.resolve([] as { blocked_id: string }[]),
+      // Chargement de TOUS les profils par batches de 1000
+      const BATCH = 1000;
+      let allProfiles: Profile[] = [];
+      let offset = 0;
+      let keepLoading = true;
+      // Charger likes et bloqués une seule fois
+      const [liked, blocked] = await Promise.all([
+        sb.query<{ to_user: string }>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user`),
+        sb.query<{ blocked_id: string }>(auth.token, "blocks", `?blocker_id=eq.${auth.userId}&select=blocked_id`),
       ]);
-      if (pageNum === 0) {
-        setLikedIds(new Set(liked.map(l => l.to_user)));
-        const bIds = new Set(blocked.map(b => b.blocked_id));
-        setBlockedIds(bIds);
+      setLikedIds(new Set(liked.map(l => l.to_user)));
+      const bIds = new Set(blocked.map(b => b.blocked_id));
+      setBlockedIds(bIds);
+      while (keepLoading) {
+        let params = `?id=neq.${auth.userId}&is_visible=neq.false&is_complete=eq.true&order=is_premium.desc,is_verified.desc,created_at.desc&limit=${BATCH}&offset=${offset}`;
+        if (filters.city && !filters.city.startsWith("──")) params += `&city=eq.${encodeURIComponent(filters.city)}`;
+        if (filters.gender) params += `&gender=eq.${filters.gender}`;
+        if (filters.ageMin) params += `&age=gte.${filters.ageMin}`;
+        if (filters.ageMax) params += `&age=lte.${filters.ageMax}`;
+        if (filters.religion) params += `&religion=eq.${encodeURIComponent(filters.religion)}`;
+        const batch = await sb.query<Profile>(auth.token, "profiles", params);
+        if (!Array.isArray(batch) || batch.length === 0) break;
+        allProfiles = [...allProfiles, ...batch];
+        if (batch.length < BATCH) keepLoading = false;
+        else offset += BATCH;
       }
-      const bIds = pageNum === 0 ? new Set(blocked.map(b => b.blocked_id)) : blockedIds;
-      const seen = new Set<string>(append ? profiles.map(p => p.id) : []);
-      const unique = (Array.isArray(all) ? all : []).filter(p => {
+      const seen = new Set<string>();
+      const unique = allProfiles.filter(p => {
         if (seen.has(p.id) || bIds.has(p.id)) return false;
         seen.add(p.id); return true;
       });
       const orderedUnique = priorityRandomizeProfiles(unique);
-      setHasMore(all.length === PAGE_SIZE);
-      if (append) setProfiles(prev => [...prev, ...orderedUnique]);
-      else { setProfiles(orderedUnique); setCurrent(0); }
-      if (pageNum === 0) {
-        const today = new Date().toISOString().split("T")[0];
-        const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`);
-        setLikesToday(Array.isArray(tl) ? tl.length : 0);
-      }
+      setHasMore(false);
+      setProfiles(orderedUnique);
+      setCurrent(0);
+      const today = new Date().toISOString().split("T")[0];
+      const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`);
+      setLikesToday(Array.isArray(tl) ? tl.length : 0);
     } catch { if (!append) setProfiles([]); }
     if (pageNum === 0) setLoading(false); else setLoadingMore(false);
   };
 
   const loadMore = async () => {
-    if (loadingMore || !hasMore) return;
-    const nextPage = page + 1;
-    setPage(nextPage);
-    await loadProfiles(nextPage, true);
+    // Plus de pagination — tous les profils sont déjà chargés
   };
 
   const handleBlock = async () => {
