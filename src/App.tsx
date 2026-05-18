@@ -7916,6 +7916,17 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Onglet actif ──
   const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs">("stats");
+  // ── Vue & tri utilisateurs admin ──
+  const [usersViewMode, setUsersViewMode] = useState<"grid" | "list">("grid");
+  const [usersSort, setUsersSort] = useState<"created_at.desc" | "created_at.asc" | "name.asc" | "name.desc" | "last_seen.desc" | "age.asc" | "age.desc">("created_at.desc");
+  const [adminViewedProfile, setAdminViewedProfile] = useState<Profile | null>(null);
+  const openAdminProfile = async (userId: string) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies,created_at,last_seen`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data) && data[0]) setAdminViewedProfile(data[0]);
+    } catch {}
+  };
 
   // ── Avis utilisateurs ──
   type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
@@ -8206,14 +8217,13 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Chargement des utilisateurs avec recherche ──
-  const loadUsers = async (search = "", page = 0) => {
+  const loadUsers = async (search = "", page = 0, sort = usersSort) => {
     setUsersLoading(true);
     try {
       const offset = page * USER_PAGE_SIZE;
-      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&order=created_at.desc&limit=${USER_PAGE_SIZE}&offset=${offset}`;
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&order=${sort}&limit=${USER_PAGE_SIZE}&offset=${offset}`;
       if (search.trim()) {
-        // Recherche par nom (ilike)
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&name=ilike.*${encodeURIComponent(search.trim())}*&order=created_at.desc&limit=${USER_PAGE_SIZE}&offset=${offset}`;
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&name=ilike.*${encodeURIComponent(search.trim())}*&order=${sort}&limit=${USER_PAGE_SIZE}&offset=${offset}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       setUsers(res);
@@ -9496,24 +9506,86 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* ═══════════════════════════════════════════ ONGLET UTILISATEURS */}
       {activeTab === "users" && (
         <div style={{ padding: "16px" }}>
+          {/* Modale profil complet admin */}
+          {adminViewedProfile && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setAdminViewedProfile(null)}>
+              <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={e => e.stopPropagation()}>
+                {/* Photo */}
+                <div style={{ position: "relative", height: 260, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", borderRadius: "20px 20px 0 0", overflow: "hidden" }}>
+                  {adminViewedProfile.photo_url
+                    ? <img src={adminViewedProfile.photo_url} alt={adminViewedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                  }
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "40px 16px 14px", background: "linear-gradient(transparent, rgba(0,0,0,0.75))" }}>
+                    <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1.3rem" }}>{adminViewedProfile.name}, {adminViewedProfile.age} ans</div>
+                    <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.8rem", marginTop: 3 }}>{adminViewedProfile.city} · {adminViewedProfile.gender}</div>
+                  </div>
+                  <div onClick={() => setAdminViewedProfile(null)} style={{ position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </div>
+                </div>
+                {/* Infos */}
+                <div style={{ padding: "16px" }}>
+                  {/* Badges */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                    {adminViewedProfile.is_premium && <span style={{ background: "rgba(212,168,67,0.15)", color: "#D4A843", borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>⭐ Premium</span>}
+                    {adminViewedProfile.is_verified && <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>✓ Vérifié</span>}
+                    {adminViewedProfile.is_admin && <span style={{ background: "rgba(231,76,60,0.1)", color: G.rouge, borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>⚙ Admin</span>}
+                  </div>
+                  {adminViewedProfile.bio && <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Bio</div><div style={{ fontSize: "0.88rem", color: "#333", lineHeight: 1.6 }}>{adminViewedProfile.bio}</div></div>}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {adminViewedProfile.religion && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Religion</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.religion}</div></div>}
+                    {adminViewedProfile.profession && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Profession</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.profession}</div></div>}
+                    {adminViewedProfile.hobbies && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px", gridColumn: "1 / -1" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Centres d'intérêt</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.hobbies}</div></div>}
+                  </div>
+                  {(adminViewedProfile as any).created_at && <div style={{ marginTop: 12, fontSize: "0.72rem", color: "#bbb", textAlign: "center" }}>Inscrit le {formatDate((adminViewedProfile as any).created_at)}</div>}
+                </div>
+              </div>
+            </div>
+          )}
           {/* Barre de recherche */}
           <div style={{ position: "relative", marginBottom: 14 }}>
             <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
             <input
               value={userSearch}
               onChange={e => setUserSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0); } }}
+              onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort); } }}
               placeholder="Rechercher par nom…"
               style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, outline: "none", boxSizing: "border-box" }}
             />
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0); }} style={{ flex: 1, padding: "10px" }}>
+            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0, usersSort); }} style={{ flex: 1, padding: "10px" }}>
               Rechercher
             </Btn>
-            <Btn variant="ghost" onClick={() => { setUserSearch(""); setUserPage(0); loadUsers("", 0); }} style={{ padding: "10px 16px" }}>
+            <Btn variant="ghost" onClick={() => { setUserSearch(""); setUserPage(0); loadUsers("", 0, usersSort); }} style={{ padding: "10px 16px" }}>
               Réinitialiser
             </Btn>
+          </div>
+          {/* ── Tri + Toggle vue ── */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
+            <select
+              value={usersSort}
+              onChange={e => { const s = e.target.value as typeof usersSort; setUsersSort(s); setUserPage(0); loadUsers(userSearch, 0, s); }}
+              style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: `2px solid ${G.gris}`, fontSize: "0.8rem", fontWeight: 600, color: "#333", background: G.blanc, cursor: "pointer", outline: "none" }}
+            >
+              <option value="created_at.desc">📅 Plus récents</option>
+              <option value="created_at.asc">📅 Plus anciens</option>
+              <option value="name.asc">🔤 A → Z</option>
+              <option value="name.desc">🔤 Z → A</option>
+              <option value="last_seen.desc">🟢 Dernière connexion</option>
+              <option value="age.asc">🎂 Âge croissant</option>
+              <option value="age.desc">🎂 Âge décroissant</option>
+            </select>
+            {/* Toggle grille / liste */}
+            <div style={{ display: "flex", borderRadius: 10, border: `2px solid ${G.gris}`, overflow: "hidden", flexShrink: 0 }}>
+              <div onClick={() => setUsersViewMode("grid")} style={{ padding: "7px 12px", background: usersViewMode === "grid" ? G.rouge : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={usersViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              </div>
+              <div onClick={() => setUsersViewMode("list")} style={{ padding: "7px 12px", background: usersViewMode === "list" ? G.rouge : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={usersViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </div>
+            </div>
           </div>
 
           {usersLoading ? (
@@ -9529,6 +9601,49 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 📢 Diffusion générale
               </button>
+              {/* ── VUE LISTE ── */}
+              {usersViewMode === "list" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {users.map(u => {
+                    const isLoading = actionLoading === u.id;
+                    const isSelf = u.id === auth.userId;
+                    const onlineStatus = (() => {
+                      if (!u.last_seen) return null;
+                      const mins = Math.floor((Date.now() - new Date(u.last_seen).getTime()) / 60000);
+                      if (mins < 5) return <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", display: "inline-block", flexShrink: 0 }} />;
+                      return null;
+                    })();
+                    return (
+                      <div key={u.id} style={{ background: G.blanc, borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                        {/* Avatar cliquable */}
+                        <div onClick={() => openAdminProfile(u.id)} style={{ width: 38, height: 38, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", position: "relative" }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          {onlineStatus && <div style={{ position: "absolute", bottom: 0, right: 0 }}>{onlineStatus}</div>}
+                        </div>
+                        {/* Infos */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {u.name} {isSelf && <span style={{ fontSize: "0.62rem", color: G.vert, fontWeight: 700 }}>(Vous)</span>}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "#888" }}>{u.age} ans · {u.city} · {u.gender}</div>
+                        </div>
+                        {/* Badges compacts */}
+                        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                          {u.is_premium && <span style={{ background: "rgba(212,168,67,0.15)", color: "#D4A843", borderRadius: 50, padding: "2px 7px", fontSize: "0.62rem", fontWeight: 700 }}>★</span>}
+                          {u.is_verified && <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "2px 7px", fontSize: "0.62rem", fontWeight: 700 }}>✓</span>}
+                          {u.is_banned && <span style={{ background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "2px 7px", fontSize: "0.62rem", fontWeight: 700 }}>⛔</span>}
+                        </div>
+                        {/* Actions rapides */}
+                        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                          <ActionBtn label="Message" color="#2980b9" disabled={isLoading || isSelf} onClick={() => { setMsgModal({ user: u }); setMsgText(""); }} />
+                          <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || isSelf} onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+              /* ── VUE GRILLE (existante) ── */
               <div data-admlist="">
               {users.map(u => {
                 const isLoading = actionLoading === u.id;
@@ -9537,7 +9652,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div key={u.id} style={{ background: G.blanc, borderRadius: 16, padding: "14px", marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                     {/* En-tête utilisateur */}
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
-                      <div style={{ width: 42, height: 42, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <div onClick={() => openAdminProfile(u.id)} style={{ width: 42, height: 42, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -9651,7 +9766,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 );
               })}
-              </div>{/* /admlist users */}
+              </div>
+              )}
 
               {/* Pagination */}
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
