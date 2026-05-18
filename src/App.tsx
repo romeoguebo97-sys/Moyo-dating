@@ -7927,6 +7927,27 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       if (Array.isArray(data) && data[0]) setAdminViewedProfile(data[0]);
     } catch {}
   };
+  // ── Sélection multiple ──
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [showIncomplete, setShowIncomplete] = useState(false);
+  const toggleSelectUser = (id: string) => setSelectedUsers(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const selectAll = (userList: AdminProfile[]) => setSelectedUsers(new Set(userList.filter(u => u.id !== auth.userId).map(u => u.id)));
+  const deselectAll = () => setSelectedUsers(new Set());
+  const bulkDelete = async () => {
+    if (selectedUsers.size === 0) return;
+    setBulkDeleting(true);
+    let count = 0;
+    for (const id of Array.from(selectedUsers)) {
+      const u = users.find(x => x.id === id);
+      if (u) { try { await deleteAccount(u); count++; } catch {} }
+    }
+    setSelectedUsers(new Set());
+    setBulkDeleting(false);
+    showToast(`${count} profil(s) supprimé(s).`, "success");
+    loadUsers(userSearch, userPage, usersSort);
+  };
+  // Profils incomplets → déclaré après users (voir plus bas)
 
   // ── Avis utilisateurs ──
   type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
@@ -8137,6 +8158,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Users ──
   const [users, setUsers] = useState<AdminProfile[]>([]);
+  // Profils incomplets = name est "..." ou vide
+  const displayedUsers = showIncomplete ? users.filter(u => u.name === "..." || !u.name) : users;
   const [userSearch, setUserSearch] = useState("");
   const [usersLoading, setUsersLoading] = useState(false);
   const [userPage, setUserPage] = useState(0);
@@ -9596,17 +9619,59 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.88rem" }}>Aucun utilisateur trouvé</div>
           ) : (
             <>
-              <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 10, fontWeight: 600 }}>{users.length} utilisateur(s) affichés</div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 10, fontWeight: 600 }}>{displayedUsers.length} utilisateur(s) affichés</div>
+
+              {/* ── Filtre profils incomplets ── */}
+              <div
+                onClick={() => { setShowIncomplete(v => !v); setSelectedUsers(new Set()); }}
+                style={{ display: "flex", alignItems: "center", gap: 8, background: showIncomplete ? "rgba(231,76,60,0.08)" : "#F8F8F8", border: `1.5px solid ${showIncomplete ? "#e74c3c" : G.gris}`, borderRadius: 10, padding: "8px 14px", marginBottom: 10, cursor: "pointer" }}
+              >
+                <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${showIncomplete ? "#e74c3c" : "#bbb"}`, background: showIncomplete ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {showIncomplete && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                </div>
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: showIncomplete ? "#e74c3c" : "#555" }}>
+                  Afficher uniquement les profils incomplets (<code style={{ fontFamily: "monospace", background: "rgba(0,0,0,0.06)", padding: "1px 5px", borderRadius: 4 }}>...</code>)
+                </span>
+              </div>
+
+              {/* ── Barre actions groupées ── */}
+              {displayedUsers.filter(u => u.id !== auth.userId).length > 0 && (
+                <div style={{ background: selectedUsers.size > 0 ? "rgba(231,76,60,0.06)" : "#F8F8F8", border: `1.5px solid ${selectedUsers.size > 0 ? "#e74c3c" : G.gris}`, borderRadius: 12, padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 6, flex: 1, flexWrap: "wrap", alignItems: "center" }}>
+                    <button
+                      onClick={() => selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length ? deselectAll() : selectAll(displayedUsers)}
+                      style={{ background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", color: "#333" }}
+                    >
+                      {selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length && displayedUsers.length > 0 ? "✗ Tout désélectionner" : "✓ Tout sélectionner"}
+                    </button>
+                    {selectedUsers.size > 0 && (
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#e74c3c" }}>{selectedUsers.size} sélectionné(s)</span>
+                    )}
+                  </div>
+                  {selectedUsers.size > 0 && (
+                    <button
+                      onClick={() => confirm(`⚠️ Supprimer définitivement les ${selectedUsers.size} profil(s) sélectionné(s) ? Cette action est irréversible.`, () => bulkDelete())}
+                      disabled={bulkDeleting}
+                      style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: G.blanc, border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      {bulkDeleting ? "Suppression..." : `🗑 Supprimer (${selectedUsers.size})`}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <button onClick={() => { setBroadcastModal(true); setBroadcastText(""); }} style={{ width: "100%", background: `linear-gradient(135deg,#e67e22,#d35400)`, color: G.blanc, border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 📢 Diffusion générale
               </button>
+
               {/* ── VUE LISTE ── */}
               {usersViewMode === "list" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {users.map(u => {
+                  {displayedUsers.map(u => {
                     const isLoading = actionLoading === u.id;
                     const isSelf = u.id === auth.userId;
+                    const isSelected = selectedUsers.has(u.id);
                     const onlineStatus = (() => {
                       if (!u.last_seen) return null;
                       const mins = Math.floor((Date.now() - new Date(u.last_seen).getTime()) / 60000);
@@ -9614,7 +9679,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       return null;
                     })();
                     return (
-                      <div key={u.id} style={{ background: G.blanc, borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                      <div key={u.id} style={{ background: isSelected ? "rgba(231,76,60,0.05)" : G.blanc, borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1.5px solid ${isSelected ? "#e74c3c" : "transparent"}` }}>
+                        {/* Case à cocher */}
+                        {!isSelf && (
+                          <div onClick={() => toggleSelectUser(u.id)} style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${isSelected ? "#e74c3c" : "#ccc"}`, background: isSelected ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                            {isSelected && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </div>
+                        )}
                         {/* Avatar cliquable */}
                         <div onClick={() => openAdminProfile(u.id)} style={{ width: 38, height: 38, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", position: "relative" }}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -9622,8 +9693,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                         {/* Infos */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: u.name === "..." ? "#e74c3c" : "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {u.name} {isSelf && <span style={{ fontSize: "0.62rem", color: G.vert, fontWeight: 700 }}>(Vous)</span>}
+                            {u.name === "..." && <span style={{ fontSize: "0.62rem", color: "#e74c3c", fontWeight: 700, marginLeft: 4 }}>Incomplet</span>}
                           </div>
                           <div style={{ fontSize: "0.7rem", color: "#888" }}>{u.age} ans · {u.city} · {u.gender}</div>
                         </div>
@@ -9645,13 +9717,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               ) : (
               /* ── VUE GRILLE (existante) ── */
               <div data-admlist="">
-              {users.map(u => {
+              {displayedUsers.map(u => {
                 const isLoading = actionLoading === u.id;
                 const isSelf = u.id === auth.userId;
                 return (
-                  <div key={u.id} style={{ background: G.blanc, borderRadius: 16, padding: "14px", marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div key={u.id} style={{ background: selectedUsers.has(u.id) ? "rgba(231,76,60,0.04)" : G.blanc, borderRadius: 16, padding: "14px", marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", border: `1.5px solid ${selectedUsers.has(u.id) ? "#e74c3c" : "transparent"}` }}>
                     {/* En-tête utilisateur */}
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                      {/* Case à cocher */}
+                      {!isSelf && (
+                        <div onClick={() => toggleSelectUser(u.id)} style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${selectedUsers.has(u.id) ? "#e74c3c" : "#ccc"}`, background: selectedUsers.has(u.id) ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginTop: 2 }}>
+                          {selectedUsers.has(u.id) && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </div>
+                      )}
                       <div onClick={() => openAdminProfile(u.id)} style={{ width: 42, height: 42, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       </div>
@@ -9659,6 +9737,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5 }}>
                           {u.name}
                           {isSelf && <span style={{ fontSize: "0.65rem", background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Vous</span>}
+                          {u.name === "..." && <span style={{ fontSize: "0.65rem", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Incomplet</span>}
                           {/* Indicateur connexion */}
                           {(() => {
                             if (!u.last_seen) return null;
