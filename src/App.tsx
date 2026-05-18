@@ -3563,10 +3563,10 @@ function Discover({ auth, onShowPremium, onFullscreen }: { auth: Auth; onShowPre
     const approxCycle = Math.max(1, el.scrollHeight / 40);
     el.scrollTop = Math.max(0, el.scrollTop - approxCycle * 20);
   }
-}} style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 60px)", height: "calc(100dvh - 60px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "transparent", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
-  <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
+}} style={{ margin: "0 -16px", padding: "0", maxHeight: "calc(100dvh - 60px)", height: "calc(100dvh - 60px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "transparent", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+  <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;} .moyo-fullscreen-view button{user-select:auto!important;-webkit-user-select:auto!important;touch-action:manipulation!important;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
-    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 130px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 16, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
+    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 60px)", minHeight: 560, borderRadius: 0, overflow: "hidden", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
       {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)" }} />
       {/* ✕ haut droite - sur chaque carte */}
