@@ -3573,7 +3573,7 @@ function Discover({ auth, onShowPremium, onFullscreen }: { auth: Auth; onShowPre
     const approxCycle = Math.max(1, el.scrollHeight / 40);
     el.scrollTop = Math.max(0, el.scrollTop - approxCycle * 20);
   }
-}} style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 60px)", height: "calc(100dvh - 60px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+}} style={{ margin: "0 -16px", padding: "0 10px 16px", maxHeight: "calc(100dvh - 60px)", height: "calc(100dvh - 60px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "transparent", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
     <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 130px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 16, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 12px 42px rgba(44,26,14,0.18)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
@@ -7133,10 +7133,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         {/* CTA Premium - rouge si gratuit, doré si actif, rouge si expiré */}
         {(() => {
           const stored = localStorage.getItem(`moyo_premium_until_${auth.userId}`);
-          // stored = premium_until (date d'expiration directe)
-          const daysLeft = stored ? Math.floor((new Date(stored).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
-          const isActive = auth.isPremium && daysLeft > 0;
-          const isExpired = !auth.isPremium && stored && daysLeft <= 0;
+          const daysLeft = stored ? Math.floor((new Date(stored).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : -1;
+          const isActive = daysLeft > 0;
+          const isExpired = daysLeft === 0 || (stored !== null && daysLeft < 0 && daysLeft > -365);
           if (isActive) return (
             <div style={{ background: "linear-gradient(135deg,#D4A843 0%,#B8860B 60%,#8B6914 100%)", borderRadius: 20, padding: "18px 20px", boxShadow: "0 10px 32px rgba(184,134,11,0.45)", border: "1px solid rgba(255,220,100,0.3)", position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(180deg,rgba(255,255,255,0.13) 0%,transparent 100%)", borderRadius: "20px 20px 0 0", pointerEvents: "none" }} />
