@@ -496,6 +496,35 @@ const GLOBAL_CSS = `
     background-size: 200px 200px;
   }
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  @keyframes slideUpMenu{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+  .moyo-bottom-sheet{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.45);
+    z-index:9999;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    animation:fadeIn .2s ease;
+  }
+  .moyo-bottom-sheet-content{
+    width:100%;
+    max-width:520px;
+    background:#fff;
+    border-radius:24px 24px 0 0;
+    overflow:hidden;
+    padding-bottom:env(safe-area-inset-bottom);
+    animation:slideUpMenu .22s ease;
+    box-shadow:0 -8px 32px rgba(0,0,0,.18);
+  }
+  .moyo-single-tap{
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .moyo-footer-hide{
+    transition:bottom .28s ease;
+  }
+
   /* ── Chat textarea : comportement naturel iOS/Android ── */
   .chat-textarea {
     -webkit-appearance: none;
