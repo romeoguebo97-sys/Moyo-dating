@@ -2746,7 +2746,7 @@ function AdminDesktopPage() {
   );
 }
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, hideNav }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; hideNav?: boolean; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
   const [showBot, setShowBot] = useState(false);
@@ -2847,7 +2847,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     {showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
 
     {/* ── NAVBAR BAS STYLE TINDER (6 onglets) ── */}
-    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "6px 4px 14px", zIndex: 50 }}>
+    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: hideNav ? "none" : "flex", justifyContent: "space-around", alignItems: "center", padding: "6px 4px 14px", zIndex: 50, transition: "opacity 0.2s", opacity: hideNav ? 0 : 1 }}>
       {tabs.map(t => {
         const active = tab === t.id;
         return (
@@ -3308,7 +3308,7 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
   );
 });
 
-function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
+function Discover({ auth, onShowPremium, onFullscreen }: { auth: Auth; onShowPremium: (r: string) => void; onFullscreen?: (full: boolean) => void }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [likedIds, setLikedIds] = useState(new Set<string>());
   const [blockedIds, setBlockedIds] = useState(new Set<string>());
@@ -3526,10 +3526,10 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
         )}
       </div>
       <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
-        <div onClick={() => setViewMode(viewMode === "list" ? "card" : "list")} style={{ background: viewMode === "list" ? G.rouge : G.blanc, color: viewMode === "list" ? G.blanc : "#111", border: `2px solid ${viewMode === "list" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+        <div onClick={() => { const next = viewMode === "list" ? "card" : "list"; setViewMode(next); onFullscreen?.(false); }} style={{ background: viewMode === "list" ? G.rouge : G.blanc, color: viewMode === "list" ? G.blanc : "#111", border: `2px solid ${viewMode === "list" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           {viewMode === "list" ? "Carte" : "Liste"}
         </div>
-        <div onClick={() => setViewMode("full")} style={{ background: viewMode === "full" ? G.rouge : G.blanc, color: viewMode === "full" ? G.blanc : "#111", border: `2px solid ${viewMode === "full" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+        <div onClick={() => { const next = viewMode === "full" ? "card" : "full"; setViewMode(next); onFullscreen?.(next === "full"); }} style={{ background: viewMode === "full" ? G.rouge : G.blanc, color: viewMode === "full" ? G.blanc : "#111", border: `2px solid ${viewMode === "full" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           Plein écran
         </div>
         <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
@@ -3580,7 +3580,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)" }} />
       {/* ✕ haut droite - sur chaque carte */}
-      <button onClick={() => setViewMode("card")} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
+      <button onClick={() => { setViewMode("card"); onFullscreen?.(false); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
       <div style={{ position: "absolute", left: 18, right: 18, bottom: 22, color: G.blanc }}>
@@ -7001,7 +7001,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                   <span style={{ fontSize: "0.65rem", color: G.rouge, fontWeight: 900, lineHeight: 1 }}>+</span>
                 </div>
               </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier ma<br/>photo</div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3, whiteSpace: "nowrap" }}>Modifier ma photo</div>
             </div>
 
             {/* Liste noire - descend sur la vague */}
@@ -10287,6 +10287,7 @@ export default function App() {
   const [page, setPage] = useState("landing");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("moyo_dark") === "1");
   const [tab, setTab] = useState("discover");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
@@ -10857,8 +10858,8 @@ export default function App() {
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
       if (t === "messages") setUnreadCount(0);
-    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount}>
-      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
+    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} hideNav={isFullscreen}>
+      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} onFullscreen={setIsFullscreen} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
