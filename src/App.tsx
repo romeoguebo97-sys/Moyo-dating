@@ -2835,6 +2835,17 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     },
   ];
 
+  useEffect(() => {
+    const handleGuide = () => setShowGuide(true);
+    const handleBot = () => setShowBot(true);
+    window.addEventListener("moyo-show-guide", handleGuide);
+    window.addEventListener("moyo-show-bot", handleBot);
+    return () => {
+      window.removeEventListener("moyo-show-guide", handleGuide);
+      window.removeEventListener("moyo-show-bot", handleBot);
+    };
+  }, []);
+
   const screenWidth = useWindowWidth();
   const isDesktop = screenWidth >= 1024;
   const isTablet = screenWidth >= 768 && screenWidth < 1024;
@@ -2869,18 +2880,6 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           <div style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
             <span style={{ color: G.rouge }}>Mo</span><span style={{ color: G.or }}>yo</span>
           </div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            {auth.isAdmin && (
-              <div onClick={() => openAdminPanel(() => setTab("admin"))} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "4px 10px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                ⚙️
-                {adminBadgeCount && adminBadgeCount > 0 ? <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.58rem", fontWeight: 800, padding: "0px 5px" }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</span> : null}
-              </div>
-            )}
-            <div onClick={() => setShowGuide(true)} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "4px 10px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer" }}>Guide</div>
-            <div onClick={() => setShowBot(true)} style={{ width: 28, height: 28, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
-            </div>
-          </div>
         </div>
         <nav className="moyo-sidebar-nav">
           {tabs.map(t => {
@@ -2901,6 +2900,16 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             );
           })}
         </nav>
+        {/* Admin juste au-dessus du bloc profil */}
+        {auth.isAdmin && (
+          <div className="moyo-nav-item" onClick={() => openAdminPanel(() => setTab("admin"))} style={{ margin: "0 10px 4px", borderRadius: 12 }}>
+            <div className="moyo-nav-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            Admin
+            {adminBadgeCount && adminBadgeCount > 0 ? <span className="moyo-nav-badge moyo-nav-badge-red">{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</span> : null}
+          </div>
+        )}
         <div className="moyo-sidebar-bottom">
           <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${G.or},#8B6914)`, display: "flex", alignItems: "center", justifyContent: "center", color: G.blanc, fontSize: "0.65rem", fontWeight: 800, flexShrink: 0, border: `2px solid ${G.or}` }}>
             {auth.name?.slice(0, 2).toUpperCase() || "MO"}
@@ -3616,9 +3625,6 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
     {isWide && (
       <div style={{ width: 220, minWidth: 220, background: viewMode === "full" ? "rgba(8,8,8,0.5)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.07)" : G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column", transition: "background 0.35s, backdrop-filter 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
-        <div style={{ padding: "14px 12px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-          <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em" }}>Profils ({profiles.length})</div>
-        </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
           {profiles.map((prof, idx) => {
             const isActive = idx === current;
@@ -3649,7 +3655,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       </div>
     )}
     {/* ── CONTENU PRINCIPAL DÉCOUVRIR ── */}
-    <div style={{ flex: 1, padding: isWide ? "20px 24px" : 0, overflowY: isWide ? "auto" : "visible", minWidth: 0, maxWidth: isWide ? 620 : "none" }}>
+    <div style={{ flex: 1, padding: isWide ? "16px 20px" : 0, overflowY: isWide ? "auto" : "visible", minWidth: 0, display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
     {/* ── CSS animations bottom sheet + fullscreen footer ── */}
     <style>{`
@@ -3951,7 +3957,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
 
     {/* ── PANNEAU DROIT (desktop/tablette uniquement) ── */}
     {isWide && (
-      <div style={{ width: 280, minWidth: 280, background: viewMode === "full" ? "rgba(8,8,8,0.5)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", borderLeft: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.07)" : G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%", transition: "background 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
+      <div style={{ width: 300, minWidth: 300, background: viewMode === "full" ? "rgba(8,8,8,0.5)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", borderLeft: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.07)" : G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%", transition: "background 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
 
         {/* 1. Affichage */}
         <div>
@@ -4011,6 +4017,18 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
         <div>
           <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 8 }}>Conseil du moment</div>
           <PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />
+        </div>
+
+        {/* 4. Guide + Assistant Moyo */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <div onClick={() => { const evt = new CustomEvent("moyo-show-guide"); window.dispatchEvent(evt); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.rouge}`, background: G.rouge, color: G.blanc, cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Guide
+          </div>
+          <div onClick={() => { const evt = new CustomEvent("moyo-show-bot"); window.dispatchEvent(evt); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.vert}`, background: G.vert, color: G.blanc, cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
+            Assistant
+          </div>
         </div>
 
         {/* 4. CTA Premium si gratuit */}
@@ -6280,7 +6298,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
       {/* Zone messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "14px", paddingBottom: `${footerHeight + 14}px`, display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
-        <img src="/msg-bg.png" alt="" style={{ position: "fixed", top: 48, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, height: `calc(100% - 48px - ${footerHeight}px)`, objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
+        <img src="/msg-bg.png" alt="" style={{ position: isWideMsg ? "absolute" : "fixed", top: isWideMsg ? 0 : 48, left: 0, right: 0, width: "100%", height: isWideMsg ? "100%" : `calc(100% - 48px - ${footerHeight}px)`, objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
@@ -7058,6 +7076,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingError, setRatingError] = useState("");
   const [existingRatingId, setExistingRatingId] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<string>("main");
 
   const loadExistingRating = async () => {
     try {
@@ -7209,14 +7228,79 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     </div>
   );
 
-  /* ── VUE PROFIL (style Tinder) ── */
+  const isWideProfile = window.innerWidth >= 768;
   const isVisible = profile?.is_visible !== false;
 
+  // ── Menu items gauche ──
+  const menuItems = [
+    { id: "main", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, label: "Mon profil" },
+    { id: "edit", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>, label: "Modifier mon profil" },
+    { id: "photo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>, label: "Modifier ma photo" },
+    { id: "premium", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, label: "Premium", badge: auth.isPremium ? "✓" : null },
+    { id: "parrainage", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, label: "Parrainer un ami" },
+    { id: "verification", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>, label: "Vérification", badge: profile?.is_verified ? "✓" : null },
+    { id: "visibility", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>, label: isVisible ? "Profil visible" : "Profil invisible" },
+    { id: "blocklist", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, label: "Liste noire" },
+    { id: "darkmode", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>, label: darkMode ? "Mode clair" : "Mode sombre" },
+    { id: "rating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, label: "Noter l'application" },
+    { id: "preview", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>, label: "Voir mon profil" },
+    { id: "invite", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.07 6.07l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>, label: "Inviter un ami" },
+    { id: "logout", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>, label: "Se déconnecter", danger: true },
+    { id: "delete", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>, label: "Supprimer mon compte", danger: true },
+  ];
+
   return (
-    <div style={{ paddingBottom: 30, background: "#EEEEF2", minHeight: "100%" }}>
+    <div style={{ paddingBottom: isWideProfile ? 0 : 30, background: "#EEEEF2", minHeight: "100%", display: isWideProfile ? "flex" : "block", height: isWideProfile ? "100%" : "auto" }}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
+
+      {/* ── COLONNE GAUCHE MENU (desktop) ── */}
+      {isWideProfile && (
+        <div style={{ width: 240, minWidth: 240, background: G.blanc, borderRight: `1px solid ${G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column" }}>
+          {/* Avatar compact */}
+          <div style={{ padding: "20px 16px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#E8C5A0,#C47A4A)", border: `2px solid ${auth.isPremium ? G.or : G.gris}` }}>
+              {profile?.photo_url
+                ? <img src={profile.photo_url} alt={profile?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+              }
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile?.name || auth.name}</div>
+              <div style={{ fontSize: "0.65rem", color: auth.isPremium ? G.or : "#aaa", fontWeight: 600, marginTop: 2 }}>{auth.isPremium ? "⭐ Premium actif" : "Gratuit"}</div>
+            </div>
+          </div>
+          {/* Menu items */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+            {menuItems.map(item => (
+              <div key={item.id} onClick={() => {
+                if (item.id === "edit") { setActiveSection("edit"); setEditing(true); }
+                else if (item.id === "photo") { fileRef.current?.click(); }
+                else if (item.id === "logout") { setShowLogout(true); }
+                else if (item.id === "delete") { setShowDelete(true); }
+                else if (item.id === "darkmode") { onToggleDark?.(); }
+                else if (item.id === "preview") { setShowPreview(true); }
+                else if (item.id === "invite") {
+                  const refLink = `https://moyo-congo.com?ref=${auth.userId}`;
+                  const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nCrée ton compte gratuitement ici : ${refLink}`);
+                  if (navigator.share) navigator.share({ title: "Moyo Congo", text: "Rejoins-moi sur Moyo !", url: refLink });
+                  else window.open(`https://wa.me/?text=${msg}`, "_blank");
+                }
+                else setActiveSection(item.id);
+              }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 11, marginBottom: 2, cursor: "pointer", background: activeSection === item.id ? (item.danger ? "rgba(192,57,43,0.06)" : "rgba(192,57,43,0.06)") : "transparent", color: item.danger ? G.rouge : activeSection === item.id ? G.rouge : "#444", fontWeight: activeSection === item.id ? 700 : 500, fontSize: "0.85rem", transition: "all 0.12s" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: activeSection === item.id ? "rgba(192,57,43,0.1)" : "#F5F5F7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: item.danger ? G.rouge : activeSection === item.id ? G.rouge : "#666" }}>{item.icon}</div>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.badge && <span style={{ fontSize: "0.6rem", background: G.vert, color: G.blanc, borderRadius: 50, padding: "1px 6px", fontWeight: 700 }}>{item.badge}</span>}
+                {!item.danger && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── COLONNE DROITE CONTENU ── */}
+      <div style={{ flex: 1, overflowY: "auto", height: isWideProfile ? "100%" : "auto" }}>
 
       {/* ── ZONE BLANCHE : photo + nom + boutons ── */}
       <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 8 }}>
@@ -7883,6 +7967,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           </div>
         </div>
       )}
+      </div>{/* fin colonne droite */}
     </div>
   );
 }
