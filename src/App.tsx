@@ -8199,7 +8199,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [userSearch, setUserSearch] = useState("");
   const [usersLoading, setUsersLoading] = useState(false);
   const [userPage, setUserPage] = useState(0);
-  const USER_PAGE_SIZE = usersViewMode === "list" ? 500 : 20;
+  const USER_PAGE_SIZE_GRID = 20;
+  const USER_PAGE_SIZE_LIST = 500;
+  const USER_PAGE_SIZE = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
 
   // ── Global ──
   const [loading, setLoading] = useState(true);
@@ -8279,10 +8281,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const loadUsers = async (search = "", page = 0, sort = usersSort) => {
     setUsersLoading(true);
     try {
-      const offset = page * USER_PAGE_SIZE;
-      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&order=${sort}&limit=${USER_PAGE_SIZE}&offset=${offset}`;
+      const pageSize = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
+      const offset = page * pageSize;
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&order=${sort}&limit=${pageSize}&offset=${offset}`;
       if (search.trim()) {
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&name=ilike.*${encodeURIComponent(search.trim())}*&order=${sort}&limit=${USER_PAGE_SIZE}&offset=${offset}`;
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&name=ilike.*${encodeURIComponent(search.trim())}*&order=${sort}&limit=${pageSize}&offset=${offset}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       setUsers(res);
@@ -8295,8 +8298,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   useEffect(() => { loadStats(); }, []);
   useEffect(() => {
-    if (activeTab === "users") loadUsers(userSearch, userPage);
-  }, [activeTab, userPage]);
+    if (activeTab === "users") { setUserPage(0); loadUsers(userSearch, 0, usersSort); }
+  }, [activeTab, usersViewMode]);
 
   // ── Action admin générique sur un profil ──
   const adminAction = async (
@@ -9711,7 +9714,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* ── VUE LISTE ── */}
               {usersViewMode === "list" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {displayedUsers.map(u => {
+                  {displayedUsers.map((u, rowIdx) => {
                     const isLoading = actionLoading === u.id;
                     const isSelf = u.id === auth.userId;
                     const isSelected = selectedUsers.has(u.id);
@@ -9723,6 +9726,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     })();
                     return (
                       <div key={u.id} style={{ background: isSelected ? "rgba(231,76,60,0.04)" : G.blanc, borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: `1.5px solid ${isSelected ? "#e74c3c" : "transparent"}`, flexWrap: "wrap" }}>
+                        {/* Numéro de ligne */}
+                        <div style={{ width: 28, flexShrink: 0, textAlign: "right", fontSize: "0.65rem", color: "#bbb", fontWeight: 700, fontFamily: "monospace" }}>
+                          {userPage * USER_PAGE_SIZE_LIST + rowIdx + 1}
+                        </div>
                         {/* Case à cocher */}
                         {!isSelf && (
                           <div onClick={() => toggleSelectUser(u.id)} style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isSelected ? "#e74c3c" : "#ccc"}`, background: isSelected ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
@@ -9918,13 +9925,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
               {/* Pagination */}
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <Btn variant="ghost" onClick={() => { const p = Math.max(0, userPage - 1); setUserPage(p); loadUsers(userSearch, p); }} disabled={userPage === 0} style={{ flex: 1, padding: "10px" }}>
+                <Btn variant="ghost" onClick={() => { const p = Math.max(0, userPage - 1); setUserPage(p); loadUsers(userSearch, p, usersSort); }} disabled={userPage === 0} style={{ flex: 1, padding: "10px" }}>
                   ← Précédent
                 </Btn>
                 <span style={{ display: "flex", alignItems: "center", fontSize: "0.8rem", color: "#888", padding: "0 8px" }}>
                   Page {userPage + 1}
                 </span>
-                <Btn variant="ghost" onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(userSearch, p); }} disabled={users.length < USER_PAGE_SIZE} style={{ flex: 1, padding: "10px" }}>
+                <Btn variant="ghost" onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(userSearch, p, usersSort); }} disabled={users.length < USER_PAGE_SIZE} style={{ flex: 1, padding: "10px" }}>
                   Suivant →
                 </Btn>
               </div>
