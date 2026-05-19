@@ -2985,8 +2985,9 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         <div style={{ padding: "8px 0" }}>
           {[
             { title: "Découvrir des profils", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>, items: [
-              "L'onglet Découvrir propose 3 modes d'affichage : Vue carte (swipe), Vue liste et Plein écran. Passez d'un mode à l'autre via les boutons en haut à droite.",
-              "En mode Plein écran, la carte prend toute la hauteur de l'écran pour une immersion maximale. Le menu du bas disparaît automatiquement pour libérer l'espace.",
+              "Sur ordinateur et tablette, l'application s'affiche en plein écran avec une barre de navigation sur la gauche (Découvrir, Likes, Vues, Matchs, Messages, Profil, Admin). Sur mobile, la navigation reste en bas de l'écran.",
+              "L'onglet Découvrir propose 3 modes d'affichage : Vue carte (swipe), Vue liste et Plein écran. Sur ordinateur, les modes et les filtres sont dans le panneau à droite de la carte.",
+              "En mode Plein écran, la carte prend toute la hauteur de l'écran pour une immersion maximale. Sur ordinateur, les panneaux latéraux restent visibles avec un effet de verre flouté.",
               "Les profils défilent en boucle continue — vous parcourez tous les membres disponibles avant de revenir au premier. Aucun profil ne se répète avant que vous ayez tout vu.",
               "Vous pouvez voir le profil complet de n'importe quel utilisateur gratuitement en appuyant sur les 3 traits (☰) de sa carte puis 'Voir le profil'.",
               "Compte gratuit : 5 likes par jour. Le compteur ❤️ X/5 s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel. Premium : likes illimités, pas de compteur.",
@@ -3028,6 +3029,16 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Les statuts expirent automatiquement après 24h. Vous pouvez aussi supprimer un statut manuellement.",
               "Appuyez sur le statut d'un autre membre pour le voir en plein écran.",
               "Sur votre propre statut, appuyez sur le compteur Vues ou Likes pour voir exactement qui a vu ou aimé votre statut.",
+            ]},
+            { title: "Messagerie", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [
+              "Sur ordinateur et tablette, la messagerie s'affiche en deux colonnes : la liste de vos conversations à gauche, et le chat actif à droite. Cliquez sur une conversation pour l'ouvrir sans quitter la liste.",
+              "Sur mobile, le comportement reste identique : appuyez sur une conversation pour l'ouvrir en plein écran.",
+              "Les statuts apparaissent en haut de la colonne gauche (ou en haut de l'écran sur mobile).",
+            ]},
+            { title: "Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: [
+              "Sur ordinateur et tablette, votre page Profil s'affiche en deux colonnes 50/50 : le menu à gauche, le contenu à droite. Cliquez sur un item du menu pour afficher son contenu à droite sans quitter la page.",
+              "Menu disponible : Mon profil, Modifier mon profil, Modifier ma photo, Premium, Parrainer un ami, Vérification, Profil visible/invisible, Liste noire, Mode sombre, Noter l'application, Voir mon profil, Inviter un ami, Se déconnecter, Supprimer mon compte.",
+              "Sur mobile, tout s'affiche verticalement dans une seule colonne, comme avant.",
             ]},
             { title: "Likes", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: [
               "L'onglet Likes (coeur) affiche les profils qui vous ont liké. Le badge rouge se met à jour en temps réel.",
@@ -6099,9 +6110,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       {/* Colonne gauche liste (desktop) */}
       {isWideMsg && (
         <div style={{ width: 300, minWidth: 300, borderRight: `1px solid ${G.gris}`, background: G.blanc, display: "flex", flexDirection: "column", height: "100%" }}>
-          <div style={{ padding: "16px 16px 10px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-            <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun }}>Messages</h2>
-          </div>
           {convList}
         </div>
       )}
@@ -6666,9 +6674,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       <>
         {/* ── COLONNE GAUCHE : liste conversations ── */}
         <div style={{ width: 300, minWidth: 300, borderRight: `1px solid ${G.gris}`, background: G.blanc, display: "flex", flexDirection: "column", height: "100%" }}>
-          <div style={{ padding: "16px 16px 10px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-            <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun }}>Messages</h2>
-          </div>
           {convList}
         </div>
         {/* ── COLONNE DROITE : chat ouvert ── */}
@@ -7276,19 +7281,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
 
       {/* ── COLONNE GAUCHE : MENU 50% ── */}
       <div style={{ width: isWideProfile ? "50%" : "100%", background: G.blanc, borderRight: isWideProfile ? `1px solid ${G.gris}` : "none", overflowY: "auto", height: isWideProfile ? "100%" : "auto", display: "flex", flexDirection: "column" }}>
-        {/* Avatar + nom en haut */}
-        <div style={{ padding: "24px 20px 16px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#E8C5A0,#C47A4A)", border: `2.5px solid ${auth.isPremium ? G.or : G.gris}` }}>
-            {profile?.photo_url
-              ? <img src={profile.photo_url} alt={profile?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-            }
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun }}>{profile?.name || auth.name}</div>
-            <div style={{ fontSize: "0.7rem", color: auth.isPremium ? G.or : "#aaa", fontWeight: 600, marginTop: 2 }}>{auth.isPremium ? "⭐ Premium actif" : "Compte gratuit"}</div>
-          </div>
-        </div>
         {/* Menu items */}
         <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
           {menuItems.map(item => (
@@ -8375,6 +8367,25 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [warnReason, setWarnReason] = useState(WARN_REASONS[0]);
   const [msgModal, setMsgModal] = useState<{ user: Profile } | null>(null);
   const [msgText, setMsgText] = useState("");
+  const [msgHistory, setMsgHistory] = useState<{ id: string; reason: string; created_at: string }[]>([]);
+  const [msgHistoryLoading, setMsgHistoryLoading] = useState(false);
+
+  const loadMsgHistory = async (userId: string) => {
+    setMsgHistoryLoading(true);
+    try {
+      const res = await sb.query<{ id: string; reason: string; created_at: string }>(
+        auth.token, "user_warnings",
+        `?user_id=eq.${userId}&warning_number=eq.0&order=created_at.desc&limit=50`
+      );
+      setMsgHistory(Array.isArray(res) ? res : []);
+    } catch { setMsgHistory([]); }
+    setMsgHistoryLoading(false);
+  };
+
+  const deleteMsgHistory = async (id: string) => {
+    await sb.delete(auth.token, "user_warnings", `?id=eq.${id}`);
+    setMsgHistory(prev => prev.filter(m => m.id !== id));
+  };
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
@@ -9065,24 +9076,55 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
       {msgModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: window.innerWidth >= 768 ? 0 : 20 }}>
-          <div style={{ background: G.blanc, borderRadius: window.innerWidth >= 768 ? 0 : 22, width: window.innerWidth >= 768 ? "100%" : "100%", maxWidth: window.innerWidth >= 768 ? "none" : 360, height: window.innerWidth >= 768 ? "100%" : "auto", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden", display: "flex", flexDirection: window.innerWidth >= 768 ? "row" : "column" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: window.innerWidth >= 768 ? 0 : 0 }}>
+          <div style={{ background: G.blanc, borderRadius: 0, width: "100%", height: "100%", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden", display: "flex", flexDirection: window.innerWidth >= 768 ? "row" : "column" }}>
 
-            {/* ── COLONNE GAUCHE : modèles ── */}
-            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", borderRight: window.innerWidth >= 768 ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", background: G.blanc }}>
-              <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: "24px 24px 16px", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
+            {/* ── COLONNE GAUCHE : header + historique + modèles ── */}
+            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", borderRight: window.innerWidth >= 768 ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", background: G.blanc, height: window.innerWidth >= 768 ? "100%" : "auto", flex: window.innerWidth >= 768 ? "none" : "0 0 auto", maxHeight: window.innerWidth >= 768 ? "none" : "55vh", overflow: "hidden" }}>
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: "20px 20px 14px", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a" }}>Message à {msgModal.user.name}</div>
-                    <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Sélectionne un modèle ou écris un message personnalisé</div>
+                    <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Message à {msgModal.user.name}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un modèle ou écris un message personnalisé</div>
                   </div>
                 </div>
               </div>
-              <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ fontSize: "0.65rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 4 }}>Modèles de messages</div>
+
+              {/* Historique */}
+              <div style={{ padding: "10px 16px 6px", flexShrink: 0, borderBottom: `1px solid ${G.gris}` }}>
+                <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 6 }}>
+                  Historique ({msgHistory.length} message{msgHistory.length > 1 ? "s" : ""} envoyé{msgHistory.length > 1 ? "s" : ""})
+                </div>
+                {msgHistoryLoading ? (
+                  <div style={{ textAlign: "center", padding: "8px 0", color: "#aaa", fontSize: "0.75rem" }}>Chargement…</div>
+                ) : msgHistory.length === 0 ? (
+                  <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun message envoyé pour le moment</div>
+                ) : (
+                  <div style={{ maxHeight: 140, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+                    {msgHistory.map(m => (
+                      <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFB", borderRadius: 8, padding: "7px 10px", border: "1px solid #E8F0F8" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.68rem", color: "#2980b9", fontWeight: 600, marginBottom: 2 }}>
+                            {new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </div>
+                          <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.reason}</div>
+                        </div>
+                        <button onClick={() => deleteMsgHistory(m.id)} title="Supprimer" style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Modèles */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px", display: "flex", flexDirection: "column", gap: 5 }}>
+                <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 4 }}>Modèles de messages</div>
                 {[
                   `${msgModal.user.name}, bienvenue sur Moyo ! Nous vous conseillons de liker les profils qui vous intéressent. Si une personne vous like en retour, le match se débloque automatiquement pour discuter et voir ses stories. Moyo 100% Congolais !!!!`,
                   "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.",
@@ -9100,29 +9142,27 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo.",
                   "Profitez de -50% sur le Premium ce weekend uniquement !",
                 ].map((t, i) => (
-                  <div key={i} onClick={() => setMsgText(t)} style={{ padding: "10px 14px", borderRadius: 12, cursor: "pointer", background: msgText === t ? "rgba(41,128,185,0.1)" : G.creme, border: `1.5px solid ${msgText === t ? "#2980b9" : "transparent"}`, fontSize: "0.82rem", color: "#333", lineHeight: 1.5, transition: "all 0.12s" }}>
-                    {t.length > 80 ? t.slice(0, 80) + "…" : t}
+                  <div key={i} onClick={() => setMsgText(t)} style={{ padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: msgText === t ? "rgba(41,128,185,0.1)" : G.creme, border: `1.5px solid ${msgText === t ? "#2980b9" : "transparent"}`, fontSize: "0.8rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", flexShrink: 0 }}>
+                    {t.length > 75 ? t.slice(0, 75) + "…" : t}
                   </div>
                 ))}
               </div>
             </div>
 
             {/* ── COLONNE DROITE : saisie ── */}
-            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", display: "flex", flexDirection: "column", padding: "24px" }}>
+            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", flex: 1, display: "flex", flexDirection: "column", padding: "24px", borderTop: window.innerWidth >= 768 ? "none" : `1px solid ${G.gris}` }}>
               <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#555", marginBottom: 10 }}>Message personnalisé</div>
               <textarea
                 value={msgText}
                 onChange={e => setMsgText(e.target.value)}
                 placeholder="Écrivez votre message ici ou sélectionnez un modèle à gauche…"
-                style={{ flex: 1, width: "100%", boxSizing: "border-box", padding: "14px", borderRadius: 12, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.88rem", resize: "none", outline: "none", fontFamily: "inherit", lineHeight: 1.6, minHeight: window.innerWidth >= 768 ? "auto" : 140 }}
+                style={{ flex: 1, width: "100%", boxSizing: "border-box", padding: "14px", borderRadius: 12, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.88rem", resize: "none", outline: "none", fontFamily: "inherit", lineHeight: 1.6, minHeight: window.innerWidth >= 768 ? "auto" : 120 }}
               />
               {msgText && (
-                <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 6, textAlign: "right" }}>
-                  {msgText.length} caractères
-                </div>
+                <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 6, textAlign: "right" }}>{msgText.length} caractères</div>
               )}
               <div style={{ display: "flex", gap: 10, marginTop: 16, flexShrink: 0 }}>
-                <button onClick={() => { setMsgModal(null); setMsgText(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                <button onClick={() => { setMsgModal(null); setMsgText(""); setMsgHistory([]); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                 <button onClick={async () => {
                   if (!msgText.trim()) return;
                   await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
@@ -9131,7 +9171,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
                   });
                   showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
-                  setMsgModal(null); setMsgText("");
+                  setMsgText("");
+                  loadMsgHistory(msgModal.user.id);
                 }} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
                   Envoyer le message
                 </button>
@@ -10065,7 +10106,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading} onClick={() => confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true }, `${u.name} a été débanni(e).`))} />
                           }
                           <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || isSelf} onClick={() => { if (isSelf) return; confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
-                          <ActionBtn label="Message" color="#2980b9" disabled={isLoading || isSelf} onClick={() => { setMsgModal({ user: u }); setMsgText(""); }} />
+                          <ActionBtn label="Message" color="#2980b9" disabled={isLoading || isSelf} onClick={() => { setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
                         </div>
                       </div>
                     );
@@ -10202,7 +10243,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
                           }} />
                         <ActionBtn label="Message" color="#2980b9" disabled={isLoading || isSelf}
-                          onClick={() => { setMsgModal({ user: u }); setMsgText(""); }} />
+                          onClick={() => { setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
                       </div>
                     </div>
                   </div>
