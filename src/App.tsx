@@ -3285,21 +3285,21 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
     >
       <div style={{
         background: G.blanc,
-        borderRadius: 16,
-        padding: "10px 14px",
-        boxShadow: "0 2px 12px rgba(44,26,14,0.07)",
+        borderRadius: 14,
+        padding: "8px 12px",
+        boxShadow: "0 2px 10px rgba(44,26,14,0.06)",
         border: `1px solid ${G.gris}`,
         position: "relative",
         overflow: "hidden",
       }}>
         {/* Fond décoratif léger */}
-        <div style={{ position: "absolute", top: -16, right: -16, width: 70, height: 70, borderRadius: "50%", background: slide.bg, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: -14, right: -14, width: 62, height: 62, borderRadius: "50%", background: slide.bg, pointerEvents: "none" }} />
 
         {/* Ligne unique : icône + texte + bouton */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
           {/* Icône compacte */}
           <div style={{
-            width: 36, height: 36, borderRadius: 12, flexShrink: 0,
+            width: 32, height: 32, borderRadius: 10, flexShrink: 0,
             background: slide.bg, display: "flex", alignItems: "center", justifyContent: "center",
             color: slide.accent,
           }}>
@@ -3308,10 +3308,10 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
 
           {/* Titre + description */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, lineHeight: 1.2, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: G.brun, lineHeight: 1.2, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {slide.title}
             </div>
-            <div style={{ fontSize: "0.68rem", color: "#888", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+            <div style={{ fontSize: "0.62rem", color: "#888", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
               {slide.description}
             </div>
           </div>
@@ -3320,7 +3320,7 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
           <button onClick={handleAction} style={{
             background: `linear-gradient(135deg,${slide.accent},${slide.accent}cc)`,
             color: G.blanc, border: "none", borderRadius: 50,
-            padding: "6px 11px", fontSize: "0.66rem", fontWeight: 700,
+            padding: "5px 9px", fontSize: "0.60rem", fontWeight: 700,
             cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
             boxShadow: `0 2px 8px ${slide.accent}44`,
           }}>
@@ -3329,10 +3329,10 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
         </div>
 
         {/* Dots */}
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 4, marginTop: 8 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 3, marginTop: 6 }}>
           {slides.map((_, i) => (
             <div key={i} onClick={() => goTo(i)} style={{
-              width: i === idx ? 16 : 4, height: 4, borderRadius: 99,
+              width: i === idx ? 14 : 4, height: 4, borderRadius: 99,
               background: i === idx ? slide.accent : "#D8D0C8",
               transition: "width 0.3s ease, background 0.3s ease",
               cursor: "pointer",
@@ -7214,11 +7214,10 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         {/* CTA Premium - rouge si gratuit, doré si actif, rouge si expiré */}
         {(() => {
           const stored = localStorage.getItem(`moyo_premium_until_${auth.userId}`);
-          // stored = premium_until (date d'expiration directe)
-          const daysLeft = stored ? Math.floor((new Date(stored).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
-          const isActive = auth.isPremium && daysLeft > 0;
-          const isExpired = !auth.isPremium && stored && daysLeft <= 0;
-          if (isActive) return (
+          const daysLeft = stored ? Math.floor((new Date(stored).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : -1;
+          const isLifetime = stored && new Date(stored).getFullYear() >= 2090;
+          // Si isPremium = true → toujours bouton doré, peu importe le localStorage
+          if (auth.isPremium) return (
             <div style={{ background: "linear-gradient(135deg,#D4A843 0%,#B8860B 60%,#8B6914 100%)", borderRadius: 20, padding: "18px 20px", boxShadow: "0 10px 32px rgba(184,134,11,0.45)", border: "1px solid rgba(255,220,100,0.3)", position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(180deg,rgba(255,255,255,0.13) 0%,transparent 100%)", borderRadius: "20px 20px 0 0", pointerEvents: "none" }} />
               <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
@@ -7228,12 +7227,27 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                 </div>
                 <div style={{ width: 1, height: 44, background: "rgba(255,255,255,0.3)", marginLeft: 18, marginRight: 18, flexShrink: 0 }} />
                 <div style={{ textAlign: "center", flexShrink: 0 }}>
-                  <div style={{ fontSize: "1.75rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>{daysLeft > 0 ? daysLeft : "0"}</div>
-                  <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>jours</div>
+                  {isLifetime ? (
+                    <>
+                      <div style={{ fontSize: "1.4rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>∞</div>
+                      <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>À vie</div>
+                    </>
+                  ) : daysLeft >= 0 ? (
+                    <>
+                      <div style={{ fontSize: "1.75rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>{daysLeft}</div>
+                      <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>jours</div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>✓</div>
+                      <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>Actif</div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           );
+          const isExpired = !auth.isPremium && stored && daysLeft <= 0;
           return (
             <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge} 0%,${G.rougeDark} 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(192,57,43,0.35)", display: "flex", alignItems: "center", justifyContent: "space-between", transition: "transform 0.15s, box-shadow 0.15s" }}>
               <div>
@@ -9808,11 +9822,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                         {!u.is_premium ? (
                           <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
-                            onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true }, `${u.name} est maintenant Premium.`))} />
+                            onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString() }, `${u.name} est maintenant Premium.`))} />
                         ) : (
                           <ActionBtn label="— Premium" color="#B8860B" disabled={isLoading}
-                            onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false }, `Premium retiré pour ${u.name}.`))} />
+                            onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
                         )}
+                        <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading}
+                          onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: "2099-12-31T23:59:59.000Z" }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
                         {!u.is_admin ? (
                           auth.userId === SUPER_ADMIN_ID && (
                           <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
