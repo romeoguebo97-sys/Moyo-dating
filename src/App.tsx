@@ -67,6 +67,8 @@ const SUPER_ADMIN_ID = "2b70da16-9e1e-48b0-802e-580d8d150b44";
 const REFERRAL_BONUS_DAYS = 7;
 const FREE_LIMITS = { likes: 5, messages: 3 };
 const STATUS_LIMIT = 2; // Maximum de statuts actifs par utilisateur sur 24h
+const LIFETIME_PREMIUM_UNTIL = "2099-12-31T23:59:59.000Z";
+const PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000;
 
 const SUPPORT_TEAM_ID = "moyo-support-team";
 const SUPPORT_TEAM_NAME = "Assistance Moyo";
@@ -2833,90 +2835,133 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     },
   ];
 
-  return <div style={{ maxWidth: 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme, boxShadow: "0 0 60px rgba(44,26,14,0.12)" }}>
-    <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box" }}>
-      <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
-        {auth.isAdmin && (
-          <div onClick={() => openAdminPanel(() => setTab("admin"))} style={{ display: "flex", alignItems: "center", gap: 5, background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
-            <span>⚙️ Admin</span>
-            {adminBadgeCount && adminBadgeCount > 0 ? (
-              <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.62rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
-                {adminBadgeCount > 99 ? "99+" : adminBadgeCount}
-              </span>
-            ) : null}
-          </div>
-        )}
-        <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.blanc, background: G.rouge, borderRadius: 50, padding: "6px 14px", cursor: "pointer", letterSpacing: "0.02em" }}>Guide</div>
-        <div onClick={() => setShowBot(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(26,92,58,0.35)", flexShrink: 0 }} title="Assistant Moyo">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/>
-            <path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/>
-            <line x1="8" y1="21" x2="8" y2="19"/>
-            <line x1="16" y1="21" x2="16" y2="19"/>
-            <circle cx="9" cy="11" r="1" fill="white"/>
-            <circle cx="15" cy="11" r="1" fill="white"/>
-          </svg>
-        </div>
-      </div>
-    </div>
-    <div style={{ flex: 1, overflowY: "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
+  const screenWidth = useWindowWidth();
+  const isDesktop = screenWidth >= 1024;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const isWide = screenWidth >= 768;
 
-    {/* Bot Widget */}
-    {showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
-
-    {/* ── NAVBAR BAS STYLE TINDER (6 onglets) ── */}
+  return <div style={{ maxWidth: isWide ? "none" : 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: isWide ? "row" : "column", background: isWide ? "#EAEDF2" : G.creme, boxShadow: isWide ? "none" : "0 0 60px rgba(44,26,14,0.12)" }}>
     <style>{`
       .moyo-footer-hidden { transform: translateX(-50%) translateY(100%) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
       .moyo-footer-visible { transform: translateX(-50%) translateY(0) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
+      .moyo-sidebar { width: 220px; min-width: 220px; background: ${G.blanc}; border-right: 1px solid ${G.gris}; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; box-shadow: 2px 0 16px rgba(44,26,14,0.06); z-index: 100; }
+      .moyo-sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid ${G.gris}; display: flex; align-items: center; justify-content: space-between; }
+      .moyo-sidebar-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+      .moyo-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: all 0.15s; position: relative; font-weight: 600; font-size: 0.83rem; color: #666; }
+      .moyo-nav-item:hover { background: ${G.creme}; color: ${G.brun}; }
+      .moyo-nav-item.active { background: rgba(192,57,43,0.08); color: ${G.rouge}; }
+      .moyo-nav-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: #F5F5F7; flex-shrink: 0; }
+      .moyo-nav-item.active .moyo-nav-icon { background: rgba(192,57,43,0.1); }
+      .moyo-nav-badge { position: absolute; right: 10px; border-radius: 50px; font-size: 0.58rem; font-weight: 800; padding: 2px 6px; }
+      .moyo-nav-badge-red { background: ${G.rouge}; color: white; }
+      .moyo-nav-badge-gold { background: ${G.or}; color: #111; }
+      .moyo-sidebar-bottom { padding: 12px 14px; border-top: 1px solid ${G.gris}; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.15s; }
+      .moyo-sidebar-bottom:hover { background: ${G.creme}; }
+      .moyo-main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow: hidden; }
+      .moyo-topbar-wide { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; background: ${G.blanc}; border-bottom: 1px solid ${G.gris}; flex-shrink: 0; }
+      .moyo-content-wide { flex: 1; overflow-y: auto; padding-bottom: 0; }
     `}</style>
-    <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "5px 4px 13px", zIndex: 50 }}>
-      {tabs.map(t => {
-        const active = tab === t.id;
-        return (
-          <div key={t.id} onClick={() => { setIsFullscreen(false); setTab(t.id); }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", position: "relative", flex: 1 }}>
-            <div style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-              padding: "5px 8px", borderRadius: 12,
-              background: active ? "rgba(192,57,43,0.1)" : "transparent",
-              transition: "background 0.2s",
-              minWidth: 48,
-            }}>
-              <div style={{ position: "relative" }}>
-                {t.icon(active)}
-                {/* Badge messages */}
-                {t.id === "messages" && unreadCount > 0 && (
-                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </div>
-                )}
-                {/* Badge likes reçus */}
-                {t.id === "likes" && likesReceived > 0 && (
-                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>
-                    {likesReceived > 9 ? "9+" : likesReceived}
-                  </div>
-                )}
-                {/* Badge visiteurs */}
-                {t.id === "visitors" && viewsReceived > 0 && (
-                  <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: "#111", borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>
-                    {viewsReceived > 9 ? "9+" : viewsReceived}
-                  </div>
-                )}
-                {/* Badge matchs */}
-                {t.id === "matches" && notifCount > 0 && (
-                  <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>
-                    {notifCount > 9 ? "9+" : notifCount}
-                  </div>
-                )}
+
+    {/* ── SIDEBAR (desktop/tablette) ── */}
+    {isWide && (
+      <div className="moyo-sidebar">
+        <div className="moyo-sidebar-logo">
+          <div style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
+            <span style={{ color: G.rouge }}>Mo</span><span style={{ color: G.or }}>yo</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {auth.isAdmin && (
+              <div onClick={() => openAdminPanel(() => setTab("admin"))} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "4px 10px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                ⚙️
+                {adminBadgeCount && adminBadgeCount > 0 ? <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.58rem", fontWeight: 800, padding: "0px 5px" }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</span> : null}
               </div>
-              <div style={{ fontSize: "0.56rem", fontWeight: 700, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>
-                {t.label}
-              </div>
+            )}
+            <div onClick={() => setShowGuide(true)} style={{ background: G.rouge, color: G.blanc, borderRadius: 50, padding: "4px 10px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer" }}>Guide</div>
+            <div onClick={() => setShowBot(true)} style={{ width: 28, height: 28, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
             </div>
           </div>
-        );
-      })}
-    </div>
+        </div>
+        <nav className="moyo-sidebar-nav">
+          {tabs.map(t => {
+            const active = tab === t.id;
+            const getBadge = () => {
+              if (t.id === "messages" && unreadCount > 0) return <span className="moyo-nav-badge moyo-nav-badge-red">{unreadCount > 9 ? "9+" : unreadCount}</span>;
+              if (t.id === "likes" && likesReceived > 0) return <span className="moyo-nav-badge moyo-nav-badge-red">{likesReceived > 9 ? "9+" : likesReceived}</span>;
+              if (t.id === "visitors" && viewsReceived > 0) return <span className="moyo-nav-badge moyo-nav-badge-gold">{viewsReceived > 9 ? "9+" : viewsReceived}</span>;
+              if (t.id === "matches" && notifCount > 0) return <span className="moyo-nav-badge moyo-nav-badge-red">{notifCount > 9 ? "9+" : notifCount}</span>;
+              return null;
+            };
+            return (
+              <div key={t.id} className={`moyo-nav-item${active ? " active" : ""}`} onClick={() => { setIsFullscreen(false); setTab(t.id); }}>
+                <div className="moyo-nav-icon">{t.icon(active)}</div>
+                {t.label}
+                {getBadge()}
+              </div>
+            );
+          })}
+        </nav>
+        <div className="moyo-sidebar-bottom">
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${G.or},#8B6914)`, display: "flex", alignItems: "center", justifyContent: "center", color: G.blanc, fontSize: "0.65rem", fontWeight: 800, flexShrink: 0, border: `2px solid ${G.or}` }}>
+            {auth.name?.slice(0, 2).toUpperCase() || "MO"}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: "0.83rem", color: G.brun }}>{auth.name}</div>
+            <div style={{ fontSize: "0.62rem", color: G.or, fontWeight: 600, marginTop: 1 }}>{auth.isPremium ? "⭐ Premium actif" : "Gratuit"}</div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── ZONE PRINCIPALE ── */}
+    {isWide ? (
+      <div className="moyo-main-area">
+        <div className="moyo-content-wide">{children}</div>
+      </div>
+    ) : (
+      <>
+        {/* Header mobile */}
+        <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box" }}>
+          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
+            {auth.isAdmin && (
+              <div onClick={() => openAdminPanel(() => setTab("admin"))} style={{ display: "flex", alignItems: "center", gap: 5, background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
+                <span>⚙️ Admin</span>
+                {adminBadgeCount && adminBadgeCount > 0 ? <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.62rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.6 }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</span> : null}
+              </div>
+            )}
+            <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.blanc, background: G.rouge, borderRadius: 50, padding: "6px 14px", cursor: "pointer", letterSpacing: "0.02em" }}>Guide</div>
+            <div onClick={() => setShowBot(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(26,92,58,0.35)", flexShrink: 0 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><line x1="8" y1="21" x2="8" y2="19"/><line x1="16" y1="21" x2="16" y2="19"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
+            </div>
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
+        {/* Footer mobile */}
+        <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "5px 4px 13px", zIndex: 50 }}>
+          {tabs.map(t => {
+            const active = tab === t.id;
+            return (
+              <div key={t.id} onClick={() => { setIsFullscreen(false); setTab(t.id); }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", position: "relative", flex: 1 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "5px 8px", borderRadius: 12, background: active ? "rgba(192,57,43,0.1)" : "transparent", transition: "background 0.2s", minWidth: 48 }}>
+                  <div style={{ position: "relative" }}>
+                    {t.icon(active)}
+                    {t.id === "messages" && unreadCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{unreadCount > 9 ? "9+" : unreadCount}</div>}
+                    {t.id === "likes" && likesReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{likesReceived > 9 ? "9+" : likesReceived}</div>}
+                    {t.id === "visitors" && viewsReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: "#111", borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{viewsReceived > 9 ? "9+" : viewsReceived}</div>}
+                    {t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{notifCount > 9 ? "9+" : notifCount}</div>}
+                  </div>
+                  <div style={{ fontSize: "0.56rem", fontWeight: 700, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>{t.label}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </>
+    )}
+
+    {/* Bot Widget */}
+    {showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
     {showGuide && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
       <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
         {/* Header */}
@@ -3346,19 +3391,14 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
   );
 });
 
-function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
+function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowPremium: (r: string) => void; isWide?: boolean }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [likedIds, setLikedIds] = useState(new Set<string>());
   const [blockedIds, setBlockedIds] = useState(new Set<string>());
   const [current, setCurrent] = useState(0);
   const [matchPop, setMatchPop] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(0);
-  const PAGE_SIZE = 15;
   const [likesToday, setLikesToday] = useState(0);
-  const [showReport, setShowReport] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
   const [showSameGender, setShowSameGender] = useState(false);
@@ -3369,8 +3409,6 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   const [viewMode, setViewMode] = useState<"card" | "list" | "full">("card");
   const fullscreenScrollRef = useRef<HTMLDivElement>(null);
   const swipeStartX = useRef<number | null>(null);
-  const [wrapToast, setWrapToast] = useState(false);
-  const wrapToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // ── Bottom Sheet menu ──
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [bottomSheetProfile, setBottomSheetProfile] = useState<Profile | null>(null);
@@ -3413,7 +3451,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   useEffect(() => { if (profiles.length > 0 && profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
 
   const loadProfiles = async (pageNum = 0, append = false) => {
-    if (pageNum === 0) setLoading(true); else setLoadingMore(true);
+    setLoading(true);
     try {
       // Chargement de TOUS les profils par batches de 1000
       const BATCH = 1000;
@@ -3447,14 +3485,13 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
         seen.add(p.id); return true;
       });
       const orderedUnique = priorityRandomizeProfiles(unique);
-      setHasMore(false);
       setProfiles(orderedUnique);
       setCurrent(0);
       const today = new Date().toISOString().split("T")[0];
       const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`);
       setLikesToday(Array.isArray(tl) ? tl.length : 0);
     } catch { if (!append) setProfiles([]); }
-    if (pageNum === 0) setLoading(false); else setLoadingMore(false);
+    setLoading(false);
   };
 
   const loadMore = async () => {
@@ -3550,7 +3587,7 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       if (res && res.length > 0) {
         console.log(`[Moyo][Report] ✅ Signalement enregistré - id:${res[0]?.id}`);
         setDiscoverToast({ msg: "Signalement envoyé. Merci de protéger la communauté Moyo.", type: "success" });
-        setShowReport(false);
+        
         setShowSignaler(false);
       } else {
         // Supabase a renvoyé un tableau vide sans erreur (RLS silencieuse possible)
@@ -3573,7 +3610,9 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
   }, [profiles]);
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
 
-  return <div style={{ padding: "14px 16px 8px" }}>
+  return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
+    {/* ── CONTENU PRINCIPAL DÉCOUVRIR ── */}
+    <div style={{ flex: 1, padding: isWide ? "20px 24px" : 0, overflowY: isWide ? "auto" : "visible", minWidth: 0 }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
     {/* ── CSS animations bottom sheet + fullscreen footer ── */}
     <style>{`
@@ -3661,7 +3700,8 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
           </span>
         </div>
       )}
-      <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
+      {/* Boutons vue/filtres — masqués sur desktop (panneau droit) */}
+      {!isWide && <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
         <div onClick={() => {
           const next = viewMode === "list" ? "card" : "list";
           setViewMode(next);
@@ -3678,8 +3718,8 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
         <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           Filtres
         </div>
-      </div>
-    </div>{showFilters && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
+      </div>}
+    </div>{(!isWide && showFilters) && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
   <select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
     <option value="">Toutes les villes</option>
     {VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}
@@ -3707,9 +3747,9 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
     if (filters.ageMin && (min < 18 || min > 99)) return;
     if (filters.ageMax && (max < 18 || max > 99)) return;
     if (filters.ageMin && filters.ageMax && min > max) return;
-    setPage(0); loadProfiles(0); setShowFilters(false);
+    loadProfiles(0); setShowFilters(false);
   }} style={{ width: "100%" }}>Appliquer</Btn>
-</div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>Actualiser</Btn></div> : viewMode === "full" ? <div ref={fullscreenScrollRef} className="no-invert moyo-fullscreen-view" onScroll={(e) => {
+</div>}{profiles.length === 0 ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { loadProfiles(0); }}>Actualiser</Btn></div> : viewMode === "full" ? <div ref={fullscreenScrollRef} className="no-invert moyo-fullscreen-view" onScroll={(e) => {
   const el = e.currentTarget;
   if (!profiles.length) return;
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 900) {
@@ -3752,11 +3792,11 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       </div>
     </div>
   ))}
-  {hasMore && <div onClick={loadMore} style={{ textAlign: "center", padding: "14px", background: G.blanc, borderRadius: 14, margin: "4px 6px 16px", cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", color: G.rouge, border: `1px solid ${G.gris}` }}>{loadingMore ? "Chargement..." : "Voir plus de profils"}</div>}
+  {/* fin fullscreen */}
 </div> : viewMode === "list" ? <div>
   {profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} isPremium={auth.isPremium} onView={() => { setViewedProfile(prof); recordView(prof.id); }} />)}
-  {hasMore && <div onClick={loadMore} style={{ textAlign: "center", padding: "14px", background: G.blanc, borderRadius: 14, marginTop: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", color: G.rouge, border: `1px solid ${G.gris}` }}>{loadingMore ? "Chargement..." : "Voir plus de profils"}</div>}
-</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { setPage(0); loadProfiles(0); }}>Actualiser</Btn></div> : <><div
+  {/* fin liste */}
+</div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { loadProfiles(0); }}>Actualiser</Btn></div> : <><div
   onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
   onTouchEnd={(e) => {
     if (swipeStartX.current === null) return;
@@ -3869,7 +3909,88 @@ function Discover({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: stri
       )}
     </div>
   </div>
-</div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}</div>;
+</div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
+    </div>{/* fin contenu principal */}
+
+    {/* ── PANNEAU DROIT (desktop/tablette uniquement) ── */}
+    {isWide && (
+      <div style={{ width: 280, minWidth: 280, background: G.blanc, borderLeft: `1px solid ${G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%" }}>
+
+        {/* 1. Affichage */}
+        <div>
+          <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 8 }}>Affichage</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {[
+              { key: "card", label: "Vue Carte", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> },
+              { key: "list", label: "Vue Liste", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+              { key: "full", label: "Plein écran", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> },
+            ].map(v => (
+              <div key={v.key} onClick={() => { setViewMode(v.key as "card" | "list" | "full"); window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: v.key === "full" } })); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 11, border: `1.5px solid ${viewMode === v.key ? G.rouge : G.gris}`, background: viewMode === v.key ? "rgba(192,57,43,0.05)" : G.blanc, color: viewMode === v.key ? G.rouge : "#555", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, transition: "all 0.15s" }}>
+                <div style={{ width: 26, height: 26, borderRadius: 7, background: viewMode === v.key ? "rgba(192,57,43,0.1)" : "#F5F5F7", display: "flex", alignItems: "center", justifyContent: "center" }}>{v.icon}</div>
+                {v.label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 2. Filtres */}
+        <div>
+          <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 8 }}>Filtres</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div>
+              <div style={{ fontSize: "0.63rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Ville</div>
+              <select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: "7px 10px", borderRadius: 9, border: `1.5px solid ${G.gris}`, background: G.blanc, fontSize: "0.76rem", color: G.brun, fontWeight: 500, outline: "none", cursor: "pointer" }}>
+                <option value="">Toutes les villes</option>
+                {VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.63rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Genre</div>
+              <select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: "7px 10px", borderRadius: 9, border: `1.5px solid ${G.gris}`, background: G.blanc, fontSize: "0.76rem", color: G.brun, fontWeight: 500, outline: "none", cursor: "pointer" }}>
+                <option value="">Homme et Femme</option>
+                <option value="Homme">Homme</option>
+                <option value="Femme">Femme</option>
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.63rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Âge</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input type="number" value={filters.ageMin} onChange={e => setFilters(prev => ({ ...prev, ageMin: e.target.value }))} placeholder="Min (18)" min={18} max={99} style={{ flex: 1, padding: "7px 8px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.76rem", outline: "none" }} />
+                <input type="number" value={filters.ageMax} onChange={e => setFilters(prev => ({ ...prev, ageMax: e.target.value }))} placeholder="Max (99)" min={18} max={99} style={{ flex: 1, padding: "7px 8px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.76rem", outline: "none" }} />
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.63rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Religion</div>
+              <select value={filters.religion} onChange={e => setFilters(prev => ({ ...prev, religion: e.target.value }))} style={{ width: "100%", padding: "7px 10px", borderRadius: 9, border: `1.5px solid ${G.gris}`, background: G.blanc, fontSize: "0.76rem", color: G.brun, fontWeight: 500, outline: "none", cursor: "pointer" }}>
+                <option value="">Toutes</option>
+                {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <Btn variant="primary" onClick={() => { const min = parseInt(filters.ageMin); const max = parseInt(filters.ageMax); if (filters.ageMin && (min < 18 || min > 99)) return; if (filters.ageMax && (max < 18 || max > 99)) return; if (filters.ageMin && filters.ageMax && min > max) return; loadProfiles(0); }} style={{ width: "100%", padding: "9px", fontSize: "0.78rem" }}>Appliquer</Btn>
+          </div>
+        </div>
+
+        {/* 3. Carrousel */}
+        <div>
+          <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 8 }}>Conseil du moment</div>
+          <PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />
+        </div>
+
+        {/* 4. CTA Premium si gratuit */}
+        {!auth.isPremium && (
+          <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "16px", cursor: "pointer", boxShadow: "0 6px 20px rgba(192,57,43,0.3)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span style={{ fontSize: "0.88rem", fontWeight: 800, color: G.blanc }}>Passer à Moyo Premium</span>
+            </div>
+            <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.78)", lineHeight: 1.5, marginBottom: 10 }}>Messages illimités · Likes illimités · Voir qui vous like</div>
+            <div style={{ fontSize: "1rem", fontWeight: 900, color: G.or }}>3 500 <span style={{ fontSize: "0.62rem", fontWeight: 600, opacity: 0.85 }}>FCFA/mois</span></div>
+          </div>
+        )}
+
+      </div>
+    )}
+  </div>;
 }
 
 function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
@@ -7757,7 +7878,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
 type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
 function getPremiumCountdown(approvedAt?: string): { label: string; color: string; expired: boolean } {
   if (!approvedAt) return { label: "", color: "#888", expired: false };
-  const expiry = new Date(new Date(approvedAt).getTime() + 31 * 24 * 60 * 60 * 1000);
+  const expiry = new Date(new Date(approvedAt).getTime() + PREMIUM_30_DAYS_MS);
   const diffMs = expiry.getTime() - Date.now();
   if (diffMs <= 0) return { label: "Expiré", color: "#e74c3c", expired: true };
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -7983,7 +8104,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     showToast(`${count} profil(s) supprimé(s).`, "success");
     loadUsers(userSearch, userPage, usersSort);
   };
-  // Profils incomplets → déclaré après users (voir plus bas)
+
 
   // ── Avis utilisateurs ──
   type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
@@ -8032,7 +8153,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setPaymentsLoading(false);
   };
   const activatePayment = async (p: PaymentRequest) => {
-    const premiumUntil = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
+    const premiumUntil = new Date(Date.now() + PREMIUM_30_DAYS_MS).toISOString();
     const targetId = p.gift_for || p.user_id;
     await adminAction(targetId, { is_premium: true, premium_until: premiumUntil }, `Premium activé.`);
     logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} — payé par ${p.user_id}` : `Premium activé — réf: ${p.tx_ref}`, targetId);
@@ -9800,12 +9921,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginLeft: "auto", flexShrink: 0 }}>
                           {/* Premium */}
                           {!u.is_premium
-                            ? <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading} onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString() }, `${u.name} est maintenant Premium.`))} />
+                            ? <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading} onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + PREMIUM_30_DAYS_MS).toISOString() }, `${u.name} est maintenant Premium.`))} />
                             : isLifetimePremium(u)
                               ? <ActionBtn label="— À vie" color="#8B6914" disabled={isLoading} onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
                               : <ActionBtn label="— Premium" color="#B8860B" disabled={isLoading} onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
                           }
-                          <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)} onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ?`, () => adminAction(u.id, { is_premium: true, premium_until: "2099-12-31T23:59:59.000Z" }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
+                          <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)} onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ?`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
                           {/* Admin */}
                           {!u.is_admin
                             ? auth.userId === SUPER_ADMIN_ID && <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading} onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
@@ -9898,7 +10019,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                         {!u.is_premium ? (
                           <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
-                            onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString() }, `${u.name} est maintenant Premium.`))} />
+                            onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + PREMIUM_30_DAYS_MS).toISOString() }, `${u.name} est maintenant Premium.`))} />
                         ) : isLifetimePremium(u) ? (
                           <ActionBtn label="— À vie" color="#8B6914" disabled={isLoading}
                             onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
@@ -9907,7 +10028,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
                         )}
                         <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
-                          onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: "2099-12-31T23:59:59.000Z" }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
+                          onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
                         {!u.is_admin ? (
                           auth.userId === SUPER_ADMIN_ID && (
                           <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
@@ -11235,7 +11356,7 @@ export default function App() {
       setTab(t);
       if (t === "messages") setUnreadCount(0);
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount}>
-      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} />}
+      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
