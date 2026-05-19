@@ -3624,7 +3624,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
     {isWide && (
-      <div style={{ width: 220, minWidth: 220, background: viewMode === "full" ? "rgba(8,8,8,0.5)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.07)" : G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column", transition: "background 0.35s, backdrop-filter 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
+      <div style={{ width: 220, minWidth: 220, background: viewMode === "full" ? "rgba(255,255,255,0.72)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.4)" : G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column", transition: "background 0.35s, backdrop-filter 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
         <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
           {profiles.map((prof, idx) => {
             const isActive = idx === current;
@@ -3655,7 +3655,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       </div>
     )}
     {/* ── CONTENU PRINCIPAL DÉCOUVRIR ── */}
-    <div style={{ flex: 1, padding: isWide ? "16px 20px" : 0, overflowY: isWide ? "auto" : "visible", minWidth: 0, display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined }}>
+    <div style={{ flex: 1, padding: isWide ? "16px 20px" : 0, overflowY: isWide ? "auto" : "visible", minWidth: 0, display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: isWide ? "100%" : "auto" }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
     {/* ── CSS animations bottom sheet + fullscreen footer ── */}
     <style>{`
@@ -3854,7 +3854,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 6, position: "relative", touchAction: "pan-y" }}><div style={{ height: 210, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "10px 14px" }}>
+  style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined }}><div style={{ height: isWide ? undefined : 210, flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : "none" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "10px 14px", flexShrink: 0 }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div>
     {/* 3 traits menu - single tap/click → bottom sheet */}
@@ -3879,7 +3879,14 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   </div>
   <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 2, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", minHeight: "1.23rem" }}>{p.bio || ""}</p>
 </div>
-</div></div><div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", marginTop: 8, marginBottom: 6 }}><div onClick={() => navigate("prev")} style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem" }}>←</div><div onClick={() => handleLike(p)} style={{ width: 54, height: 54, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div><div onClick={() => navigate("next")} style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem" }}>→</div></div><div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, marginTop: 4, marginBottom: 6 }}>
+</div></div>
+{/* Boutons ← ❤️ → */}
+<div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", marginTop: isWide ? "auto" : 8, marginBottom: 6, paddingTop: isWide ? 12 : 0, flexShrink: 0 }}>
+  <div onClick={() => navigate("prev")} style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem", boxShadow: "0 2px 8px rgba(44,26,14,0.08)" }}>←</div>
+  <div onClick={() => handleLike(p)} style={{ width: 54, height: 54, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div>
+  <div onClick={() => navigate("next")} style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem", boxShadow: "0 2px 8px rgba(44,26,14,0.08)" }}>→</div>
+</div>
+<div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, marginTop: 4, marginBottom: 6 }}>
   {profiles.slice(Math.max(0, current - 2), Math.min(profiles.length, current + 3)).map((_, i) => {
     const idx = Math.max(0, current - 2) + i;
     const isActive = idx === current;
@@ -3957,7 +3964,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
 
     {/* ── PANNEAU DROIT (desktop/tablette uniquement) ── */}
     {isWide && (
-      <div style={{ width: 300, minWidth: 300, background: viewMode === "full" ? "rgba(8,8,8,0.5)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(1.1)" : "none", borderLeft: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.07)" : G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%", transition: "background 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
+      <div style={{ width: 300, minWidth: 300, background: viewMode === "full" ? "rgba(255,255,255,0.72)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", borderLeft: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.4)" : G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%", transition: "background 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
 
         {/* 1. Affichage */}
         <div>
@@ -7231,79 +7238,77 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const isWideProfile = window.innerWidth >= 768;
   const isVisible = profile?.is_visible !== false;
 
-  // ── Menu items gauche ──
   const menuItems = [
-    { id: "main", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, label: "Mon profil" },
-    { id: "edit", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>, label: "Modifier mon profil" },
-    { id: "photo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>, label: "Modifier ma photo" },
-    { id: "premium", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, label: "Premium", badge: auth.isPremium ? "✓" : null },
-    { id: "parrainage", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, label: "Parrainer un ami" },
-    { id: "verification", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>, label: "Vérification", badge: profile?.is_verified ? "✓" : null },
-    { id: "visibility", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>, label: isVisible ? "Profil visible" : "Profil invisible" },
-    { id: "blocklist", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, label: "Liste noire" },
-    { id: "darkmode", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>, label: darkMode ? "Mode clair" : "Mode sombre" },
-    { id: "rating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, label: "Noter l'application" },
-    { id: "preview", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>, label: "Voir mon profil" },
-    { id: "invite", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.07 6.07l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>, label: "Inviter un ami" },
-    { id: "logout", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>, label: "Se déconnecter", danger: true },
-    { id: "delete", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>, label: "Supprimer mon compte", danger: true },
+    { id: "main", label: "Mon profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+    { id: "edit", label: "Modifier mon profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
+    { id: "photo", label: "Modifier ma photo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> },
+    { id: "premium", label: "Premium", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, badge: auth.isPremium ? "✓" : null },
+    { id: "parrainage", label: "Parrainer un ami", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+    { id: "verification", label: "Vérification", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>, badge: profile?.is_verified ? "✓" : null },
+    { id: "visibility", label: isVisible ? "Profil visible" : "Profil invisible", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
+    { id: "blocklist", label: "Liste noire", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> },
+    { id: "darkmode", label: darkMode ? "Mode clair" : "Mode sombre", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> },
+    { id: "rating", label: "Noter l'application", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
+    { id: "preview", label: "Voir mon profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
+    { id: "invite", label: "Inviter un ami", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.07 6.07l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
+    { id: "logout", label: "Se déconnecter", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>, danger: true },
+    { id: "delete", label: "Supprimer mon compte", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>, danger: true },
   ];
 
+  const handleMenuClick = (id: string) => {
+    if (id === "photo") { fileRef.current?.click(); return; }
+    if (id === "darkmode") { onToggleDark?.(); return; }
+    if (id === "invite") {
+      const refLink = `https://moyo-congo.com?ref=${auth.userId}`;
+      const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nCrée ton compte gratuitement ici : ${refLink}`);
+      if (navigator.share) navigator.share({ title: "Moyo Congo", text: "Rejoins-moi sur Moyo !", url: refLink });
+      else window.open(`https://wa.me/?text=${msg}`, "_blank");
+      return;
+    }
+    setActiveSection(id);
+  };
+
   return (
-    <div style={{ paddingBottom: isWideProfile ? 0 : 30, background: "#EEEEF2", minHeight: "100%", display: isWideProfile ? "flex" : "block", height: isWideProfile ? "100%" : "auto" }}>
+    <div style={{ background: "#EEEEF2", minHeight: "100%", display: isWideProfile ? "flex" : "block", height: isWideProfile ? "100%" : "auto", paddingBottom: isWideProfile ? 0 : 30 }}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
 
-      {/* ── COLONNE GAUCHE MENU (desktop) ── */}
-      {isWideProfile && (
-        <div style={{ width: 240, minWidth: 240, background: G.blanc, borderRight: `1px solid ${G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column" }}>
-          {/* Avatar compact */}
-          <div style={{ padding: "20px 16px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#E8C5A0,#C47A4A)", border: `2px solid ${auth.isPremium ? G.or : G.gris}` }}>
-              {profile?.photo_url
-                ? <img src={profile.photo_url} alt={profile?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-              }
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile?.name || auth.name}</div>
-              <div style={{ fontSize: "0.65rem", color: auth.isPremium ? G.or : "#aaa", fontWeight: 600, marginTop: 2 }}>{auth.isPremium ? "⭐ Premium actif" : "Gratuit"}</div>
-            </div>
+      {/* ── COLONNE GAUCHE : MENU 50% ── */}
+      <div style={{ width: isWideProfile ? "50%" : "100%", background: G.blanc, borderRight: isWideProfile ? `1px solid ${G.gris}` : "none", overflowY: "auto", height: isWideProfile ? "100%" : "auto", display: "flex", flexDirection: "column" }}>
+        {/* Avatar + nom en haut */}
+        <div style={{ padding: "24px 20px 16px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#E8C5A0,#C47A4A)", border: `2.5px solid ${auth.isPremium ? G.or : G.gris}` }}>
+            {profile?.photo_url
+              ? <img src={profile.photo_url} alt={profile?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+            }
           </div>
-          {/* Menu items */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
-            {menuItems.map(item => (
-              <div key={item.id} onClick={() => {
-                if (item.id === "edit") { setActiveSection("edit"); setEditing(true); }
-                else if (item.id === "photo") { fileRef.current?.click(); }
-                else if (item.id === "logout") { setShowLogout(true); }
-                else if (item.id === "delete") { setShowDelete(true); }
-                else if (item.id === "darkmode") { onToggleDark?.(); }
-                else if (item.id === "preview") { setShowPreview(true); }
-                else if (item.id === "invite") {
-                  const refLink = `https://moyo-congo.com?ref=${auth.userId}`;
-                  const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nCrée ton compte gratuitement ici : ${refLink}`);
-                  if (navigator.share) navigator.share({ title: "Moyo Congo", text: "Rejoins-moi sur Moyo !", url: refLink });
-                  else window.open(`https://wa.me/?text=${msg}`, "_blank");
-                }
-                else setActiveSection(item.id);
-              }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 11, marginBottom: 2, cursor: "pointer", background: activeSection === item.id ? (item.danger ? "rgba(192,57,43,0.06)" : "rgba(192,57,43,0.06)") : "transparent", color: item.danger ? G.rouge : activeSection === item.id ? G.rouge : "#444", fontWeight: activeSection === item.id ? 700 : 500, fontSize: "0.85rem", transition: "all 0.12s" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 9, background: activeSection === item.id ? "rgba(192,57,43,0.1)" : "#F5F5F7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: item.danger ? G.rouge : activeSection === item.id ? G.rouge : "#666" }}>{item.icon}</div>
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {item.badge && <span style={{ fontSize: "0.6rem", background: G.vert, color: G.blanc, borderRadius: 50, padding: "1px 6px", fontWeight: 700 }}>{item.badge}</span>}
-                {!item.danger && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>}
-              </div>
-            ))}
+          <div>
+            <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun }}>{profile?.name || auth.name}</div>
+            <div style={{ fontSize: "0.7rem", color: auth.isPremium ? G.or : "#aaa", fontWeight: 600, marginTop: 2 }}>{auth.isPremium ? "⭐ Premium actif" : "Compte gratuit"}</div>
           </div>
         </div>
-      )}
+        {/* Menu items */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
+          {menuItems.map(item => (
+            <div key={item.id} onClick={() => handleMenuClick(item.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, marginBottom: 3, cursor: "pointer", background: activeSection === item.id ? "rgba(192,57,43,0.06)" : "transparent", transition: "background 0.12s" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: activeSection === item.id ? "rgba(192,57,43,0.1)" : "#F5F5F7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: (item as any).danger ? G.rouge : activeSection === item.id ? G.rouge : "#666" }}>
+                {item.icon}
+              </div>
+              <span style={{ flex: 1, fontSize: "0.9rem", fontWeight: activeSection === item.id ? 700 : 500, color: (item as any).danger ? G.rouge : activeSection === item.id ? G.rouge : "#333" }}>{item.label}</span>
+              {(item as any).badge && <span style={{ fontSize: "0.62rem", background: G.vert, color: G.blanc, borderRadius: 50, padding: "2px 7px", fontWeight: 700 }}>{(item as any).badge}</span>}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          ))}
+        </div>
+      </div>
 
-      {/* ── COLONNE DROITE CONTENU ── */}
-      <div style={{ flex: 1, overflowY: "auto", height: isWideProfile ? "100%" : "auto" }}>
+      {/* ── COLONNE DROITE : CONTENU 50% ── */}
+      <div style={{ width: isWideProfile ? "50%" : "100%", overflowY: "auto", height: isWideProfile ? "100%" : "auto", background: "#EEEEF2" }}>
 
-      {/* ── ZONE BLANCHE : photo + nom + boutons ── */}
-      <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 8 }}>
+      {/* ── ZONE BLANCHE : photo + nom + boutons — visible si section main ou mobile ── */}
+      {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 8 }}>
 
         {/* Photo ronde */}
         <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
@@ -7410,7 +7415,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
               <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Voir mon<br/>profil</div>
             </div>
         </div>
-      </div>
+      </div>}{/* fin ZONE BLANCHE */}
 
       {/* ── MODAL APERÇU PROFIL ── */}
       {showPreview && profile && (
@@ -7502,16 +7507,14 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           </div>
         </div>
       )}
-      <div style={{ background: "#EEEEF2", position: "relative" }}>
-        <svg viewBox="0 0 500 40" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 40, marginTop: -1 }}>
-          <path d="M0,0 Q125,40 250,40 Q375,40 500,0 L500,0 L0,0 Z" fill={G.blanc}/>
-        </svg>
+      {(!isWideProfile || ["main","premium","parrainage","verification","visibility","blocklist","darkmode","rating","logout","delete"].includes(activeSection)) && <div style={{ background: "#EEEEF2", position: "relative" }}>
+        {(!isWideProfile || activeSection === "main") && <svg viewBox="0 0 500 40" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 40, marginTop: -1 }}><path d="M0,0 Q125,40 250,40 Q375,40 500,0 L500,0 L0,0 Z" fill={G.blanc}/></svg>}
 
         {/* ── ACTIONS (cartes empilées) ── */}
         <div style={{ padding: "20px 16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
 
         {/* CTA Premium - rouge si gratuit, doré si actif, rouge si expiré */}
-        {(() => {
+        {(!isWideProfile || ["premium","main"].includes(activeSection)) && (() => {
           const stored = localStorage.getItem(`moyo_premium_until_${auth.userId}`);
           const daysLeft = stored ? Math.floor((new Date(stored).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : -1;
           const isLifetime = stored && new Date(stored).getFullYear() >= 2090;
@@ -7570,7 +7573,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
 
 
         {/* Parrainage — mis en avant */}
-        <div onClick={() => {
+        {(!isWideProfile || ["parrainage","main"].includes(activeSection)) && <div onClick={() => {
           const refLink = `https://moyo-congo.com?ref=${auth.userId}`;
           const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ?\nCrée ton compte gratuitement ici : ${refLink}`);
           if (navigator.share) {
@@ -7587,12 +7590,12 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.or }}>7 jours Premium offerts</span> pour chaque ami qui s'abonne</div>
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </div>
+        </div>}
 
 
         {/* Demande de vérification */}
-        {!profile?.is_verified ? (
-          <a href="https://wa.me/242065132012?text=Bonjour%2C%20je%20souhaite%20faire%20vérifier%20mon%20compte%20Moyo.%20Mon%20email%20%3A%20" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+        {(!isWideProfile || ["verification","main"].includes(activeSection)) && (!profile?.is_verified ? (
+          <a href={`https://wa.me/242065132012?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo.\n\n👤 Nom : ${profile?.name || auth.name}\n🎂 Âge : ${profile?.age} ans\n⚥ Genre : ${profile?.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
             <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
               <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(29,155,240,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <VerifiedBadge size={22} />
@@ -7611,10 +7614,10 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
           </div>
-        )}
+        ))}
 
         {/* Toggle Visible / Invisible */}
-        <div style={{
+        {(!isWideProfile || ["visibility","main"].includes(activeSection)) && <div style={{
           background: G.blanc, borderRadius: 16, padding: "16px 20px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8`,
@@ -7639,11 +7642,11 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           }} style={{ width: 52, height: 28, borderRadius: 50, background: isVisible ? "#27ae60" : "#e74c3c", cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
             <div style={{ position: "absolute", top: 3, left: isVisible ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
           </div>
-        </div>
+        </div>}
 
 
         {/* Mode sombre */}
-        <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
+        {(!isWideProfile || ["darkmode","main"].includes(activeSection)) && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 42, height: 42, borderRadius: "50%", background: darkMode ? "rgba(44,26,14,0.1)" : "rgba(212,168,67,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={darkMode ? "#2C1A0E" : G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -7661,36 +7664,33 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           <div onClick={onToggleDark} style={{ width: 52, height: 28, borderRadius: 50, background: darkMode ? "#2C1A0E" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
             <div style={{ position: "absolute", top: 3, left: darkMode ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
           </div>
-        </div>
+        </div>}
 
 
-        {/* ── Carte Noter Moyo ── */}
-        <div>
-          <div
-            onClick={() => setShowRating(v => !v)}
-            style={{ background: G.blanc, borderRadius: showRating ? "16px 16px 0 0" : 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid ${showRating ? G.or : "#E8E8E8"}`, cursor: "pointer", transition: "border-color 0.2s, border-radius 0.2s" }}
-          >
-            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill={G.or} stroke="none">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>
-                {ratingSubmitted ? "Ton avis Moyo" : "Noter Moyo"}
-              </div>
-              <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>
-                {ratingSubmitted
-                  ? `${["", "😕", "🙁", "😐", "😊", "😍"][userRating]} ${userRating}/5 étoiles - Modifier`
-                  : "Donne-nous ton avis sur l'application"}
-              </div>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showRating ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
+        {/* ── Notation ── */}
+        {(!isWideProfile || ["rating","main"].includes(activeSection)) && <div
+          onClick={() => setShowRating(v => !v)}
+          style={{ background: G.blanc, borderRadius: showRating ? "16px 16px 0 0" : 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid ${showRating ? G.or : "#E8E8E8"}`, cursor: "pointer", transition: "border-color 0.2s, border-radius 0.2s" }}
+        >
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(212,168,67,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill={showRating ? G.or : "none"} stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>
+              {ratingSubmitted ? "Ton avis Moyo" : "Noter Moyo"}
+            </div>
+            <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>
+              {ratingSubmitted
+                ? `${["", "😕", "🙁", "😐", "😊", "😍"][userRating]} ${userRating}/5 étoiles - Modifier`
+                : "Donne-nous ton avis sur l'application"}
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showRating ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </div>}
 
-          {showRating && (
+        {(!isWideProfile || ["rating","main"].includes(activeSection)) && showRating && (
             <div style={{ background: "#FAFAFA", border: `1px solid ${G.or}`, borderTop: "none", borderRadius: "0 0 16px 16px", padding: "20px 20px 16px" }}>
               {ratingSubmitted && !ratingLoading ? (
                 <div style={{ textAlign: "center", paddingBottom: 4 }}>
@@ -7708,10 +7708,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                       "{ratingComment}"
                     </div>
                   )}
-                  <button
-                    onClick={() => setRatingSubmitted(false)}
-                    style={{ background: "transparent", border: `1.5px solid ${G.or}`, color: "#B8860B", borderRadius: 50, padding: "8px 20px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}
-                  >
+                  <button onClick={() => setRatingSubmitted(false)} style={{ background: "transparent", border: `1.5px solid ${G.or}`, color: "#B8860B", borderRadius: 50, padding: "8px 20px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>
                     Modifier mon avis
                   </button>
                 </div>
@@ -7719,134 +7716,55 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                 <div>
                   <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#111", marginBottom: 4, textAlign: "center" }}>Comment tu trouves Moyo ?</div>
                   <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, textAlign: "center" }}>Ton avis nous aide à améliorer l'application</div>
-
-                  {/* Étoiles */}
                   <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 4 }}>
                     {[1,2,3,4,5].map(star => (
-                      <div
-                        key={star}
-                        onMouseEnter={() => setHoverRating(star)}
-                        onMouseLeave={() => setHoverRating(0)}
-                        onClick={() => { setUserRating(star); setRatingError(""); }}
-                        style={{ cursor: "pointer", transform: (hoverRating || userRating) >= star ? "scale(1.25)" : "scale(1)", transition: "transform 0.15s" }}
-                      >
-                        <svg width="38" height="38" viewBox="0 0 24 24" fill={(hoverRating || userRating) >= star ? G.or : "#DDD"} stroke="none">
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                        </svg>
+                      <div key={star} onMouseEnter={() => setHoverRating(star)} onMouseLeave={() => setHoverRating(0)} onClick={() => { setUserRating(star); setRatingError(""); }} style={{ cursor: "pointer", transform: (hoverRating || userRating) >= star ? "scale(1.25)" : "scale(1)", transition: "transform 0.15s" }}>
+                        <svg width="38" height="38" viewBox="0 0 24 24" fill={(hoverRating || userRating) >= star ? G.or : "#DDD"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                       </div>
                     ))}
                   </div>
                   <div style={{ textAlign: "center", fontSize: "0.75rem", color: "#aaa", marginBottom: 14, minHeight: 18 }}>
                     {userRating > 0 && ["", "Très déçu(e)", "Déçu(e)", "Correct", "Bien !", "Excellent !"][userRating]}
                   </div>
-
-                  {/* Commentaire */}
-                  <textarea
-                    value={ratingComment}
-                    onChange={e => setRatingComment(e.target.value.slice(0, 300))}
-                    placeholder="Laisse un commentaire (optionnel)..."
-                    rows={3}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid #DDD`, fontSize: "0.82rem", resize: "none", outline: "none", fontFamily: "inherit", marginBottom: 4 }}
-                  />
-                  <div style={{ textAlign: "right", fontSize: "0.72rem", color: ratingComment.length >= 280 ? G.rouge : "#ccc", marginBottom: 12 }}>
-                    {ratingComment.length}/300
-                  </div>
-
-                  {/* Erreur */}
-                  {ratingError && (
-                    <div style={{ background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: "0.8rem", color: "#e74c3c", marginBottom: 10 }}>
-                      {ratingError}
-                    </div>
-                  )}
-
-                  {/* Bouton envoi */}
-                  <button
-                    onClick={handleSubmitRating}
-                    disabled={ratingLoading || userRating === 0}
-                    style={{
-                      width: "100%", background: userRating === 0 ? "#DDD" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
-                      color: userRating === 0 ? "#aaa" : G.blanc, border: "none", borderRadius: 50,
-                      padding: "12px", fontSize: "0.88rem", fontWeight: 700,
-                      cursor: userRating === 0 || ratingLoading ? "not-allowed" : "pointer",
-                      transition: "all 0.2s", opacity: ratingLoading ? 0.7 : 1,
-                    }}
-                  >
+                  <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value.slice(0, 300))} placeholder="Laisse un commentaire (optionnel)..." rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid #DDD`, fontSize: "0.82rem", resize: "none", outline: "none", fontFamily: "inherit", marginBottom: 4 }} />
+                  <div style={{ textAlign: "right", fontSize: "0.72rem", color: ratingComment.length >= 280 ? G.rouge : "#ccc", marginBottom: 12 }}>{ratingComment.length}/300</div>
+                  {ratingError && <div style={{ background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: "0.8rem", color: "#e74c3c", marginBottom: 10 }}>{ratingError}</div>}
+                  <button onClick={handleSubmitRating} disabled={ratingLoading || userRating === 0} style={{ width: "100%", background: userRating === 0 ? "#DDD" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: userRating === 0 ? "#aaa" : G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: userRating === 0 || ratingLoading ? "not-allowed" : "pointer", transition: "all 0.2s", opacity: ratingLoading ? 0.7 : 1 }}>
                     {ratingLoading ? "Envoi en cours..." : existingRatingId ? "Mettre à jour mon avis" : "Envoyer mon avis"}
                   </button>
                 </div>
               )}
             </div>
-          )}
-        </div>
-
+        )}
 
         {/* ── Carte Avertissements ── */}
-        {(() => {
+        {(!isWideProfile || activeSection === "main") && (() => {
           const wc = profile?.warning_count ?? 0;
-          const bgCard =
-            wc === 0 ? G.blanc :
-            wc === 1 ? "#FFFDE7" :
-            wc === 2 ? "#FFF3E0" :
-            "#FFF0F0";
-          const borderCard =
-            wc === 0 ? "#E8E8E8" :
-            wc === 1 ? "#FFF176" :
-            wc === 2 ? "#FFCC80" :
-            "#FFBDBD";
-          const iconBg =
-            wc === 0 ? "#F5F5F5" :
-            wc === 1 ? "rgba(255,235,59,0.2)" :
-            wc === 2 ? "rgba(255,152,0,0.15)" :
-            "rgba(231,76,60,0.12)";
-          const iconColor =
-            wc === 0 ? "#bbb" :
-            wc === 1 ? "#F9A825" :
-            wc === 2 ? "#E65100" :
-            "#e74c3c";
-          const labelColor =
-            wc === 0 ? "#aaa" :
-            wc === 1 ? "#F57F17" :
-            wc === 2 ? "#E65100" :
-            "#c0392b";
-          const countColor =
-            wc === 0 ? "#888" :
-            wc === 1 ? "#F9A825" :
-            wc === 2 ? "#E65100" :
-            "#e74c3c";
+          const bgCard = wc === 0 ? G.blanc : wc === 1 ? "#FFFDE7" : wc === 2 ? "#FFF3E0" : "#FFF0F0";
+          const borderCard = wc === 0 ? "#E8E8E8" : wc === 1 ? "#FFF176" : wc === 2 ? "#FFCC80" : "#FFBDBD";
+          const iconBg = wc === 0 ? "#F5F5F5" : wc === 1 ? "rgba(255,235,59,0.2)" : wc === 2 ? "rgba(255,152,0,0.15)" : "rgba(231,76,60,0.12)";
+          const iconColor = wc === 0 ? "#bbb" : wc === 1 ? "#F9A825" : wc === 2 ? "#E65100" : "#e74c3c";
+          const labelColor = wc === 0 ? "#aaa" : wc === 1 ? "#F57F17" : wc === 2 ? "#E65100" : "#c0392b";
+          const countColor = wc === 0 ? "#888" : wc === 1 ? "#F9A825" : wc === 2 ? "#E65100" : "#e74c3c";
           return (
             <div style={{ background: bgCard, borderRadius: 16, padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${borderCard}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
               <div style={{ width: 42, height: 42, borderRadius: "50%", background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: labelColor }}>Avertissements</div>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    {[0, 1, 2].map(i => (
-                      <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wc ? countColor : "#E0E0E0", transition: "background 0.3s" }} />
-                    ))}
-                  </div>
+                  <div style={{ display: "flex", gap: 4 }}>{[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wc ? countColor : "#E0E0E0", transition: "background 0.3s" }} />)}</div>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: "1rem", color: countColor, marginTop: 2 }}>
-                  {wc}/3
-                </div>
-                {wc >= 3 && (
-                  <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4, lineHeight: 1.5, fontWeight: 500 }}>
-                    Votre compte risque une suspension en cas de nouveau signalement.
-                  </div>
-                )}
+                <div style={{ fontWeight: 700, fontSize: "1rem", color: countColor, marginTop: 2 }}>{wc}/3</div>
+                {wc >= 3 && <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4, lineHeight: 1.5, fontWeight: 500 }}>Votre compte risque une suspension en cas de nouveau signalement.</div>}
               </div>
             </div>
           );
         })()}
 
-
-
-        {/* Email de connexion - grisé, non modifiable */}
-        <div style={{ marginTop: 4, background: G.blanc, borderRadius: 16, padding: "14px 18px", border: `1px solid #E8E8E8`, display: "flex", alignItems: "center", gap: 14 }}>
+        {/* Email de connexion */}
+        {(!isWideProfile || activeSection === "main") && <div style={{ marginTop: 4, background: G.blanc, borderRadius: 16, padding: "14px 18px", border: `1px solid #E8E8E8`, display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           </div>
@@ -7855,55 +7773,53 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             <div style={{ fontSize: "0.88rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "-"}</div>
           </div>
           <div style={{ fontSize: "0.65rem", color: "#ccc", background: "#F5F5F5", padding: "3px 10px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>Non modifiable</div>
-        </div>
+        </div>}
 
-        {/* ── Double action : Se déconnecter | Supprimer mon compte ── */}
-        <div style={{ display: "flex", gap: 10 }}>
-          {/* Se déconnecter */}
-          <div
-            onClick={() => setShowLogout(true)}
-            style={{
-              flex: 1, background: G.blanc, borderRadius: 16, padding: "15px 12px",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
-              cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-              border: `1.5px solid #E8E8E8`, minHeight: 82,
-            }}
-          >
+        {/* ── Se déconnecter | Supprimer mon compte ── */}
+        {(!isWideProfile || ["logout","delete","main"].includes(activeSection)) && <div style={{ display: "flex", gap: 10 }}>
+          {(!isWideProfile || ["logout","main"].includes(activeSection)) && <div onClick={() => setShowLogout(true)} style={{ flex: 1, background: G.blanc, borderRadius: 16, padding: "15px 12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: `1.5px solid #E8E8E8`, minHeight: 82 }}>
             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </div>
             <div style={{ fontWeight: 700, fontSize: "0.82rem", color: G.rouge, textAlign: "center", lineHeight: 1.25 }}>Se déconnecter</div>
-          </div>
-
-          {/* Supprimer mon compte */}
-          <div
-            onClick={() => setShowDelete(true)}
-            style={{
-              flex: 1, background: "#FFF8F8", borderRadius: 16, padding: "15px 12px",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
-              cursor: "pointer", boxShadow: "0 1px 4px rgba(231,76,60,0.07)",
-              border: `1.5px solid #FFD6D6`, minHeight: 82,
-            }}
-          >
+          </div>}
+          {(!isWideProfile || ["delete","main"].includes(activeSection)) && <div onClick={() => setShowDelete(true)} style={{ flex: 1, background: "#FFF8F8", borderRadius: 16, padding: "15px 12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: "0 1px 4px rgba(231,76,60,0.07)", border: `1.5px solid #FFD6D6`, minHeight: 82 }}>
             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(231,76,60,0.10)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-              </svg>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
             <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#e74c3c", textAlign: "center", lineHeight: 1.25 }}>Supprimer<br/>mon compte</div>
+          </div>}
+        </div>}
+
+        {/* Liste noire intégrée (section blocklist) */}
+        {isWideProfile && activeSection === "blocklist" && (
+          <div style={{ background: G.blanc, borderRadius: 16, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 16 }}>Liste noire</div>
+            {blockedUsers.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 20px", color: "#aaa" }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><polyline points="20 6 9 17 4 12"/></svg>
+                <p style={{ fontSize: "0.88rem" }}>Aucun utilisateur bloqué</p>
+              </div>
+            ) : blockedUsers.map(b => (
+              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid #F5F5F5` }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.gris, overflow: "hidden", flexShrink: 0 }}>
+                  {b.profile?.photo_url ? <img src={b.profile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}>{b.profile?.gender === "Femme" ? "👩🏿" : "👨🏿"}</div>}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{b.profile?.name || "Utilisateur"}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#888" }}>{b.profile?.city || "-"}</div>
+                </div>
+                <div onClick={() => handleUnblock(b.id)} style={{ background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, color: G.rouge, cursor: "pointer" }}>Débloquer</div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
 
       </div>{/* fin actions */}
-      </div>{/* fin zone grise */}
+      </div>}
 
-      {/* ── MODAL LISTE NOIRE ── */}
-      {showBlocked && (
+      {/* ── MODALES (communes mobile et desktop) ── */}
+      {showBlocked && !isWideProfile && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "70vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid #F5F5F5` }}>
@@ -7912,19 +7828,14 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             </div>
             <div style={{ overflowY: "auto", flex: 1, padding: "12px 0 20px" }}>
               {blockedUsers.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>
-                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(39,174,96,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </div>
-                  <p style={{ fontSize: "0.88rem" }}>Aucun utilisateur bloqué</p>
-                </div>
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 12px" }}><polyline points="20 6 9 17 4 12"/></svg><p style={{ fontSize: "0.88rem" }}>Aucun utilisateur bloqué</p></div>
               ) : blockedUsers.map(b => (
                 <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px" }}>
                   <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.gris, overflow: "hidden", flexShrink: 0 }}>
                     {b.profile?.photo_url ? <img src={b.profile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}>{b.profile?.gender === "Femme" ? "👩🏿" : "👨🏿"}</div>}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a1a" }}>{b.profile?.name || "Utilisateur"}</div>
+                    <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{b.profile?.name || "Utilisateur"}</div>
                     <div style={{ fontSize: "0.75rem", color: "#888" }}>{b.profile?.city || "-"}</div>
                   </div>
                   <div onClick={() => handleUnblock(b.id)} style={{ background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, color: G.rouge, cursor: "pointer", flexShrink: 0 }}>Débloquer</div>
@@ -7935,7 +7846,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         </div>
       )}
 
-      {/* ── MODAL DÉCONNEXION ── */}
       {showLogout && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
@@ -7952,7 +7862,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         </div>
       )}
 
-      {/* ── MODAL SUPPRESSION ── */}
       {showDelete && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
@@ -9156,32 +9065,64 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
       {msgModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
-            <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(41,128,185,0.15)" }}>
-              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: window.innerWidth >= 768 ? 0 : 20 }}>
+          <div style={{ background: G.blanc, borderRadius: window.innerWidth >= 768 ? 0 : 22, width: window.innerWidth >= 768 ? "100%" : "100%", maxWidth: window.innerWidth >= 768 ? "none" : 360, height: window.innerWidth >= 768 ? "100%" : "auto", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden", display: "flex", flexDirection: window.innerWidth >= 768 ? "row" : "column" }}>
+
+            {/* ── COLONNE GAUCHE : modèles ── */}
+            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", borderRight: window.innerWidth >= 768 ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", background: G.blanc }}>
+              <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: "24px 24px 16px", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a" }}>Message à {msgModal.user.name}</div>
+                    <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Sélectionne un modèle ou écris un message personnalisé</div>
+                  </div>
+                </div>
               </div>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a" }}>Message à {msgModal.user.name}</div>
-              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>Le message sera visible dans sa messagerie Assistance Moyo</div>
-            </div>
-            <div style={{ padding: "16px 20px 20px" }}>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+              <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ fontSize: "0.65rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 4 }}>Modèles de messages</div>
                 {[
-                  "Votre abonnement Premium expire dans [X] jours.",
+                  `${msgModal.user.name}, bienvenue sur Moyo ! Nous vous conseillons de liker les profils qui vous intéressent. Si une personne vous like en retour, le match se débloque automatiquement pour discuter et voir ses stories. Moyo 100% Congolais !!!!`,
                   "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.",
-                  "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo.",
-                  `${msgModal.user.name}, bienvenue sur Moyo ! Complétez votre profil pour plus de visibilité et likez les profils qui vous intéressent. Si une personne vous like en retour, le match se débloque automatiquement pour discuter et voir ses stories.`,
+                  "Votre abonnement Premium expire dans [X] jours.",
                   "Votre demande de vérification est en cours d'examen. Merci de patienter.",
                   "Votre profil a été vérifié avec succès ! ✓",
+                  "Votre photo de profil ne respecte pas nos conditions d'utilisation. Merci d'utiliser une photo claire de votre visage, sinon votre compte sera supprimé dans 24h.",
+                  "Les photos contenant des images téléchargées sur internet, célébrités, dessins ou contenus inappropriés sont interdites. Merci de mettre votre vraie photo.",
+                  "Votre photo de profil est floue ou non identifiable. Merci d'ajouter une photo claire de votre visage pour continuer à utiliser votre compte.",
+                  "Votre nom de profil ne respecte pas nos règles d'utilisation. Merci d'utiliser votre vrai prénom ou un nom conforme.",
+                  "Les adresses e-mail, numéros de téléphone et liens sont interdits dans les noms de profil. Merci de modifier votre profil.",
+                  "Votre compte a été suspendu car votre nom de profil n'est pas conforme. Vous pouvez créer un nouveau compte gratuitement avec des informations valides.",
+                  "Les insultes, menaces et comportements irrespectueux sont interdits sur la plateforme. Toute récidive entraînera une suppression définitive du compte.",
+                  "Pour garantir la sécurité des utilisateurs, les faux profils sont supprimés automatiquement.",
+                  "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo.",
                   "Profitez de -50% sur le Premium ce weekend uniquement !",
-                ].map(t => (
-                  <button key={t} onClick={() => setMsgText(t)} style={{ fontSize: "0.72rem", background: msgText === t ? "rgba(41,128,185,0.12)" : G.creme, border: `1.5px solid ${msgText === t ? "#2980b9" : "transparent"}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: "#333", textAlign: "left", lineHeight: 1.3 }}>{t.length > 48 ? t.slice(0, 48) + "…" : t}</button>
+                ].map((t, i) => (
+                  <div key={i} onClick={() => setMsgText(t)} style={{ padding: "10px 14px", borderRadius: 12, cursor: "pointer", background: msgText === t ? "rgba(41,128,185,0.1)" : G.creme, border: `1.5px solid ${msgText === t ? "#2980b9" : "transparent"}`, fontSize: "0.82rem", color: "#333", lineHeight: 1.5, transition: "all 0.12s" }}>
+                    {t.length > 80 ? t.slice(0, 80) + "…" : t}
+                  </div>
                 ))}
               </div>
-              <textarea value={msgText} onChange={e => setMsgText(e.target.value)} placeholder="Écrivez votre message ici…" rows={4} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.84rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
-              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button onClick={() => setMsgModal(null)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+            </div>
+
+            {/* ── COLONNE DROITE : saisie ── */}
+            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", display: "flex", flexDirection: "column", padding: "24px" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#555", marginBottom: 10 }}>Message personnalisé</div>
+              <textarea
+                value={msgText}
+                onChange={e => setMsgText(e.target.value)}
+                placeholder="Écrivez votre message ici ou sélectionnez un modèle à gauche…"
+                style={{ flex: 1, width: "100%", boxSizing: "border-box", padding: "14px", borderRadius: 12, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.88rem", resize: "none", outline: "none", fontFamily: "inherit", lineHeight: 1.6, minHeight: window.innerWidth >= 768 ? "auto" : 140 }}
+              />
+              {msgText && (
+                <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 6, textAlign: "right" }}>
+                  {msgText.length} caractères
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 10, marginTop: 16, flexShrink: 0 }}>
+                <button onClick={() => { setMsgModal(null); setMsgText(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                 <button onClick={async () => {
                   if (!msgText.trim()) return;
                   await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
@@ -9191,9 +9132,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   });
                   showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
                   setMsgModal(null); setMsgText("");
-                }} style={{ flex: 1, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Envoyer</button>
+                }} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
+                  Envoyer le message
+                </button>
               </div>
             </div>
+
           </div>
         </div>
       )}
