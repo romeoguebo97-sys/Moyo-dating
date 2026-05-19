@@ -4131,6 +4131,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
   const [liking, setLiking] = useState(false);
 
   const handleLikeFromBanner = async (p: Profile) => {
+    if (myGender && p.gender && myGender === p.gender) { setShowSameGender(true); return; }
     setLiking(true);
     try {
       await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
@@ -4463,6 +4464,12 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   const [liking, setLiking] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [isPremiumReal, setIsPremiumReal] = useState(auth.isPremium);
+  const [myGender, setMyGender] = useState("");
+  const [showSameGender, setShowSameGender] = useState(false);
+  useEffect(() => {
+    sb.query<{ gender: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
+      .then(res => { if (res?.[0]) setMyGender(res[0].gender); }).catch(() => {});
+  }, [auth.userId]);
   const loadData = async (premiumOverride?: boolean) => {
     const isPrem = premiumOverride !== undefined ? premiumOverride : isPremiumReal;
     setLoading(true);
@@ -4600,6 +4607,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   const handleDismiss = (p: Profile, e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(p); };
 
   const handleLike = async (p: Profile) => {
+    if (myGender && p.gender && myGender === p.gender) { setShowSameGender(true); return; }
     setLiking(true);
     try {
       await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
@@ -5173,6 +5181,20 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
               <Btn variant="ghost" onClick={() => setConfirmUnlike(null)} style={{ flex: 1 }}>Annuler</Btn>
               <Btn variant="danger" onClick={() => handleUnlike(confirmUnlike)} style={{ flex: 1 }}>Retirer le like</Btn>
             </div>
+          </div>
+        </div>
+      )}
+      {showSameGender && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: "32px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+            <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGender === "Homme" ? "🕺" : "💃"}</div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>
+              {myGender === "Homme" ? "Eh frère, reste du bon côté ! 😂" : "Eh sœur, reste du bon côté ! 😂"}
+            </h3>
+            <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20, lineHeight: 1.5 }}>
+              Moyo c'est pour les rencontres hétérosexuelles 😄
+            </p>
+            <Btn variant="primary" onClick={() => setShowSameGender(false)} style={{ width: "100%" }}>J'ai compris 😄</Btn>
           </div>
         </div>
       )}
