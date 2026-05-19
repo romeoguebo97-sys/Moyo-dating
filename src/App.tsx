@@ -2971,13 +2971,39 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <>
         {/* Header mobile */}
         <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box" }}>
-          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
+          {/* Gauche : Logo + icône Filtres (discover uniquement) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 4 }}>
+            <div style={{ fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
+            {tab === "discover" && (
+              <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-toggle-filters"))}
+                style={{ width: 32, height: 32, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="6" x2="20" y2="6"/><circle cx="8" cy="6" r="2" fill={G.brun} stroke="none"/>
+                  <line x1="4" y1="12" x2="20" y2="12"/><circle cx="14" cy="12" r="2" fill={G.brun} stroke="none"/>
+                  <line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="18" r="2" fill={G.brun} stroke="none"/>
+                </svg>
+              </div>
+            )}
+          </div>
+          {/* Droite : Admin + boutons vue (discover) + Guide + Bot */}
+          <div style={{ display: "flex", gap: 6, alignItems: "center", marginRight: 4 }}>
             {auth.isAdmin && (
               <div onClick={() => openAdminPanel(() => setTab("admin"))} style={{ display: "flex", alignItems: "center", gap: 5, background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
                 <span>⚙️ Admin</span>
                 {adminBadgeCount && adminBadgeCount > 0 ? <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.62rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.6 }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</span> : null}
               </div>
+            )}
+            {tab === "discover" && (
+              <>
+                <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-toggle-viewmode", { detail: "list" }))}
+                  style={{ background: G.blanc, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 9px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", color: "#111", whiteSpace: "nowrap" }}>
+                  Liste
+                </div>
+                <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-toggle-viewmode", { detail: "full" }))}
+                  style={{ background: G.blanc, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 9px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", color: "#111", whiteSpace: "nowrap" }}>
+                  Plein écran
+                </div>
+              </>
             )}
             <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.blanc, background: G.rouge, borderRadius: 50, padding: "6px 14px", cursor: "pointer", letterSpacing: "0.02em" }}>Guide</div>
             <div onClick={() => setShowBot(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(26,92,58,0.35)", flexShrink: 0 }}>
@@ -3507,6 +3533,25 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     // Charger le genre de l'utilisateur connecté
     sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
       .then(res => { if (res[0]) setMyGender(res[0].gender); });
+
+    // ── Écoute les événements du header mobile ──
+    const handleToggleFilters = () => setShowFilters(s => !s);
+    const handleToggleViewMode = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail === "full") {
+        setViewMode("full");
+        window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: true } }));
+      } else if (detail === "list") {
+        setViewMode(v => v === "list" ? "card" : "list");
+        window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } }));
+      }
+    };
+    window.addEventListener("moyo-toggle-filters", handleToggleFilters);
+    window.addEventListener("moyo-toggle-viewmode", handleToggleViewMode);
+    return () => {
+      window.removeEventListener("moyo-toggle-filters", handleToggleFilters);
+      window.removeEventListener("moyo-toggle-viewmode", handleToggleViewMode);
+    };
   }, []);
   useEffect(() => { if (profiles.length > 0 && profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
 
@@ -3804,25 +3849,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
           </span>
         </div>
       )}
-      {/* Boutons vue/filtres — masqués sur desktop (panneau droit) */}
-      {!isWide && <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
-        <div onClick={() => {
-          const next = viewMode === "list" ? "card" : "list";
-          setViewMode(next);
-          window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } }));
-        }} style={{ background: viewMode === "list" ? G.rouge : G.blanc, color: viewMode === "list" ? G.blanc : "#111", border: `2px solid ${viewMode === "list" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
-          {viewMode === "list" ? "Carte" : "Liste"}
-        </div>
-        <div onClick={() => {
-          setViewMode("full");
-          window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: true } }));
-        }} style={{ background: viewMode === "full" ? G.rouge : G.blanc, color: viewMode === "full" ? G.blanc : "#111", border: `2px solid ${viewMode === "full" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
-          Plein écran
-        </div>
-        <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
-          Filtres
-        </div>
-      </div>}
+
     </div>{(!isWide && showFilters) && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
   <select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
     <option value="">Toutes les villes</option>
@@ -4731,20 +4758,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   return (
     <div style={{ padding: "12px 16px 24px" }}>
       {/* ── En-tête ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <h2 style={{ fontSize: "1.18rem", fontWeight: 800, color: "#111" }}>
-          {mode === "likes" ? (
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              Likes
-            </span>
-          ) : (
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Vus
-            </span>
-          )}
-        </h2>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")}
             style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`,
