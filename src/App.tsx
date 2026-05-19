@@ -3454,7 +3454,9 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     setLoading(true);
     try {
       // Chargement de TOUS les profils par batches de 1000
-      const BATCH = 1000;
+      // Sur tablette (< 1024px) : batch de 50. Sur desktop : 1000
+      const isLargeScreen = window.innerWidth >= 1024;
+      const BATCH = isLargeScreen ? 1000 : 50;
       let allProfiles: Profile[] = [];
       let offset = 0;
       let keepLoading = true;
@@ -3476,7 +3478,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
         const batch = await sb.query<Profile>(auth.token, "profiles", params);
         if (!Array.isArray(batch) || batch.length === 0) break;
         allProfiles = [...allProfiles, ...batch];
-        if (batch.length < BATCH) keepLoading = false;
+        if (!isLargeScreen || batch.length < BATCH) keepLoading = false;
         else offset += BATCH;
       }
       const seen = new Set<string>();
@@ -3613,15 +3615,15 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
     {isWide && (
-      <div style={{ width: 220, minWidth: 220, background: G.blanc, borderRight: `1px solid ${G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "14px 12px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-          <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em" }}>Profils ({profiles.length})</div>
+      <div style={{ width: 220, minWidth: 220, background: viewMode === "full" ? "rgba(255,255,255,0.12)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(20px)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(20px)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.15)" : G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column", transition: "background 0.35s, backdrop-filter 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
+        <div style={{ padding: "14px 12px 8px", borderBottom: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.15)" : G.gris}`, flexShrink: 0 }}>
+          <div style={{ fontSize: "0.68rem", fontWeight: 800, color: viewMode === "full" ? "rgba(255,255,255,0.7)" : "#aaa", textTransform: "uppercase", letterSpacing: "0.09em" }}>Profils ({profiles.length})</div>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
           {profiles.map((prof, idx) => {
             const isActive = idx === current;
             return (
-              <div key={prof.id} onClick={() => { setCurrent(idx); recordView(prof.id); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 12, cursor: "pointer", marginBottom: 4, background: isActive ? "rgba(192,57,43,0.07)" : "transparent", border: `1.5px solid ${isActive ? G.rouge : "transparent"}`, transition: "all 0.15s" }}>
+              <div key={prof.id} onClick={() => { setCurrent(idx); recordView(prof.id); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 12, cursor: "pointer", marginBottom: 4, background: isActive ? (viewMode === "full" ? "rgba(255,255,255,0.2)" : "rgba(192,57,43,0.07)") : (viewMode === "full" ? "rgba(255,255,255,0.05)" : "transparent"), border: `1.5px solid ${isActive ? (viewMode === "full" ? "rgba(255,255,255,0.4)" : G.rouge) : "transparent"}`, transition: "all 0.15s" }}>
                 {/* Avatar */}
                 <div style={{ width: 42, height: 42, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#E8C5A0,#C47A4A)" }}>
                   {prof.photo_url
@@ -3631,12 +3633,12 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
                 </div>
                 {/* Infos */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.8rem", color: isActive ? G.rouge : G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.8rem", color: isActive ? (viewMode === "full" ? "white" : G.rouge) : (viewMode === "full" ? "rgba(255,255,255,0.85)" : G.brun), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 4 }}>
                     {prof.name}
                     {prof.is_premium && <svg width="9" height="9" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
                     {prof.is_verified && <svg width="10" height="10" viewBox="0 0 24 24" fill="#1a73e8" stroke="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>}
                   </div>
-                  <div style={{ fontSize: "0.67rem", color: "#888", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.age} ans · {prof.city}</div>
+                  <div style={{ fontSize: "0.67rem", color: viewMode === "full" ? "rgba(255,255,255,0.55)" : "#888", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.age} ans · {prof.city}</div>
                 </div>
                 {/* Aimé */}
                 {likedIds.has(prof.id) && <svg width="12" height="12" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>}
@@ -3949,7 +3951,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
 
     {/* ── PANNEAU DROIT (desktop/tablette uniquement) ── */}
     {isWide && (
-      <div style={{ width: 280, minWidth: 280, background: G.blanc, borderLeft: `1px solid ${G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%" }}>
+      <div style={{ width: 280, minWidth: 280, background: viewMode === "full" ? "rgba(255,255,255,0.12)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(20px)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(20px)" : "none", borderLeft: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.15)" : G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%", transition: "background 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
 
         {/* 1. Affichage */}
         <div>
@@ -4738,7 +4740,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                     subtitle="Complète ton profil pour attirer plus d'attention ✨"
                   />
                 ) : viewMode === "card" ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
                     {likers.map(p => (
                       <ProfileCard key={p.id}
                         p={p}
@@ -4795,7 +4797,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                     subtitle="Explore les profils et envoie des likes !"
                   />
                 ) : viewMode === "card" ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
                     {sentLikes.map(p => {
                       const meta = sentLikesMeta[p.id];
                       return (
@@ -4905,7 +4907,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                     subtitle="Les personnes qui consultent ton profil apparaîtront ici"
                   />
                 ) : viewMode === "card" ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
                     {visitors.map(p => (
                       <ProfileCard key={p.id}
                         p={p}
@@ -4961,7 +4963,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                     subtitle="Les profils que tu auras visités apparaîtront ici"
                   />
                 ) : viewMode === "card" ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
                     {visitedProfiles.map(p => (
                       <ProfileCard key={p.id}
                         p={p}
@@ -5235,7 +5237,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
         ))}
       </div>
     ) : (
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 12 }}>
         {matches.map(m => (
           <div key={m.id} className="card-hover" style={{ background: G.blanc, borderRadius: 16, boxShadow: "0 3px 16px rgba(44,26,14,0.08)", position: "relative" }}>
             <div onClick={() => setSelectedMatch(m)} style={{ cursor: "pointer" }}>
@@ -6553,40 +6555,109 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     first: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0],
   })).filter(g => !!g.first);
 
-  return <div style={{ padding: "12px 16px 16px" }}>
-    <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>
-    <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
-    <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 12px", marginBottom: 10, WebkitOverflowScrolling: "touch" }}>
-      <div onClick={() => {
-        if (!auth.isPremium) { onShowPremium("Publier un statut est réservé aux membres Premium."); return; }
-        if (myStatuses.length > 0) { openStatusViewer(myStatuses, 0); return; }
-        setShowStatusComposer(true);
-      }} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
-        <div style={{ position: "relative", width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", padding: myStatuses.length ? 3 : 0, border: myStatuses.length ? `2px solid ${G.rouge}` : `2px dashed rgba(192,57,43,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.05)", color: G.rouge, fontSize: "1.6rem", fontWeight: 800 }}>
-          {myStatuses.length ? <Avatar url={myStatuses[0]?.profile?.photo_url} gender={myStatuses[0]?.profile?.gender} size={50} premium={auth.isPremium} /> : "+"}
-          {auth.isPremium && myStatuses.length < STATUS_LIMIT && (
-            <button onClick={(e) => { e.stopPropagation(); setShowStatusComposer(true); }} aria-label="Ajouter un statut" style={{ position: "absolute", right: -4, bottom: -2, width: 24, height: 24, borderRadius: "50%", border: "2px solid #fff", background: G.rouge, color: "#fff", fontSize: "1rem", lineHeight: 1, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.18)", WebkitTapHighlightColor: "transparent" }}>+</button>
-          )}
-        </div>
-        <div style={{ fontSize: "0.72rem", fontWeight: 700, color: G.rouge }}>Mon statut</div>
-        <div style={{ fontSize: "0.65rem", color: "#999" }}>{myStatuses.length ? `Voir • ${myStatuses.length}/${STATUS_LIMIT}` : `0/${STATUS_LIMIT}`}</div>
-      </div>
-      {statusGroups.slice(0, 12).map(group => {
-        const st = group.first;
-        return (
-        <div key={group.userId} onClick={() => openStatusViewer(group.items, 0)} style={{ minWidth: 74, textAlign: "center", cursor: "pointer" }}>
-          <div style={{ position: "relative", width: 58, height: 58, borderRadius: "50%", margin: "0 auto 6px", padding: 3, border: `2px solid ${st.profile?.is_premium ? G.or : G.rouge}` }}>
-            <Avatar url={st.profile?.photo_url} gender={st.profile?.gender} size={50} premium={false} />
-            <span style={{ position: "absolute", right: -2, bottom: 4, width: 12, height: 12, borderRadius: "50%", background: G.rouge, border: "2px solid #fff" }} />
+  const isWideMsg = window.innerWidth >= 768;
+
+  // ── Liste des conversations (commun mobile + desktop) ──
+  const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div style={{ padding: isWideMsg ? "16px 16px 8px" : "12px 16px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+      {!isWideMsg && <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 12 }}>Messages</h2>}
+      <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
+      <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 8px", WebkitOverflowScrolling: "touch" }}>
+        <div onClick={() => {
+          if (!auth.isPremium) { onShowPremium("Publier un statut est réservé aux membres Premium."); return; }
+          if (myStatuses.length > 0) { openStatusViewer(myStatuses, 0); return; }
+          setShowStatusComposer(true);
+        }} style={{ minWidth: 64, textAlign: "center", cursor: "pointer" }}>
+          <div style={{ position: "relative", width: 52, height: 52, borderRadius: "50%", margin: "0 auto 4px", padding: myStatuses.length ? 3 : 0, border: myStatuses.length ? `2px solid ${G.rouge}` : `2px dashed rgba(192,57,43,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.05)", color: G.rouge, fontSize: "1.4rem", fontWeight: 800 }}>
+            {myStatuses.length ? <Avatar url={myStatuses[0]?.profile?.photo_url} gender={myStatuses[0]?.profile?.gender} size={44} premium={auth.isPremium} /> : "+"}
+            {auth.isPremium && myStatuses.length < STATUS_LIMIT && (
+              <button onClick={(e) => { e.stopPropagation(); setShowStatusComposer(true); }} style={{ position: "absolute", right: -4, bottom: -2, width: 20, height: 20, borderRadius: "50%", border: "2px solid #fff", background: G.rouge, color: "#fff", fontSize: "0.9rem", lineHeight: 1, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>+</button>
+            )}
           </div>
-          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.profile?.name || "Statut"}</div>
-          <div style={{ fontSize: "0.65rem", color: G.rouge }}>{group.items.length > 1 ? `${group.items.length} photos` : "Nouveau"}</div>
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: G.rouge }}>Mon statut</div>
+          <div style={{ fontSize: "0.58rem", color: "#999" }}>{myStatuses.length}/{STATUS_LIMIT}</div>
         </div>
-      );})}
+        {statusGroups.slice(0, 12).map(group => {
+          const st = group.first;
+          return (
+          <div key={group.userId} onClick={() => openStatusViewer(group.items, 0)} style={{ minWidth: 64, textAlign: "center", cursor: "pointer" }}>
+            <div style={{ position: "relative", width: 52, height: 52, borderRadius: "50%", margin: "0 auto 4px", padding: 3, border: `2px solid ${st.profile?.is_premium ? G.or : G.rouge}` }}>
+              <Avatar url={st.profile?.photo_url} gender={st.profile?.gender} size={44} premium={false} />
+              <span style={{ position: "absolute", right: -2, bottom: 4, width: 10, height: 10, borderRadius: "50%", background: G.rouge, border: "2px solid #fff" }} />
+            </div>
+            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.profile?.name || "Statut"}</div>
+          </div>
+        );})}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.65rem", color: "#bbb", marginTop: 4 }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span>Statuts visibles uniquement par vos matchs</span>
+      </div>
     </div>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.72rem", color: "#999", marginBottom: 14 }}>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Les statuts sont visibles uniquement par vos matchs</span>
+    {/* Liste conversations */}
+    <div style={{ flex: 1, overflowY: "auto", padding: "8px 10px" }}>
+      {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
+        ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
+        : convs.map(c => (
+          <div key={c.id} onClick={() => {
+            setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
+            onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
+            setOpen(c);
+          }} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 10px", background: (open as Match | null)?.id === c.id ? "rgba(192,57,43,0.06)" : (c.unreadCount || 0) > 0 ? "rgba(192,57,43,0.03)" : "transparent", borderRadius: 12, marginBottom: 4, cursor: "pointer", border: (open as Match | null)?.id === c.id ? `1.5px solid rgba(192,57,43,0.2)` : "1.5px solid transparent", transition: "all 0.12s" }}>
+            <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={44} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
+                <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, fontSize: "0.88rem", color: (c.unreadCount || 0) > 0 ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isWideMsg ? 140 : 160 }}>{c.partner?.name}</div>
+                {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
+              </div>
+              <div style={{ fontSize: "0.76rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#888", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {c.lastMsg?.content?.startsWith("[img]") ? "Photo" : c.lastMsg?.content || "Dis bonjour !"}
+              </div>
+            </div>
+            {(c.unreadCount || 0) > 0 && (
+              <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", minWidth: 20, height: 20, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>
+                {(c.unreadCount || 0) > 9 ? "9+" : c.unreadCount}
+              </div>
+            )}
+          </div>
+        ))
+      }
     </div>
+  </div>;
+
+  return <div style={{ padding: isWideMsg ? 0 : "12px 16px 16px", display: isWideMsg ? "flex" : "block", height: isWideMsg ? "100%" : "auto" }}>
+    {isWideMsg ? (
+      <>
+        {/* ── COLONNE GAUCHE : liste conversations ── */}
+        <div style={{ width: 300, minWidth: 300, borderRight: `1px solid ${G.gris}`, background: G.blanc, display: "flex", flexDirection: "column", height: "100%" }}>
+          <div style={{ padding: "16px 16px 10px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+            <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun }}>Messages</h2>
+          </div>
+          {convList}
+        </div>
+        {/* ── COLONNE DROITE : chat ouvert ── */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#F0F1F5", height: "100%" }}>
+          {!open ? (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#aaa", gap: 16 }}>
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#E0D5CC" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontWeight: 700, fontSize: "1rem", color: "#bbb", marginBottom: 6 }}>Sélectionne une conversation</div>
+                <div style={{ fontSize: "0.78rem", color: "#ccc" }}>Clique sur un match pour démarrer</div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </>
+    ) : (
+      <>
+        {!open && <>
+          <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>
+          <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
+        </>}
+      </>
+    )}
+    {/* ── Modale statuts, composers, etc. (commun) ── */}
+    <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     {showStatusComposer && (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 650, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowStatusComposer(false)}>
         <div style={{ background: G.blanc, borderRadius: 22, padding: 22, width: "100%", maxWidth: 340, boxShadow: "0 18px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
@@ -6711,34 +6782,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
           </div>
         </div>
       </div>
-    )}<br />
-    {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
-      ? <div style={{ textAlign: "center", padding: "50px 20px", color: "#555" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><p style={{ fontSize: "0.85rem" }}>Fais des matchs pour commencer à discuter !</p></div>
-      : convs.map(c => (
-        <div key={c.id} onClick={() => {
-          // Réinitialiser le badge immédiatement dans l'état local
-          setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
-          onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
-          setOpen(c);
-        }} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px", background: (c.unreadCount || 0) > 0 ? "rgba(192,57,43,0.03)" : G.blanc, borderRadius: 14, marginBottom: 8, cursor: "pointer", border: (c.unreadCount || 0) > 0 ? `1px solid rgba(192,57,43,0.1)` : "1px solid transparent" }}>
-          <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-              <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, fontSize: "0.92rem", color: (c.unreadCount || 0) > 0 ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>{c.partner?.name}</div>
-              {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
-            </div>
-            <div style={{ fontSize: "0.82rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#555", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {c.lastMsg?.content?.startsWith("[img]") ? "Photo" : c.lastMsg?.content || "Dis bonjour !"}
-            </div>
-          </div>
-          {(c.unreadCount || 0) > 0 && (
-            <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", minWidth: 22, height: 22, padding: "0 5px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, flexShrink: 0 }}>
-              {(c.unreadCount || 0) > 9 ? "9+" : c.unreadCount}
-            </div>
-          )}
-        </div>
-      ))
-    }
+    )}
+    {/* Mobile : liste des convs (seulement si pas de conv ouverte) */}
+    {!isWideMsg && !open && convList}
   </div>;
 }
 
