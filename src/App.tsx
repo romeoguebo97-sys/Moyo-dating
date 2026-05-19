@@ -11796,12 +11796,52 @@ export default function App() {
       loadLikesReceived();
     });
 
+    // ── REALTIME user_warnings — modal instantané sans refresh ──
+    const checkWarningsRealtime = async () => {
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${auth.userId}&acknowledged=eq.false&order=created_at.asc&limit=1`,
+          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
+        );
+        if (!r.ok) return;
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data) && data.length > 0) {
+          const w = data[0];
+          setPendingWarning(prev => prev?.id === w.id ? prev : { id: w.id, warning_number: w.warning_number, reason: w.reason });
+        }
+      } catch {}
+    };
+    const wsWarnings = sb.subscribeRealtime(auth.token, "user_warnings", `user_id=eq.${auth.userId}`, () => {
+      checkWarningsRealtime();
+    });
+
+    // ── REALTIME broadcasts — modal instantané sans refresh ──
+    const checkBroadcastRealtime = async () => {
+      try {
+        const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${lastSeen}&order=created_at.desc&limit=1`,
+          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
+        );
+        if (!r.ok) return;
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data) && data.length > 0) {
+          setPendingBroadcast(prev => prev?.id === data[0].id ? prev : { id: data[0].id, message: data[0].message });
+        }
+      } catch {}
+    };
+    const wsBroadcasts = sb.subscribeRealtime(auth.token, "broadcasts", `id=neq.00000000-0000-0000-0000-000000000000`, () => {
+      checkBroadcastRealtime();
+    });
+
     // Fallback polling toutes les 8s (le realtime gère l'instantané)
     const fallbackInterval = setInterval(() => {
       if (isUnmatchingRef.current) return;
       checkUnread();
       loadLikesReceived();
       loadMatchCount();
+      checkWarningsRealtime();
+      checkBroadcastRealtime();
     }, 8000);
 
     return () => {
@@ -11810,6 +11850,8 @@ export default function App() {
       try { wsMatches?.close(); } catch {}
       try { wsMatches2?.close(); } catch {}
       try { wsViews?.close(); } catch {}
+      try { wsWarnings?.close(); } catch {}
+      try { wsBroadcasts?.close(); } catch {}
       clearInterval(fallbackInterval);
       clearInterval(adminBadgeInterval);
       clearInterval(lastSeenInterval);
