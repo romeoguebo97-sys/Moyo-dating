@@ -4566,15 +4566,18 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   };
 
   useEffect(() => {
+    // Charger immédiatement avec la valeur premium connue (auth.isPremium)
+    loadData(auth.isPremium);
+    // Puis vérifier la vraie valeur en base et recharger si nécessaire
     sb.query<{ is_premium: boolean }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=is_premium`)
       .then(res => {
         if (Array.isArray(res) && res.length > 0) {
           const prem = res[0].is_premium === true;
           setIsPremiumReal(prem);
-          loadData(prem);
+          // Recharger uniquement si la valeur diffère de celle déjà utilisée
+          if (prem !== auth.isPremium) loadData(prem);
         }
       }).catch(() => {});
-    loadData();
     const wsLikes = sb.subscribeRealtime(auth.token, "likes", `to_user=eq.${auth.userId}`, () => { loadData(); });
     const wsViews = sb.subscribeRealtime(auth.token, "profile_views", `viewed_id=eq.${auth.userId}`, () => { loadData(); });
     return () => {
