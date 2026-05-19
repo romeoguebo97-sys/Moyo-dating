@@ -1157,6 +1157,10 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     ]},
     { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
       { icon: "Q", titre: "Moyo est-il gratuit ?", desc: "Oui, l'inscription est gratuite. 5 likes/jour et 3 messages/match. Premium à 3 500 FCFA/mois." },
+      { icon: "Q", titre: "Comment naviguer entre les profils ?", desc: "3 modes disponibles : Vue carte (swipe gauche/droite ou boutons ←→), Vue liste (défilement vertical), Plein écran (immersion totale, footer masqué). Passez d'un mode à l'autre via les boutons en haut de l'écran Découvrir." },
+      { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
+      { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: "5 likes par jour. Le compteur ❤️ X/5 s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché." },
+      { icon: "Q", titre: "Puis-je voir le profil complet de quelqu'un gratuitement ?", desc: "Oui. Appuyez sur le bouton ☰ de n'importe quelle carte → 'Voir le profil'. C'est gratuit pour tous les membres, sans restriction." },
       { icon: "Q", titre: "Comment annuler un match ?", desc: "Dans Matchs, appuyez sur les 3 traits → Annuler le match. La conversation, les likes et les vues sont supprimés. L'autre personne n'est pas notifiée." },
       { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, le bouton cadeau apparait uniquement si vous êtes Premium. Vous pouvez offrir le Premium à votre partenaire non-premium." },
       { icon: "Q", titre: "Comment obtenir le badge vérifié ?", desc: "Profil → Faire vérifier mon compte → WhatsApp. Gratuit, vérification sous 24h." },
@@ -1164,25 +1168,22 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment activer le mode sombre ?", desc: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
       { icon: "Q", titre: "Comment rendre mon profil invisible ?", desc: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
       { icon: "Q", titre: "Pourquoi je ne vois pas mon profil dans Découvrir ?", desc: "Votre profil doit être complet jusqu'à la dernière étape de l'inscription pour apparaître dans Découvrir. Vérifiez aussi que votre profil est bien visible dans les paramètres." },
-      { icon: "Q", titre: "À quoi servent les onglets Likes et Vus ?", desc: "Deux onglets séparés : Likes (personnes qui vous ont liké) et Vus (personnes qui ont visité votre profil). Tout le monde voit le compteur. Premium requis pour voir les cartes et l'identité des personnes. Vous pouvez retirer une carte sans affecter les matchs." },
+      { icon: "Q", titre: "À quoi servent les onglets Likes et Vus ?", desc: "Deux onglets séparés : Likes (personnes qui vous ont liké) et Vus (personnes qui ont visité votre profil). Tout le monde voit le compteur. Premium requis pour voir les cartes et l'identité des personnes." },
       { icon: "Q", titre: "Qui apparaît dans mes Vues ?", desc: "Uniquement les membres Premium qui ont consulté votre profil. Les membres gratuits ne génèrent pas de vues et n'apparaissent pas dans votre liste Vues." },
-      { icon: "Q", titre: "Comment suis-je informé d'un nouveau match ?", desc: "Dès qu'un match est créé, un message de bienvenue apparaît automatiquement dans la conversation : \"🎉 Vous avez un match avec [Prénom] ! Dites-lui bonjour 👋\". Le badge rouge sur l'onglet Messages se met également à jour en temps réel." },
+      { icon: "Q", titre: "Comment suis-je informé d'un nouveau match ?", desc: "Dès qu'un match est créé, un message de bienvenue apparaît automatiquement dans la conversation. Le badge rouge sur l'onglet Messages se met à jour en temps réel." },
       { icon: "Q", titre: "Si je unlike quelqu'un, que se passe-t-il ?", desc: "Le like disparait des deux côtés instantanément. Si vous aviez un match, la conversation et tous les messages sont supprimés." },
-      { icon: "Q", titre: "Que se passe-t-il si j'envoie un message irrespectueux ?", desc: "Moyo bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement automatique est envoyé à notre équipe. Les comportements répétés entraînent la suppression du compte." },
-      { icon: "Q", titre: "Comment réagir à un message ?", desc: "Appuyez longuement sur un message pour ouvrir le menu de réactions (👍 ❤️ 😂 😮 😢 🙏). Une seule réaction par message est autorisée : choisir une nouvelle réaction remplace automatiquement la précédente." },
+      { icon: "Q", titre: "Que se passe-t-il si j'envoie un message irrespectueux ?", desc: "Moyo bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement automatique est envoyé à notre équipe." },
+      { icon: "Q", titre: "Comment réagir à un message ?", desc: "Appuyez longuement sur un message pour ouvrir le menu de réactions (👍 ❤️ 😂 😮 😢 🙏). Une seule réaction par message est autorisée." },
       { icon: "Q", titre: "Comment contacter l'assistance Moyo ?", desc: "Appuyez sur l'icône verte (Assistant Moyo) à côté du bouton Guide. Vous pouvez poser vos questions ou signaler un problème directement depuis l'app." },
       { icon: "Q", titre: "Puis-je voir le profil de quelqu'un depuis les messages ?", desc: "Oui. Dans une conversation, appuyez sur la photo de profil de votre match en haut de l'écran pour voir sa fiche complète." },
-      { icon: "Q", titre: "Comment répondre à un message précis ?", desc: "Appuyez longuement sur le message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler la réponse." },
-      { icon: "Q", titre: "Comment supprimer un message ?", desc: "Appuyez longuement sur le message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté, sans affecter l'autre personne)." },
-      { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Elle détaille le motif. Vous devez cliquer \"OK, j\'ai compris\" pour continuer à utiliser l'application. Plusieurs avertissements peuvent entraîner la suspension du compte." },
-      { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → choisissez votre opérateur (MTN Mobile Money ou Airtel Money) → appuyez sur le bouton pour effectuer le paiement sur votre téléphone → validez → entrez le numéro de transaction (ID) reçu par SMS → appuyez sur 'J'ai payé'. L'activation est manuelle sous 24h." },
-      { icon: "Q", titre: "Où trouver mon numéro de transaction MTN ou Airtel ?", desc: "Après validation du paiement, votre opérateur vous envoie un SMS contenant un numéro de transaction ID (ex: 7753031542 pour Airtel, 7753031542 pour MTN). Entrez ce numéro ID exactement tel quel dans le champ prévu." },
-      { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "L'activation est manuelle par notre équipe. Délai habituel : quelques minutes à 24h. Si après 24h vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo. Une fois activé, déconnectez-vous et reconnectez-vous." },
-      { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche un compteur en temps réel : vert si vous avez plus de 3 jours, orange sous 3 jours, rouge si expiré. À expiration, le statut repasse automatiquement en gratuit." },
-      { icon: "Q", titre: "J'ai reçu un message 'Vérifiez vos informations de paiement', que faire ?", desc: "Cela signifie que le numéro de transaction saisi ne correspond pas à celui reçu par notre équipe. Vérifiez votre SMS MTN et soumettez à nouveau une demande avec le bon numéro." },
-      { icon: "Q", titre: "Qu'est-ce qu'un message informatif de Moyo ?", desc: "Notre équipe peut vous envoyer des notifications importantes (activation Premium, rappels, informations) qui apparaissent sous forme de modal bleu à votre connexion. Appuyez sur 'OK, J'AI COMPRIS' pour les fermer." },
-      { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: "Depuis votre page Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez automatiquement 7 jours de Premium offerts sur votre compte. Plus vous parrainez, plus vous cumulez des jours gratuits." },
-      { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Découvrir → choisissez une photo ou écrivez un texte. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
+      { icon: "Q", titre: "Comment répondre à un message précis ?", desc: "Appuyez longuement sur le message → Répondre. Un bandeau s'affiche avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
+      { icon: "Q", titre: "Comment supprimer un message ?", desc: "Appuyez longuement sur le message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque uniquement de votre côté)." },
+      { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Vous devez cliquer 'OK, j'ai compris' pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
+      { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → choisissez votre opérateur → effectuez le paiement → entrez le numéro de transaction (ID) reçu par SMS → appuyez sur 'J'ai payé'. L'activation est manuelle sous 24h." },
+      { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "L'activation est manuelle par notre équipe. Délai habituel : quelques minutes à 24h. Si après 24h vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo." },
+      { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche votre statut en temps réel : nombre de jours restants, ou 'Actif' si votre abonnement est en cours." },
+      { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: "Depuis votre page Profil, appuyez sur 'Parrainer un ami'. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez automatiquement 7 jours de Premium offerts." },
+      { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Messages → choisissez une photo. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
     ]},
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
       { icon: "shield", titre: "Données sécurisées", desc: "Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers." },
@@ -2833,7 +2834,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
   ];
 
   return <div style={{ maxWidth: 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme, boxShadow: "0 0 60px rgba(44,26,14,0.12)" }}>
-    <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box" }}>
+    <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box" }}>
       <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
         {auth.isAdmin && (
@@ -2859,7 +2860,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         </div>
       </div>
     </div>
-    <div style={{ flex: 1, overflowY: "auto", paddingBottom: isFullscreen ? 0 : 75, paddingTop: 48, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
+    <div style={{ flex: 1, overflowY: "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
 
     {/* Bot Widget */}
     {showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
@@ -2869,7 +2870,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       .moyo-footer-hidden { transform: translateX(-50%) translateY(100%) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
       .moyo-footer-visible { transform: translateX(-50%) translateY(0) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
     `}</style>
-    <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "6px 4px 14px", zIndex: 50 }}>
+    <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "5px 4px 13px", zIndex: 50 }}>
       {tabs.map(t => {
         const active = tab === t.id;
         return (
@@ -2932,6 +2933,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             { title: "Découvrir des profils", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>, items: [
               "L'onglet Découvrir propose 3 modes d'affichage : Vue carte (swipe), Vue liste et Plein écran. Passez d'un mode à l'autre via les boutons en haut à droite.",
               "En mode Plein écran, la carte prend toute la hauteur de l'écran pour une immersion maximale. Le menu du bas disparaît automatiquement pour libérer l'espace.",
+              "Les profils défilent en boucle continue — vous parcourez tous les membres disponibles avant de revenir au premier. Aucun profil ne se répète avant que vous ayez tout vu.",
               "Vous pouvez voir le profil complet de n'importe quel utilisateur gratuitement en appuyant sur les 3 traits (☰) de sa carte puis 'Voir le profil'.",
               "Compte gratuit : 5 likes par jour. Le compteur ❤️ X/5 s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel. Premium : likes illimités, pas de compteur.",
               "Filtres disponibles : genre, ville, âge (18-99), religion.",
@@ -2940,9 +2942,9 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             ]},
             { title: "Menu ☰ — Options sur un profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>, items: [
               "Appuyez une seule fois sur le bouton ☰ d'une carte pour ouvrir le menu. Fonctionne au premier tap sur tous les appareils (iPhone, Android, tablette, ordinateur).",
-              "Le menu s'ouvre depuis le bas de l'écran sous forme de panneau élégant avec l'avatar et le nom du profil concerné.",
-              "3 options disponibles : Voir le profil (accessible à tous, gratuit), Bloquer (retire définitivement le profil de votre Découvrir), Signaler (envoie un rapport à notre équipe).",
-              "Le menu fonctionne sur chaque profil indépendamment — pas uniquement sur le premier affiché.",
+              "Le menu s'ouvre depuis le bas de l'écran avec l'avatar et le nom du profil concerné.",
+              "3 options disponibles : Voir le profil (gratuit pour tous), Bloquer (retire définitivement le profil de votre Découvrir), Signaler (envoie un rapport à notre équipe).",
+              "Le menu fonctionne sur chaque profil indépendamment en mode carte, liste et plein écran.",
             ]},
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: ["Compte gratuit : 3 messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.", "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message → Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler.", "Supprimer un message : appuyez longuement → Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au cœur de notre communauté."] },
@@ -9117,7 +9119,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Profils incomplets", "Cochez 'Afficher uniquement les profils incomplets (...)' pour filtrer les comptes dont l'inscription n'a pas été terminée (nom affiché comme '...'). Ces profils n'ont pas finalisé leur inscription."],
                     ["Sélection multiple", "Cochez les cases à gauche de chaque profil pour les sélectionner. Utilisez 'Tout sélectionner' pour sélectionner d'un coup tous les profils affichés. Idéal combiné avec le filtre 'Incomplets'."],
                     ["Suppression en masse", "Une fois des profils sélectionnés, le bouton 🗑 Supprimer (X) apparaît. Cette action supprime définitivement les comptes sélectionnés de la base de données. Irréversible."],
-                    ["Rendre Premium / Retirer Premium", "Attribue ou retire l'accès aux fonctionnalités payantes."],
+                    ["Rendre Premium / Retirer Premium", "Attribue 30 jours de Premium ou retire l'accès aux fonctionnalités payantes."],
+                    ["★ À vie", "Attribue le Premium permanent à un utilisateur (date d'expiration fixée à 2099). Réservé aux employés et collaborateurs Moyo. L'utilisateur voit le symbole ∞ sur son profil à la place du compteur de jours."],
                     ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
                     ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
                     ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
