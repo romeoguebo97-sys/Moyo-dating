@@ -4526,7 +4526,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
 
     // ── VISITEURS (qui m'ont vu) ──
     try {
-      const views = await sb.query<ViewRecord>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id,created_at&order=created_at.desc&limit=100`);
+      const views = await sb.query<ViewRecord>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&viewer_id=neq.${auth.userId}&select=viewer_id,created_at&order=created_at.desc&limit=100`);
       if (Array.isArray(views)) {
         // Dédoublonner - garder la visite la plus récente par visitor, exclure auto-visite
         const seen = new Map<string, string>();
@@ -4534,19 +4534,27 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           if (v.viewer_id && v.viewer_id !== auth.userId && !seen.has(v.viewer_id))
             seen.set(v.viewer_id, v.created_at || "");
         });
-        setViewsCount(seen.size);
         if (isPrem && seen.size > 0) {
           const allIds = [...seen.keys()].filter(id => !dIds.has(id));
           if (allIds.length > 0) {
             const vIds = allIds.join(",");
             const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified,is_visible,is_admin`);
-            // Garder tous les profils retournés, même invisibles
             const found = Array.isArray(vProfiles) ? vProfiles : [];
+            // Compteur = uniquement les profils réellement récupérables
+            const foundIds = new Set(found.map(p => p.id));
             setVisitors(found);
+            setViewsCount(found.length);
             const vmeta: Record<string, { date?: string }> = {};
-            seen.forEach((date, id) => { vmeta[id] = { date }; });
+            seen.forEach((date, id) => { if (foundIds.has(id)) vmeta[id] = { date }; });
             setVisitorMeta(vmeta);
+          } else {
+            setViewsCount(0);
           }
+        } else if (!isPrem) {
+          // Non-premium : compteur brut (pas de cartes)
+          setViewsCount(seen.size);
+        } else {
+          setViewsCount(0);
         }
       }
     } catch {}
@@ -4997,17 +5005,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             <>
               {isPremiumReal ? (
                 loading ? <Spinner /> :
-                visitors.length === 0 && viewsCount === 0 ? (
+                visitors.length === 0 ? (
                   <EmptyState
                     icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
                     title="Aucun visiteur pour l'instant"
                     subtitle="Les personnes qui consultent ton profil apparaîtront ici"
-                  />
-                ) : visitors.length === 0 && viewsCount > 0 ? (
-                  <EmptyState
-                    icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
-                    title={`${viewsCount} visiteur${viewsCount > 1 ? "s ont" : " a"} consulté ton profil`}
-                    subtitle={`${viewsCount > 1 ? "Ces membres ont" : "Ce membre a"} supprimé son compte ou rendu son profil invisible`}
                   />
                 ) : viewMode === "card" ? (
                   <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
@@ -11702,7 +11704,7 @@ export default function App() {
       try {
         const [likes, views] = await Promise.all([
           sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`),
-          sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id`),
+          sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&viewer_id=neq.${auth.userId}&select=viewer_id`),
         ]);
         const likesCount = Array.isArray(likes) ? likes.filter(l => !dIds.has(l.from_user)).length : 0;
         const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
