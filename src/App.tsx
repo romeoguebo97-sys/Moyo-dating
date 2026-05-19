@@ -3676,9 +3676,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   const p = profiles[current];
   const fullscreenProfiles = React.useMemo(() => {
     if (!profiles.length) return [];
-    // Répète les profils assez de fois pour un scroll quasi-infini (min 200 cartes)
-    const repeat = Math.max(3, Math.ceil(200 / profiles.length));
-    return Array.from({ length: repeat }, () => profiles).flat();
+    return [...profiles];
   }, [profiles]);
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
 
@@ -3865,8 +3863,9 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   const el = e.currentTarget;
   if (!profiles.length) return;
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 900) {
-    const approxCycle = Math.max(1, el.scrollHeight / 40);
-    el.scrollTop = Math.max(0, el.scrollTop - approxCycle * 20);
+    // Fin de la liste — reshuffler et repartir du début
+    setProfiles(prev => shuffleArray([...prev]));
+    el.scrollTop = 0;
   }
 }} style={{ margin: "0 -16px", padding: "0 10px 0", maxHeight: "calc(100dvh - 100px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
@@ -4763,26 +4762,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
               borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
             {viewMode === "card" ? "≡ Liste" : "⊞ Carte"}
           </div>
-          {isPremiumReal && (
-            <span style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111",
-              borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="#111" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                PREMIUM
-              </span>
-            </span>
-          )}
-          {isPremiumReal && (() => {
-            const stored = localStorage.getItem(`moyo_premium_until_${auth.userId}`);
-            if (!stored) return null;
-            const cd = getPremiumCountdown(new Date(new Date(stored).getTime() - 31 * 24 * 60 * 60 * 1000).toISOString());
-            if (!cd.label) return null;
-            return (
-              <span style={{ background: cd.expired ? "rgba(231,76,60,0.1)" : "rgba(39,174,96,0.1)", color: cd.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, border: `1px solid ${cd.expired ? "rgba(231,76,60,0.2)" : "rgba(39,174,96,0.2)"}` }}>
-                {cd.expired ? "⏰ Expiré" : `⏱ ${cd.label}`}
-              </span>
-            );
-          })()}
+
         </div>
       </div>
 
