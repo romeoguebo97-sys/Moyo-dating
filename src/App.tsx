@@ -788,7 +788,11 @@ function PremiumBadge({ size = 16 }: { size?: number }) {
 }
 
 function Avatar({ url, gender, size = 54, border = false, premium = false }: { url?: string | null; gender?: string; size?: number; border?: boolean; premium?: boolean }) {
-  return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: border ? `3px solid ${G.rouge}` : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.45 }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (gender === "Femme" ? "👩🏿" : "👨🏿")}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", border: `2px solid ${G.blanc}` }}>⭐</div>}</div>;
+  // ── Cercle doré pour les membres Premium, rouge pour les autres ──
+  const borderColor = border ? (premium ? G.or : G.rouge) : "none";
+  const borderStyle = border ? `3px solid ${borderColor}` : "none";
+  const boxShadow = border && premium ? `0 0 0 1px ${G.or}44` : "none";
+  return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.45 }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (gender === "Femme" ? "👩🏿" : "👨🏿")}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", border: `2px solid ${G.blanc}` }}>⭐</div>}</div>;
 }
 
 function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void; reason: string; userId: string; token: string }) {
@@ -11526,6 +11530,7 @@ export default function App() {
   }, [auth?.userId]);
 
   // ── Vérifier expiration Premium au login ──
+  // Ne jamais retirer le Premium à vie (premium_until >= 2090)
   useEffect(() => {
     if (!auth?.userId || !auth.isPremium) return;
     const checkPremiumExpiry = async () => {
@@ -11535,6 +11540,9 @@ export default function App() {
         if (!Array.isArray(data) || !data[0]?.premium_until) return;
         const until = new Date(data[0].premium_until);
         localStorage.setItem(`moyo_premium_until_${auth.userId}`, until.toISOString());
+        // ── Ne jamais toucher au Premium à vie (date >= 2090) ──
+        if (until.getFullYear() >= 2090) return;
+        // ── Retirer le Premium uniquement si vraiment expiré ──
         if (until < new Date()) {
           await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: false }) });
         }
