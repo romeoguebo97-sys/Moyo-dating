@@ -278,6 +278,14 @@ const sb = {
         headers: this.h(),
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
+      // ── Erreur réseau ou serveur indisponible (pas un vrai 401) ──
+      // On retourne un sentinel spécial pour distinguer "token invalide" vs "réseau KO"
+      if (!r.ok && r.status !== 400 && r.status !== 401) {
+        console.warn("[Moyo][Session] ⚠️ Refresh - serveur indisponible (" + r.status + ") - session conservée");
+        (this as any)._lastRefreshWasNetworkError = true;
+        return null;
+      }
+      (this as any)._lastRefreshWasNetworkError = false;
       const data = await r.json().catch(() => null);
       if (data?.access_token) {
         console.log("[Moyo][Session] ✅ Refresh réussi - nouveau token obtenu");
@@ -286,7 +294,9 @@ const sb = {
       console.warn("[Moyo][Session] ❌ Refresh échoué :", data?.error_description || data?.message || "réponse invalide");
       return null;
     } catch (e) {
-      console.warn("[Moyo][Session] ❌ Refresh - erreur réseau :", e);
+      // Erreur réseau pure (pas de réponse) → NE PAS déconnecter
+      console.warn("[Moyo][Session] ❌ Refresh - erreur réseau (hors ligne?) - session conservée :", e);
+      (this as any)._lastRefreshWasNetworkError = true;
       return null;
     } finally {
       this._isRefreshing = false;
@@ -323,6 +333,12 @@ const sb = {
     // Tentative de refresh
     const refreshed = await this.refreshSession(refreshToken);
     if (!refreshed) {
+      // ── Ne déconnecter QUE si c'est un vrai token invalide (400/401 Supabase) ──
+      // Si c'était une erreur réseau, on conserve la session et on retourne la réponse 401 originale
+      if ((this as any)._lastRefreshWasNetworkError) {
+        console.warn("[Moyo][Session] Refresh échoué (réseau) - session conservée, on retourne la réponse originale");
+        return r;
+      }
       console.warn("[Moyo][Session] Refresh impossible - déconnexion");
       this._onAuthFailure?.();
       return r;
@@ -2099,7 +2115,21 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     try {
       const res = await sb.signIn(form.email.trim(), form.password);
       if (res.error) {
-        setErrorMsg("Adresse e-mail ou mot de passe incorrect. Veuillez vérifier vos informations et réessayer.");
+        const errMsg = res.error?.message || "";
+        if (errMsg.includes("Email not confirmed") || errMsg.includes("email_not_confirmed")) {
+          setErrorMsg("Votre email n'est pas encore confirmé. Vérifiez votre boîte mail et cliquez sur le lien d'activation.");
+        } else if (errMsg.includes("Invalid login") || errMsg.includes("invalid_credentials") || errMsg.includes("Invalid credentials")) {
+          setErrorMsg("Adresse e-mail ou mot de passe incorrect. Vérifiez vos informations et réessayez.");
+        } else if (errMsg.includes("Too many requests") || errMsg.includes("over_request_rate_limit")) {
+          setErrorMsg("Trop de tentatives. Patientez quelques minutes avant de réessayer.");
+        } else {
+          setErrorMsg("Connexion impossible. Vérifiez votre email et mot de passe, puis réessayez.");
+        }
+        setLoading(false); return;
+      }
+      // ── Vérification défensive : access_token et user.id requis ──
+      if (!res.access_token || !res.user?.id) {
+        setErrorMsg("Connexion impossible. Vérifiez votre email et mot de passe, puis réessayez.");
         setLoading(false); return;
       }
       const profiles = await sb.query<Profile>(res.access_token, "profiles", `?id=eq.${res.user.id}`);
@@ -2123,7 +2153,10 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         refreshToken: res.refresh_token || undefined,
         expiresAt: res.expires_in ? Date.now() + res.expires_in * 1000 : undefined,
       });
-    } catch { setErrorMsg("Erreur de connexion. Veuillez vérifier votre adresse e-mail ou votre mot de passe."); }
+    } catch (e) {
+      console.error("[Moyo][Login] Erreur inattendue :", e);
+      setErrorMsg("Une erreur est survenue. Vérifie ta connexion internet et réessaie.");
+    }
     setLoading(false);
   };
 
@@ -3581,10 +3614,21 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
     const mutual = await sb.query<object>(auth.token, "likes", `?from_user=eq.${p.id}&to_user=eq.${auth.userId}`);
     if (mutual.length > 0) {
-      const matchRes = await sb.insert<{id: string}>(auth.token, "matches", { user1: auth.userId, user2: p.id });
-      const matchId = matchRes?.[0]?.id;
-      if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, auth.name, p.name);
-      setMatchPop(p);
+      // ── Anti-doublon : vérifier qu'aucun match n'existe déjà dans les deux sens ──
+      const [existFwd, existRev] = await Promise.all([
+        sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}&select=id&limit=1`),
+        sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}&select=id&limit=1`),
+      ]);
+      const existingMatchId = existFwd?.[0]?.id || existRev?.[0]?.id || null;
+      if (existingMatchId) {
+        // Match déjà existant : juste afficher la popup sans recréer
+        setMatchPop(p);
+      } else {
+        const matchRes = await sb.insert<{id: string}>(auth.token, "matches", { user1: auth.userId, user2: p.id });
+        const matchId = matchRes?.[0]?.id;
+        if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, auth.name, p.name);
+        setMatchPop(p);
+      }
     }
   };
 
@@ -4085,9 +4129,16 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
       // Vérifier si match mutuel
       const mutual = await sb.query<object>(auth.token, "likes", `?from_user=eq.${p.id}&to_user=eq.${auth.userId}`);
       if (Array.isArray(mutual) && mutual.length > 0) {
-        const matchRes = await sb.insert<{id: string}>(auth.token, "matches", { user1: auth.userId, user2: p.id });
-        const matchId = matchRes?.[0]?.id;
-        if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, auth.name, p.name);
+        // ── Anti-doublon : vérifier qu'aucun match n'existe déjà ──
+        const [existFwd, existRev] = await Promise.all([
+          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}&select=id&limit=1`),
+          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}&select=id&limit=1`),
+        ]);
+        if (!existFwd?.[0]?.id && !existRev?.[0]?.id) {
+          const matchRes = await sb.insert<{id: string}>(auth.token, "matches", { user1: auth.userId, user2: p.id });
+          const matchId = matchRes?.[0]?.id;
+          if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, auth.name, p.name);
+        }
       }
     } catch {}
     setLiking(false);
