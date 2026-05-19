@@ -278,8 +278,7 @@ const sb = {
         headers: this.h(),
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
-      // ── Erreur réseau ou serveur indisponible (pas un vrai 401) ──
-      // On retourne un sentinel spécial pour distinguer "token invalide" vs "réseau KO"
+      // ── Erreur serveur (pas un vrai 401/400) → conserver la session ──
       if (!r.ok && r.status !== 400 && r.status !== 401) {
         console.warn("[Moyo][Session] ⚠️ Refresh - serveur indisponible (" + r.status + ") - session conservée");
         (this as any)._lastRefreshWasNetworkError = true;
@@ -294,7 +293,7 @@ const sb = {
       console.warn("[Moyo][Session] ❌ Refresh échoué :", data?.error_description || data?.message || "réponse invalide");
       return null;
     } catch (e) {
-      // Erreur réseau pure (pas de réponse) → NE PAS déconnecter
+      // Erreur réseau pure (hors ligne, timeout) → NE PAS déconnecter
       console.warn("[Moyo][Session] ❌ Refresh - erreur réseau (hors ligne?) - session conservée :", e);
       (this as any)._lastRefreshWasNetworkError = true;
       return null;
@@ -334,9 +333,9 @@ const sb = {
     const refreshed = await this.refreshSession(refreshToken);
     if (!refreshed) {
       // ── Ne déconnecter QUE si c'est un vrai token invalide (400/401 Supabase) ──
-      // Si c'était une erreur réseau, on conserve la session et on retourne la réponse 401 originale
+      // Si c'était une erreur réseau, on conserve la session
       if ((this as any)._lastRefreshWasNetworkError) {
-        console.warn("[Moyo][Session] Refresh échoué (réseau) - session conservée, on retourne la réponse originale");
+        console.warn("[Moyo][Session] Refresh échoué (réseau) - session conservée");
         return r;
       }
       console.warn("[Moyo][Session] Refresh impossible - déconnexion");
@@ -2888,7 +2887,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
   const isTablet = screenWidth >= 768 && screenWidth < 1024;
   const isWide = screenWidth >= 768;
 
-  return <div style={{ maxWidth: isWide ? "none" : 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: isWide ? "row" : "column", background: isWide ? "#EAEDF2" : G.creme, boxShadow: isWide ? "none" : "0 0 60px rgba(44,26,14,0.12)" }}>
+  return <div data-active-tab={tab} style={{ maxWidth: isWide ? "none" : 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: isWide ? "row" : "column", background: isWide ? "#EAEDF2" : G.creme, boxShadow: isWide ? "none" : "0 0 60px rgba(44,26,14,0.12)" }}>
     <style>{`
       .moyo-footer-hidden { transform: translateX(-50%) translateY(100%) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
       .moyo-footer-visible { transform: translateX(-50%) translateY(0) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
@@ -3619,9 +3618,8 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
         sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}&select=id&limit=1`),
         sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}&select=id&limit=1`),
       ]);
-      const existingMatchId = existFwd?.[0]?.id || existRev?.[0]?.id || null;
-      if (existingMatchId) {
-        // Match déjà existant : juste afficher la popup sans recréer
+      const alreadyExists = (existFwd?.[0]?.id || existRev?.[0]?.id) ? true : false;
+      if (alreadyExists) {
         setMatchPop(p);
       } else {
         const matchRes = await sb.insert<{id: string}>(auth.token, "matches", { user1: auth.userId, user2: p.id });
@@ -7241,12 +7239,54 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     setUploadLoading(false);
     setPendingFile(null);
   };
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
   const handleDelete = async () => {
-    await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}`);
-    await sb.delete(auth.token, "likes", `?to_user=eq.${auth.userId}`);
-    await sb.rpc(auth.token, "delete_user");
-    await sb.signOut(auth.token);
-    onLogout();
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      // ── Étape 1 : supprimer toutes les données associées en cascade ──
+      await Promise.all([
+        sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}`),
+        sb.delete(auth.token, "likes", `?to_user=eq.${auth.userId}`),
+        sb.delete(auth.token, "blocks", `?blocker_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "blocks", `?blocked_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "profile_views", `?viewer_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "app_ratings", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "statuses", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "payment_requests", `?user_id=eq.${auth.userId}`),
+      ]);
+
+      // ── Étape 2 : supprimer les matchs et leurs messages ──
+      const matches = await sb.query<{ id: string }>(
+        auth.token, "matches",
+        `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`
+      );
+      if (Array.isArray(matches) && matches.length > 0) {
+        const ids = matches.map(m => m.id);
+        for (const id of ids) {
+          await sb.delete(auth.token, "messages", `?match_id=eq.${id}`);
+        }
+        await sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}`);
+        await sb.delete(auth.token, "matches", `?user2=eq.${auth.userId}`);
+      }
+
+      // ── Étape 3 : appeler la RPC Supabase qui supprime le compte Auth ──
+      // Cette RPC doit exister dans Supabase (voir SQL fourni séparément)
+      const rpcResult = await sb.rpc(auth.token, "delete_user");
+      console.log("[Moyo][Delete] RPC delete_user result:", rpcResult);
+
+      // ── Étape 4 : déconnexion propre et redirection ──
+      await sb.signOut(auth.token);
+      onLogout();
+    } catch (e: any) {
+      console.error("[Moyo][Delete] Erreur suppression compte :", e);
+      setDeleteError("Une erreur est survenue lors de la suppression. Réessaie ou contacte le support à contact@moyo-congo.com");
+      setDeleteLoading(false);
+    }
   };
 
   if (loading) return <div style={{ padding: 40, textAlign: "center" }}>
@@ -7914,12 +7954,24 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>⚠️</div>
             <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Supprimer mon compte ?</h3>
-            <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 6, lineHeight: 1.6 }}>Ton profil, tes likes et tes messages seront <strong style={{ color: "#1a1a1a" }}>définitivement supprimés</strong>.</p>
-            <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#e74c3c", marginBottom: 24 }}>Cette action est irréversible.</p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <Btn variant="ghost" onClick={() => setShowDelete(false)} style={{ flex: 1 }}>Non, garder</Btn>
-              <Btn variant="danger" onClick={handleDelete} style={{ flex: 1 }}>Oui, supprimer</Btn>
-            </div>
+            <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 6, lineHeight: 1.6 }}>Ton profil, tes likes, tes matchs et tes messages seront <strong style={{ color: "#1a1a1a" }}>définitivement supprimés</strong>.</p>
+            <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#e74c3c", marginBottom: deleteError ? 10 : 24 }}>Cette action est irréversible.</p>
+            {deleteError && (
+              <div style={{ background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: "0.78rem", color: "#e74c3c", lineHeight: 1.5, textAlign: "left" }}>
+                {deleteError}
+              </div>
+            )}
+            {deleteLoading ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "12px 0", color: "#888", fontSize: "0.88rem" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                Suppression en cours…
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn variant="ghost" onClick={() => { setShowDelete(false); setDeleteError(""); }} style={{ flex: 1 }}>Non, garder</Btn>
+                <Btn variant="danger" onClick={handleDelete} style={{ flex: 1 }}>Oui, supprimer</Btn>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -8261,8 +8313,16 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setLogsLoading(false);
   };
   const clearAdminLogs = async () => {
-    await fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-    setAdminLogs([]);
+    // ── Confirmation obligatoire avant suppression irréversible ──
+    confirm("Voulez-vous vraiment effacer tout l'historique des actions admin ? Cette action est irréversible.", async () => {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        setAdminLogs([]);
+        showToast("Historique admin effacé.", "success");
+      } catch {
+        showToast("Erreur lors de la suppression des logs.", "error");
+      }
+    });
   };
   const [viewPaymentProfile, setViewPaymentProfile] = useState<Profile | null>(null);
   const openPaymentProfile = async (userId: string) => {
@@ -8576,43 +8636,52 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       const today = new Date(); today.setHours(0,0,0,0);
       const todayIso = today.toISOString();
 
-      const [allUsers, matches, messages, reps, totalReps] = await Promise.all([
-        sb.query<AdminProfile>(auth.token, "profiles", "?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&order=created_at.desc&limit=500"),
-        sb.query<{ id: string }>(auth.token, "matches", "?select=id"),
-        sb.query<{ id: string }>(auth.token, "messages", "?select=id"),
-        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&order=created_at.desc&limit=50"),
-        sb.query<{ id: string }>(auth.token, "reports", "?select=id"),
+      // ── Utiliser count=exact pour les totaux (pas de limite à 500) ──
+      const countHeader = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" };
+      const parseCount = (r: Response) => { const h = r.headers.get("content-range"); return h ? parseInt(h.split("/")[1]) || 0 : 0; };
+
+      const [rTotalUsers, rMatches, rMessages, rTotalReports,
+             rPremium, rVerified, rBanned, rMale, rFemale, rTodayUsers] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/matches?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/messages?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/reports?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?is_premium=eq.true&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?is_verified=eq.true&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?is_banned=eq.true&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?gender=eq.Homme&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?gender=eq.Femme&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?created_at=gte.${todayIso}&select=id`, { headers: countHeader }),
       ]);
 
-      // Calculs stats avancées
-      const todayUsers = allUsers.filter(u => u.created_at && u.created_at >= todayIso).length;
-      const premiumUsers = allUsers.filter(u => u.is_premium).length;
-      const verifiedUsers = allUsers.filter(u => u.is_verified).length;
-      const bannedUsers = allUsers.filter(u => u.is_banned).length;
-      const maleCount = allUsers.filter(u => u.gender === "Homme").length;
-      const femaleCount = allUsers.filter(u => u.gender === "Femme").length;
+      // ── Charger un échantillon de profils pour top villes + derniers inscrits ──
+      const [recentProfilesRes, reps] = await Promise.all([
+        sb.query<AdminProfile>(auth.token, "profiles", "?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&order=created_at.desc&limit=500"),
+        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&order=created_at.desc&limit=50"),
+      ]);
 
-      // Top villes
+      // Top villes (sur l'échantillon de 500 derniers inscrits)
       const cityMap: Record<string, number> = {};
-      allUsers.forEach(u => { if (u.city) cityMap[u.city] = (cityMap[u.city] || 0) + 1; });
-      const topCities = Object.entries(cityMap)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([city, count]) => ({ city, count }));
-
-      // Derniers inscrits
-      const recentUsers = allUsers.slice(0, 5);
+      recentProfilesRes.forEach(u => { if (u.city) cityMap[u.city] = (cityMap[u.city] || 0) + 1; });
+      const topCities = Object.entries(cityMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([city, count]) => ({ city, count }));
+      const recentUsers = recentProfilesRes.slice(0, 5);
 
       setStats({
-        users: allUsers.length,
-        matches: matches.length,
-        messages: messages.length,
-        reports: totalReps.length,
-        todayUsers, premiumUsers, verifiedUsers, bannedUsers,
-        maleCount, femaleCount, topCities, recentUsers,
+        users: parseCount(rTotalUsers),
+        matches: parseCount(rMatches),
+        messages: parseCount(rMessages),
+        reports: parseCount(rTotalReports),
+        todayUsers: parseCount(rTodayUsers),
+        premiumUsers: parseCount(rPremium),
+        verifiedUsers: parseCount(rVerified),
+        bannedUsers: parseCount(rBanned),
+        maleCount: parseCount(rMale),
+        femaleCount: parseCount(rFemale),
+        topCities,
+        recentUsers,
       });
       setReports(reps);
-      console.log(`[Moyo][Admin] ✅ Dashboard chargé - ${allUsers.length} profils, ${reps.length} signalements`);
+      console.log(`[Moyo][Admin] ✅ Dashboard chargé - ${parseCount(rTotalUsers)} profils, ${reps.length} signalements`);
     } catch (e: any) {
       console.error("[Moyo][Admin] ❌ Erreur chargement dashboard :", e?.message || e);
       showToast("Erreur chargement dashboard : " + (e?.message || "inconnue"), "error");
@@ -8650,7 +8719,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setUsersLoading(false);
   };
 
-  useEffect(() => { loadStats(); }, []);
+  useEffect(() => {
+    // Charger stats + reviews + payments au montage pour avoir les badges dès l'ouverture
+    loadStats();
+    loadReviews();
+    loadPayments();
+  }, []);
   useEffect(() => {
     if (activeTab === "users") { setUserPage(0); loadUsers(userSearch, 0, usersSort); }
   }, [activeTab, usersViewMode]);
@@ -8704,13 +8778,61 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
     setActionLoading(user.id);
     try {
-      // Supprimer le profil (cascade selon policies)
+      // ── Étape 1 : supprimer toutes les données associées en cascade ──
+      await Promise.all([
+        sb.delete(auth.token, "likes", `?from_user=eq.${user.id}`),
+        sb.delete(auth.token, "likes", `?to_user=eq.${user.id}`),
+        sb.delete(auth.token, "blocks", `?blocker_id=eq.${user.id}`),
+        sb.delete(auth.token, "blocks", `?blocked_id=eq.${user.id}`),
+        sb.delete(auth.token, "profile_views", `?viewer_id=eq.${user.id}`),
+        sb.delete(auth.token, "profile_views", `?viewed_id=eq.${user.id}`),
+        sb.delete(auth.token, "dismissed_cards", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "app_ratings", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "statuses", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "payment_requests", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "user_warnings", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "reports", `?reporter_id=eq.${user.id}`),
+      ]);
+
+      // ── Étape 2 : supprimer les matchs et leurs messages ──
+      const matches = await sb.query<{ id: string }>(
+        auth.token, "matches",
+        `?or=(user1.eq.${user.id},user2.eq.${user.id})&select=id`
+      );
+      if (Array.isArray(matches) && matches.length > 0) {
+        for (const m of matches) {
+          await sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`);
+        }
+        await sb.delete(auth.token, "matches", `?user1=eq.${user.id}`);
+        await sb.delete(auth.token, "matches", `?user2=eq.${user.id}`);
+      }
+
+      // ── Étape 3 : supprimer le profil ──
       await sb.delete(auth.token, "profiles", `?id=eq.${user.id}`);
-      console.log("[Moyo][Admin][Delete] ✅ Profil supprimé :", user.id);
-      showToast(`Profil de ${user.name} supprimé.`, "success");
-      logAdminAction(auth.token, auth.userId, auth.name, `Compte supprimé : ${user.name}`, user.id);
+
+      // ── Étape 4 : supprimer le compte Auth via RPC admin ──
+      // La RPC delete_user_by_id(target_user_id uuid) doit exister dans Supabase
+      // Elle appelle auth.users DELETE avec les droits service_role via SECURITY DEFINER
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/delete_user_by_id`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+          body: JSON.stringify({ target_user_id: user.id }),
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(() => null);
+          console.warn("[Moyo][Admin][Delete] RPC delete_user_by_id non disponible ou erreur :", err?.message || r.status, "— Le profil a été supprimé mais le compte Auth peut subsister.");
+        } else {
+          console.log("[Moyo][Admin][Delete] ✅ Compte Auth supprimé via RPC :", user.id);
+        }
+      } catch (rpcErr) {
+        console.warn("[Moyo][Admin][Delete] RPC Auth inaccessible :", rpcErr, "— Données supprimées, Auth peut subsister.");
+      }
+
+      showToast(`Compte de ${user.name} supprimé définitivement.`, "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Compte supprimé définitivement : ${user.name}`, user.id);
       setUsers(prev => prev.filter(u => u.id !== user.id));
-      setStats(s => ({ ...s, users: s.users - 1 }));
+      setStats(s => ({ ...s, users: Math.max(0, s.users - 1) }));
     } catch (e: any) {
       console.error("[Moyo][Admin][Delete] ❌ Erreur :", e?.message || e);
       showToast("Erreur suppression : " + (e?.message || "inconnue"), "error");
@@ -9010,7 +9132,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const systemPendingCount = reports.filter(r => isPending(r) && isSystemReport(r)).length;
   const messagingPendingCount = reports.filter(r => isPending(r) && isSupportUserMessage(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
-  const adminBadgeCount = pendingCount + unreadReviewsCount;
+  // ── Badge global = signalements en attente + avis non lus + paiements en attente ──
+  const adminBadgeCount = pendingCount + unreadReviewsCount + pendingPaymentsCount;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
 
@@ -9289,14 +9412,24 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <button onClick={() => { setMsgModal(null); setMsgText(""); setMsgHistory([]); setMsgTab("modeles"); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                       <button onClick={async () => {
                         if (!msgText.trim()) return;
-                        await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                          body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
-                        });
-                        showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
-                        setMsgText("");
-                        loadMsgHistory(msgModal.user.id);
+                        try {
+                          const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+                            body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
+                          });
+                          if (!r.ok) {
+                            const err = await r.json().catch(() => null);
+                            showToast(`Erreur envoi : ${err?.message || r.status}`, "error");
+                            return;
+                          }
+                          showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
+                          logAdminAction(auth.token, auth.userId, auth.name, `Message envoyé à ${msgModal.user.name}`, msgModal.user.id);
+                          setMsgText("");
+                          loadMsgHistory(msgModal.user.id);
+                        } catch (e: any) {
+                          showToast("Erreur réseau. Le message n'a pas été envoyé.", "error");
+                        }
                       }} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
                         Envoyer le message
                       </button>
@@ -9320,14 +9453,24 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <button onClick={() => { setMsgModal(null); setMsgText(""); setMsgHistory([]); setMsgTab("modeles"); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                     <button onClick={async () => {
                       if (!msgText.trim()) return;
-                      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                        body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
-                      });
-                      showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
-                      setMsgText("");
-                      loadMsgHistory(msgModal.user.id);
+                      try {
+                        const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+                          body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
+                        });
+                        if (!r.ok) {
+                          const err = await r.json().catch(() => null);
+                          showToast(`Erreur envoi : ${err?.message || r.status}`, "error");
+                          return;
+                        }
+                        showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
+                        logAdminAction(auth.token, auth.userId, auth.name, `Message envoyé à ${msgModal.user.name}`, msgModal.user.id);
+                        setMsgText("");
+                        loadMsgHistory(msgModal.user.id);
+                      } catch (e: any) {
+                        showToast("Erreur réseau. Le message n'a pas été envoyé.", "error");
+                      }
                     }} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
                       Envoyer le message
                     </button>
@@ -9884,7 +10027,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               onClick={() => {
                 setActiveTab(key as any);
                 if (key === "users" && users.length === 0) loadUsers("", 0);
-                if (key === "reviews" && reviews.length === 0) loadReviews();
+                if (key === "reviews") loadReviews();
                 if (key === "payments") loadPayments();
                 if (key === "logs") loadAdminLogs();
               }}
@@ -11545,29 +11688,43 @@ export default function App() {
         ]);
         const likesCount = Array.isArray(likes) ? likes.filter(l => !dIds.has(l.from_user)).length : 0;
         const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
-        setLikesReceived(likesCount);
-        setViewsReceived(viewsCount);
+        // ── Ne pas écraser le zéro si l'utilisateur est sur cet onglet (il vient de tout voir) ──
+        setLikesReceived(prev => {
+          const currentTab = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
+          return currentTab === 'likes' ? 0 : likesCount;
+        });
+        setViewsReceived(prev => {
+          const currentTab = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
+          return currentTab === 'visitors' ? 0 : viewsCount;
+        });
       } catch {}
     };
     loadLikesReceived();
     refreshBadgesRef.current = loadLikesReceived;
 
-    // Chargement initial des matchs
+    // Chargement initial des matchs — badge = nouveaux matchs depuis la dernière visite
     const loadMatchCount = async () => {
-      const res = await sb.query<{ id: string; user1: string; user2: string }>(
-        auth.token, "matches",
-        `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id,user1,user2`
-      );
-      if (Array.isArray(res)) {
-        // Dédupliquer par paire de partenaires (pas juste par ID)
-        // pour éviter le doublon quand user1/user2 ont chacun un enregistrement
-        const seenPartners = new Set<string>();
-        for (const r of res) {
-          const partnerId = r.user1 === auth.userId ? r.user2 : r.user1;
-          seenPartners.add(partnerId);
+      try {
+        const lastVisit = localStorage.getItem(`moyo_matches_seen_${auth.userId}`) || "1970-01-01T00:00:00.000Z";
+        const res = await sb.query<{ id: string; user1: string; user2: string; created_at?: string }>(
+          auth.token, "matches",
+          `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id,user1,user2,created_at`
+        );
+        if (Array.isArray(res)) {
+          const seenPartners = new Set<string>();
+          const newPartners = new Set<string>();
+          for (const r of res) {
+            const partnerId = r.user1 === auth.userId ? r.user2 : r.user1;
+            if (!seenPartners.has(partnerId)) {
+              seenPartners.add(partnerId);
+              if (r.created_at && r.created_at > lastVisit) {
+                newPartners.add(partnerId);
+              }
+            }
+          }
+          setNotifCount(newPartners.size);
         }
-        setNotifCount(seenPartners.size);
-      }
+      } catch {}
     };
     loadMatchCount();
 
@@ -11592,16 +11749,19 @@ export default function App() {
     };
     checkUnread();
 
-    // ── ADMIN badge - fetch au démarrage et toutes les 30s ──
+    // ── ADMIN badge - fetch au démarrage et toutes les 5s ──
+    // Inclut : signalements pending + avis non lus + paiements en attente
     const checkAdminBadge = async () => {
       if (!auth.isAdmin) return;
       try {
-        const [rPending, rUnreadReviews] = await Promise.all([
-          fetch(`${SUPABASE_URL}/rest/v1/reports?select=id&status=eq.pending`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } }),
-          fetch(`${SUPABASE_URL}/rest/v1/app_ratings?select=id&is_read=eq.false`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } }),
+        const h = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" };
+        const [rPending, rUnreadReviews, rPendingPayments] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/reports?select=id&status=eq.pending`, { headers: h }),
+          fetch(`${SUPABASE_URL}/rest/v1/app_ratings?select=id&is_read=eq.false`, { headers: h }),
+          fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id&status=eq.pending`, { headers: h }),
         ]);
-        const parseCount = (r: Response) => { const h = r.headers.get("content-range"); return h ? parseInt(h.split("/")[1]) || 0 : 0; };
-        setAdminBadgeCount(parseCount(rPending) + parseCount(rUnreadReviews));
+        const parseCount = (r: Response) => { const h2 = r.headers.get("content-range"); return h2 ? parseInt(h2.split("/")[1]) || 0 : 0; };
+        setAdminBadgeCount(parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments));
       } catch {}
     };
     checkAdminBadge();
@@ -11719,6 +11879,13 @@ export default function App() {
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
       if (t === "messages") setUnreadCount(0);
+      // ── Remise à zéro des badges au clic sur l'onglet correspondant ──
+      if (t === "matches") {
+        setNotifCount(0);
+        try { localStorage.setItem(`moyo_matches_seen_${auth!.userId}`, new Date().toISOString()); } catch {}
+      }
+      if (t === "likes") setLikesReceived(0);
+      if (t === "visitors") setViewsReceived(0);
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
