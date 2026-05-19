@@ -3611,8 +3611,43 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
 
   return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
+    {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
+    {isWide && (
+      <div style={{ width: 220, minWidth: 220, background: G.blanc, borderRight: `1px solid ${G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "14px 12px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+          <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em" }}>Profils ({profiles.length})</div>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+          {profiles.map((prof, idx) => {
+            const isActive = idx === current;
+            return (
+              <div key={prof.id} onClick={() => { setCurrent(idx); recordView(prof.id); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 12, cursor: "pointer", marginBottom: 4, background: isActive ? "rgba(192,57,43,0.07)" : "transparent", border: `1.5px solid ${isActive ? G.rouge : "transparent"}`, transition: "all 0.15s" }}>
+                {/* Avatar */}
+                <div style={{ width: 42, height: 42, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#E8C5A0,#C47A4A)" }}>
+                  {prof.photo_url
+                    ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                  }
+                </div>
+                {/* Infos */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.8rem", color: isActive ? G.rouge : G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 4 }}>
+                    {prof.name}
+                    {prof.is_premium && <svg width="9" height="9" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
+                    {prof.is_verified && <svg width="10" height="10" viewBox="0 0 24 24" fill="#1a73e8" stroke="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>}
+                  </div>
+                  <div style={{ fontSize: "0.67rem", color: "#888", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prof.age} ans · {prof.city}</div>
+                </div>
+                {/* Aimé */}
+                {likedIds.has(prof.id) && <svg width="12" height="12" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    )}
     {/* ── CONTENU PRINCIPAL DÉCOUVRIR ── */}
-    <div style={{ flex: 1, padding: isWide ? "20px 24px" : 0, overflowY: isWide ? "auto" : "visible", minWidth: 0 }}>
+    <div style={{ flex: 1, padding: isWide ? "20px 24px" : 0, overflowY: isWide ? "auto" : "visible", minWidth: 0, maxWidth: isWide ? 620 : "none" }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
     {/* ── CSS animations bottom sheet + fullscreen footer ── */}
     <style>{`
@@ -3844,7 +3879,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       <div key={idx} style={{ width: isActive ? 23 : 7, height: 7, borderRadius: 99, background: isActive ? G.rouge : "#E0D5CC", transition: "width 0.25s ease, background 0.25s ease" }} />
     );
   })}
-</div><div style={{ marginTop: 6 }}><PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} /></div></>}{viewedProfile && (
+</div><div style={{ marginTop: 6 }}>{!isWide && <PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />}</div></>}{viewedProfile && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
