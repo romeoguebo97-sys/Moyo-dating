@@ -3513,10 +3513,8 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   const loadProfiles = async (pageNum = 0, append = false) => {
     setLoading(true);
     try {
-      // Chargement de TOUS les profils par batches de 1000
-      // Sur tablette (< 1024px) : batch de 50. Sur desktop : 1000
-      const isLargeScreen = window.innerWidth >= 1024;
-      const BATCH = isLargeScreen ? 1000 : 50;
+      // Chargement de TOUS les profils par batches de 1000 — mobile et desktop, quelle que soit la taille de la base
+      const BATCH = 1000;
       let allProfiles: Profile[] = [];
       let offset = 0;
       let keepLoading = true;
@@ -3538,7 +3536,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
         const batch = await sb.query<Profile>(auth.token, "profiles", params);
         if (!Array.isArray(batch) || batch.length === 0) break;
         allProfiles = [...allProfiles, ...batch];
-        if (!isLargeScreen || batch.length < BATCH) keepLoading = false;
+        if (batch.length < BATCH) keepLoading = false;
         else offset += BATCH;
       }
       const seen = new Set<string>();
