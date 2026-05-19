@@ -3794,7 +3794,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       </div>
     )}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
-      <h2 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, flexShrink: 0 }}>Découvrir</h2>
+      
       {/* Compteur likes gratuits — visible uniquement pour les non-premium */}
       {!auth.isPremium && (
         <div style={{ display: "flex", alignItems: "center", gap: 5, background: likesToday >= FREE_LIMITS.likes ? "rgba(231,76,60,0.1)" : "rgba(26,92,58,0.08)", borderRadius: 50, padding: "4px 10px 4px 8px", border: `1.5px solid ${likesToday >= FREE_LIMITS.likes ? "#e74c3c" : G.vert}`, flexShrink: 0 }}>
@@ -5280,7 +5280,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
 
   return <div style={{ padding: "12px 16px 16px" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-      <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>Matchs</h2>
+      
       <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>
     </div>
     {/* Overlay fermeture menu */}
@@ -6098,7 +6098,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   // ── Liste des conversations (commun mobile + desktop) ──
   const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
     <div style={{ padding: isWideMsg ? "16px 16px 8px" : "12px 16px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-      {!isWideMsg && <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 12 }}>Messages</h2>}
+      
       <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
       <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 8px", WebkitOverflowScrolling: "touch" }}>
         <div onClick={() => {
@@ -6749,7 +6749,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     ) : (
       <>
         {!open && <>
-          <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>
+          
           <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
         </>}
       </>
@@ -7369,6 +7369,14 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
       else window.open(`https://wa.me/?text=${msg}`, "_blank");
       return;
     }
+    // ── "Voir mon profil" ouvre la modale d'aperçu (desktop + mobile) ──
+    if (id === "preview") { setShowPreview(true); return; }
+    // ── "Modifier mon profil" ouvre directement le formulaire ──
+    if (id === "edit") { setEditing(true); return; }
+    // ── "Se déconnecter" ouvre directement la modale ──
+    if (id === "logout") { setShowLogout(true); return; }
+    // ── "Supprimer mon compte" ouvre directement la modale ──
+    if (id === "delete") { setShowDelete(true); return; }
     setActiveSection(id);
   };
 
@@ -7403,7 +7411,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
 
         {/* Photo ronde */}
         <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
-          <div style={{ width: 120, height: 120, borderRadius: "50%", background: `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 8px 32px rgba(192,57,43,0.25)` }}>
+          <div style={{ width: 120, height: 120, borderRadius: "50%", background: profile?.is_premium ? `conic-gradient(${G.or} 0% 100%, ${G.gris} 100%)` : `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: profile?.is_premium ? `0 8px 32px rgba(212,168,67,0.35)` : `0 8px 32px rgba(192,57,43,0.25)` }}>
             <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
               <Avatar url={profile?.photo_url} gender={profile?.gender} size={108} premium={profile?.is_premium} />
             </div>
