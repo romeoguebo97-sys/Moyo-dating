@@ -4528,15 +4528,21 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     try {
       const views = await sb.query<ViewRecord>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id,created_at&order=created_at.desc&limit=100`);
       if (Array.isArray(views)) {
-        // Dédoublonner - garder la visite la plus récente par visitor
+        // Dédoublonner - garder la visite la plus récente par visitor, exclure auto-visite
         const seen = new Map<string, string>();
-        views.forEach(v => { if (!seen.has(v.viewer_id)) seen.set(v.viewer_id, v.created_at || ""); });
+        views.forEach(v => {
+          if (v.viewer_id && v.viewer_id !== auth.userId && !seen.has(v.viewer_id))
+            seen.set(v.viewer_id, v.created_at || "");
+        });
         setViewsCount(seen.size);
         if (isPrem && seen.size > 0) {
-          const vIds = [...seen.keys()].filter(id => !dIds.has(id)).join(",");
-          if (vIds) {
-            const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified`);
-            setVisitors(Array.isArray(vProfiles) ? vProfiles : []);
+          const allIds = [...seen.keys()].filter(id => !dIds.has(id));
+          if (allIds.length > 0) {
+            const vIds = allIds.join(",");
+            const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified,is_visible,is_admin`);
+            // Garder tous les profils retournés, même invisibles
+            const found = Array.isArray(vProfiles) ? vProfiles : [];
+            setVisitors(found);
             const vmeta: Record<string, { date?: string }> = {};
             seen.forEach((date, id) => { vmeta[id] = { date }; });
             setVisitorMeta(vmeta);
@@ -4991,11 +4997,17 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             <>
               {isPremiumReal ? (
                 loading ? <Spinner /> :
-                visitors.length === 0 ? (
+                visitors.length === 0 && viewsCount === 0 ? (
                   <EmptyState
                     icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
                     title="Aucun visiteur pour l'instant"
                     subtitle="Les personnes qui consultent ton profil apparaîtront ici"
+                  />
+                ) : visitors.length === 0 && viewsCount > 0 ? (
+                  <EmptyState
+                    icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                    title={`${viewsCount} visiteur${viewsCount > 1 ? "s ont" : " a"} consulté ton profil`}
+                    subtitle={`${viewsCount > 1 ? "Ces membres ont" : "Ce membre a"} supprimé son compte ou rendu son profil invisible`}
                   />
                 ) : viewMode === "card" ? (
                   <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
