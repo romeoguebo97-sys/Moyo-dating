@@ -9284,14 +9284,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   if (!broadcastText.trim()) return;
                   setBroadcastLoading(true);
                   try {
-                    await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
+                    const bRes = await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
                       body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId }),
                     });
+                    if (!bRes.ok) { const e = await bRes.json().catch(() => ({})); throw new Error(e.message || String(bRes.status)); }
                     showToast("Message diffusé à tous les utilisateurs ✓", "success");
                     setBroadcastModal(false); setBroadcastText("");
-                  } catch { showToast("Erreur lors de la diffusion", "error"); }
+                  } catch (e: any) { showToast("Erreur lors de la diffusion : " + (e.message || ""), "error"); }
                   setBroadcastLoading(false);
                 }} style={{ flex: 1, background: broadcastLoading ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading ? "not-allowed" : "pointer" }}>
                   {broadcastLoading ? "Envoi…" : "Envoyer à tous"}
@@ -11502,7 +11503,8 @@ export default function App() {
     checkWarnings();
   }, [auth?.userId]);
 
-  // ── Vérifier les broadcasts non vus à chaque connexion ──
+  // ── Vérifier les broadcasts non vus (login + polling 30s) ──
+  const checkBroadcastRef = React.useRef<(() => Promise<void>) | null>(null);
   useEffect(() => {
     if (!auth?.userId) return;
     const checkBroadcast = async () => {
@@ -11515,11 +11517,17 @@ export default function App() {
         if (!r.ok) return;
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
-          setPendingBroadcast({ id: data[0].id, message: data[0].message });
+          setPendingBroadcast(prev => {
+            if (prev && prev.id === data[0].id) return prev;
+            return { id: data[0].id, message: data[0].message };
+          });
         }
       } catch {}
     };
+    checkBroadcastRef.current = checkBroadcast;
     checkBroadcast();
+    const broadcastInterval = setInterval(checkBroadcast, 30000);
+    return () => clearInterval(broadcastInterval);
   }, [auth?.userId]);
 
   // ── Vérifier expiration Premium au login ──
