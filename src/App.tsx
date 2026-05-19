@@ -1186,6 +1186,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche votre statut en temps réel : nombre de jours restants, ou 'Actif' si votre abonnement est en cours." },
       { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: "Depuis votre page Profil, appuyez sur 'Parrainer un ami'. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez automatiquement 7 jours de Premium offerts." },
       { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Messages → choisissez une photo. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
+      { icon: "Q", titre: "Pourquoi dois-je confirmer mon email après l'inscription ?", desc: "Après la création de votre compte, un email de confirmation vous est envoyé. Consultez votre boîte mail (y compris les spams) et cliquez sur le lien pour activer votre compte avant de vous connecter." },
+      { icon: "Q", titre: "Je n'ai pas reçu l'email de confirmation ?", desc: "Vérifiez vos spams ou courriers indésirables. Si vous ne le trouvez pas, contactez notre équipe via l'Assistant Moyo avec votre adresse email." },
     ]},
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
       { icon: "shield", titre: "Données sécurisées", desc: "Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers." },
@@ -2482,6 +2484,8 @@ const BOT_FAQ = [
   { q: ["répondre", "citer", "reply", "bandeau", "réponse message"], r: "Appuyez longuement sur un message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
   { q: ["supprimer message", "effacer message", "pour moi", "pour tous"], r: "Appuyez longuement sur un message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté)." },
   { q: ["avertissement", "sanction", "notification officielle", "banni", "suspension"], r: "Un avertissement est une notification officielle MOYO qui apparaît à votre connexion. Vous devez cliquer \"OK, j\'ai compris\" pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
+  { q: ["confirmer", "confirmation", "email confirmation", "activer compte", "lien email"], r: "Après votre inscription, un email de confirmation vous est envoyé. Consultez votre boîte mail (y compris les spams) et cliquez sur le lien pour activer votre compte avant de vous connecter." },
+  { q: ["pas reçu", "email introuvable", "spam", "confirmation pas reçue"], r: "Vérifiez vos spams ou courriers indésirables. Si vous ne trouvez toujours pas l'email, contactez notre équipe via l'Assistant Moyo avec votre adresse email." },
 ];
 
 function getBotResponse(input: string): string {
@@ -8390,6 +8394,55 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+
+  // ── ÉVÉNEMENT PREMIUM ──
+  const [premiumEventActive, setPremiumEventActive] = useState(false);
+  const [premiumEventLoading, setPremiumEventLoading] = useState(false);
+
+  useEffect(() => {
+    // Charger l'état de l'événement premium depuis app_settings
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active&select=value`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+    }).then(r => r.json()).then(data => {
+      if (Array.isArray(data) && data.length > 0) setPremiumEventActive(data[0].value === "true");
+    }).catch(() => {});
+  }, []);
+
+  const togglePremiumEvent = async () => {
+    setPremiumEventLoading(true);
+    const newState = !premiumEventActive;
+    try {
+      // 1. Mettre à jour app_settings
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation,resolution=merge-duplicates" },
+        body: JSON.stringify({ key: "premium_event_active", value: newState ? "true" : "false" }),
+      });
+      if (newState) {
+        // 2. Activer : passer tous les profils en is_premium = true
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?is_premium=eq.false`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ is_premium: true }),
+        });
+        showToast("🎉 Événement Premium activé pour tous les utilisateurs !", "success");
+      } else {
+        // 3. Désactiver : remettre is_premium = false uniquement pour ceux sans premium_until valide
+        const now = new Date().toISOString();
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(premium_until.is.null,premium_until.lt.${now})`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ is_premium: false }),
+        });
+        showToast("Événement Premium désactivé. Les abonnés réels conservent leur statut.", "success");
+      }
+      setPremiumEventActive(newState);
+    } catch {
+      showToast("Erreur lors de la modification de l'événement Premium.", "error");
+    } finally {
+      setPremiumEventLoading(false);
+    }
+  };
   const [warnCustom, setWarnCustom] = useState("");
   const [warnLoading, setWarnLoading] = useState(false);
 
@@ -9134,18 +9187,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ width: isWideMsg ? "50%" : "100%", borderRight: isWideMsg ? `1px solid ${G.gris}` : "none", display: isWideMsg ? "flex" : (msgTab === "modeles" ? "flex" : "none"), flexDirection: "column", background: G.blanc, height: isWideMsg ? "100%" : "auto", flex: isWideMsg ? "none" : "1 1 auto", overflow: "hidden" }}>
                 {/* Header + onglets */}
                 <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: isWideMsg ? "20px 20px 0" : "0 20px 0", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
-                  {/* Titre + icône : desktop/tablette uniquement */}
-                  {isWideMsg && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Message à {msgModal.user.name}</div>
-                        <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un modèle ou écris un message personnalisé</div>
-                      </div>
+                  {/* Titre + icône : tous les écrans */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <div style={{ width: isWideMsg ? 44 : 40, height: isWideMsg ? 44 : 40, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     </div>
-                  )}
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Message à {msgModal.user.name}</div>
+                      <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un modèle ou écris un message personnalisé</div>
+                    </div>
+                  </div>
                   {/* Onglets */}
                   <div style={{ display: "flex", gap: 0 }}>
                     {(["modeles", "historique"] as const).map(tab => (
@@ -10081,6 +10132,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   )}
                 </div>
               )}
+
+              {/* ── ÉVÉNEMENT PREMIUM ── */}
+              <button
+                onClick={togglePremiumEvent}
+                disabled={premiumEventLoading}
+                style={{ width: "100%", background: premiumEventActive ? `linear-gradient(135deg,#27ae60,#1e8449)` : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: premiumEventLoading ? "not-allowed" : "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: premiumEventLoading ? 0.7 : 1 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                {premiumEventLoading ? "En cours…" : premiumEventActive ? "⏹ Désactiver l'événement Premium" : "🎉 Événement Premium — Offrir à tous"}
+              </button>
 
               <button onClick={() => { setBroadcastModal(true); setBroadcastText(""); }} style={{ width: "100%", background: `linear-gradient(135deg,#e67e22,#d35400)`, color: G.blanc, border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
