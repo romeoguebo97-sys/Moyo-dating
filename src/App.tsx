@@ -7954,7 +7954,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs">("stats");
   // ── Vue & tri utilisateurs admin ──
   const [usersViewMode, setUsersViewMode] = useState<"grid" | "list">("grid");
-  const [usersSort, setUsersSort] = useState<"created_at.desc" | "created_at.asc" | "name.asc" | "name.desc" | "last_seen.desc" | "age.asc" | "age.desc">("created_at.desc");
+  const [usersSort, setUsersSort] = useState<"created_at.desc" | "created_at.asc" | "name.asc" | "name.desc" | "last_seen.desc" | "age.asc" | "age.desc" | "online" | "premium" | "lifetime" | "admin" | "verified" | "banned" | "male" | "female">("created_at.desc");
   const [adminViewedProfile, setAdminViewedProfile] = useState<Profile | null>(null);
   const openAdminProfile = async (userId: string) => {
     try {
@@ -8194,8 +8194,27 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Users ──
   const [users, setUsers] = useState<AdminProfile[]>([]);
+  // Helper : premium à vie
+  const isLifetimePremium = (u: AdminProfile) => !!u.premium_until && new Date(u.premium_until).getFullYear() >= 2090;
+  // Tri côté client pour les critères booléens
+  const sortedUsers = React.useMemo(() => {
+    const list = [...users];
+    const now = Date.now();
+    const isOnline = (u: AdminProfile) => !!u.last_seen && (now - new Date(u.last_seen).getTime()) < 5 * 60 * 1000;
+    switch (usersSort) {
+      case "online":    return list.sort((a, b) => Number(isOnline(b)) - Number(isOnline(a)));
+      case "premium":   return list.sort((a, b) => Number(b.is_premium) - Number(a.is_premium));
+      case "lifetime":  return list.sort((a, b) => Number(isLifetimePremium(b)) - Number(isLifetimePremium(a)));
+      case "admin":     return list.sort((a, b) => Number(!!b.is_admin) - Number(!!a.is_admin));
+      case "verified":  return list.sort((a, b) => Number(!!b.is_verified) - Number(!!a.is_verified));
+      case "banned":    return list.sort((a, b) => Number(!!b.is_banned) - Number(!!a.is_banned));
+      case "male":      return list.sort((a, b) => (a.gender === "Homme" ? -1 : 1));
+      case "female":    return list.sort((a, b) => (a.gender === "Femme" ? -1 : 1));
+      default:          return list;
+    }
+  }, [users, usersSort]);
   // Profils incomplets = name est "..." ou vide
-  const displayedUsers = showIncomplete ? users.filter(u => u.name === "..." || !u.name) : users;
+  const displayedUsers = showIncomplete ? sortedUsers.filter(u => u.name === "..." || !u.name) : sortedUsers;
   const [userSearch, setUserSearch] = useState("");
   const [usersLoading, setUsersLoading] = useState(false);
   const [userPage, setUserPage] = useState(0);
@@ -8283,9 +8302,20 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     try {
       const pageSize = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
       const offset = page * pageSize;
-      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&order=${sort}&limit=${pageSize}&offset=${offset}`;
+      // Tris côté serveur (colonnes Supabase) vs tris côté client (booléens)
+      const serverSorts: Record<string, string> = {
+        "created_at.desc": "created_at.desc",
+        "created_at.asc": "created_at.asc",
+        "name.asc": "name.asc",
+        "name.desc": "name.desc",
+        "last_seen.desc": "last_seen.desc",
+        "age.asc": "age.asc",
+        "age.desc": "age.desc",
+      };
+      const serverSort = serverSorts[sort] || "created_at.desc";
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
       if (search.trim()) {
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&name=ilike.*${encodeURIComponent(search.trim())}*&order=${sort}&limit=${pageSize}&offset=${offset}`;
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until&name=ilike.*${encodeURIComponent(search.trim())}*&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       setUsers(res);
@@ -9116,14 +9146,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {([
-                    ["Vue grille / Vue liste", "Basculez entre la vue grille (cartes détaillées) et la vue liste (lignes compactes) via les icônes en haut à droite, à côté du sélecteur de tri."],
-                    ["Tri", "Triez les utilisateurs par : Plus récents, Plus anciens, A→Z, Z→A, Dernière connexion, Âge croissant ou décroissant. Le tri s'applique immédiatement."],
+                    ["Vue grille / Vue liste", "Basculez entre la vue grille (cartes détaillées) et la vue liste (lignes compactes) via les icônes en haut à droite. La vue liste affiche 500 utilisateurs par page avec numérotation, la vue grille en affiche 20."],
+                    ["Tri", "15 options de tri disponibles : Plus récents/anciens, A→Z/Z→A, Dernière connexion, En ligne d'abord, Âge croissant/décroissant, Premium d'abord, ♾️ À vie d'abord, Admin d'abord, Vérifiés d'abord, Bannis d'abord, Hommes/Femmes d'abord. Les tris par statut (Premium, Admin, etc.) s'appliquent instantanément sans rechargement."],
                     ["Voir le profil complet", "Cliquez sur la silhouette/avatar d'un utilisateur pour ouvrir sa fiche complète : photo, bio, religion, profession, centres d'intérêt, date d'inscription."],
                     ["Profils incomplets", "Cochez 'Afficher uniquement les profils incomplets (...)' pour filtrer les comptes dont l'inscription n'a pas été terminée (nom affiché comme '...'). Ces profils n'ont pas finalisé leur inscription."],
                     ["Sélection multiple", "Cochez les cases à gauche de chaque profil pour les sélectionner. Utilisez 'Tout sélectionner' pour sélectionner d'un coup tous les profils affichés. Idéal combiné avec le filtre 'Incomplets'."],
                     ["Suppression en masse", "Une fois des profils sélectionnés, le bouton 🗑 Supprimer (X) apparaît. Cette action supprime définitivement les comptes sélectionnés de la base de données. Irréversible."],
-                    ["Rendre Premium / Retirer Premium", "Attribue 30 jours de Premium ou retire l'accès aux fonctionnalités payantes."],
-                    ["★ À vie", "Attribue le Premium permanent à un utilisateur (date d'expiration fixée à 2099). Réservé aux employés et collaborateurs Moyo. L'utilisateur voit le symbole ∞ sur son profil à la place du compteur de jours."],
+                    ["Rendre Premium / Retirer Premium", "Attribue 30 jours de Premium ou retire l'accès aux fonctionnalités payantes. Si l'utilisateur a le Premium à vie, le bouton affiche '— À vie' à la place."],
+                    ["★ À vie", "Attribue le Premium permanent à un utilisateur (date d'expiration fixée à 2099). Réservé aux employés et collaborateurs Moyo. L'utilisateur voit le symbole ∞ sur son profil. Un badge ♾️ À vie (doré foncé) apparaît directement sur sa carte dans l'Admin. Le bouton est grisé si l'utilisateur a déjà le Premium à vie."],
+                    ["— À vie", "Retire le Premium à vie d'un utilisateur. Ce bouton remplace '— Premium' lorsque l'utilisateur possède le Premium permanent. L'utilisateur repasse en compte gratuit."],
                     ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
                     ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
                     ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
@@ -9643,8 +9674,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <option value="name.asc">🔤 A → Z</option>
               <option value="name.desc">🔤 Z → A</option>
               <option value="last_seen.desc">🟢 Dernière connexion</option>
+              <option value="online">🟢 En ligne d'abord</option>
               <option value="age.asc">🎂 Âge croissant</option>
               <option value="age.desc">🎂 Âge décroissant</option>
+              <option value="premium">⭐ Premium d'abord</option>
+              <option value="lifetime">♾️ Premium à vie d'abord</option>
+              <option value="admin">⚙️ Admin d'abord</option>
+              <option value="verified">✓ Vérifiés d'abord</option>
+              <option value="banned">⛔ Bannis d'abord</option>
+              <option value="male">👨 Hommes d'abord</option>
+              <option value="female">👩 Femmes d'abord</option>
             </select>
             {/* Toggle grille / liste */}
             <div style={{ display: "flex", borderRadius: 10, border: `2px solid ${G.gris}`, overflow: "hidden", flexShrink: 0 }}>
@@ -9751,7 +9790,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                         {/* Badges statuts */}
                         <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
-                          {u.is_premium && <span style={{ background: "rgba(212,168,67,0.15)", color: "#D4A843", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>★ Prem</span>}
+                          {isLifetimePremium(u) && <span style={{ background: "linear-gradient(135deg,#8B6914,#D4A843)", color: G.blanc, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>♾️ À vie</span>}
+                          {u.is_premium && !isLifetimePremium(u) && <span style={{ background: "rgba(212,168,67,0.15)", color: "#D4A843", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>★ Prem</span>}
                           {u.is_verified && <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>✓ Vérifié</span>}
                           {u.is_admin && <span style={{ background: "rgba(231,76,60,0.1)", color: G.rouge, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⚙ Admin</span>}
                           {u.is_banned && <span style={{ background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⛔ Banni</span>}
@@ -9761,9 +9801,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {/* Premium */}
                           {!u.is_premium
                             ? <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading} onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString() }, `${u.name} est maintenant Premium.`))} />
-                            : <ActionBtn label="— Premium" color="#B8860B" disabled={isLoading} onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
+                            : isLifetimePremium(u)
+                              ? <ActionBtn label="— À vie" color="#8B6914" disabled={isLoading} onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
+                              : <ActionBtn label="— Premium" color="#B8860B" disabled={isLoading} onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
                           }
-                          <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading} onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ?`, () => adminAction(u.id, { is_premium: true, premium_until: "2099-12-31T23:59:59.000Z" }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
+                          <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)} onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ?`, () => adminAction(u.id, { is_premium: true, premium_until: "2099-12-31T23:59:59.000Z" }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
                           {/* Admin */}
                           {!u.is_admin
                             ? auth.userId === SUPER_ADMIN_ID && <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading} onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
@@ -9811,6 +9853,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {u.name}
                           {isSelf && <span style={{ fontSize: "0.65rem", background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Vous</span>}
                           {u.name === "..." && <span style={{ fontSize: "0.65rem", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Incomplet</span>}
+                          {isLifetimePremium(u) && <span style={{ fontSize: "0.65rem", background: "linear-gradient(135deg,#8B6914,#D4A843)", color: G.blanc, borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>♾️ À vie</span>}
                           {/* Indicateur connexion */}
                           {(() => {
                             if (!u.last_seen) return null;
@@ -9856,11 +9899,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         {!u.is_premium ? (
                           <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
                             onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString() }, `${u.name} est maintenant Premium.`))} />
+                        ) : isLifetimePremium(u) ? (
+                          <ActionBtn label="— À vie" color="#8B6914" disabled={isLoading}
+                            onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
                         ) : (
                           <ActionBtn label="— Premium" color="#B8860B" disabled={isLoading}
                             onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
                         )}
-                        <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading}
+                        <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
                           onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: "2099-12-31T23:59:59.000Z" }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
                         {!u.is_admin ? (
                           auth.userId === SUPER_ADMIN_ID && (
