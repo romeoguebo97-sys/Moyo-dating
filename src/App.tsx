@@ -9284,10 +9284,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   if (!broadcastText.trim()) return;
                   setBroadcastLoading(true);
                   try {
-                    const bRes = await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
+                    const bRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/insert_broadcast`, {
                       method: "POST",
-                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                      body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId }),
+                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+                      body: JSON.stringify({ p_message: broadcastText.trim(), p_created_by: auth.userId }),
                     });
                     if (!bRes.ok) { const e = await bRes.json().catch(() => ({})); throw new Error(e.message || String(bRes.status)); }
                     showToast("Message diffusé à tous les utilisateurs ✓", "success");
