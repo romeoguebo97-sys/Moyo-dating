@@ -7,7 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Moyo Congo</title>
     <meta name="description" content="Moyo connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora." />
-
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.moyo-congo.com" />
@@ -16,13 +15,11 @@
     <meta property="og:image" content="https://www.moyo-congo.com/og-image.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-
     <!-- Twitter / WhatsApp -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Moyo Congo - Rencontres congolaises" />
     <meta name="twitter:description" content="Moyo connecte les Congolais à la recherche d'une relation sincère et durable." />
     <meta name="twitter:image" content="https://www.moyo-congo.com/og-image.jpg" />
-
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#C0392B">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -50,5 +47,12 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
   </body>
 </html>
