@@ -3794,7 +3794,16 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       </div>
     )}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
-      <h2 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, flexShrink: 0 }}>Découvrir</h2>
+      {/* Bouton Filtres icône SVG à gauche — mobile uniquement */}
+      {!isWide && (
+        <div onClick={() => setShowFilters(s => !s)} style={{ width: 36, height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: showFilters ? G.rouge : G.blanc, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: "50%", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showFilters ? G.blanc : G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/><circle cx="8" cy="6" r="2" fill={showFilters ? G.blanc : G.brun} stroke="none"/>
+            <line x1="4" y1="12" x2="20" y2="12"/><circle cx="16" cy="12" r="2" fill={showFilters ? G.blanc : G.brun} stroke="none"/>
+            <line x1="4" y1="18" x2="20" y2="18"/><circle cx="10" cy="18" r="2" fill={showFilters ? G.blanc : G.brun} stroke="none"/>
+          </svg>
+        </div>
+      )}
       {/* Compteur likes gratuits — visible uniquement pour les non-premium */}
       {!auth.isPremium && (
         <div style={{ display: "flex", alignItems: "center", gap: 5, background: likesToday >= FREE_LIMITS.likes ? "rgba(231,76,60,0.1)" : "rgba(26,92,58,0.08)", borderRadius: 50, padding: "4px 10px 4px 8px", border: `1.5px solid ${likesToday >= FREE_LIMITS.likes ? "#e74c3c" : G.vert}`, flexShrink: 0 }}>
@@ -3804,7 +3813,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
           </span>
         </div>
       )}
-      {/* Boutons vue/filtres — masqués sur desktop (panneau droit) */}
+      {/* Boutons Plein écran + Liste — à droite, mobile uniquement */}
       {!isWide && <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "flex-end", flexWrap: "nowrap", minWidth: 0 }}>
         <div onClick={() => {
           const next = viewMode === "list" ? "card" : "list";
@@ -3818,9 +3827,6 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
           window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: true } }));
         }} style={{ background: viewMode === "full" ? G.rouge : G.blanc, color: viewMode === "full" ? G.blanc : "#111", border: `2px solid ${viewMode === "full" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           Plein écran
-        </div>
-        <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
-          Filtres
         </div>
       </div>}
     </div>{(!isWide && showFilters) && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
@@ -4125,6 +4131,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
   const [liking, setLiking] = useState(false);
 
   const handleLikeFromBanner = async (p: Profile) => {
+    if (myGender && p.gender && myGender === p.gender) { setShowSameGender(true); return; }
     setLiking(true);
     try {
       await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
@@ -4457,6 +4464,12 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   const [liking, setLiking] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [isPremiumReal, setIsPremiumReal] = useState(auth.isPremium);
+  const [myGender, setMyGender] = useState("");
+  const [showSameGender, setShowSameGender] = useState(false);
+  useEffect(() => {
+    sb.query<{ gender: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
+      .then(res => { if (res?.[0]) setMyGender(res[0].gender); }).catch(() => {});
+  }, [auth.userId]);
   const loadData = async (premiumOverride?: boolean) => {
     const isPrem = premiumOverride !== undefined ? premiumOverride : isPremiumReal;
     setLoading(true);
@@ -4594,6 +4607,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   const handleDismiss = (p: Profile, e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(p); };
 
   const handleLike = async (p: Profile) => {
+    if (myGender && p.gender && myGender === p.gender) { setShowSameGender(true); return; }
     setLiking(true);
     try {
       await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
@@ -4731,20 +4745,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   return (
     <div style={{ padding: "12px 16px 24px" }}>
       {/* ── En-tête ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <h2 style={{ fontSize: "1.18rem", fontWeight: 800, color: "#111" }}>
-          {mode === "likes" ? (
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              Likes
-            </span>
-          ) : (
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Vus
-            </span>
-          )}
-        </h2>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")}
             style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`,
@@ -5183,6 +5184,20 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
           </div>
         </div>
       )}
+      {showSameGender && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: "32px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+            <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGender === "Homme" ? "🕺" : "💃"}</div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>
+              {myGender === "Homme" ? "Eh frère, reste du bon côté ! 😂" : "Eh sœur, reste du bon côté ! 😂"}
+            </h3>
+            <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20, lineHeight: 1.5 }}>
+              Moyo c'est pour les rencontres hétérosexuelles 😄
+            </p>
+            <Btn variant="primary" onClick={() => setShowSameGender(false)} style={{ width: "100%" }}>J'ai compris 😄</Btn>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -5279,8 +5294,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const p = selectedMatch?.partner;
 
   return <div style={{ padding: "12px 16px 16px" }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-      <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>Matchs</h2>
+    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: 12 }}>
       <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>
     </div>
     {/* Overlay fermeture menu */}
@@ -6098,7 +6112,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   // ── Liste des conversations (commun mobile + desktop) ──
   const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
     <div style={{ padding: isWideMsg ? "16px 16px 8px" : "12px 16px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-      {!isWideMsg && <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 12 }}>Messages</h2>}
+      {!isWideMsg && null}
       <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
       <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 8px", WebkitOverflowScrolling: "touch" }}>
         <div onClick={() => {
@@ -6749,7 +6763,6 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     ) : (
       <>
         {!open && <>
-          <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 16 }}>Messages</h2>
           <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
         </>}
       </>
@@ -9293,14 +9306,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   if (!broadcastText.trim()) return;
                   setBroadcastLoading(true);
                   try {
-                    await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
+                    const bRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/insert_broadcast`, {
                       method: "POST",
-                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                      body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId }),
+                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+                      body: JSON.stringify({ p_message: broadcastText.trim(), p_created_by: auth.userId }),
                     });
+                    if (!bRes.ok) { const e = await bRes.json().catch(() => ({})); throw new Error(e.message || String(bRes.status)); }
                     showToast("Message diffusé à tous les utilisateurs ✓", "success");
                     setBroadcastModal(false); setBroadcastText("");
-                  } catch { showToast("Erreur lors de la diffusion", "error"); }
+                  } catch (e: any) { showToast("Erreur lors de la diffusion : " + (e.message || ""), "error"); }
                   setBroadcastLoading(false);
                 }} style={{ flex: 1, background: broadcastLoading ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading ? "not-allowed" : "pointer" }}>
                   {broadcastLoading ? "Envoi…" : "Envoyer à tous"}
@@ -11511,7 +11525,8 @@ export default function App() {
     checkWarnings();
   }, [auth?.userId]);
 
-  // ── Vérifier les broadcasts non vus à chaque connexion ──
+  // ── Vérifier les broadcasts non vus (login + polling 30s) ──
+  const checkBroadcastRef = React.useRef<(() => Promise<void>) | null>(null);
   useEffect(() => {
     if (!auth?.userId) return;
     const checkBroadcast = async () => {
@@ -11524,11 +11539,17 @@ export default function App() {
         if (!r.ok) return;
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
-          setPendingBroadcast({ id: data[0].id, message: data[0].message });
+          setPendingBroadcast(prev => {
+            if (prev && prev.id === data[0].id) return prev;
+            return { id: data[0].id, message: data[0].message };
+          });
         }
       } catch {}
     };
+    checkBroadcastRef.current = checkBroadcast;
     checkBroadcast();
+    const broadcastInterval = setInterval(checkBroadcast, 30000);
+    return () => clearInterval(broadcastInterval);
   }, [auth?.userId]);
 
   // ── Vérifier expiration Premium au login ──
