@@ -8307,7 +8307,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setLogsLoading(false);
   };
   const clearAdminLogs = async () => {
-    if (!window.confirm("Voulez-vous vraiment effacer tout l'historique des actions admin ? Cette action est irréversible.")) return;
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       setAdminLogs([]);
@@ -8491,10 +8490,17 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   const deleteMsgHistory = async (id: string, userId: string) => {
-    await sb.delete(auth.token, "user_warnings", `?id=eq.${id}`);
+    // Supprimer optimistiquement d'abord
     setMsgHistory(prev => prev.filter(m => m.id !== id));
-    // Recharger depuis la base pour s'assurer de la cohérence
-    setTimeout(() => loadMsgHistory(userId), 300);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }
+      });
+    } catch {
+      // Si erreur, recharger pour remettre le bon état
+      loadMsgHistory(userId);
+    }
   };
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
