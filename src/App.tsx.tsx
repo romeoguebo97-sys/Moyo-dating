@@ -1770,7 +1770,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                         .then(res => res.json()).then((d: any[]) => d[0]).catch(() => null);
                       return { id: r.id, name: prof?.name || "Membre", city: prof?.city || "Congo", comment: r.comment || "", rating: r.rating };
                     }));
-                    setFeaturedAvis(enriched.filter(a => a.comment));
+                    setFeaturedAvis(enriched);
                   })
                   .catch(() => {});
               }, []);
@@ -1844,9 +1844,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                         <svg key={si} width="13" height="13" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                       ))}
                     </div>
-                    <p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.8, fontStyle: "italic", marginBottom: 22, paddingLeft: 12 }}>
-                      "{t.temoignage}"
-                    </p>
+                    {t.temoignage && (
+                      <p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.8, fontStyle: "italic", marginBottom: 22, paddingLeft: 12 }}>
+                        "{t.temoignage}"
+                      </p>
+                    )}
                     <div style={{ display: "flex", alignItems: "center", gap: 14, paddingLeft: 12 }}>
                       <div style={{ width: 56, height: 56, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg,${G.cremeDark},${G.creme})`, border: `2px solid ${t.accent}`, boxShadow: `0 4px 14px rgba(44,26,14,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111" }}>{t.initiales}</span>
@@ -8314,7 +8316,14 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const clearAdminLogs = async () => {
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      // Supprimer tous les logs un par un depuis le state local
+      const ids = adminLogs.map(l => l.id);
+      await Promise.all(ids.map(id =>
+        fetch(`${SUPABASE_URL}/rest/v1/admin_logs?id=eq.${id}`, {
+          method: "DELETE",
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+        })
+      ));
       setAdminLogs([]);
       showToast("Historique admin effacé.", "success");
     } catch {
