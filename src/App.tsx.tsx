@@ -2917,7 +2917,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
   const isTablet = screenWidth >= 768 && screenWidth < 1024;
   const isWide = screenWidth >= 768;
 
-  return <div data-active-tab={tab} style={{ maxWidth: isWide ? "none" : 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: isWide ? "row" : "column", background: isWide ? "#EAEDF2" : G.creme, boxShadow: isWide ? "none" : "0 0 60px rgba(44,26,14,0.12)" }}>
+  return <div data-active-tab={tab} style={{ maxWidth: isWide ? "none" : 500, margin: "0 auto", minHeight: "100vh", height: isWide ? "100vh" : undefined, display: "flex", flexDirection: isWide ? "row" : "column", background: isWide ? "#EAEDF2" : G.creme, boxShadow: isWide ? "none" : "0 0 60px rgba(44,26,14,0.12)", overflow: isWide ? "hidden" : undefined }}>
     <style>{`
       .moyo-footer-hidden { transform: translateX(-50%) translateY(100%) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
       .moyo-footer-visible { transform: translateX(-50%) translateY(0) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
@@ -2937,8 +2937,8 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       .moyo-sidebar-bottom:hover { background: ${G.creme}; }
       .moyo-main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow: hidden; }
       .moyo-topbar-wide { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; background: ${G.blanc}; border-bottom: 1px solid ${G.gris}; flex-shrink: 0; }
-      .moyo-content-wide { flex: 1; overflow-y: auto; padding-bottom: 0; }
-      .moyo-content-wide.fullscreen-mode { overflow: hidden; height: 100%; }
+      .moyo-content-wide { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 0; }
+      .moyo-content-wide.fullscreen-mode { overflow: hidden; display: flex; flex-direction: column; }
     `}</style>
 
     {/* ── SIDEBAR (desktop/tablette) ── */}
@@ -3706,7 +3706,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   }, [profiles]);
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
 
-  return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto", overflow: isWide && (viewMode as string) === "full" ? "hidden" : undefined }}>
+  return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto", minHeight: 0, overflow: isWide && (viewMode as string) === "full" ? "hidden" : undefined }}>
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
     {isWide && (
       <div style={{ width: 260, minWidth: 260, background: viewMode === "full" ? "rgba(15,10,5,0.55)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.08)" : G.gris}`, overflowY: viewMode === "full" ? "hidden" : "auto", height: "100%", display: "flex", flexDirection: "column", transition: "all 0.45s cubic-bezier(0.4,0,0.2,1)", zIndex: viewMode === "full" ? 10 : 1, pointerEvents: viewMode === "full" ? "none" : "auto", filter: viewMode === "full" ? "blur(2px)" : "none" }}>
