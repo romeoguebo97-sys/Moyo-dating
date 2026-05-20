@@ -1776,21 +1776,21 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             const accents = [G.rouge, G.or, G.vert, G.rouge, G.or, G.vert];
             const isMobile = window.innerWidth < 768;
             const CarouselTesti = () => {
-              const temoignages = featuredAvis.length > 0
-                ? featuredAvis.map((a, i) => ({
-                    initiales: a.name.slice(0, 2).toUpperCase(),
-                    noms: a.name,
-                    lieu: a.city,
-                    since: "",
-                    temoignage: a.comment,
-                    stars: a.rating,
-                    accent: accents[i % accents.length],
-                  }))
-                : [
-                    { initiales: "OA", noms: "Orlane & Armel", lieu: "Diaspora France / Congo", since: "Ensemble depuis 2024", temoignage: "Même à distance, nous avons réussi à créer une vraie connexion. Moyo nous a donné l'espace pour nous découvrir vraiment avant de se rencontrer.", stars: 5, accent: G.rouge },
-                    { initiales: "GJ", noms: "Grâce & Junior", lieu: "Brazzaville", since: "Mariage coutumier en préparation", temoignage: "On discutait simplement au début… aujourd'hui nous préparons notre mariage coutumier. Moyo nous a mis en contact avec les bonnes personnes.", stars: 5, accent: G.or },
-                    { initiales: "RL", noms: "Ruth & Lionel", lieu: "Pointe-Noire", since: "En couple depuis 18 mois", temoignage: "Après plusieurs déceptions sur d'autres applis, Moyo nous a permis de construire une relation sérieuse. Ici les gens cherchent vraiment l'amour.", stars: 5, accent: G.vert },
-                  ];
+              const fictifs = [
+                { initiales: "OA", noms: "Orlane & Armel", lieu: "Diaspora France / Congo", since: "Ensemble depuis 2024", temoignage: "Même à distance, nous avons réussi à créer une vraie connexion. Moyo nous a donné l'espace pour nous découvrir vraiment avant de se rencontrer.", stars: 5, accent: G.rouge },
+                { initiales: "GJ", noms: "Grâce & Junior", lieu: "Brazzaville", since: "Mariage coutumier en préparation", temoignage: "On discutait simplement au début… aujourd'hui nous préparons notre mariage coutumier. Moyo nous a mis en contact avec les bonnes personnes.", stars: 5, accent: G.or },
+                { initiales: "RL", noms: "Ruth & Lionel", lieu: "Pointe-Noire", since: "En couple depuis 18 mois", temoignage: "Après plusieurs déceptions sur d'autres applis, Moyo nous a permis de construire une relation sérieuse. Ici les gens cherchent vraiment l'amour.", stars: 5, accent: G.vert },
+              ];
+              const vrais = featuredAvis.map((a, i) => ({
+                initiales: a.name.slice(0, 2).toUpperCase(),
+                noms: a.name,
+                lieu: a.city,
+                since: "",
+                temoignage: a.comment,
+                stars: a.rating,
+                accent: accents[i % accents.length],
+              }));
+              const temoignages = [...vrais, ...fictifs];
               const [idx, setIdx] = React.useState(0);
               const [slideDir, setSlideDir] = React.useState<"left"|"right">("left");
               const [animKey, setAnimKey] = React.useState(0);
