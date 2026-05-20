@@ -2921,7 +2921,8 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     <style>{`
       .moyo-footer-hidden { transform: translateX(-50%) translateY(100%) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
       .moyo-footer-visible { transform: translateX(-50%) translateY(0) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
-      .moyo-sidebar { width: 250px; min-width: 250px; background: ${G.blanc}; border-right: 1px solid ${G.gris}; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; box-shadow: 2px 0 16px rgba(44,26,14,0.06); z-index: 100; }
+      .moyo-sidebar { width: 250px; min-width: 250px; background: ${G.blanc}; border-right: 1px solid ${G.gris}; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; box-shadow: 2px 0 16px rgba(44,26,14,0.06); z-index: 100; transition: all 0.45s cubic-bezier(0.4,0,0.2,1); }
+      .moyo-sidebar.fullscreen-blur { background: rgba(15,10,5,0.55) !important; filter: blur(2px); pointer-events: none; }
       .moyo-sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid ${G.gris}; display: flex; align-items: center; justify-content: space-between; }
       .moyo-sidebar-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
       .moyo-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: all 0.15s; position: relative; font-weight: 600; font-size: 0.83rem; color: #666; }
@@ -2941,7 +2942,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
 
     {/* ── SIDEBAR (desktop/tablette) ── */}
     {isWide && (
-      <div className="moyo-sidebar">
+      <div className={`moyo-sidebar${isFullscreen ? " fullscreen-blur" : ""}`}>
         <div className="moyo-sidebar-logo">
           <div style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
             <span style={{ color: G.rouge }}>Mo</span><span style={{ color: G.or }}>yo</span>
@@ -3707,7 +3708,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
     {isWide && (
-      <div style={{ width: 260, minWidth: 260, background: viewMode === "full" ? "rgba(255,255,255,0.72)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.4)" : G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column", transition: "background 0.35s, backdrop-filter 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
+      <div style={{ width: 260, minWidth: 260, background: viewMode === "full" ? "rgba(15,10,5,0.55)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.08)" : G.gris}`, overflowY: viewMode === "full" ? "hidden" : "auto", height: "100%", display: "flex", flexDirection: "column", transition: "all 0.45s cubic-bezier(0.4,0,0.2,1)", zIndex: viewMode === "full" ? 10 : 1, pointerEvents: viewMode === "full" ? "none" : "auto", filter: viewMode === "full" ? "blur(2px)" : "none" }}>
         <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
           {profiles.map((prof, idx) => {
             const isActive = idx === current;
@@ -3946,7 +3947,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined }}><div style={{ height: isWide ? undefined : 210, flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : "none" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}</div><div style={{ padding: "10px 14px", flexShrink: 0 }}>
+  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined }}><div style={{ height: isWide ? undefined : 210, flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : "none", position: "relative" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && viewMode === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: isWide && viewMode === "full" ? "none" : "block" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div>
     {/* 3 traits menu - single tap/click → bottom sheet */}
@@ -4056,7 +4057,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
 
     {/* ── PANNEAU DROIT (desktop/tablette uniquement) ── */}
     {isWide && (
-      <div style={{ width: 330, minWidth: 330, background: viewMode === "full" ? "rgba(255,255,255,0.72)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", borderLeft: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.4)" : G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%", transition: "background 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
+      <div style={{ width: 330, minWidth: 330, background: viewMode === "full" ? "rgba(15,10,5,0.55)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", borderLeft: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.08)" : G.gris}`, padding: "20px 16px", overflowY: viewMode === "full" ? "hidden" : "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%", transition: "all 0.45s cubic-bezier(0.4,0,0.2,1)", zIndex: viewMode === "full" ? 10 : 1, pointerEvents: viewMode === "full" ? "none" : "auto", filter: viewMode === "full" ? "blur(2px)" : "none" }}>
 
         {/* 1. Affichage */}
         <div>
