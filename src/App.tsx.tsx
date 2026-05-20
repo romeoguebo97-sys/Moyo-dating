@@ -2723,7 +2723,7 @@ function AdminDesktopPage() {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
     }).then(r => r.json()).then(data => {
       if (Array.isArray(data) && data.length > 0)
-        setRules(r => ({ ...r, blockSameGenderLike: data[0].value !== "false" }));
+        setRules(r => ({ ...r, blockSameGenderLike: data[0].value === "true" }));
     }).catch(() => {});
   }, [auth]);
 
@@ -3650,11 +3650,11 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
 
   const handleLike = useCallback(async (p: Profile) => {
     if (myGender && p.gender && myGender === p.gender) {
-      // Vérifier la règle dynamique depuis app_settings
       try {
         const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const data = await r.json().catch(() => []);
-        const blocked = !Array.isArray(data) || data.length === 0 || data[0].value !== "false";
+        // blocked = true si la règle est "true" ou absente (par défaut bloqué)
+        const blocked = !Array.isArray(data) || data.length === 0 || data[0].value === "true";
         if (blocked) { setShowSameGender(true); return; }
       } catch { setShowSameGender(true); return; }
     }
