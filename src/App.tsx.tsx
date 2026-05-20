@@ -2921,7 +2921,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     <style>{`
       .moyo-footer-hidden { transform: translateX(-50%) translateY(100%) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
       .moyo-footer-visible { transform: translateX(-50%) translateY(0) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
-      .moyo-sidebar { width: 260px; min-width: 260px; background: ${G.blanc}; border-right: 1px solid ${G.gris}; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; box-shadow: 2px 0 16px rgba(44,26,14,0.06); z-index: 100; }
+      .moyo-sidebar { width: 250px; min-width: 250px; background: ${G.blanc}; border-right: 1px solid ${G.gris}; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; box-shadow: 2px 0 16px rgba(44,26,14,0.06); z-index: 100; }
       .moyo-sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid ${G.gris}; display: flex; align-items: center; justify-content: space-between; }
       .moyo-sidebar-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
       .moyo-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: all 0.15s; position: relative; font-weight: 600; font-size: 0.83rem; color: #666; }
@@ -2991,7 +2991,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     {/* ── ZONE PRINCIPALE ── */}
     {isWide ? (
       <div className="moyo-main-area">
-        <div className="moyo-content-wide" style={{ maxWidth: 560, margin: "0 auto", width: "100%" }}>{children}</div>
+        <div className="moyo-content-wide">{children}</div>
       </div>
     ) : (
       <>
@@ -3707,7 +3707,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
     {isWide && (
-      <div style={{ width: 220, minWidth: 220, background: viewMode === "full" ? "rgba(255,255,255,0.72)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.4)" : G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column", transition: "background 0.35s, backdrop-filter 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
+      <div style={{ width: 260, minWidth: 260, background: viewMode === "full" ? "rgba(255,255,255,0.72)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.4)" : G.gris}`, overflowY: "auto", height: "100%", display: "flex", flexDirection: "column", transition: "background 0.35s, backdrop-filter 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
         <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
           {profiles.map((prof, idx) => {
             const isActive = idx === current;
@@ -4056,7 +4056,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
 
     {/* ── PANNEAU DROIT (desktop/tablette uniquement) ── */}
     {isWide && (
-      <div style={{ width: 340, minWidth: 340, background: viewMode === "full" ? "rgba(255,255,255,0.72)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", borderLeft: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.4)" : G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%", transition: "background 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
+      <div style={{ width: 330, minWidth: 330, background: viewMode === "full" ? "rgba(255,255,255,0.72)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(18px) saturate(1.8)" : "none", borderLeft: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.4)" : G.gris}`, padding: "20px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, height: "100%", transition: "background 0.35s", zIndex: viewMode === "full" ? 10 : 1 }}>
 
         {/* 1. Affichage */}
         <div>
