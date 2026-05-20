@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 
 const SUPABASE_URL = "https://mcswcapxpruiffzrxfvl.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nx44ipF3_X98flDVXxBZ5A_aztvDdgN";
@@ -787,13 +787,13 @@ function PremiumBadge({ size = 16 }: { size?: number }) {
   );
 }
 
-function Avatar({ url, gender, size = 54, border = false, premium = false }: { url?: string | null; gender?: string; size?: number; border?: boolean; premium?: boolean }) {
+const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, premium = false }: { url?: string | null; gender?: string; size?: number; border?: boolean; premium?: boolean }) {
   // ── Cercle doré pour les membres Premium, rouge pour les autres ──
   const borderColor = border ? (premium ? G.or : G.rouge) : "none";
   const borderStyle = border ? `3px solid ${borderColor}` : "none";
   const boxShadow = border && premium ? `0 0 0 1px ${G.or}44` : "none";
   return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.45 }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (gender === "Femme" ? "👩🏿" : "👨🏿")}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", border: `2px solid ${G.blanc}` }}>⭐</div>}</div>;
-}
+});
 
 function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void; reason: string; userId: string; token: string }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "proof">("offer");
@@ -3159,7 +3159,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
   </div>;
 }
 
-function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPremium }: { prof: Profile; liked: boolean; onLike: () => void; onBlock: () => void; onReport: (r: string) => void; onView?: () => void; isPremium?: boolean }) {
+const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPremium }: { prof: Profile; liked: boolean; onLike: () => void; onBlock: () => void; onReport: (r: string) => void; onView?: () => void; isPremium?: boolean }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showSignalerMenu, setShowSignalerMenu] = useState(false);
   return (
@@ -3220,7 +3220,7 @@ function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPre
       )}
     </div>
   );
-}
+});
 
 // ── CAROUSEL D'ENGAGEMENT PREMIUM ──
 const premiumConversionSlides = [
@@ -3603,7 +3603,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     } catch {}
   };
 
-  const handleLike = async (p: Profile) => {
+  const handleLike = useCallback(async (p: Profile) => {
     if (myGender && p.gender && myGender === p.gender) { setShowSameGender(true); return; }
     if (likedIds.has(p.id)) {
       // Unlike - mise à jour optimiste immédiate
@@ -3657,7 +3657,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
         setMatchPop(p);
       }
     }
-  };
+  }, [auth, likedIds, likesToday, myGender, onShowPremium]);
 
   // ── État toast local pour Discover ──
   const [discoverToast, setDiscoverToast] = useState<ToastState>(null);
@@ -4389,14 +4389,14 @@ function InnerSwitch({ options, value, onChange }: {
 }
 
 // Badge générique
-function Badge({ label, color = G.rouge, bg = "rgba(192,57,43,0.1)" }: { label: React.ReactNode; color?: string; bg?: string }) {
+const Badge = memo(function Badge({ label, color = G.rouge, bg = "rgba(192,57,43,0.1)" }: { label: React.ReactNode; color?: string; bg?: string }) {
   return (
     <span style={{ background: bg, color, borderRadius: 50, padding: "2px 8px",
       fontSize: "0.65rem", fontWeight: 700, letterSpacing: 0.2, flexShrink: 0 }}>
       {label}
     </span>
   );
-}
+});
 
 // Bloc flou Premium CTA
 function PremiumBlur({ count, label, onShowPremium }: { count: number; label: string; onShowPremium: () => void }) {
@@ -4446,7 +4446,7 @@ function PremiumBlur({ count, label, onShowPremium }: { count: number; label: st
 }
 
 // Empty state élégant
-function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) {
+const EmptyState = memo(function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) {
   return (
     <div style={{ textAlign: "center", padding: "44px 24px", display: "flex", flexDirection: "column",
       alignItems: "center", gap: 14 }}>
@@ -4460,7 +4460,7 @@ function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: s
       </div>
     </div>
   );
-}
+});
 
 function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void }) {
   // ── Sub-tab state ──
@@ -5456,7 +5456,7 @@ function getOnlineStatus(lastSeen?: string): { label: string; color: string } {
   return { label: `Vu il y a ${Math.floor(diff / 1440)}j`, color: "#bbb" };
 }
 
-function TickIcon({ read, isPremium, white = false }: { read: boolean; isPremium: boolean; white?: boolean }) {
+const TickIcon = memo(function TickIcon({ read, isPremium, white = false }: { read: boolean; isPremium: boolean; white?: boolean }) {
   if (!isPremium) {
     // Gratuit : juste une coche grise
     return (
@@ -5477,7 +5477,7 @@ function TickIcon({ read, isPremium, white = false }: { read: boolean; isPremium
       </svg>
     </div>
   );
-}
+});
 
 const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId, onCancel }: {
   replyTo: Message; partnerName?: string; myId: string; onCancel: () => void;
@@ -6022,7 +6022,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     setShowDeleteConv(false); setOpen(null); loadConvs();
   };
 
-  const send = async () => {
+  const send = useCallback(async () => {
     if (!text.trim() || !open) return;
     if (open.id === "__support__") {
       const msgText = text.trim();
@@ -6060,7 +6060,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content.substring(0, 60)}]\n` : "";
     const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: prefix + text, is_read: false });
     if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); setReplyTo(null); }
-  };
+  }, [auth, open, text, replyTo, msgCount, onShowPremium]);
 
   const sendImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -6097,7 +6097,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
   const isWideMsg = window.innerWidth >= 768;
 
-  const statusGroups = Array.from(
+  const statusGroups = useMemo(() => Array.from(
     statuses.reduce((acc, st) => {
       if (!st.user_id) return acc;
       const current = acc.get(st.user_id) || [];
@@ -6109,7 +6109,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     userId,
     items: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()),
     first: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0],
-  })).filter(g => !!g.first);
+  })).filter(g => !!g.first), [statuses]);
 
   // ── Liste des conversations (commun mobile + desktop) ──
   const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
