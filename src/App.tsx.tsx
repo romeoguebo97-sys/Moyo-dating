@@ -2835,10 +2835,10 @@ function AdminDesktopPage() {
                     if (!auth) return;
                     const newVal = !rules.blockSameGenderLike;
                     setRules(r => ({ ...r, blockSameGenderLike: newVal }));
-                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation,resolution=merge-duplicates" },
-                      body: JSON.stringify({ key: "rule_block_same_gender_like", value: String(newVal) }),
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+                      body: JSON.stringify({ value: String(newVal) }),
                     });
                   }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: rules.blockSameGenderLike ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
                     <div style={{ position: "absolute", top: 3, left: rules.blockSameGenderLike ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
@@ -8628,10 +8628,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const expiresAt = new Date(data[0].value);
         if (expiresAt < new Date()) {
           // Événement expiré — désactiver automatiquement
-          await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation,resolution=merge-duplicates" },
-            body: JSON.stringify({ key: "premium_event_active", value: "false" }),
+          await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+            body: JSON.stringify({ value: "false" }),
           });
           const now = new Date().toISOString();
           await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(premium_until.is.null,premium_until.lt.${now})`, {
@@ -8653,10 +8653,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const newState = !premiumEventActive;
     try {
       // 1. Mettre à jour app_settings
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation,resolution=merge-duplicates" },
-        body: JSON.stringify({ key: "premium_event_active", value: newState ? "true" : "false" }),
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ value: newState ? "true" : "false" }),
       });
       if (newState) {
         // 2. Activer : passer tous les profils en is_premium = true
@@ -8667,10 +8667,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         });
         // Sauvegarder la date d'expiration
         if (premiumEventExpiresAt) {
-          await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation,resolution=merge-duplicates" },
-            body: JSON.stringify({ key: "premium_event_expires_at", value: new Date(premiumEventExpiresAt).toISOString() }),
+          await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_expires_at`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+            body: JSON.stringify({ value: new Date(premiumEventExpiresAt).toISOString() }),
           });
         }
         showToast("🎉 Événement Premium activé pour tous les utilisateurs !", "success");
