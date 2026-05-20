@@ -2714,6 +2714,18 @@ const openAdminPanel = (fallback: () => void) => {
 function AdminDesktopPage() {
   const [auth, setAuth] = React.useState<Auth | null>(null);
   const [checked, setChecked] = React.useState(false);
+  const [rulesMenuOpen, setRulesMenuOpen] = React.useState(false);
+  const [rules, setRules] = React.useState({ blockSameGenderLike: true });
+
+  React.useEffect(() => {
+    if (!auth) return;
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+    }).then(r => r.json()).then(data => {
+      if (Array.isArray(data) && data.length > 0)
+        setRules(r => ({ ...r, blockSameGenderLike: data[0].value !== "false" }));
+    }).catch(() => {});
+  }, [auth]);
 
   React.useEffect(() => {
     try {
@@ -2820,6 +2832,7 @@ function AdminDesktopPage() {
                     <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Homme → Homme / Femme → Femme</div>
                   </div>
                   <button onClick={async () => {
+                    if (!auth) return;
                     const newVal = !rules.blockSameGenderLike;
                     setRules(r => ({ ...r, blockSameGenderLike: newVal }));
                     await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
@@ -8595,17 +8608,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [premiumEventLoading, setPremiumEventLoading] = useState(false);
   const [premiumEventConfirm, setPremiumEventConfirm] = useState(false);
   const [premiumEventExpiresAt, setPremiumEventExpiresAt] = useState("");
-  const [rulesMenuOpen, setRulesMenuOpen] = useState(false);
-  const [rules, setRules] = useState({ blockSameGenderLike: true });
-
-  useEffect(() => {
-    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value`, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
-    }).then(r => r.json()).then(data => {
-      if (Array.isArray(data) && data.length > 0)
-        setRules(r => ({ ...r, blockSameGenderLike: data[0].value !== "false" }));
-    }).catch(() => {});
-  }, []);
 
   useEffect(() => {
     // Charger l'état de l'événement premium depuis app_settings
