@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { G, SUPABASE_URL, SUPABASE_KEY } from "./constants";
-import { Auth } from "./types";
+import { Auth, Profile } from "./types";
 import { sb } from "./lib/supabase";
 
 // ── Chargés immédiatement (nécessaires dès l'ouverture) ──
-import { Landing, About, Login, SignUp, ResetPassword } from "./components/auth/LoginSignUp";
+import { Login, SignUp } from "./components/auth/LoginSignUp";
+import { Landing } from "./components/auth/Landing";
+import { About } from "./components/auth/About";
+import { ResetPassword } from "./components/auth/ResetPassword";
 import { AppShell } from "./components/shell/AppShell";
 import { PremiumModal } from "./components/premium/PremiumModal";
 import { UserWarningModal } from "./components/admin/Admin";
