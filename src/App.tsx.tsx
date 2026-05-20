@@ -8307,16 +8307,14 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setLogsLoading(false);
   };
   const clearAdminLogs = async () => {
-    // ── Confirmation obligatoire avant suppression irréversible ──
-    confirm("Voulez-vous vraiment effacer tout l'historique des actions admin ? Cette action est irréversible.", async () => {
-      try {
-        await fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-        setAdminLogs([]);
-        showToast("Historique admin effacé.", "success");
-      } catch {
-        showToast("Erreur lors de la suppression des logs.", "error");
-      }
-    });
+    if (!window.confirm("Voulez-vous vraiment effacer tout l'historique des actions admin ? Cette action est irréversible.")) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      setAdminLogs([]);
+      showToast("Historique admin effacé.", "success");
+    } catch {
+      showToast("Erreur lors de la suppression des logs.", "error");
+    }
   };
   const [viewPaymentProfile, setViewPaymentProfile] = useState<Profile | null>(null);
   const openPaymentProfile = async (userId: string) => {
@@ -8492,9 +8490,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setMsgHistoryLoading(false);
   };
 
-  const deleteMsgHistory = async (id: string) => {
+  const deleteMsgHistory = async (id: string, userId: string) => {
     await sb.delete(auth.token, "user_warnings", `?id=eq.${id}`);
     setMsgHistory(prev => prev.filter(m => m.id !== id));
+    // Recharger depuis la base pour s'assurer de la cohérence
+    setTimeout(() => loadMsgHistory(userId), 300);
   };
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
@@ -9345,16 +9345,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ) : msgHistory.length === 0 ? (
               <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun message envoyé pour le moment</div>
             ) : (
-              <div style={{ maxHeight: isWideMsg ? 140 : "100%", overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
                 {msgHistory.map(m => (
                   <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFB", borderRadius: 8, padding: "7px 10px", border: "1px solid #E8F0F8" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: "0.68rem", color: "#2980b9", fontWeight: 600, marginBottom: 2 }}>
                         {new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </div>
-                      <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.reason}</div>
+                      <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4 }}>{m.reason}</div>
                     </div>
-                    <button onClick={() => deleteMsgHistory(m.id)} title="Supprimer" style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                    <button onClick={() => deleteMsgHistory(m.id, msgModal!.user.id)} title="Supprimer" style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                     </button>
                   </div>
@@ -9372,8 +9372,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ width: isWideMsg ? "50%" : "100%", borderRight: isWideMsg ? `1px solid ${G.gris}` : "none", display: isWideMsg ? "flex" : (msgTab === "modeles" ? "flex" : "none"), flexDirection: "column", background: G.blanc, height: isWideMsg ? "100%" : "auto", flex: isWideMsg ? "none" : "1 1 auto", overflow: "hidden" }}>
                 {/* Header + onglets */}
                 <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: isWideMsg ? "20px 20px 0" : "0 20px 0", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
-                  {/* Titre + icône : tous les écrans */}
+                  {/* Titre + icône + bouton retour */}
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <button onClick={() => { setMsgModal(null); setMsgText(""); setMsgHistory([]); setMsgTab("modeles"); }} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(41,128,185,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
                     <div style={{ width: isWideMsg ? 44 : 40, height: isWideMsg ? 44 : 40, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     </div>
