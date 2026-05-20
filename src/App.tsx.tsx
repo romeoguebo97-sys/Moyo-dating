@@ -1806,7 +1806,6 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               }, []);
 
               React.useEffect(() => {
-                if (!isMobile) return;
                 timerRef.current = setInterval(() => {
                   const next = (idxRef.current + 1) % temoignages.length;
                   goTo(next, "left");
@@ -1831,8 +1830,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
               return (
                 <div style={{ position: "relative", overflow: "hidden" }}
-                  onTouchStart={isMobile ? handleTouchStart : undefined}
-                  onTouchEnd={isMobile ? handleTouchEnd : undefined}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
                 >
                   <style>{`
                     @keyframes slideInLeft  { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
@@ -1845,7 +1844,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     key={animKey}
                     className="testi-slide"
                     style={{
-                      animationName: isMobile ? animName : "none",
+                      animationName: animName,
                       background: G.blanc,
                       border: `1px solid ${G.gris}`,
                       boxShadow: "0 4px 24px rgba(44,26,14,0.07)",
@@ -1880,25 +1879,23 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     </div>
                   </div>
 
-                  {/* Indicateurs dots — mobile uniquement */}
-                  {isMobile && (
-                    <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20 }}>
-                      {temoignages.map((_, i) => (
-                        <div
-                          key={i}
-                          onClick={() => { if (timerRef.current) clearInterval(timerRef.current); goTo(i, i > idx ? "left" : "right"); }}
-                          style={{
-                            width: i === idx ? 22 : 8,
-                            height: 8,
-                            borderRadius: 50,
-                            background: i === idx ? G.rouge : G.gris,
-                            cursor: "pointer",
-                            transition: "all 0.35s ease",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  {/* Indicateurs dots */}
+                  <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20 }}>
+                    {temoignages.map((_, i) => (
+                      <div
+                        key={i}
+                        onClick={() => { if (timerRef.current) clearInterval(timerRef.current); goTo(i, i > idx ? "left" : "right"); }}
+                        style={{
+                          width: i === idx ? 22 : 8,
+                          height: 8,
+                          borderRadius: 50,
+                          background: i === idx ? G.rouge : G.gris,
+                          cursor: "pointer",
+                          transition: "all 0.35s ease",
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               );
             };
