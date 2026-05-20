@@ -2803,7 +2803,39 @@ function AdminDesktopPage() {
         <button onClick={() => window.close()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: "#888" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           Fermer
-        </button>      </div>
+        </button>
+        {/* ── BURGER RÈGLES ── */}
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setRulesMenuOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: rulesMenuOpen ? G.rouge : G.creme, border: `1.5px solid ${rulesMenuOpen ? G.rouge : G.gris}`, borderRadius: 20, cursor: "pointer", transition: "all 0.2s" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={rulesMenuOpen ? G.blanc : "#555"} strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          {rulesMenuOpen && (
+            <div style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, background: G.blanc, borderRadius: 16, boxShadow: "0 8px 32px rgba(44,26,14,0.18)", border: `1px solid ${G.gris}`, width: 300, zIndex: 9999, overflow: "hidden" }}>
+              <div style={{ padding: "14px 16px 10px", borderBottom: `1px solid ${G.gris}`, fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a" }}>⚙️ Règles de la plateforme</div>
+              <div style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Règle : bloquer like même genre */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a" }}>Bloquer like même genre</div>
+                    <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Homme → Homme / Femme → Femme</div>
+                  </div>
+                  <button onClick={async () => {
+                    const newVal = !rules.blockSameGenderLike;
+                    setRules(r => ({ ...r, blockSameGenderLike: newVal }));
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation,resolution=merge-duplicates" },
+                      body: JSON.stringify({ key: "rule_block_same_gender_like", value: String(newVal) }),
+                    });
+                  }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: rules.blockSameGenderLike ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
+                    <div style={{ position: "absolute", top: 3, left: rules.blockSameGenderLike ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Contenu Admin dans wrapper desktop */}
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
@@ -3604,7 +3636,15 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   };
 
   const handleLike = useCallback(async (p: Profile) => {
-    if (myGender && p.gender && myGender === p.gender) { setShowSameGender(true); return; }
+    if (myGender && p.gender && myGender === p.gender) {
+      // Vérifier la règle dynamique depuis app_settings
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        const blocked = !Array.isArray(data) || data.length === 0 || data[0].value !== "false";
+        if (blocked) { setShowSameGender(true); return; }
+      } catch { setShowSameGender(true); return; }
+    }
     if (likedIds.has(p.id)) {
       // Unlike - mise à jour optimiste immédiate
       setLikedIds(s => { const n = new Set(s); n.delete(p.id); return n; });
@@ -8548,11 +8588,24 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastExpiresAt, setBroadcastExpiresAt] = useState("");
 
   // ── ÉVÉNEMENT PREMIUM ──
   const [premiumEventActive, setPremiumEventActive] = useState(false);
   const [premiumEventLoading, setPremiumEventLoading] = useState(false);
   const [premiumEventConfirm, setPremiumEventConfirm] = useState(false);
+  const [premiumEventExpiresAt, setPremiumEventExpiresAt] = useState("");
+  const [rulesMenuOpen, setRulesMenuOpen] = useState(false);
+  const [rules, setRules] = useState({ blockSameGenderLike: true });
+
+  useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+    }).then(r => r.json()).then(data => {
+      if (Array.isArray(data) && data.length > 0)
+        setRules(r => ({ ...r, blockSameGenderLike: data[0].value !== "false" }));
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Charger l'état de l'événement premium depuis app_settings
@@ -8561,6 +8614,36 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     }).then(r => r.json()).then(data => {
       if (Array.isArray(data) && data.length > 0) setPremiumEventActive(data[0].value === "true");
     }).catch(() => {});
+
+    // Vérifier automatiquement si l'événement premium a expiré
+    const checkPremiumEventExpiry = async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_expires_at&select=value`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+        });
+        const data = await r.json().catch(() => []);
+        if (!Array.isArray(data) || !data[0]?.value) return;
+        const expiresAt = new Date(data[0].value);
+        if (expiresAt < new Date()) {
+          // Événement expiré — désactiver automatiquement
+          await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation,resolution=merge-duplicates" },
+            body: JSON.stringify({ key: "premium_event_active", value: "false" }),
+          });
+          const now = new Date().toISOString();
+          await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(premium_until.is.null,premium_until.lt.${now})`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+            body: JSON.stringify({ is_premium: false }),
+          });
+          setPremiumEventActive(false);
+        }
+      } catch {}
+    };
+    checkPremiumEventExpiry();
+    const interval = setInterval(checkPremiumEventExpiry, 60000); // vérifier chaque minute
+    return () => clearInterval(interval);
   }, []);
 
   const togglePremiumEvent = async () => {
@@ -8580,6 +8663,14 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
           headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
           body: JSON.stringify({ is_premium: true }),
         });
+        // Sauvegarder la date d'expiration
+        if (premiumEventExpiresAt) {
+          await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation,resolution=merge-duplicates" },
+            body: JSON.stringify({ key: "premium_event_expires_at", value: new Date(premiumEventExpiresAt).toISOString() }),
+          });
+        }
         showToast("🎉 Événement Premium activé pour tous les utilisateurs !", "success");
       } else {
         // 3. Désactiver : remettre is_premium = false uniquement pour ceux sans premium_until valide
@@ -9340,22 +9431,27 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 ))}
               </div>
               <textarea value={broadcastText} onChange={e => setBroadcastText(e.target.value)} placeholder="Écrivez votre message de diffusion…" rows={4} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "2px solid rgba(230,126,34,0.3)", fontSize: "0.84rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 4, fontWeight: 600 }}>Date d'expiration du message <span style={{ color: G.rouge }}>*</span></div>
+                <input type="datetime-local" value={broadcastExpiresAt} onChange={e => setBroadcastExpiresAt(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: "2px solid rgba(230,126,34,0.3)", fontSize: "0.84rem", outline: "none", fontFamily: "inherit" }} />
+                <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 3 }}>Passé cette date, le message ne s'affichera plus</div>
+              </div>
               <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button onClick={() => setBroadcastModal(false)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-                <button disabled={broadcastLoading} onClick={async () => {
-                  if (!broadcastText.trim()) return;
+                <button onClick={() => { setBroadcastModal(false); setBroadcastExpiresAt(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                <button disabled={broadcastLoading || !broadcastExpiresAt} onClick={async () => {
+                  if (!broadcastText.trim() || !broadcastExpiresAt) return;
                   setBroadcastLoading(true);
                   try {
                     await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                      body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId }),
+                      body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId, expires_at: new Date(broadcastExpiresAt).toISOString() }),
                     });
                     showToast("Message diffusé à tous les utilisateurs ✓", "success");
-                    setBroadcastModal(false); setBroadcastText("");
+                    setBroadcastModal(false); setBroadcastText(""); setBroadcastExpiresAt("");
                   } catch { showToast("Erreur lors de la diffusion", "error"); }
                   setBroadcastLoading(false);
-                }} style={{ flex: 1, background: broadcastLoading ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading ? "not-allowed" : "pointer" }}>
+                }} style={{ flex: 1, background: broadcastLoading || !broadcastExpiresAt ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading || !broadcastExpiresAt ? "not-allowed" : "pointer" }}>
                   {broadcastLoading ? "Envoi…" : "Envoyer à tous"}
                 </button>
               </div>
@@ -10027,6 +10123,71 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              {/* Section - Événement Premium */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>🎉 Événement Premium</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Activation", "Le bouton '🎉 Événement Premium — Offrir à tous' passe tous les utilisateurs en mode Premium gratuitement. À utiliser uniquement pour des événements spéciaux (lancement, promotion, fête)."],
+                    ["Date d'expiration obligatoire", "Lors de l'activation, vous devez choisir une date et heure d'expiration. Passé cette date, le Premium est retiré automatiquement aux non-abonnés."],
+                    ["Abonnés réels protégés", "Les utilisateurs ayant payé un abonnement (premium_until valide) conservent leur Premium même après l'expiration de l'événement. Seuls les bénéficiaires gratuits de l'événement sont concernés."],
+                    ["Désactivation manuelle", "Vous pouvez aussi désactiver l'événement manuellement à tout moment avec le bouton '⏹ Désactiver'. Les abonnés réels ne sont jamais affectés."],
+                    ["Vérification automatique", "Le système vérifie toutes les minutes si la date d'expiration est dépassée et désactive l'événement sans intervention de votre part."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section - Diffusion générale mise à jour */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>📢 Diffusion — Date d'expiration</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Date d'expiration obligatoire", "Depuis la mise à jour, chaque message de diffusion doit avoir une date d'expiration. Le bouton 'Envoyer' est désactivé tant que vous n'avez pas choisi une date."],
+                    ["Expiration automatique", "Passé la date choisie, le message ne s'affiche plus pour personne — même pour les utilisateurs qui ne l'ont pas encore vu."],
+                    ["Nouveaux inscrits protégés", "Un utilisateur qui s'inscrit après l'envoi d'un broadcast ne reçoit pas les messages antérieurs à son inscription."],
+                    ["Corriger un broadcast actif", "Pour stopper un message déjà envoyé, allez dans Supabase → Table Editor → broadcasts → modifiez le champ expires_at avec une date passée."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section - Règles de la plateforme */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>⚙️ Règles de la plateforme (Burger)</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Accès", "Le bouton burger ☰ se trouve à droite du bouton 'Fermer' dans la barre du haut. Il ouvre un panneau de switchs pour gérer les règles en temps réel."],
+                    ["Switch vert = actif", "Quand un switch est vert, la règle est activée. Exemple : switch vert sur 'Bloquer like même genre' → un homme ne peut pas liker un autre homme."],
+                    ["Switch rouge = désactivé", "Quand un switch est rouge, la règle est désactivée. Tout le monde peut liker tout le monde sans restriction."],
+                    ["Sauvegarde instantanée", "Chaque basculement est sauvegardé immédiatement dans Supabase. Pas besoin de recharger la page. Le changement est effectif pour tous les utilisateurs en quelques secondes."],
+                    ["Règle actuelle", "'Bloquer like même genre' — empêche les likes Homme→Homme et Femme→Femme. Désactivez cette règle si vous souhaitez ouvrir la plateforme à tous les profils."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Signature */}
               <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
                 <div style={{ fontSize: "0.7rem", color: "#bbb", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>Conçu et développé par</div>
@@ -10419,14 +10580,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           ? "⚠️ Cela va retirer le statut Premium à tous les utilisateurs qui ne sont pas abonnés réels. Les vrais abonnés (avec premium_until valide) ne seront pas affectés."
                           : "⚠️ Cela va activer le Premium pour TOUS les utilisateurs gratuitement. Utilisez uniquement pour un événement spécial."}
                       </p>
+                      {!premiumEventActive && (
+                        <div style={{ marginBottom: 16 }}>
+                          <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 4, fontWeight: 600 }}>Date d'expiration <span style={{ color: G.rouge }}>*</span></div>
+                          <input type="datetime-local" value={premiumEventExpiresAt} onChange={e => setPremiumEventExpiresAt(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: "2px solid rgba(184,134,11,0.4)", fontSize: "0.84rem", outline: "none", fontFamily: "inherit" }} />
+                          <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 3 }}>Passé cette date, le Premium sera retiré automatiquement aux non-abonnés</div>
+                        </div>
+                      )}
                       <p style={{ fontSize: "0.78rem", color: "#e74c3c", fontWeight: 600, textAlign: "center", marginBottom: 20 }}>
                         Cette action affecte tous les utilisateurs de la plateforme.
                       </p>
                       <div style={{ display: "flex", gap: 10 }}>
-                        <button onClick={() => setPremiumEventConfirm(false)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
+                        <button onClick={() => { setPremiumEventConfirm(false); setPremiumEventExpiresAt(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
                           Annuler
                         </button>
-                        <button onClick={() => { setPremiumEventConfirm(false); togglePremiumEvent(); }} style={{ flex: 1, background: premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
+                        <button disabled={!premiumEventActive && !premiumEventExpiresAt} onClick={() => { setPremiumEventConfirm(false); togglePremiumEvent(); }} style={{ flex: 1, background: !premiumEventActive && !premiumEventExpiresAt ? "#aaa" : premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: !premiumEventActive && !premiumEventExpiresAt ? "not-allowed" : "pointer" }}>
                           Confirmer
                         </button>
                       </div>
@@ -11580,14 +11748,28 @@ export default function App() {
     const checkBroadcast = async () => {
       try {
         const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
+        // Récupérer la date d'inscription de l'utilisateur
+        const profileR = await fetch(
+          `${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=created_at`,
+          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
+        );
+        const profileData = await profileR.json().catch(() => []);
+        const registeredAt = Array.isArray(profileData) && profileData[0]?.created_at
+          ? profileData[0].created_at
+          : new Date().toISOString();
+        // Utiliser la date la plus récente entre lastSeen et registered_at
+        const since = lastSeen > registeredAt ? lastSeen : registeredAt;
         const r = await fetch(
-          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${lastSeen}&order=created_at.desc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${since}&order=created_at.desc&limit=1`,
           { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
         );
         if (!r.ok) return;
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
-          setPendingBroadcast({ id: data[0].id, message: data[0].message });
+          const broadcast = data[0];
+          // Ne pas afficher si expiré
+          if (broadcast.expires_at && new Date(broadcast.expires_at) < new Date()) return;
+          setPendingBroadcast({ id: broadcast.id, message: broadcast.message });
         }
       } catch {}
     };
@@ -11889,14 +12071,25 @@ export default function App() {
     const checkBroadcastRealtime = async () => {
       try {
         const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
+        const profileR = await fetch(
+          `${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=created_at`,
+          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
+        );
+        const profileData = await profileR.json().catch(() => []);
+        const registeredAt = Array.isArray(profileData) && profileData[0]?.created_at
+          ? profileData[0].created_at
+          : new Date().toISOString();
+        const since = lastSeen > registeredAt ? lastSeen : registeredAt;
         const r = await fetch(
-          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${lastSeen}&order=created_at.desc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${since}&order=created_at.desc&limit=1`,
           { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
         );
         if (!r.ok) return;
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
-          setPendingBroadcast(prev => prev?.id === data[0].id ? prev : { id: data[0].id, message: data[0].message });
+          const broadcast = data[0];
+          if (broadcast.expires_at && new Date(broadcast.expires_at) < new Date()) return;
+          setPendingBroadcast(prev => prev?.id === broadcast.id ? prev : { id: broadcast.id, message: broadcast.message });
         }
       } catch {}
     };
