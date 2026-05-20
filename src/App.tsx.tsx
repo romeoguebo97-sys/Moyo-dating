@@ -1136,6 +1136,25 @@ function useWindowWidth() {
 }
 
 function Landing({ onNav }: { onNav: (p: string) => void }) {
+  const [featuredAvis, setFeaturedAvis] = React.useState<{ id: string; name: string; city: string; comment: string; rating: number }[]>([]);
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_ratings?is_featured=eq.true&select=id,rating,comment,user_id&order=created_at.desc&limit=10`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+    })
+      .then(r => r.json())
+      .then(async (rows) => {
+        if (!Array.isArray(rows) || rows.length === 0) return;
+        const enriched = await Promise.all(rows.map(async (r: any) => {
+          const prof = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${r.user_id}&select=name,city`, {
+            headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+          }).then(res => res.json()).then((d: any[]) => d[0]).catch(() => null);
+          return { id: r.id, name: prof?.name || "Membre", city: prof?.city || "Congo", comment: r.comment || "", rating: r.rating };
+        }));
+        setFeaturedAvis(enriched);
+      })
+      .catch(() => {});
+  }, []);
   const NEW_FB = "https://facebook.com/MoyoCongoOfficiel";
   const svgFb = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>;
   const svgIg = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>;
@@ -1752,29 +1771,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               Ils nous ont fait confiance
             </h2>
           </div>
-          {/* Cartes témoignages - carrousel automatique avec vrais avis */}
+          {/* Cartes témoignages - carrousel mobile droite→gauche */}
           {(() => {
             const accents = [G.rouge, G.or, G.vert, G.rouge, G.or, G.vert];
+            const isMobile = window.innerWidth < 768;
             const CarouselTesti = () => {
-              const [featuredAvis, setFeaturedAvis] = React.useState<{ id: string; name: string; city: string; comment: string; rating: number }[]>([]);
-
-              React.useEffect(() => {
-                fetch(`${SUPABASE_URL}/rest/v1/app_ratings?is_featured=eq.true&select=id,rating,comment,user_id&order=created_at.desc&limit=10`, {
-                  headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-                })
-                  .then(r => r.json())
-                  .then(async (rows) => {
-                    if (!Array.isArray(rows) || rows.length === 0) return;
-                    const enriched = await Promise.all(rows.map(async (r: any) => {
-                      const prof = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${r.user_id}&select=name,city`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } })
-                        .then(res => res.json()).then((d: any[]) => d[0]).catch(() => null);
-                      return { id: r.id, name: prof?.name || "Membre", city: prof?.city || "Congo", comment: r.comment || "", rating: r.rating };
-                    }));
-                    setFeaturedAvis(enriched);
-                  })
-                  .catch(() => {});
-              }, []);
-
               const temoignages = featuredAvis.length > 0
                 ? featuredAvis.map((a, i) => ({
                     initiales: a.name.slice(0, 2).toUpperCase(),
@@ -1791,42 +1792,60 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     { initiales: "RL", noms: "Ruth & Lionel", lieu: "Pointe-Noire", since: "En couple depuis 18 mois", temoignage: "Après plusieurs déceptions sur d'autres applis, Moyo nous a permis de construire une relation sérieuse. Ici les gens cherchent vraiment l'amour.", stars: 5, accent: G.vert },
                   ];
               const [idx, setIdx] = React.useState(0);
-              const [anim, setAnim] = React.useState<"in"|"out">("in");
+              const [slideDir, setSlideDir] = React.useState<"left"|"right">("left");
+              const [animKey, setAnimKey] = React.useState(0);
               const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-
               const idxRef = React.useRef(0);
+              const touchStartX = React.useRef<number | null>(null);
 
-              const goTo = React.useCallback((next: number) => {
-                setAnim("out");
-                setTimeout(() => {
-                  idxRef.current = next;
-                  setIdx(next);
-                  setAnim("in");
-                }, 320);
+              const goTo = React.useCallback((next: number, dir: "left"|"right" = "left") => {
+                setSlideDir(dir);
+                setAnimKey(k => k + 1);
+                idxRef.current = next;
+                setIdx(next);
               }, []);
 
               React.useEffect(() => {
+                if (!isMobile) return;
                 timerRef.current = setInterval(() => {
                   const next = (idxRef.current + 1) % temoignages.length;
-                  goTo(next);
+                  goTo(next, "left");
                 }, 4000);
                 return () => { if (timerRef.current) clearInterval(timerRef.current); };
-              }, [goTo]);
+              }, [goTo, temoignages.length]);
+
+              const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+              const handleTouchEnd = (e: React.TouchEvent) => {
+                if (touchStartX.current === null) return;
+                const diff = touchStartX.current - e.changedTouches[0].clientX;
+                if (Math.abs(diff) > 40) {
+                  if (timerRef.current) clearInterval(timerRef.current);
+                  if (diff > 0) goTo((idxRef.current + 1) % temoignages.length, "left");
+                  else goTo((idxRef.current - 1 + temoignages.length) % temoignages.length, "right");
+                }
+                touchStartX.current = null;
+              };
 
               const t = temoignages[idx];
+              const animName = slideDir === "left" ? "slideInLeft" : "slideInRight";
+
               return (
-                <div style={{ position: "relative" }}>
+                <div style={{ position: "relative", overflow: "hidden" }}
+                  onTouchStart={isMobile ? handleTouchStart : undefined}
+                  onTouchEnd={isMobile ? handleTouchEnd : undefined}
+                >
                   <style>{`
-                    @keyframes testiIn  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-                    @keyframes testiOut { from { opacity: 1; transform: translateY(0); }  to { opacity: 0; transform: translateY(-10px); } }
-                    .testi-in  { animation: testiIn  0.32s ease forwards; }
-                    .testi-out { animation: testiOut 0.28s ease forwards; }
+                    @keyframes slideInLeft  { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
+                    @keyframes slideInRight { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: translateX(0); } }
+                    .testi-slide { animation-duration: 0.35s; animation-timing-function: ease; animation-fill-mode: forwards; }
                   `}</style>
 
                   {/* Carte */}
                   <div
-                    className={anim === "in" ? "testi-in" : "testi-out"}
+                    key={animKey}
+                    className="testi-slide"
                     style={{
+                      animationName: isMobile ? animName : "none",
                       background: G.blanc,
                       border: `1px solid ${G.gris}`,
                       boxShadow: "0 4px 24px rgba(44,26,14,0.07)",
@@ -1856,28 +1875,30 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                       <div>
                         <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111" }}>{t.noms}</div>
                         <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>{t.lieu}</div>
-                        <div style={{ fontSize: "0.7rem", color: t.accent, fontWeight: 600, marginTop: 2 }}>{t.since}</div>
+                        {t.since && <div style={{ fontSize: "0.7rem", color: t.accent, fontWeight: 600, marginTop: 2 }}>{t.since}</div>}
                       </div>
                     </div>
                   </div>
 
-                  {/* Indicateurs dots */}
-                  <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20 }}>
-                    {temoignages.map((_, i) => (
-                      <div
-                        key={i}
-                        onClick={() => { if (timerRef.current) clearInterval(timerRef.current); goTo(i); }}
-                        style={{
-                          width: i === idx ? 22 : 8,
-                          height: 8,
-                          borderRadius: 50,
-                          background: i === idx ? G.rouge : G.gris,
-                          cursor: "pointer",
-                          transition: "all 0.35s ease",
-                        }}
-                      />
-                    ))}
-                  </div>
+                  {/* Indicateurs dots — mobile uniquement */}
+                  {isMobile && (
+                    <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20 }}>
+                      {temoignages.map((_, i) => (
+                        <div
+                          key={i}
+                          onClick={() => { if (timerRef.current) clearInterval(timerRef.current); goTo(i, i > idx ? "left" : "right"); }}
+                          style={{
+                            width: i === idx ? 22 : 8,
+                            height: 8,
+                            borderRadius: 50,
+                            background: i === idx ? G.rouge : G.gris,
+                            cursor: "pointer",
+                            transition: "all 0.35s ease",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             };
