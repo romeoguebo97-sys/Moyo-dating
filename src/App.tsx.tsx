@@ -2917,7 +2917,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
   const isTablet = screenWidth >= 768 && screenWidth < 1024;
   const isWide = screenWidth >= 768;
 
-  return <div data-active-tab={tab} style={{ maxWidth: isWide ? "none" : 500, margin: "0 auto", minHeight: "100vh", height: isWide ? "100vh" : undefined, display: "flex", flexDirection: isWide ? "row" : "column", background: isWide ? "#EAEDF2" : G.creme, boxShadow: isWide ? "none" : "0 0 60px rgba(44,26,14,0.12)", overflow: isWide ? "hidden" : undefined }}>
+  return <div data-active-tab={tab} style={{ maxWidth: isWide ? "none" : 500, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: isWide ? "row" : "column", background: isWide ? "#EAEDF2" : G.creme, boxShadow: isWide ? "none" : "0 0 60px rgba(44,26,14,0.12)" }}>
     <style>{`
       .moyo-footer-hidden { transform: translateX(-50%) translateY(100%) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
       .moyo-footer-visible { transform: translateX(-50%) translateY(0) !important; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important; }
@@ -2937,8 +2937,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       .moyo-sidebar-bottom:hover { background: ${G.creme}; }
       .moyo-main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow: hidden; }
       .moyo-topbar-wide { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; background: ${G.blanc}; border-bottom: 1px solid ${G.gris}; flex-shrink: 0; }
-      .moyo-content-wide { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 0; }
-      .moyo-content-wide.fullscreen-mode { overflow: hidden; display: flex; flex-direction: column; }
+      .moyo-content-wide { flex: 1; overflow-y: auto; padding-bottom: 0; }
     `}</style>
 
     {/* ── SIDEBAR (desktop/tablette) ── */}
@@ -2993,7 +2992,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     {/* ── ZONE PRINCIPALE ── */}
     {isWide ? (
       <div className="moyo-main-area">
-        <div className={`moyo-content-wide${isFullscreen ? " fullscreen-mode" : ""}`}>{children}</div>
+        <div className="moyo-content-wide">{children}</div>
       </div>
     ) : (
       <>
@@ -3706,7 +3705,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   }, [profiles]);
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
 
-  return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto", minHeight: 0, overflow: isWide && (viewMode as string) === "full" ? "hidden" : undefined }}>
+  return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
     {isWide && (
       <div style={{ width: 260, minWidth: 260, background: viewMode === "full" ? "rgba(15,10,5,0.55)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.08)" : G.gris}`, overflowY: viewMode === "full" ? "hidden" : "auto", height: "100%", display: "flex", flexDirection: "column", transition: "all 0.45s cubic-bezier(0.4,0,0.2,1)", zIndex: viewMode === "full" ? 10 : 1, pointerEvents: viewMode === "full" ? "none" : "auto", filter: viewMode === "full" ? "blur(2px)" : "none" }}>
@@ -3893,10 +3892,10 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     setProfiles(prev => shuffleArray([...prev]));
     el.scrollTop = 0;
   }
-}} style={{ margin: "0 -16px", padding: "0 10px 0", maxHeight: "calc(100dvh - 100px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+}} style={{ margin: "0 -16px", padding: "0 10px 0", maxHeight: isWide ? "100vh" : "calc(100dvh - 100px)", height: isWide ? "100vh" : undefined, overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
-    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100dvh - 110px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 12, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
+    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: isWide ? "100vh" : "calc(100dvh - 110px)", minHeight: 560, borderRadius: isWide ? 0 : 28, overflow: "hidden", marginBottom: isWide ? 0 : 12, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: isWide ? "none" : "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
       {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
       {/* ✕ haut droite - sur chaque carte */}
@@ -3948,7 +3947,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: (viewMode as string) === "full" && isWide ? "100%" : (isWide ? undefined : 210), flex: (viewMode as string) === "full" && isWide ? "none" : (isWide ? 1 : "none"), background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide && (viewMode as string) !== "full" ? 200 : "none", position: "relative" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", position: (viewMode as string) === "full" && isWide ? "absolute" : "relative", inset: 0 }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
+  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : 210, flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : "none", position: "relative" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div>
     {/* 3 traits menu - single tap/click → bottom sheet */}
@@ -3980,7 +3979,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   <div onClick={() => handleLike(p)} style={{ width: 54, height: 54, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div>
   <div onClick={() => navigate("next")} style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem", boxShadow: "0 2px 8px rgba(44,26,14,0.08)" }}>→</div>
 </div>
-<div style={{ display: (viewMode as string) === "full" && isWide ? "none" : "flex", justifyContent: "center", alignItems: "center", gap: 5, marginTop: 4, marginBottom: 6 }}>
+<div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, marginTop: 4, marginBottom: 6 }}>
   {profiles.slice(Math.max(0, current - 2), Math.min(profiles.length, current + 3)).map((_, i) => {
     const idx = Math.max(0, current - 2) + i;
     const isActive = idx === current;
@@ -3988,7 +3987,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       <div key={idx} style={{ width: isActive ? 23 : 7, height: 7, borderRadius: 99, background: isActive ? G.rouge : "#E0D5CC", transition: "width 0.25s ease, background 0.25s ease" }} />
     );
   })}
-</div>{!((viewMode as string) === "full" && isWide) && <div style={{ marginTop: 6 }}>{!isWide && <PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />}</div>}</>}{viewedProfile && (
+</div><div style={{ marginTop: 6 }}>{!isWide && <PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />}</div></>}{viewedProfile && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
