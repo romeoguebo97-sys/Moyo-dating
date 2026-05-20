@@ -3739,7 +3739,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       </div>
     )}
     {/* ── CONTENU PRINCIPAL DÉCOUVRIR ── */}
-    <div style={{ flex: 1, padding: isWide ? "16px 20px" : 0, overflowY: isWide ? "auto" : "visible", minWidth: 0, display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: isWide ? "100%" : "auto" }}>
+    <div style={{ flex: 1, padding: isWide ? ((viewMode as string) === "full" ? 0 : "16px 20px") : 0, overflowY: isWide ? ((viewMode as string) === "full" ? "hidden" : "auto") : "visible", minWidth: 0, display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: isWide ? "100%" : "auto" }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
     {/* ── CSS animations bottom sheet + fullscreen footer ── */}
     <style>{`
