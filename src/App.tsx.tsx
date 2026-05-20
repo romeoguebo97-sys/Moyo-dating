@@ -1752,38 +1752,44 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               Ils nous ont fait confiance
             </h2>
           </div>
-          {/* Cartes témoignages - carrousel automatique */}
+          {/* Cartes témoignages - carrousel automatique avec vrais avis */}
           {(() => {
-            const temoignages = [
-              {
-                initiales: "OA",
-                noms: "Orlane & Armel",
-                lieu: "Diaspora France / Congo",
-                since: "Ensemble depuis 2024",
-                temoignage: "Même à distance, nous avons réussi à créer une vraie connexion. Moyo nous a donné l'espace pour nous découvrir vraiment avant de se rencontrer.",
-                stars: 5,
-                accent: G.rouge,
-              },
-              {
-                initiales: "GJ",
-                noms: "Grâce & Junior",
-                lieu: "Brazzaville",
-                since: "Mariage coutumier en préparation",
-                temoignage: "On discutait simplement au début… aujourd'hui nous préparons notre mariage coutumier. Moyo nous a mis en contact avec les bonnes personnes.",
-                stars: 5,
-                accent: G.or,
-              },
-              {
-                initiales: "RL",
-                noms: "Ruth & Lionel",
-                lieu: "Pointe-Noire",
-                since: "En couple depuis 18 mois",
-                temoignage: "Après plusieurs déceptions sur d'autres applis, Moyo nous a permis de construire une relation sérieuse. Ici les gens cherchent vraiment l'amour.",
-                stars: 5,
-                accent: G.vert,
-              },
-            ];
+            const accents = [G.rouge, G.or, G.vert, G.rouge, G.or, G.vert];
             const CarouselTesti = () => {
+              const [featuredAvis, setFeaturedAvis] = React.useState<{ id: string; name: string; city: string; comment: string; rating: number }[]>([]);
+
+              React.useEffect(() => {
+                fetch(`${SUPABASE_URL}/rest/v1/app_ratings?is_featured=eq.true&select=id,rating,comment,user_id&order=created_at.desc&limit=10`, {
+                  headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+                })
+                  .then(r => r.json())
+                  .then(async (rows) => {
+                    if (!Array.isArray(rows) || rows.length === 0) return;
+                    const enriched = await Promise.all(rows.map(async (r: any) => {
+                      const prof = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${r.user_id}&select=name,city`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } })
+                        .then(res => res.json()).then((d: any[]) => d[0]).catch(() => null);
+                      return { id: r.id, name: prof?.name || "Membre", city: prof?.city || "Congo", comment: r.comment || "", rating: r.rating };
+                    }));
+                    setFeaturedAvis(enriched.filter(a => a.comment));
+                  })
+                  .catch(() => {});
+              }, []);
+
+              const temoignages = featuredAvis.length > 0
+                ? featuredAvis.map((a, i) => ({
+                    initiales: a.name.slice(0, 2).toUpperCase(),
+                    noms: a.name,
+                    lieu: a.city,
+                    since: "",
+                    temoignage: a.comment,
+                    stars: a.rating,
+                    accent: accents[i % accents.length],
+                  }))
+                : [
+                    { initiales: "OA", noms: "Orlane & Armel", lieu: "Diaspora France / Congo", since: "Ensemble depuis 2024", temoignage: "Même à distance, nous avons réussi à créer une vraie connexion. Moyo nous a donné l'espace pour nous découvrir vraiment avant de se rencontrer.", stars: 5, accent: G.rouge },
+                    { initiales: "GJ", noms: "Grâce & Junior", lieu: "Brazzaville", since: "Mariage coutumier en préparation", temoignage: "On discutait simplement au début… aujourd'hui nous préparons notre mariage coutumier. Moyo nous a mis en contact avec les bonnes personnes.", stars: 5, accent: G.or },
+                    { initiales: "RL", noms: "Ruth & Lionel", lieu: "Pointe-Noire", since: "En couple depuis 18 mois", temoignage: "Après plusieurs déceptions sur d'autres applis, Moyo nous a permis de construire une relation sérieuse. Ici les gens cherchent vraiment l'amour.", stars: 5, accent: G.vert },
+                  ];
               const [idx, setIdx] = React.useState(0);
               const [anim, setAnim] = React.useState<"in"|"out">("in");
               const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
@@ -8286,7 +8292,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
 
   // ── Avis utilisateurs ──
-  type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
+  type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; is_featured?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [payments, setPayments] = useState<PaymentRequest[]>([]);
@@ -8417,7 +8423,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const loadReviews = async () => {
     setReviewsLoading(true);
     try {
-      const rows = await sb.query<ReviewRow>(auth.token, "app_ratings", "?select=id,user_id,rating,comment,is_read,created_at,updated_at&order=created_at.desc&limit=200");
+      const rows = await sb.query<ReviewRow>(auth.token, "app_ratings", "?select=id,user_id,rating,comment,is_read,is_featured,created_at,updated_at&order=created_at.desc&limit=200");
       const enriched = await Promise.all(rows.map(async r => {
         const prof = await sb.query<{ name: string; city?: string; gender?: string }>(auth.token, "profiles", `?id=eq.${r.user_id}&select=name,city,gender`);
         return { ...r, profile: prof[0] };
@@ -8455,6 +8461,15 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   const toggleHideReview = (id: string) => {
     setHiddenReviews(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  const toggleFeatureReview = async (id: string, current: boolean) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/app_ratings?id=eq.${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+      body: JSON.stringify({ is_featured: !current }),
+    });
+    setReviews(prev => prev.map(r => r.id === id ? { ...r, is_featured: !current } : r));
   };
 
   // ── Avertissements ──
@@ -11156,6 +11171,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               Marquer lu
                             </div>
                           )}
+                          <div
+                            onClick={() => toggleFeatureReview(r.id, !!r.is_featured)}
+                            style={{ display: "flex", alignItems: "center", gap: 5, background: r.is_featured ? "rgba(212,168,67,0.15)" : "rgba(212,168,67,0.07)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: r.is_featured ? "#B8860B" : "#aaa", border: r.is_featured ? "1px solid rgba(212,168,67,0.4)" : "none" }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill={r.is_featured ? "#D4A843" : "none"} stroke={r.is_featured ? "#B8860B" : "#aaa"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            {r.is_featured ? "En avant ✓" : "Mettre en avant"}
+                          </div>
                           <div
                             onClick={() => toggleHideReview(r.id)}
                             style={{ display: "flex", alignItems: "center", gap: 5, background: isHidden ? "rgba(39,174,96,0.08)" : "rgba(0,0,0,0.04)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: isHidden ? "#27ae60" : "#888" }}
