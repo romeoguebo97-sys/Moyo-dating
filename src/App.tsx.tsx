@@ -3245,7 +3245,7 @@ function AdminDesktopPage() {
 
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
-  const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
+  const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
   const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumDurationDays: "31", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
@@ -3260,7 +3260,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         const map: Record<string, string> = {};
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
-        setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
+        setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
         setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage }));
       }).catch(() => {});
   }, [auth.token]);
@@ -7743,6 +7743,15 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const [uploadLoading, setUploadLoading] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const [emailConfirmed, setEmailConfirmed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    }).then(r => r.json()).then(data => {
+      setEmailConfirmed(!!data?.email_confirmed_at);
+    }).catch(() => setEmailConfirmed(false));
+  }, [auth.token]);
   const [blockedUsers, setBlockedUsers] = useState<Array<{ id: string; blocked_id: string; profile?: Profile }>>([]);
   const [showBlocked, setShowBlocked] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -8480,7 +8489,25 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             <div style={{ fontSize: "0.72rem", color: "#bbb", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>Email de connexion</div>
             <div style={{ fontSize: "0.88rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "-"}</div>
           </div>
-          <div style={{ fontSize: "0.65rem", color: "#ccc", background: "#F5F5F5", padding: "3px 10px", borderRadius: 50, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>Non modifiable</div>
+          {emailConfirmed === true ? (
+            <div style={{ fontSize: "0.65rem", color: "#27ae60", background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.3)", padding: "4px 10px", borderRadius: 50, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Confirmé
+            </div>
+          ) : (
+            <button onClick={async () => {
+              try {
+                await fetch(`${SUPABASE_URL}/auth/v1/resend`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+                  body: JSON.stringify({ type: "signup", email: auth.email })
+                });
+                alert("Email de confirmation envoyé ! Vérifie ta boîte mail.");
+              } catch { alert("Erreur lors de l'envoi. Réessaie."); }
+            }} style={{ fontSize: "0.65rem", color: G.rouge, background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, padding: "4px 10px", borderRadius: 50, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}>
+              Vérifier mon email
+            </button>
+          )}
         </div>}
 
         {/* ── Se déconnecter | Supprimer mon compte ── */}
