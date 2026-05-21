@@ -11999,25 +11999,14 @@ export default function App() {
     return () => window.removeEventListener("moyo-open-admin-config", handler);
   }, []);
 
-  // Bloquer le scroll sous le panneau config (iOS + Android)
+  // Bloquer le scroll sous le panneau config
   useEffect(() => {
     if (showAdminConfig) {
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.documentElement.style.overflow = '';
     }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.documentElement.style.overflow = '';
-    };
+    return () => { document.body.style.overflow = ''; };
   }, [showAdminConfig]);
   const isUnmatchingRef = useRef(false);
   // Ref pour permettre à LikesPage de déclencher un refresh des badges
