@@ -877,7 +877,7 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
               <div style={{ color: G.blanc, fontSize: "1.3rem", fontWeight: 800 }}>Premium</div>
             </div>
             <div style={{ marginLeft: "auto", textAlign: "right" }}>
-              <div style={{ color: G.blanc, fontSize: "1.6rem", fontWeight: 800 }}>3 500 FCFA</div>
+              <div style={{ color: G.blanc, fontSize: "1.6rem", fontWeight: 800 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}</div>
               <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>/mois</div>
             </div>
           </div>
@@ -934,7 +934,7 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
               MTN Mobile Money
             </div>
           </div>
-          <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>Paiement sécurisé - 3 500 FCFA / 1 mois</div>
+          <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>{`Paiement sécurisé - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA / 1 mois`}</div>
         </div>
         <div style={{ padding: "20px 20px 32px" }}>
           {/* Étape 1 */}
@@ -1000,7 +1000,7 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
               Airtel Money
             </div>
           </div>
-          <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", marginLeft: 42 }}>3 500 FCFA - 1 mois Premium</div>
+          <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", marginLeft: 42 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA - 1 mois Premium`}</div>
         </div>
         <div style={{ padding: "20px 20px 32px" }}>
           <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
@@ -1199,7 +1199,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     ]},
     { id: "services", title: "Nos services", emoji: "🌟", items: [
       { icon: "hearts", titre: "Rencontres en ligne", desc: "Trouve ton âme sœur parmi des profils vérifiés.", badge: "Gratuit" },
-      { icon: "star2", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké.", badge: "3 500 FCFA/mois" },
+      { icon: "star2", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké.", badge: `${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois` },
       { icon: "ring", titre: "Accompagnement mariage", desc: "Nous t'accompagnons dans l'organisation de ta cérémonie congolaise.", badge: "Sur demande" },
       { icon: "vip", titre: "Mise en relation VIP", desc: "Service personnalisé et discret dans ta recherche de l'âme sœur.", badge: "Premium" },
     ]},
@@ -1215,7 +1215,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 { icon: "thumbup", titre: "Patrick - Pointe-Noire", desc: "Simple, propre, efficace. Exactement ce qu'il fallait pour la diaspora congolaise." },
     ]},
     { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
-      { icon: "Q", titre: "Moyo est-il gratuit ?", desc: "Oui, l'inscription est gratuite. 5 likes/jour et 3 messages/match. Premium à 3 500 FCFA/mois." },
+      { icon: "Q", titre: "Moyo est-il gratuit ?", desc: `Oui, l'inscription est gratuite. 5 likes/jour et 3 messages/match. Premium à ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois.` },
       { icon: "Q", titre: "Comment naviguer entre les profils ?", desc: "3 modes disponibles : Vue carte (swipe gauche/droite ou boutons ←→), Vue liste (défilement vertical), Plein écran (immersion totale, footer masqué). Passez d'un mode à l'autre via les boutons en haut de l'écran Découvrir." },
       { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
       { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: "5 likes par jour. Le compteur ❤️ X/5 s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché." },
@@ -2549,7 +2549,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
 // ── FAQ pour le bot ──
 const BOT_FAQ = [
-  { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: "Le Premium coûte 3 500 FCFA/mois. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money ou Airtel Money. Activation manuelle sous 24h." },
+  { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium coûte ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money ou Airtel Money. Activation manuelle sous 24h.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: "Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez automatiquement 7 jours Premium offerts. Pas de limite !" },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
   { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: "Compte gratuit : 5 likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément." },
@@ -2894,12 +2894,219 @@ function AdminDesktopPage() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           Fermer
         </button>
-        {/* ── BURGER RÈGLES ── */}
+        {/* ── BURGER RÈGLES — OFF-CANVAS DROIT ── */}
         <div style={{ position: "relative" }}>
           <button onClick={() => setRulesMenuOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: rulesMenuOpen ? G.rouge : G.creme, border: `1.5px solid ${rulesMenuOpen ? G.rouge : G.gris}`, borderRadius: 20, cursor: "pointer", transition: "all 0.2s" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={rulesMenuOpen ? G.blanc : "#555"} strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
-          {rulesMenuOpen && (
+        </div>
+        {/* Overlay */}
+        {rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998, backdropFilter: "blur(2px)" }} />}
+        {/* Panel off-canvas */}
+        <div style={{ position: "fixed", top: 0, right: rulesMenuOpen ? 0 : "-380px", width: 360, height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)", overflowY: "auto" }}>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Configuration
+            </div>
+            <button onClick={() => setRulesMenuOpen(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          {/* Contenu scrollable */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "0 0 40px" }}>
+            {/* ── RÈGLES ── */}
+            <div style={{ padding: "16px 20px 12px" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Règles</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+                <div>
+                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#1a1a1a" }}>Bloquer like même genre</div>
+                  <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Homme → Homme / Femme → Femme</div>
+                </div>
+                <button onClick={async () => {
+                  if (!auth) return;
+                  const newVal = !rules.blockSameGenderLike;
+                  setRules(r => ({ ...r, blockSameGenderLike: newVal }));
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(newVal) }) });
+                }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: rules.blockSameGenderLike ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
+                  <div style={{ position: "absolute", top: 3, left: rules.blockSameGenderLike ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+                </button>
+              </div>
+            </div>
+            <div style={{ height: 1, background: G.gris, margin: "0 20px" }} />
+            {/* ── TEXTES DES MODALS ── */}
+            <div style={{ padding: "16px 20px 12px" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Textes des modals</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {([
+                  ["modal_same_gender_homme", "Même genre (Homme)", modalTexts.sameGenderHomme],
+                  ["modal_same_gender_femme", "Même genre (Femme)", modalTexts.sameGenderFemme],
+                  ["modal_match_title", "Match — Titre", modalTexts.matchTitle],
+                  ["modal_match_subtitle", "Match — Sous-titre", modalTexts.matchSubtitle],
+                  ["modal_premium_default", "Premium — Message", modalTexts.premiumDefault],
+                  ["modal_likes_epuises", "Likes épuisés", modalTexts.likesEpuises],
+                ] as [string, string, string][]).map(([key, label, value]) => (
+                  <div key={key}>
+                    <div onClick={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: editingModal === key ? "rgba(192,57,43,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingModal === key ? G.rouge : "transparent"}` }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+                      </div>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </div>
+                    {editingModal === key && (
+                      <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
+                        <textarea value={editingValue} onChange={e => setEditingValue(e.target.value)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: `1.5px solid rgba(192,57,43,0.3)`, fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+                        {key.includes("subtitle") && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 4 }}>💡 Utilise {"{name}"} pour le prénom</div>}
+                        {key.includes("likes") && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 4 }}>💡 Utilise {"{n}"} pour le nombre de likes</div>}
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => setEditingModal(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+                          <button onClick={async () => {
+                            if (!auth) return;
+                            await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingValue }) });
+                            const keyMap: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" };
+                            setModalTexts(t => ({ ...t, [keyMap[key]]: editingValue }));
+                            setEditingModal(null);
+                          }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G.rouge, color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ height: 1, background: G.gris, margin: "0 20px" }} />
+            {/* ── LIMITES & QUOTAS ── */}
+            <div style={{ padding: "16px 20px 12px" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Limites & Quotas</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {([
+                  ["limit_likes_free", "limitLikes", "Likes gratuits/jour", appConfig.limitLikes, "number"],
+                  ["limit_messages_free", "limitMessages", "Messages gratuits/match", appConfig.limitMessages, "number"],
+                  ["limit_photo_size_mb", "limitPhotoSizeMb", "Taille max photo (Mo)", appConfig.limitPhotoSizeMb, "number"],
+                  ["match_welcome_message", "matchWelcomeMessage", "Message bienvenue match", appConfig.matchWelcomeMessage, "text"],
+                ] as [string, keyof typeof appConfig, string, string, string][]).map(([key, configKey, label, value, type]) => (
+                  <div key={key}>
+                    <div onClick={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: editingConfig === key ? "rgba(41,128,185,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingConfig === key ? "#2980b9" : "transparent"}` }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+                      </div>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </div>
+                    {editingConfig === key && (
+                      <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
+                        {type === "number" ? <input type="number" value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(41,128,185,0.3)", fontSize: "0.84rem", outline: "none" }} /> : <textarea value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(41,128,185,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />}
+                        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                          <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+                          <button onClick={async () => {
+                            if (!auth) return;
+                            await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                            setAppConfig(c => ({ ...c, [configKey]: editingConfigValue }));
+                            setEditingConfig(null);
+                          }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: "#2980b9", color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ height: 1, background: G.gris, margin: "0 20px" }} />
+            {/* ── PRIX & ABONNEMENT ── */}
+            <div style={{ padding: "16px 20px 12px" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Prix & Abonnement</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {([
+                  ["premium_price_fcfa", "premiumPriceFcfa", "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
+                  ["premium_duration_days", "premiumDurationDays", "Durée abonnement (jours)", appConfig.premiumDurationDays],
+                ] as [string, keyof typeof appConfig, string, string][]).map(([key, configKey, label, value]) => (
+                  <div key={key}>
+                    <div onClick={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: editingConfig === key ? "rgba(39,174,96,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingConfig === key ? "#27ae60" : "transparent"}` }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2 }}>{value}</div>
+                      </div>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </div>
+                    {editingConfig === key && (
+                      <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
+                        <input type="number" value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(39,174,96,0.3)", fontSize: "0.84rem", outline: "none" }} />
+                        <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3 }}>{key === "premium_duration_days" ? "⚠️ Nouveaux abonnements uniquement" : "⚠️ Modifie les boutons de paiement"}</div>
+                        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                          <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+                          <button onClick={async () => {
+                            if (!auth) return;
+                            await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                            setAppConfig(c => ({ ...c, [configKey]: editingConfigValue }));
+                            if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500;
+                            if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000;
+                            setEditingConfig(null);
+                          }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: "#27ae60", color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ height: 1, background: G.gris, margin: "0 20px" }} />
+            {/* ── FONCTIONNALITÉS ── */}
+            <div style={{ padding: "16px 20px 12px" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Fonctionnalités</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {([
+                  ["feature_statuses", "featureStatuses", "Statuts (Stories)"],
+                  ["feature_gift_premium", "featureGiftPremium", "Cadeau Premium"],
+                  ["feature_assistant", "featureAssistant", "Assistant IA"],
+                  ["maintenance_mode", "maintenanceMode", "🔴 Mode maintenance"],
+                ] as [string, keyof typeof appConfig, string][]).map(([key, configKey, label]) => (
+                  <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", background: key === "maintenance_mode" && appConfig[configKey] === "true" ? "rgba(231,76,60,0.06)" : G.creme, borderRadius: 12, border: `1px solid ${key === "maintenance_mode" && appConfig[configKey] === "true" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
+                    <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
+                    <button onClick={async () => {
+                      if (!auth) return;
+                      const newVal = appConfig[configKey] !== "true" ? "true" : "false";
+                      setAppConfig(c => ({ ...c, [configKey]: newVal }));
+                      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newVal }) });
+                    }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: appConfig[configKey] === "true" ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
+                      <div style={{ position: "absolute", top: 3, left: appConfig[configKey] === "true" ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+                    </button>
+                  </div>
+                ))}
+                {appConfig.maintenanceMode === "true" && (
+                  <div>
+                    <div onClick={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: "rgba(231,76,60,0.06)", cursor: "pointer", border: `1px solid rgba(231,76,60,0.3)` }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: G.rouge }}>Message de maintenance</div>
+                        <div style={{ fontSize: "0.7rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{appConfig.maintenanceMessage}</div>
+                      </div>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </div>
+                    {editingConfig === "maintenance_message" && (
+                      <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
+                        <textarea value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(231,76,60,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+                        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                          <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+                          <button onClick={async () => {
+                            if (!auth) return;
+                            await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_message`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                            setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue }));
+                            setEditingConfig(null);
+                          }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G.rouge, color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenu Admin dans wrapper desktop */}
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
             <div style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, background: G.blanc, borderRadius: 16, boxShadow: "0 8px 32px rgba(44,26,14,0.18)", border: `1px solid ${G.gris}`, width: 300, zIndex: 9999, overflow: "hidden" }}>
               <div style={{ padding: "14px 16px 10px", borderBottom: `1px solid ${G.gris}`, fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a" }}>⚙️ Règles de la plateforme</div>
               <div style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -3362,7 +3569,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: ["Compte gratuit : 3 messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.", "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message → Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler.", "Supprimer un message : appuyez longuement → Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au cœur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe."] },
-            { title: "Premium - 3 500 FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
+            { title: "Premium - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
               "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.",
               "Paiement via MTN Mobile Money ou Airtel Money - les deux opérateurs sont disponibles.",
               "Comment payer : appuyez sur 'Passer Premium' → choisissez MTN Mobile Money → appuyez sur le bouton jaune pour composer automatiquement le code de paiement sur votre téléphone → validez le paiement → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'.",
@@ -4464,7 +4671,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
               <span style={{ fontSize: "0.88rem", fontWeight: 800, color: G.blanc }}>Passer à Moyo Premium</span>
             </div>
             <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.78)", lineHeight: 1.5, marginBottom: 10 }}>Messages illimités · Likes illimités · Voir qui vous like</div>
-            <div style={{ fontSize: "1rem", fontWeight: 900, color: G.or }}>3 500 <span style={{ fontSize: "0.62rem", fontWeight: 600, opacity: 0.85 }}>FCFA/mois</span></div>
+            <div style={{ fontSize: "1rem", fontWeight: 900, color: G.or }}>{PREMIUM_PRICE_FCFA.toLocaleString()} <span style={{ fontSize: "0.62rem", fontWeight: 600, opacity: 0.85 }}>FCFA/mois</span></div>
           </div>
         )}
 
@@ -6570,7 +6777,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                       <div style={{ color: G.blanc, fontSize: "1.2rem", fontWeight: 800 }}>{open.partner?.name}</div>
                     </div>
                     <div style={{ marginLeft: "auto", textAlign: "right" }}>
-                      <div style={{ color: G.blanc, fontSize: "1.4rem", fontWeight: 800 }}>3 500 FCFA</div>
+                      <div style={{ color: G.blanc, fontSize: "1.4rem", fontWeight: 800 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}</div>
                       <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>1 mois Premium</div>
                     </div>
                   </div>
@@ -6612,7 +6819,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                       Cadeau Premium pour {open.partner?.name}
                     </div>
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>3 500 FCFA · 1 mois</div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA · 1 mois`}</div>
                 </div>
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
@@ -6663,7 +6870,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                     </div>
                     <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.blanc }}>Cadeau Airtel Money pour {open.partner?.name}</div>
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", marginLeft: 42 }}>3 500 FCFA - 1 mois Premium</div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", marginLeft: 42 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA - 1 mois Premium`}</div>
                 </div>
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
@@ -7999,7 +8206,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                   {isExpired ? "Réabonnez-vous pour retrouver tous vos avantages" : "Messages illimités · Likes illimités · Voir qui vous like"}
                 </div>
               </div>
-              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or, marginLeft: 12, flexShrink: 0 }}>3 500<br/><span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA/mois</span></div>
+              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or, marginLeft: 12, flexShrink: 0 }}>{PREMIUM_PRICE_FCFA.toLocaleString()}<br/><span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA/mois</span></div>
             </div>
           );
         })()}
@@ -12018,38 +12225,28 @@ export default function App() {
     checkWarnings();
   }, [auth?.userId]);
 
-  // ── Vérifier les broadcasts non vus à chaque connexion ──
+  // ── Vérifier les broadcasts non vus à chaque connexion + polling ──
   useEffect(() => {
     if (!auth?.userId) return;
     const checkBroadcast = async () => {
       try {
         const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
-        // Récupérer la date d'inscription de l'utilisateur
-        const profileR = await fetch(
-          `${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=created_at`,
-          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
-        );
-        const profileData = await profileR.json().catch(() => []);
-        const registeredAt = Array.isArray(profileData) && profileData[0]?.created_at
-          ? profileData[0].created_at
-          : new Date().toISOString();
-        // Utiliser la date la plus récente entre lastSeen et registered_at
-        const since = lastSeen > registeredAt ? lastSeen : registeredAt;
         const r = await fetch(
-          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${since}&order=created_at.desc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${lastSeen}&order=created_at.desc&limit=1`,
           { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
         );
         if (!r.ok) return;
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
           const broadcast = data[0];
-          // Ne pas afficher si expiré
           if (broadcast.expires_at && new Date(broadcast.expires_at) < new Date()) return;
-          setPendingBroadcast({ id: broadcast.id, message: broadcast.message });
+          setPendingBroadcast(prev => prev?.id === broadcast.id ? prev : { id: broadcast.id, message: broadcast.message });
         }
       } catch {}
     };
     checkBroadcast();
+    const interval = setInterval(checkBroadcast, 60000);
+    return () => clearInterval(interval);
   }, [auth?.userId]);
 
   // ── Vérifier expiration Premium au login ──
