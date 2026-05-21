@@ -2251,8 +2251,8 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [cropSrcSignup, setCropSrcSignup] = useState<string | null>(null);
-  const [tempToken, setTempToken] = useState<string | null>(null);
-  const [tempUserId, setTempUserId] = useState<string | null>(null);
+  const [tempToken, setTempToken] = useState<string | null>(() => sessionStorage.getItem("moyo_signup_token"));
+  const [tempUserId, setTempUserId] = useState<string | null>(() => sessionStorage.getItem("moyo_signup_uid"));
   const fileRef = useRef<HTMLInputElement>(null);
   const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
@@ -2333,7 +2333,9 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       const loginRes = await sb.signIn(emailClean, form.password);
       if (loginRes?.access_token) {
         setTempToken(loginRes.access_token);
+        sessionStorage.setItem("moyo_signup_token", loginRes.access_token);
         setTempUserId(loginRes.user?.id || authRes.user?.id || "");
+        sessionStorage.setItem("moyo_signup_uid", loginRes.user?.id || authRes.user?.id || "");
       }
       setStep(2);
     } catch { setStep(2); }
@@ -2402,6 +2404,8 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       } catch {}
       setLoading(false);
       setSuccessMsg("Compte créé !");
+      sessionStorage.removeItem("moyo_signup_token");
+      sessionStorage.removeItem("moyo_signup_uid");
       setTimeout(() => { onNav("login"); }, 6000);
     } catch {
       setErrorMsg("Erreur technique. Veuillez réessayer.");
