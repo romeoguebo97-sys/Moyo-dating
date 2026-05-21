@@ -2816,6 +2816,8 @@ function AdminDesktopPage() {
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
+  const [adminActionModal, setAdminActionModal] = React.useState<{ level: string | null; label: string; color: string } | null>(null);
+  const [adminActionEmail, setAdminActionEmail] = React.useState("");
 
   React.useEffect(() => {
     if (!auth) return;
@@ -3080,7 +3082,12 @@ function AdminDesktopPage() {
                     </div>
                     <button onClick={async () => {
                       if (!auth) return;
-                      const email = window.prompt("Entrez l'adresse email de l'utilisateur à qui vous souhaitez attribuer ce rôle :");
+                      const email = await new Promise<string | null>((resolve) => {
+                        setAdminActionEmail("");
+                        setAdminActionModal({ level, label, color });
+                        // resolve sera appelé par le modal
+                        (window as any).__adminActionResolve = resolve;
+                      });
                       if (!email) return;
                       const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email.trim())}&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
                       const found = await r.json().catch(() => []);
@@ -3100,6 +3107,40 @@ function AdminDesktopPage() {
       </div>
 
       {/* Contenu Admin dans wrapper desktop */}
+      {/* ── MODAL GESTION ADMINS ── */}
+      {adminActionModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 380, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 6 }}>{adminActionModal.label}</div>
+            <div style={{ fontSize: "0.83rem", color: "#888", marginBottom: 18, lineHeight: 1.5 }}>Entrez l'adresse email de l'utilisateur à qui vous souhaitez attribuer ce rôle.</div>
+            <input
+              type="email"
+              value={adminActionEmail}
+              onChange={e => setAdminActionEmail(e.target.value)}
+              placeholder="email@exemple.com"
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === "Enter" && adminActionEmail.trim()) {
+                  (window as any).__adminActionResolve?.(adminActionEmail.trim());
+                  setAdminActionModal(null);
+                }
+              }}
+              style={{ width: "100%", boxSizing: "border-box", padding: "11px 14px", borderRadius: 12, border: `2px solid ${adminActionModal.color}30`, fontSize: "0.88rem", outline: "none", marginBottom: 16, fontFamily: "inherit" }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { (window as any).__adminActionResolve?.(null); setAdminActionModal(null); }} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `1.5px solid ${G.gris}`, background: G.creme, fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", color: "#555" }}>
+                Annuler
+              </button>
+              <button
+                disabled={!adminActionEmail.trim()}
+                onClick={() => { (window as any).__adminActionResolve?.(adminActionEmail.trim()); setAdminActionModal(null); }}
+                style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: adminActionEmail.trim() ? adminActionModal.color : "#ccc", color: G.blanc, fontSize: "0.85rem", fontWeight: 700, cursor: adminActionEmail.trim() ? "pointer" : "not-allowed" }}>
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
         <div className="adm-wrap">
           <AdminPinGate auth={auth} onBack={() => window.close()} onBadgeCount={() => {}} />
