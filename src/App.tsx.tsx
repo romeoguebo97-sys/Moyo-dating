@@ -83,9 +83,15 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
   if (map["premium_price_fcfa"]) PREMIUM_PRICE_FCFA = parseInt(map["premium_price_fcfa"]) || 3500;
   if (map["maintenance_mode"] === "true") {
-    const msg = map["maintenance_message"] || "Moyo est en maintenance. Nous revenons très vite ! 🔧";
-    const el = document.getElementById("root");
-    if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px">Mo<span style="color:#B8860B">yo</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
+    // Bypass si admin
+    const isAdminUrl = window.location.search.includes("admin=1");
+    const savedSession = localStorage.getItem("moyo_session");
+    const isAdminUser = savedSession ? JSON.parse(savedSession)?.isAdmin === true : false;
+    if (!isAdminUrl && !isAdminUser) {
+      const msg = map["maintenance_message"] || "Moyo est en maintenance. Nous revenons très vite ! 🔧";
+      const el = document.getElementById("root");
+      if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px">Mo<span style="color:#B8860B">yo</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
+    }
   }
 }).catch(() => {});
 
@@ -940,11 +946,11 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
           {/* Étape 1 */}
           <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
             <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : Juste-Emmanuelle AKOUMOU ISSOMBO</div>
-            <a href="tel:*105*2*1*065132012*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
+            <a href={`tel:*105*2*1*065132012*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
             </a>
-            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*105*1*1*065132012*3500#</div>
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*065132012*${PREMIUM_PRICE_FCFA}#`}</div>
           </div>
           {/* Étape 2 */}
           <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
@@ -1005,11 +1011,11 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
         <div style={{ padding: "20px 20px 32px" }}>
           <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
             <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : THEOPHILE BEAUGARD LIBALI</div>
-            <a href="tel:*128*2*1*1*056230067*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
+            <a href={`tel:*128*2*1*1*056230067*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
             </a>
-            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*128*2*1*1*056230067*3500#</div>
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*056230067*${PREMIUM_PRICE_FCFA}#`}</div>
           </div>
           <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
             <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -1215,10 +1221,10 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 { icon: "thumbup", titre: "Patrick - Pointe-Noire", desc: "Simple, propre, efficace. Exactement ce qu'il fallait pour la diaspora congolaise." },
     ]},
     { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
-      { icon: "Q", titre: "Moyo est-il gratuit ?", desc: `Oui, l'inscription est gratuite. 5 likes/jour et 3 messages/match. Premium à ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois.` },
+      { icon: "Q", titre: "Moyo est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium à ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois.` },
       { icon: "Q", titre: "Comment naviguer entre les profils ?", desc: "3 modes disponibles : Vue carte (swipe gauche/droite ou boutons ←→), Vue liste (défilement vertical), Plein écran (immersion totale, footer masqué). Passez d'un mode à l'autre via les boutons en haut de l'écran Découvrir." },
       { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
-      { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: "5 likes par jour. Le compteur ❤️ X/5 s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché." },
+      { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: `${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché.` },
       { icon: "Q", titre: "Puis-je voir le profil complet de quelqu'un gratuitement ?", desc: "Oui. Appuyez sur le bouton ☰ de n'importe quelle carte → 'Voir le profil'. C'est gratuit pour tous les membres, sans restriction." },
       { icon: "Q", titre: "Comment annuler un match ?", desc: "Dans Matchs, appuyez sur les 3 traits → Annuler le match. La conversation, les likes et les vues sont supprimés. L'autre personne n'est pas notifiée." },
       { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, le bouton cadeau apparait uniquement si vous êtes Premium. Vous pouvez offrir le Premium à votre partenaire non-premium." },
@@ -2552,8 +2558,8 @@ const BOT_FAQ = [
   { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium coûte ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money ou Airtel Money. Activation manuelle sous 24h.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: "Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez automatiquement 7 jours Premium offerts. Pas de limite !" },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
-  { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: "Compte gratuit : 5 likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément." },
-  { q: ["message", "envoyer", "écrire", "conversation"], r: "Compte gratuit : 3 messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message." },
+  { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: `Compte gratuit : ${FREE_LIMITS.likes} likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément.` },
+  { q: ["message", "envoyer", "écrire", "conversation"], r: `Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message.` },
   { q: ["réaction", "réagir", "emoji", "like message"], r: "Appuyez longuement sur un message pour ouvrir le menu de réactions. Une seule réaction par message est autorisée : choisir une nouvelle réaction remplace automatiquement l'ancienne." },
   { q: ["insulte", "bloqué", "interdit", "avertissement", "modération"], r: "Moyo bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés. Un avertissement s'affiche et un signalement est transmis à notre équipe. Les comportements répétés entraînent la suppression du compte." },
   { q: ["photo", "image", "profil", "modifier"], r: "Allez dans l'onglet Profil → Modifier ma photo. Un outil de recadrage s'ouvre pour cadrer votre photo parfaitement." },
@@ -2745,6 +2751,7 @@ function AdminDesktopPage() {
     matchSubtitle: "Toi et {name} vous plaisez mutuellement !",
     premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !",
     likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
+    sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄",
   });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
@@ -2869,7 +2876,7 @@ function AdminDesktopPage() {
         <div style={{ width: 1, height: 28, background: G.gris, flexShrink: 0 }} />
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</div>
-        <div style={{ fontSize: "0.8rem", color: "#bbb" }}>— espace de modération</div>
+        <div style={{ fontSize: "0.8rem", color: "#bbb" }}>- espace de modération</div>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -2894,16 +2901,17 @@ function AdminDesktopPage() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           Fermer
         </button>
-        {/* ── BURGER RÈGLES — OFF-CANVAS DROIT ── */}
+        {/* ── BURGER RÈGLES - OFF-CANVAS DROIT ── */}
         <div style={{ position: "relative" }}>
           <button onClick={() => setRulesMenuOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: rulesMenuOpen ? G.rouge : G.creme, border: `1.5px solid ${rulesMenuOpen ? G.rouge : G.gris}`, borderRadius: 20, cursor: "pointer", transition: "all 0.2s" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={rulesMenuOpen ? G.blanc : "#555"} strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
         </div>
-        {/* Overlay */}
-        {rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998, backdropFilter: "blur(2px)" }} />}
-        {/* Panel off-canvas */}
-        <div style={{ position: "fixed", top: 0, right: rulesMenuOpen ? 0 : "-380px", width: 360, height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)", overflowY: "auto" }}>
+      </div>
+      {/* Overlay */}
+      {rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998, backdropFilter: "blur(2px)" }} />}
+      {/* Panel off-canvas */}
+      <div style={{ position: "fixed", top: 0, right: rulesMenuOpen ? 0 : "-380px", width: 360, height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)", overflowY: "auto" }}>
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
             <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 8 }}>
@@ -2935,201 +2943,6 @@ function AdminDesktopPage() {
               </div>
             </div>
             <div style={{ height: 1, background: G.gris, margin: "0 20px" }} />
-            {/* ── TEXTES DES MODALS ── */}
-            <div style={{ padding: "16px 20px 12px" }}>
-              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Textes des modals</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {([
-                  ["modal_same_gender_homme", "Même genre (Homme)", modalTexts.sameGenderHomme],
-                  ["modal_same_gender_femme", "Même genre (Femme)", modalTexts.sameGenderFemme],
-                  ["modal_match_title", "Match — Titre", modalTexts.matchTitle],
-                  ["modal_match_subtitle", "Match — Sous-titre", modalTexts.matchSubtitle],
-                  ["modal_premium_default", "Premium — Message", modalTexts.premiumDefault],
-                  ["modal_likes_epuises", "Likes épuisés", modalTexts.likesEpuises],
-                ] as [string, string, string][]).map(([key, label, value]) => (
-                  <div key={key}>
-                    <div onClick={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: editingModal === key ? "rgba(192,57,43,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingModal === key ? G.rouge : "transparent"}` }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
-                        <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
-                      </div>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </div>
-                    {editingModal === key && (
-                      <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
-                        <textarea value={editingValue} onChange={e => setEditingValue(e.target.value)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: `1.5px solid rgba(192,57,43,0.3)`, fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
-                        {key.includes("subtitle") && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 4 }}>💡 Utilise {"{name}"} pour le prénom</div>}
-                        {key.includes("likes") && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 4 }}>💡 Utilise {"{n}"} pour le nombre de likes</div>}
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => setEditingModal(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
-                          <button onClick={async () => {
-                            if (!auth) return;
-                            await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingValue }) });
-                            const keyMap: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" };
-                            setModalTexts(t => ({ ...t, [keyMap[key]]: editingValue }));
-                            setEditingModal(null);
-                          }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G.rouge, color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ height: 1, background: G.gris, margin: "0 20px" }} />
-            {/* ── LIMITES & QUOTAS ── */}
-            <div style={{ padding: "16px 20px 12px" }}>
-              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Limites & Quotas</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {([
-                  ["limit_likes_free", "limitLikes", "Likes gratuits/jour", appConfig.limitLikes, "number"],
-                  ["limit_messages_free", "limitMessages", "Messages gratuits/match", appConfig.limitMessages, "number"],
-                  ["limit_photo_size_mb", "limitPhotoSizeMb", "Taille max photo (Mo)", appConfig.limitPhotoSizeMb, "number"],
-                  ["match_welcome_message", "matchWelcomeMessage", "Message bienvenue match", appConfig.matchWelcomeMessage, "text"],
-                ] as [string, keyof typeof appConfig, string, string, string][]).map(([key, configKey, label, value, type]) => (
-                  <div key={key}>
-                    <div onClick={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: editingConfig === key ? "rgba(41,128,185,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingConfig === key ? "#2980b9" : "transparent"}` }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
-                        <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
-                      </div>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </div>
-                    {editingConfig === key && (
-                      <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
-                        {type === "number" ? <input type="number" value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(41,128,185,0.3)", fontSize: "0.84rem", outline: "none" }} /> : <textarea value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(41,128,185,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />}
-                        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                          <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
-                          <button onClick={async () => {
-                            if (!auth) return;
-                            await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
-                            setAppConfig(c => ({ ...c, [configKey]: editingConfigValue }));
-                            setEditingConfig(null);
-                          }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: "#2980b9", color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ height: 1, background: G.gris, margin: "0 20px" }} />
-            {/* ── PRIX & ABONNEMENT ── */}
-            <div style={{ padding: "16px 20px 12px" }}>
-              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Prix & Abonnement</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {([
-                  ["premium_price_fcfa", "premiumPriceFcfa", "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
-                  ["premium_duration_days", "premiumDurationDays", "Durée abonnement (jours)", appConfig.premiumDurationDays],
-                ] as [string, keyof typeof appConfig, string, string][]).map(([key, configKey, label, value]) => (
-                  <div key={key}>
-                    <div onClick={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: editingConfig === key ? "rgba(39,174,96,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingConfig === key ? "#27ae60" : "transparent"}` }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
-                        <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2 }}>{value}</div>
-                      </div>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </div>
-                    {editingConfig === key && (
-                      <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
-                        <input type="number" value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(39,174,96,0.3)", fontSize: "0.84rem", outline: "none" }} />
-                        <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3 }}>{key === "premium_duration_days" ? "⚠️ Nouveaux abonnements uniquement" : "⚠️ Modifie les boutons de paiement"}</div>
-                        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                          <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
-                          <button onClick={async () => {
-                            if (!auth) return;
-                            await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
-                            setAppConfig(c => ({ ...c, [configKey]: editingConfigValue }));
-                            if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500;
-                            if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000;
-                            setEditingConfig(null);
-                          }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: "#27ae60", color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ height: 1, background: G.gris, margin: "0 20px" }} />
-            {/* ── FONCTIONNALITÉS ── */}
-            <div style={{ padding: "16px 20px 12px" }}>
-              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Fonctionnalités</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {([
-                  ["feature_statuses", "featureStatuses", "Statuts (Stories)"],
-                  ["feature_gift_premium", "featureGiftPremium", "Cadeau Premium"],
-                  ["feature_assistant", "featureAssistant", "Assistant IA"],
-                  ["maintenance_mode", "maintenanceMode", "🔴 Mode maintenance"],
-                ] as [string, keyof typeof appConfig, string][]).map(([key, configKey, label]) => (
-                  <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", background: key === "maintenance_mode" && appConfig[configKey] === "true" ? "rgba(231,76,60,0.06)" : G.creme, borderRadius: 12, border: `1px solid ${key === "maintenance_mode" && appConfig[configKey] === "true" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
-                    <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
-                    <button onClick={async () => {
-                      if (!auth) return;
-                      const newVal = appConfig[configKey] !== "true" ? "true" : "false";
-                      setAppConfig(c => ({ ...c, [configKey]: newVal }));
-                      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newVal }) });
-                    }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: appConfig[configKey] === "true" ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
-                      <div style={{ position: "absolute", top: 3, left: appConfig[configKey] === "true" ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
-                    </button>
-                  </div>
-                ))}
-                {appConfig.maintenanceMode === "true" && (
-                  <div>
-                    <div onClick={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: "rgba(231,76,60,0.06)", cursor: "pointer", border: `1px solid rgba(231,76,60,0.3)` }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: G.rouge }}>Message de maintenance</div>
-                        <div style={{ fontSize: "0.7rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{appConfig.maintenanceMessage}</div>
-                      </div>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </div>
-                    {editingConfig === "maintenance_message" && (
-                      <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
-                        <textarea value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(231,76,60,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
-                        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                          <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
-                          <button onClick={async () => {
-                            if (!auth) return;
-                            await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_message`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
-                            setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue }));
-                            setEditingConfig(null);
-                          }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G.rouge, color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenu Admin dans wrapper desktop */}
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
-            <div style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, background: G.blanc, borderRadius: 16, boxShadow: "0 8px 32px rgba(44,26,14,0.18)", border: `1px solid ${G.gris}`, width: 300, zIndex: 9999, overflow: "hidden" }}>
-              <div style={{ padding: "14px 16px 10px", borderBottom: `1px solid ${G.gris}`, fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a" }}>⚙️ Règles de la plateforme</div>
-              <div style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-                {/* Règle : bloquer like même genre */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                  <div>
-                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a" }}>Bloquer like même genre</div>
-                    <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Homme → Homme / Femme → Femme</div>
-                  </div>
-                  <button onClick={async () => {
-                    if (!auth) return;
-                    const newVal = !rules.blockSameGenderLike;
-                    setRules(r => ({ ...r, blockSameGenderLike: newVal }));
-                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
-                      body: JSON.stringify({ value: String(newVal) }),
-                    });
-                  }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: rules.blockSameGenderLike ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
-                    <div style={{ position: "absolute", top: 3, left: rules.blockSameGenderLike ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
-                  </button>
-                </div>
-              </div>
               {/* ── TEXTES DES MODALS ── */}
               <div style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 16px 16px" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>✏️ Textes des modals</div>
@@ -3137,10 +2950,11 @@ function AdminDesktopPage() {
                   {([
                     ["modal_same_gender_homme", "Même genre (Homme)", modalTexts.sameGenderHomme],
                     ["modal_same_gender_femme", "Même genre (Femme)", modalTexts.sameGenderFemme],
-                    ["modal_match_title", "Match — Titre", modalTexts.matchTitle],
-                    ["modal_match_subtitle", "Match — Sous-titre", modalTexts.matchSubtitle],
-                    ["modal_premium_default", "Premium — Message", modalTexts.premiumDefault],
+                    ["modal_match_title", "Match - Titre", modalTexts.matchTitle],
+                    ["modal_match_subtitle", "Match - Sous-titre", modalTexts.matchSubtitle],
+                    ["modal_premium_default", "Premium - Message", modalTexts.premiumDefault],
                     ["modal_likes_epuises", "Likes épuisés", modalTexts.likesEpuises],
+                    ["modal_same_gender_sub", "Même genre - sous-texte", modalTexts.sameGenderSub],
                   ] as [string, string, string][]).map(([key, label, value]) => (
                     <div key={key}>
                       <div onClick={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, background: editingModal === key ? "rgba(192,57,43,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingModal === key ? G.rouge : "transparent"}` }}>
@@ -3164,7 +2978,7 @@ function AdminDesktopPage() {
                                 headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
                                 body: JSON.stringify({ value: editingValue }),
                               });
-                              const keyMap: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" };
+                              const keyMap: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises", modal_same_gender_sub: "sameGenderSub" };
                               setModalTexts(t => ({ ...t, [keyMap[key]]: editingValue }));
                               setEditingModal(null);
                             }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G.rouge, color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
@@ -3296,10 +3110,10 @@ function AdminDesktopPage() {
                     </div>
                   )}
                 </div>
+              </div>
             </div>
           </div>
-        </div>
-        {/* Fin off-canvas */}
+          {/* Fin off-canvas */}
 
       {/* Contenu Admin dans wrapper desktop */}
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
@@ -3551,24 +3365,24 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Sur ordinateur et tablette, l'application s'affiche en plein écran avec une barre de navigation sur la gauche (Découvrir, Likes, Vues, Matchs, Messages, Profil, Admin). Sur mobile, la navigation reste en bas de l'écran.",
               "L'onglet Découvrir propose 3 modes d'affichage : Vue carte (swipe), Vue liste et Plein écran. Sur ordinateur, les modes et les filtres sont dans le panneau à droite de la carte.",
               "En mode Plein écran, la carte prend toute la hauteur de l'écran pour une immersion maximale. Sur ordinateur, les panneaux latéraux restent visibles avec un effet de verre flouté.",
-              "Les profils défilent en boucle continue — vous parcourez tous les membres disponibles avant de revenir au premier. Aucun profil ne se répète avant que vous ayez tout vu.",
+              "Les profils défilent en boucle continue - vous parcourez tous les membres disponibles avant de revenir au premier. Aucun profil ne se répète avant que vous ayez tout vu.",
               "Vous pouvez voir le profil complet de n'importe quel utilisateur gratuitement en appuyant sur les 3 traits (☰) de sa carte puis 'Voir le profil'.",
-              "Compte gratuit : 5 likes par jour. Le compteur ❤️ X/5 s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel. Premium : likes illimités, pas de compteur.",
+              `Compte gratuit : ${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel. Premium : likes illimités, pas de compteur.`,
               "Filtres disponibles : genre, ville, âge (18-99), religion.",
               "Moyo est réservé aux rencontres hétérosexuelles uniquement.",
               "Seuls les membres Premium génèrent des vues sur les profils qu'ils consultent. Les non-premium peuvent naviguer sans laisser de trace.",
             ]},
-            { title: "Menu ☰ — Options sur un profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>, items: [
+            { title: "Menu ☰ - Options sur un profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>, items: [
               "Appuyez une seule fois sur le bouton ☰ d'une carte pour ouvrir le menu. Fonctionne au premier tap sur tous les appareils (iPhone, Android, tablette, ordinateur).",
               "Le menu s'ouvre depuis le bas de l'écran avec l'avatar et le nom du profil concerné.",
               "3 options disponibles : Voir le profil (gratuit pour tous), Bloquer (retire définitivement le profil de votre Découvrir), Signaler (envoie un rapport à notre équipe).",
               "Le menu fonctionne sur chaque profil indépendamment en mode carte, liste et plein écran.",
             ]},
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
-            { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: ["Compte gratuit : 3 messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.", "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message → Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler.", "Supprimer un message : appuyez longuement → Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au cœur de notre communauté."] },
+            { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.", "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message → Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler.", "Supprimer un message : appuyez longuement → Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au cœur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe."] },
-            { title: "Premium - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
+            { title: "Premium - " + PREMIUM_PRICE_FCFA.toLocaleString() + " FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
               "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.",
               "Paiement via MTN Mobile Money ou Airtel Money - les deux opérateurs sont disponibles.",
               "Comment payer : appuyez sur 'Passer Premium' → choisissez MTN Mobile Money → appuyez sur le bouton jaune pour composer automatiquement le code de paiement sur votre téléphone → validez le paiement → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'.",
@@ -3577,7 +3391,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Après activation, déconnectez-vous et reconnectez-vous pour que les changements prennent effet. Le bouton Premium sur votre page Profil devient doré et affiche le compteur de jours restants.",
               "Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation (bouton cadeau, réservé aux membres Premium).",
             ]},
-            { title: "Parrainage — 7 jours offerts", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: [
+            { title: "Parrainage - 7 jours offerts", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: [
               "Le parrainage est notre programme de récompense : parrainez vos amis et gagnez des jours Premium gratuits.",
               "Comment parrainer : allez sur votre page Profil → appuyez sur le bouton vert 'Parrainer un ami' → partagez votre lien unique par WhatsApp, SMS ou tout autre canal.",
               "Récompense : pour chaque ami qui s'inscrit via votre lien ET passe Premium, vous gagnez automatiquement 7 jours Premium offerts sur votre compte.",
@@ -3606,8 +3420,8 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             { title: "Likes", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: [
               "L'onglet Likes (coeur) affiche les profils qui vous ont liké. Le badge rouge se met à jour en temps réel.",
               "En Premium, vous voyez les cartes complètes des personnes qui vous ont liké. En gratuit, vous voyez uniquement le compteur.",
-              "Cliquez sur un profil pour le voir en détail et liker en retour — ce qui crée un match automatiquement.",
-              "Si vous retirez un like, il disparait aussi de la liste de l'autre personne instantanément.",
+              "Cliquez sur un profil pour le voir en détail et liker en retour - ce qui crée un match automatiquement.",
+              "Si vous retirez un like, il disparait aussi de la liste de l'autre personne instantanément.`,
             ]},
             { title: "Vues", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>, items: [
               "L'onglet Vues (oeil) affiche les profils qui ont visité votre profil. Le badge se met à jour en temps réel.",
@@ -3997,10 +3811,11 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     matchSubtitle: "Toi et {name} vous plaisez mutuellement !",
     premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !",
     likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
+    sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄",
   });
 
   useEffect(() => {
-    const keys = ["modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises"];
+    const keys = ["modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","modal_same_gender_sub"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
     }).then(r => r.json()).then(data => {
@@ -4014,6 +3829,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
         matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle,
         premiumDefault: map["modal_premium_default"] || t.premiumDefault,
         likesEpuises: map["modal_likes_epuises"] || t.likesEpuises,
+        sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub,
       }));
     }).catch(() => {});
   }, [auth.token]);
@@ -4063,7 +3879,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   const loadProfiles = async (pageNum = 0, append = false) => {
     setLoading(true);
     try {
-      // Chargement de TOUS les profils par batches de 1000 — mobile et desktop, quelle que soit la taille de la base
+      // Chargement de TOUS les profils par batches de 1000 - mobile et desktop, quelle que soit la taille de la base
       const BATCH = 1000;
       let allProfiles: Profile[] = [];
       let offset = 0;
@@ -4105,7 +3921,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   };
 
   const loadMore = async () => {
-    // Plus de pagination — tous les profils sont déjà chargés
+    // Plus de pagination - tous les profils sont déjà chargés
   };
 
   const handleBlock = async () => {
@@ -4347,9 +4163,9 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
         </div>
       </div>
     )}
-    {/* Boutons vue/filtres mobile — masqués sur desktop (panneau droit) */}
+    {/* Boutons vue/filtres mobile - masqués sur desktop (panneau droit) */}
     {!isWide && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
-      {/* Filtres à gauche — icône SVG uniquement */}
+      {/* Filtres à gauche - icône SVG uniquement */}
       <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "6px 8px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showFilters ? G.blanc : G.brun} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="4" y1="6" x2="20" y2="6"/>
@@ -4360,7 +4176,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
           <circle cx="10" cy="18" r="2" fill={showFilters ? G.blanc : G.brun} stroke="none"/>
         </svg>
       </div>
-      {/* Compteur likes gratuits — centré */}
+      {/* Compteur likes gratuits - centré */}
       {!auth.isPremium && (
         <div style={{ display: "flex", alignItems: "center", gap: 5, background: likesToday >= FREE_LIMITS.likes ? "rgba(231,76,60,0.1)" : "rgba(26,92,58,0.08)", borderRadius: 50, padding: "4px 10px 4px 8px", border: `1.5px solid ${likesToday >= FREE_LIMITS.likes ? "#e74c3c" : G.vert}`, flexShrink: 0 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill={likesToday >= FREE_LIMITS.likes ? "#e74c3c" : G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -4419,7 +4235,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   const el = e.currentTarget;
   if (!profiles.length) return;
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 900) {
-    // Fin de la liste — reshuffler et repartir du début
+    // Fin de la liste - reshuffler et repartir du début
     setProfiles(prev => shuffleArray([...prev]));
     el.scrollTop = 0;
   }
@@ -4548,7 +4364,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
         {myGender === "Homme" ? modalTexts.sameGenderHomme : modalTexts.sameGenderFemme}
       </h3>
       <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20, lineHeight: 1.5 }}>
-        Moyo c'est pour les rencontres hétérosexuelles 😄
+        {modalTexts.sameGenderSub}
       </p>
       <Btn variant="primary" onClick={() => setShowSameGender(false)} style={{ width: "100%" }}>J'ai compris 😄</Btn>
     </div>
@@ -6823,11 +6639,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : Juste-Emmanuelle AKOUMOU ISSOMBO</div>
-                    <a href="tel:*105*2*1*065132012*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
+                    <a href={`tel:*105*2*1*065132012*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
                     </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*105*1*1*065132012*3500#</div>
+                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*065132012*${PREMIUM_PRICE_FCFA}#`}</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -6874,11 +6690,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : THEOPHILE BEAUGARD LIBALI</div>
-                    <a href="tel:*128*2*1*1*056230067*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
+                    <a href={`tel:*128*2*1*1*056230067*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
                     </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*128*2*1*1*056230067*3500#</div>
+                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*056230067*${PREMIUM_PRICE_FCFA}#`}</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -7926,7 +7742,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
 
-      {/* ── COLONNE GAUCHE : MENU 50% — masquée sur mobile ── */}
+      {/* ── COLONNE GAUCHE : MENU 50% - masquée sur mobile ── */}
       <div style={{ width: isWideProfile ? "50%" : "100%", background: G.blanc, borderRight: isWideProfile ? `1px solid ${G.gris}` : "none", overflowY: "auto", height: isWideProfile ? "100%" : "auto", display: isWideProfile ? "flex" : "none", flexDirection: "column" }}>
         {/* Menu items */}
         <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
@@ -7946,7 +7762,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
       {/* ── COLONNE DROITE : CONTENU 50% ── */}
       <div style={{ width: isWideProfile ? "50%" : "100%", overflowY: "auto", height: isWideProfile ? "100%" : "auto", background: "#EEEEF2" }}>
 
-      {/* ── ZONE BLANCHE : photo + nom + boutons — visible si section main ou mobile ── */}
+      {/* ── ZONE BLANCHE : photo + nom + boutons - visible si section main ou mobile ── */}
       {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 8 }}>
 
         {/* Photo ronde */}
@@ -8198,7 +8014,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                     : <svg width="16" height="16" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   }
                   <span style={{ fontSize: "1rem", fontWeight: 700, color: G.blanc }}>
-                    {isExpired ? "Votre Premium a expiré — Renouveler" : "Passer à Moyo Premium"}
+                    {isExpired ? "Votre Premium a expiré - Renouveler" : "Passer à Moyo Premium"}
                   </span>
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.75)" }}>
@@ -8211,7 +8027,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         })()}
 
 
-        {/* Parrainage — mis en avant */}
+        {/* Parrainage - mis en avant */}
         {(!isWideProfile || ["parrainage","main"].includes(activeSection)) && <div onClick={() => {
           const refLink = `https://moyo-congo.com?ref=${auth.userId}`;
           const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ?\nCrée ton compte gratuitement ici : ${refLink}`);
@@ -8905,9 +8721,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const premiumUntil = new Date(Date.now() + PREMIUM_30_DAYS_MS).toISOString();
     const targetId = p.gift_for || p.user_id;
     await adminAction(targetId, { is_premium: true, premium_until: premiumUntil }, `Premium activé.`);
-    logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} — payé par ${p.user_id}` : `Premium activé — réf: ${p.tx_ref}`, targetId);
+    logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} - payé par ${p.user_id}` : `Premium activé - réf: ${p.tx_ref}`, targetId);
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
-    // Bonus parrainage — vérifier si le filleul a un parrain
+    // Bonus parrainage - vérifier si le filleul a un parrain
     try {
       const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${targetId}&select=referred_by,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const profileData = await profileRes.json().catch(() => []);
@@ -8943,7 +8759,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const rejectPayment = async (p: PaymentRequest) => {
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "rejected" }) });
-    logAdminAction(auth.token, auth.userId, auth.name, `Paiement rejeté — réf: ${p.tx_ref} — ${p.operator}`, p.user_id);
+    logAdminAction(auth.token, auth.userId, auth.name, `Paiement rejeté - réf: ${p.tx_ref} - ${p.operator}`, p.user_id);
     await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre preuve de paiement n'a pas pu être vérifiée. Le numéro de transaction ne correspond pas. Veuillez vérifier vos informations de paiement.", warning_number: 0, acknowledged: false }) });
     loadPayments();
   };
@@ -9105,7 +8921,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         if (!Array.isArray(data) || !data[0]?.value) return;
         const expiresAt = new Date(data[0].value);
         if (expiresAt < new Date()) {
-          // Événement expiré — désactiver automatiquement
+          // Événement expiré - désactiver automatiquement
           await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
@@ -9450,12 +9266,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         });
         if (!r.ok) {
           const err = await r.json().catch(() => null);
-          console.warn("[Moyo][Admin][Delete] RPC delete_user_by_id non disponible ou erreur :", err?.message || r.status, "— Le profil a été supprimé mais le compte Auth peut subsister.");
+          console.warn("[Moyo][Admin][Delete] RPC delete_user_by_id non disponible ou erreur :", err?.message || r.status, "- Le profil a été supprimé mais le compte Auth peut subsister.");
         } else {
           console.log("[Moyo][Admin][Delete] ✅ Compte Auth supprimé via RPC :", user.id);
         }
       } catch (rpcErr) {
-        console.warn("[Moyo][Admin][Delete] RPC Auth inaccessible :", rpcErr, "— Données supprimées, Auth peut subsister.");
+        console.warn("[Moyo][Admin][Delete] RPC Auth inaccessible :", rpcErr, "- Données supprimées, Auth peut subsister.");
       }
 
       showToast(`Compte de ${user.name} supprimé définitivement.`, "success");
@@ -9507,7 +9323,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       // 3. Mise à jour locale
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, warning_count: newCount } : u));
       showToast(`Avertissement ${newCount}/3 envoyé à ${user.name}.`, "success");
-      logAdminAction(auth.token, auth.userId, auth.name, `Avertissement ${newCount}/3 envoyé à ${user.name} — Motif : ${finalReason}`, user.id);
+      logAdminAction(auth.token, auth.userId, auth.name, `Avertissement ${newCount}/3 envoyé à ${user.name} - Motif : ${finalReason}`, user.id);
       setWarnModal(null);
       setWarnReason(WARN_REASONS[0]);
       setWarnCustom("");
@@ -10373,9 +10189,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Profils incomplets", "Cochez 'Afficher uniquement les profils incomplets (...)' pour filtrer les comptes dont l'inscription n'a pas été terminée (nom affiché comme '...'). Ces profils n'ont pas finalisé leur inscription."],
                     ["Sélection multiple", "Cochez les cases à gauche de chaque profil pour les sélectionner. Utilisez 'Tout sélectionner' pour sélectionner d'un coup tous les profils affichés. Idéal combiné avec le filtre 'Incomplets'."],
                     ["Suppression en masse", "Une fois des profils sélectionnés, le bouton 🗑 Supprimer (X) apparaît. Cette action supprime définitivement les comptes sélectionnés de la base de données. Irréversible."],
-                    ["Rendre Premium / Retirer Premium", "Attribue 30 jours de Premium ou retire l'accès aux fonctionnalités payantes. Si l'utilisateur a le Premium à vie, le bouton affiche '— À vie' à la place."],
+                    ["Rendre Premium / Retirer Premium", "Attribue 30 jours de Premium ou retire l'accès aux fonctionnalités payantes. Si l'utilisateur a le Premium à vie, le bouton affiche '- À vie' à la place."],
                     ["★ À vie", "Attribue le Premium permanent à un utilisateur (date d'expiration fixée à 2099). Réservé aux employés et collaborateurs Moyo. L'utilisateur voit le symbole ∞ sur son profil. Un badge ♾️ À vie (doré foncé) apparaît directement sur sa carte dans l'Admin. Le bouton est grisé si l'utilisateur a déjà le Premium à vie."],
-                    ["— À vie", "Retire le Premium à vie d'un utilisateur. Ce bouton remplace '— Premium' lorsque l'utilisateur possède le Premium permanent. L'utilisateur repasse en compte gratuit."],
+                    ["- À vie", "Retire le Premium à vie d'un utilisateur. Ce bouton remplace '- Premium' lorsque l'utilisateur possède le Premium permanent. L'utilisateur repasse en compte gratuit."],
                     ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
                     ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
                     ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
@@ -10557,7 +10373,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Accès au panel", "À chaque ouverture du panel Admin, une modale demande votre PIN à 4 chiffres. Sans PIN correct, l'accès est refusé."],
                     ["Création du PIN", "Lors de l'attribution du statut admin à un utilisateur (bouton '+ Admin'), un PIN à 4 chiffres est demandé. Ce PIN est communiqué à la personne par un canal sécurisé (SMS, WhatsApp)."],
                     ["Bouton 🔑 PIN", "Visible sur les cartes des admins existants (sauf la vôtre). Permet de réinitialiser le PIN d'un admin à tout moment."],
-                    ["Retrait du statut admin", "Le bouton '— Admin' retire les droits admin ET supprime le PIN de la personne. Elle ne peut plus accéder au panel."],
+                    ["Retrait du statut admin", "Le bouton '- Admin' retire les droits admin ET supprime le PIN de la personne. Elle ne peut plus accéder au panel."],
                     ["PIN oublié", "Seul l'administrateur principal peut réinitialiser un PIN via le bouton 🔑 PIN dans l'onglet Utilisateurs. Pour votre propre PIN, modifiez-le directement dans Supabase."],
                     ["Sécurité renforcée", "Le PIN est vérifié en temps réel dans Supabase à chaque tentative d'accès. Un mauvais PIN affiche un message d'erreur et vide le champ."],
                   ] as [string, string][]).map(([label, desc]) => (
@@ -10611,7 +10427,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
-                    ["Activation", "Le bouton '🎉 Événement Premium — Offrir à tous' passe tous les utilisateurs en mode Premium gratuitement. À utiliser uniquement pour des événements spéciaux (lancement, promotion, fête)."],
+                    ["Activation", "Le bouton '🎉 Événement Premium - Offrir à tous' passe tous les utilisateurs en mode Premium gratuitement. À utiliser uniquement pour des événements spéciaux (lancement, promotion, fête)."],
                     ["Date d'expiration obligatoire", "Lors de l'activation, vous devez choisir une date et heure d'expiration. Passé cette date, le Premium est retiré automatiquement aux non-abonnés."],
                     ["Abonnés réels protégés", "Les utilisateurs ayant payé un abonnement (premium_until valide) conservent leur Premium même après l'expiration de l'événement. Seuls les bénéficiaires gratuits de l'événement sont concernés."],
                     ["Désactivation manuelle", "Vous pouvez aussi désactiver l'événement manuellement à tout moment avec le bouton '⏹ Désactiver'. Les abonnés réels ne sont jamais affectés."],
@@ -10629,12 +10445,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>📢 Diffusion — Date d'expiration</span>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>📢 Diffusion - Date d'expiration</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
                     ["Date d'expiration obligatoire", "Depuis la mise à jour, chaque message de diffusion doit avoir une date d'expiration. Le bouton 'Envoyer' est désactivé tant que vous n'avez pas choisi une date."],
-                    ["Expiration automatique", "Passé la date choisie, le message ne s'affiche plus pour personne — même pour les utilisateurs qui ne l'ont pas encore vu."],
+                    ["Expiration automatique", "Passé la date choisie, le message ne s'affiche plus pour personne - même pour les utilisateurs qui ne l'ont pas encore vu."],
                     ["Nouveaux inscrits protégés", "Un utilisateur qui s'inscrit après l'envoi d'un broadcast ne reçoit pas les messages antérieurs à son inscription."],
                     ["Corriger un broadcast actif", "Pour stopper un message déjà envoyé, allez dans Supabase → Table Editor → broadcasts → modifiez le champ expires_at avec une date passée."],
                   ] as [string, string][]).map(([label, desc]) => (
@@ -10650,12 +10466,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>⚙️ Menu Burger — Configuration complète</span>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>⚙️ Menu Burger - Configuration complète</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
                     ["Accès", "Le bouton burger ☰ se trouve à droite du bouton 'Fermer' dans la barre du haut. Il ouvre un panneau de configuration complet divisé en 4 sections."],
-                    ["Règles — Switch même genre", "Vert = bloqué (Homme→Homme et Femme→Femme interdits). Rouge = ouvert (tous peuvent liker tous). Sauvegarde instantanée."],
+                    ["Règles - Switch même genre", "Vert = bloqué (Homme→Homme et Femme→Femme interdits). Rouge = ouvert (tous peuvent liker tous). Sauvegarde instantanée."],
                     ["Textes des modals", "6 modals personnalisables : message même genre Homme/Femme, titre et sous-titre du match, message Premium, message likes épuisés. Cliquer sur un modal pour éditer."],
                     ["Limites & Quotas", "Likes gratuits/jour, messages gratuits/match, taille max des photos, message de bienvenue après match. Modifier sans redéployer."],
                     ["Prix & Abonnement", "Prix Premium en FCFA et durée en jours. ⚠️ Le prix modifie les boutons de paiement. La durée s'applique aux nouveaux abonnements uniquement."],
@@ -11039,7 +10855,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 disabled={premiumEventLoading}
                 style={{ width: "100%", background: premiumEventActive ? `linear-gradient(135deg,#27ae60,#1e8449)` : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: premiumEventLoading ? "not-allowed" : "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: premiumEventLoading ? 0.7 : 1 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                {premiumEventLoading ? "En cours…" : premiumEventActive ? "⏹ Désactiver l'événement Premium" : "🎉 Événement Premium — Offrir à tous"}
+                {premiumEventLoading ? "En cours…" : premiumEventActive ? "⏹ Désactiver l'événement Premium" : "🎉 Événement Premium - Offrir à tous"}
               </button>
 
               {/* ── MODALE CONFIRMATION ÉVÉNEMENT PREMIUM ── */}
@@ -11142,19 +10958,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {!u.is_premium
                             ? <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading} onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + PREMIUM_30_DAYS_MS).toISOString() }, `${u.name} est maintenant Premium.`))} />
                             : isLifetimePremium(u)
-                              ? <ActionBtn label="— À vie" color="#8B6914" disabled={isLoading} onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
-                              : <ActionBtn label="— Premium" color="#B8860B" disabled={isLoading} onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
+                              ? <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading} onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
+                              : <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading} onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
                           }
                           <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)} onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ?`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
                           {/* Admin */}
                           {!u.is_admin
                             ? auth.userId === SUPER_ADMIN_ID && <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading} onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
-                            : auth.userId === SUPER_ADMIN_ID && !isSelf && <ActionBtn label="— Admin" color="#c0392b" disabled={isLoading || isSelf} onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null as unknown as undefined }, `Droits admin retirés pour ${u.name}.`))} />
+                            : auth.userId === SUPER_ADMIN_ID && !isSelf && <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading || isSelf} onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null as unknown as undefined }, `Droits admin retirés pour ${u.name}.`))} />
                           }
                           {/* Vérification */}
                           {!u.is_verified
                             ? <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading} onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
-                            : <ActionBtn label="— Vérifier" color="#555" disabled={isLoading} onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
+                            : <ActionBtn label="- Vérifier" color="#555" disabled={isLoading} onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
                           }
                           {/* Modération */}
                           <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || isSelf} onClick={() => { if (isSelf) return; setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} />
@@ -11240,10 +11056,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
                             onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + PREMIUM_30_DAYS_MS).toISOString() }, `${u.name} est maintenant Premium.`))} />
                         ) : isLifetimePremium(u) ? (
-                          <ActionBtn label="— À vie" color="#8B6914" disabled={isLoading}
+                          <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading}
                             onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
                         ) : (
-                          <ActionBtn label="— Premium" color="#B8860B" disabled={isLoading}
+                          <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading}
                             onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
                         )}
                         <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
@@ -11258,7 +11074,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           )
                         ) : (
                           auth.userId === SUPER_ADMIN_ID && !isSelf && (
-                          <ActionBtn label="— Admin" color="#c0392b" disabled={isLoading || isSelf}
+                          <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading || isSelf}
                             onClick={() => {
                               if (isSelf) { showToast("Vous ne pouvez pas retirer vos propres droits admin.", "error"); return; }
                               if (auth.userId !== SUPER_ADMIN_ID) { showToast("Seul l'administrateur principal peut retirer le statut admin.", "error"); return; }
@@ -11274,7 +11090,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading}
                             onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
                         ) : (
-                          <ActionBtn label="— Vérifier" color="#555" disabled={isLoading}
+                          <ActionBtn label="- Vérifier" color="#555" disabled={isLoading}
                             onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
                         )}
                       </div>
@@ -11765,7 +11581,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                   <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", textAlign: "center" }}>
                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, marginBottom: 4 }}>
-                      <span style={{ fontSize: "2rem", fontWeight: 800, color: "#B8860B", lineHeight: 1 }}>{reviewsStats.avg || "—"}</span>
+                      <span style={{ fontSize: "2rem", fontWeight: 800, color: "#B8860B", lineHeight: 1 }}>{reviewsStats.avg || "-"}</span>
                       {reviewsStats.avg > 0 && (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                       )}
@@ -11820,7 +11636,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             </div>
                             <div>
                               <div style={{ fontWeight: 700, fontSize: "0.83rem", color: "#1a1a1a" }}>{r.profile?.name || "Utilisateur"}</div>
-                              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{r.profile?.city || "—"} · {new Date(r.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
+                              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{r.profile?.city || "-"} · {new Date(r.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
                             </div>
                           </div>
                           {/* Note */}
@@ -12429,7 +12245,7 @@ export default function App() {
     loadLikesReceived();
     refreshBadgesRef.current = loadLikesReceived;
 
-    // Chargement initial des matchs — badge = nouveaux matchs depuis la dernière visite
+    // Chargement initial des matchs - badge = nouveaux matchs depuis la dernière visite
     const loadMatchCount = async () => {
       try {
         const lastVisit = localStorage.getItem(`moyo_matches_seen_${auth.userId}`) || "1970-01-01T00:00:00.000Z";
@@ -12520,7 +12336,7 @@ export default function App() {
       loadLikesReceived();
     });
 
-    // ── REALTIME user_warnings — modal instantané sans refresh ──
+    // ── REALTIME user_warnings - modal instantané sans refresh ──
     const checkWarningsRealtime = async () => {
       try {
         const r = await fetch(
@@ -12539,7 +12355,7 @@ export default function App() {
       checkWarningsRealtime();
     });
 
-    // ── REALTIME broadcasts — modal instantané sans refresh ──
+    // ── REALTIME broadcasts - modal instantané sans refresh ──
     const checkBroadcastRealtime = async () => {
       try {
         const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
