@@ -115,9 +115,9 @@ type Auth = {
   email: string;
   isPremium: boolean;
   isAdmin: boolean;
-  // ── SESSION v2 : refresh automatique JWT ──
-  refreshToken?: string;   // refresh_token Supabase
-  expiresAt?: number;      // timestamp ms (Date.now()) d'expiration du access_token
+  adminLevel?: "admin" | "superadmin";
+  refreshToken?: string;
+  expiresAt?: number;
 };
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
@@ -2203,7 +2203,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         email: res.user.email || "",
         isPremium: profiles[0].is_premium || false,
         isAdmin: profiles[0].is_admin || false,
-        // ── SESSION v2 : persist refresh_token + expiration ──
+        adminLevel: (profiles[0] as any).admin_level || undefined,
         refreshToken: res.refresh_token || undefined,
         expiresAt: res.expires_in ? Date.now() + res.expires_in * 1000 : undefined,
       });
@@ -2739,6 +2739,52 @@ const openAdminPanel = (fallback: () => void) => {
 };
 
 // ─── Admin Desktop page (mounted when ?admin=1) ───────────────────────────────
+// ── Composants helpers pour le off-canvas ──
+function SwitchBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button onClick={onToggle} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: on ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
+      <div style={{ position: "absolute", top: 3, left: on ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+    </button>
+  );
+}
+function OffCanvasSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ padding: "14px 20px 10px", borderTop: "1px solid #eee" }}>
+        <div style={{ fontWeight: 700, fontSize: "0.7rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>{title}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+function EditableRow({ label, value, open, onOpen, editValue, onEdit, onSave, hint, type = "text" }: { label: string; value: string; open: boolean; onOpen: () => void; editValue: string; onEdit: (v: string) => void; onSave: () => void; hint?: string; type?: "text" | "number" }) {
+  const G2 = { rouge: "#C0392B", gris: "#E8E0D8", blanc: "#FFFFFF", creme: "#F7F3EF" };
+  return (
+    <div>
+      <div onClick={onOpen} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: open ? "rgba(192,57,43,0.06)" : G2.creme, cursor: "pointer", border: `1px solid ${open ? G2.rouge : "transparent"}` }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
+          <div style={{ fontSize: "0.7rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+        </div>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G2.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </div>
+      {open && (
+        <div style={{ marginTop: 4, padding: "10px", background: G2.blanc, borderRadius: 8, border: `1px solid ${G2.gris}` }}>
+          {type === "number"
+            ? <input type="number" value={editValue} onChange={e => onEdit(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(192,57,43,0.3)", fontSize: "0.84rem", outline: "none" }} />
+            : <textarea value={editValue} onChange={e => onEdit(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(192,57,43,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+          }
+          {hint && <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3 }}>💡 {hint}</div>}
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <button onClick={onOpen} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G2.gris}`, background: G2.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+            <button onClick={onSave} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G2.rouge, color: G2.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminDesktopPage() {
   const [auth, setAuth] = React.useState<Auth | null>(null);
   const [checked, setChecked] = React.useState(false);
@@ -2795,6 +2841,7 @@ function AdminDesktopPage() {
         matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle,
         premiumDefault: map["modal_premium_default"] || t.premiumDefault,
         likesEpuises: map["modal_likes_epuises"] || t.likesEpuises,
+        sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub,
       }));
       setAppConfig(c => ({
         limitLikes: map["limit_likes_free"] || c.limitLikes,
@@ -2901,219 +2948,156 @@ function AdminDesktopPage() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           Fermer
         </button>
-        {/* ── BURGER RÈGLES - OFF-CANVAS DROIT ── */}
+        {/* ── BURGER - OFF-CANVAS DROIT ── */}
         <div style={{ position: "relative" }}>
           <button onClick={() => setRulesMenuOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: rulesMenuOpen ? G.rouge : G.creme, border: `1.5px solid ${rulesMenuOpen ? G.rouge : G.gris}`, borderRadius: 20, cursor: "pointer", transition: "all 0.2s" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={rulesMenuOpen ? G.blanc : "#555"} strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
         </div>
-      </div>
-      {/* Overlay */}
-      {rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998, backdropFilter: "blur(2px)" }} />}
-      {/* Panel off-canvas */}
-      <div style={{ position: "fixed", top: 0, right: rulesMenuOpen ? 0 : "-380px", width: 360, height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)", overflowY: "auto" }}>
-          {/* Header */}
+        {rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
+        <div style={{ position: "fixed", top: 0, right: rulesMenuOpen ? 0 : "-380px", width: 360, height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 8 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              Configuration
-            </div>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Configuration</div>
             <button onClick={() => setRulesMenuOpen(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          {/* Contenu scrollable */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "0 0 40px" }}>
-            {/* ── RÈGLES ── */}
-            <div style={{ padding: "16px 20px 12px" }}>
-              <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Règles</div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <OffCanvasSection title="Règles">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
                 <div>
-                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#1a1a1a" }}>Bloquer like même genre</div>
-                  <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Homme → Homme / Femme → Femme</div>
+                  <div style={{ fontSize: "0.83rem", fontWeight: 600 }}>Bloquer like même genre</div>
+                  <div style={{ fontSize: "0.72rem", color: "#888" }}>Homme - Homme / Femme - Femme</div>
                 </div>
-                <button onClick={async () => {
+                <SwitchBtn on={rules.blockSameGenderLike} onToggle={async () => {
                   if (!auth) return;
-                  const newVal = !rules.blockSameGenderLike;
-                  setRules(r => ({ ...r, blockSameGenderLike: newVal }));
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(newVal) }) });
-                }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: rules.blockSameGenderLike ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
-                  <div style={{ position: "absolute", top: 3, left: rules.blockSameGenderLike ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
-                </button>
+                  const v = !rules.blockSameGenderLike;
+                  setRules(r => ({ ...r, blockSameGenderLike: v }));
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
+                }} />
               </div>
-            </div>
-            <div style={{ height: 1, background: G.gris, margin: "0 20px" }} />
-              {/* ── TEXTES DES MODALS ── */}
-              <div style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 16px 16px" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>✏️ Textes des modals</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["modal_same_gender_homme", "Même genre (Homme)", modalTexts.sameGenderHomme],
-                    ["modal_same_gender_femme", "Même genre (Femme)", modalTexts.sameGenderFemme],
-                    ["modal_match_title", "Match - Titre", modalTexts.matchTitle],
-                    ["modal_match_subtitle", "Match - Sous-titre", modalTexts.matchSubtitle],
-                    ["modal_premium_default", "Premium - Message", modalTexts.premiumDefault],
-                    ["modal_likes_epuises", "Likes épuisés", modalTexts.likesEpuises],
-                    ["modal_same_gender_sub", "Même genre - sous-texte", modalTexts.sameGenderSub],
-                  ] as [string, string, string][]).map(([key, label, value]) => (
-                    <div key={key}>
-                      <div onClick={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, background: editingModal === key ? "rgba(192,57,43,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingModal === key ? G.rouge : "transparent"}` }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
-                          <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
-                        </div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </div>
-                      {editingModal === key && (
-                        <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
-                          <textarea value={editingValue} onChange={e => setEditingValue(e.target.value)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: `1.5px solid rgba(192,57,43,0.3)`, fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
-                          {key.includes("subtitle") && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 4 }}>💡 Utilise {"{name}"} pour le prénom</div>}
-                          {key.includes("likes") && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 4 }}>💡 Utilise {"{n}"} pour le nombre de likes</div>}
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button onClick={() => setEditingModal(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
-                            <button onClick={async () => {
-                              if (!auth) return;
-                              await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
-                                body: JSON.stringify({ value: editingValue }),
-                              });
-                              const keyMap: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises", modal_same_gender_sub: "sameGenderSub" };
-                              setModalTexts(t => ({ ...t, [keyMap[key]]: editingValue }));
-                              setEditingModal(null);
-                            }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G.rouge, color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+            </OffCanvasSection>
+            <OffCanvasSection title="Textes des modals">
+              {([
+                ["modal_same_gender_homme", "Même genre (Homme)", modalTexts.sameGenderHomme],
+                ["modal_same_gender_femme", "Même genre (Femme)", modalTexts.sameGenderFemme],
+                ["modal_same_gender_sub", "Même genre - sous-texte", modalTexts.sameGenderSub],
+                ["modal_match_title", "Match - Titre", modalTexts.matchTitle],
+                ["modal_match_subtitle", "Match - Sous-titre", modalTexts.matchSubtitle],
+                ["modal_premium_default", "Premium - Message", modalTexts.premiumDefault],
+                ["modal_likes_epuises", "Likes épuisés", modalTexts.likesEpuises],
+              ] as [string, string, string][]).map(([key, label, value]) => (
+                <EditableRow key={key} label={label} value={value} open={editingModal === key}
+                  onOpen={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }}
+                  editValue={editingValue} onEdit={setEditingValue}
+                  hint={key.includes("subtitle") ? "Utilise {name} pour le prénom" : key.includes("likes") ? "Utilise {n} pour le nombre" : undefined}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingValue }) });
+                    const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" };
+                    setModalTexts(t => ({ ...t, [km[key]]: editingValue }));
+                    setEditingModal(null);
+                  }} />
+              ))}
+            </OffCanvasSection>
+            <OffCanvasSection title="Limites & Quotas">
+              {([
+                ["limit_likes_free", "limitLikes" as keyof typeof appConfig, "Likes gratuits/jour", appConfig.limitLikes, "number"],
+                ["limit_messages_free", "limitMessages" as keyof typeof appConfig, "Messages gratuits/match", appConfig.limitMessages, "number"],
+                ["limit_photo_size_mb", "limitPhotoSizeMb" as keyof typeof appConfig, "Taille max photo (Mo)", appConfig.limitPhotoSizeMb, "number"],
+                ["match_welcome_message", "matchWelcomeMessage" as keyof typeof appConfig, "Message bienvenue match", appConfig.matchWelcomeMessage, "text"],
+              ] as [string, keyof typeof appConfig, string, string, string][]).map(([key, ck, label, value, type]) => (
+                <EditableRow key={key} label={label} value={value} open={editingConfig === key} type={type as "text"|"number"}
+                  onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+                  editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                    setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
+                    setEditingConfig(null);
+                  }} />
+              ))}
+            </OffCanvasSection>
+            <OffCanvasSection title="Prix & Abonnement">
+              {([
+                ["premium_price_fcfa", "premiumPriceFcfa" as keyof typeof appConfig, "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
+                ["premium_duration_days", "premiumDurationDays" as keyof typeof appConfig, "Durée abonnement (jours)", appConfig.premiumDurationDays],
+              ] as [string, keyof typeof appConfig, string, string][]).map(([key, ck, label, value]) => (
+                <EditableRow key={key} label={label} value={value} open={editingConfig === key} type="number"
+                  onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+                  editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                    setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
+                    if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500;
+                    if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000;
+                    setEditingConfig(null);
+                  }} />
+              ))}
+            </OffCanvasSection>
+            <OffCanvasSection title="Fonctionnalités">
+              {([
+                ["feature_statuses", "featureStatuses" as keyof typeof appConfig, "Statuts (Stories)"],
+                ["feature_gift_premium", "featureGiftPremium" as keyof typeof appConfig, "Cadeau Premium"],
+                ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
+                ["maintenance_mode", "maintenanceMode" as keyof typeof appConfig, "Mode maintenance"],
+              ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
+                <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
+                  <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => {
+                    if (!auth) return;
+                    const v = appConfig[ck] !== "true" ? "true" : "false";
+                    setAppConfig(c => ({ ...c, [ck]: v }));
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+                  }} />
                 </div>
-              </div>
-              {/* ── LIMITES & QUOTAS ── */}
-              <div style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 16px 16px" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>📊 Limites & Quotas</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["limit_likes_free", "Likes gratuits/jour", appConfig.limitLikes, "number", ""],
-                    ["limit_messages_free", "Messages gratuits/match", appConfig.limitMessages, "number", ""],
-                    ["limit_photo_size_mb", "Taille max photo (Mo)", appConfig.limitPhotoSizeMb, "number", ""],
-                    ["match_welcome_message", "Message de bienvenue après match", appConfig.matchWelcomeMessage, "text", ""],
-                  ] as [string, string, string, string, string][]).map(([key, label, value, type]) => (
-                    <div key={key}>
-                      <div onClick={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, background: editingConfig === key ? "rgba(41,128,185,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingConfig === key ? "#2980b9" : "transparent"}` }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
-                          <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
-                        </div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </div>
-                      {editingConfig === key && (
-                        <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
-                          {type === "number" ? <input type="number" value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(41,128,185,0.3)", fontSize: "0.84rem", outline: "none" }} /> : <textarea value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(41,128,185,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />}
-                          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                            <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
-                            <button onClick={async () => {
-                              if (!auth) return;
-                              await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
-                              const configKeyMap: Record<string, keyof typeof appConfig> = { limit_likes_free: "limitLikes", limit_messages_free: "limitMessages", limit_photo_size_mb: "limitPhotoSizeMb", match_welcome_message: "matchWelcomeMessage" };
-                              setAppConfig(c => ({ ...c, [configKeyMap[key]]: editingConfigValue }));
-                              setEditingConfig(null);
-                            }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: "#2980b9", color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* ── PRIX & ABONNEMENT ── */}
-              <div style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 16px 16px" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>💰 Prix & Abonnement</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["premium_price_fcfa", "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
-                    ["premium_duration_days", "Durée abonnement (jours)", appConfig.premiumDurationDays],
-                  ] as [string, string, string][]).map(([key, label, value]) => (
-                    <div key={key}>
-                      <div onClick={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, background: editingConfig === key ? "rgba(39,174,96,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingConfig === key ? "#27ae60" : "transparent"}` }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
-                          <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2 }}>{value}</div>
-                        </div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </div>
-                      {editingConfig === key && (
-                        <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
-                          <input type="number" value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(39,174,96,0.3)", fontSize: "0.84rem", outline: "none" }} />
-                          <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3 }}>{key === "premium_duration_days" ? "⚠️ Affecte les nouveaux abonnements uniquement" : "⚠️ Modifie aussi les boutons de paiement"}</div>
-                          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                            <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
-                            <button onClick={async () => {
-                              if (!auth) return;
-                              await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
-                              const configKeyMap: Record<string, keyof typeof appConfig> = { premium_price_fcfa: "premiumPriceFcfa", premium_duration_days: "premiumDurationDays" };
-                              setAppConfig(c => ({ ...c, [configKeyMap[key]]: editingConfigValue }));
-                              setEditingConfig(null);
-                            }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: "#27ae60", color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* ── FONCTIONNALITÉS ON/OFF ── */}
-              <div style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 16px 16px" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>🔧 Fonctionnalités</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {([
-                    ["feature_statuses", "featureStatuses", "Statuts (Stories)"],
-                    ["feature_gift_premium", "featureGiftPremium", "Cadeau Premium"],
-                    ["feature_assistant", "featureAssistant", "Assistant IA"],
-                    ["maintenance_mode", "maintenanceMode", "🔴 Mode maintenance"],
-                  ] as [string, keyof typeof appConfig, string][]).map(([key, configKey, label]) => (
-                    <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
-                      <button onClick={async () => {
-                        if (!auth) return;
-                        const newVal = appConfig[configKey] !== "true" ? "true" : "false";
-                        setAppConfig(c => ({ ...c, [configKey]: newVal }));
-                        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newVal }) });
-                      }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: appConfig[configKey] === "true" ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
-                        <div style={{ position: "absolute", top: 3, left: appConfig[configKey] === "true" ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
-                      </button>
-                    </div>
-                  ))}
-                  {appConfig.maintenanceMode === "true" && (
+              ))}
+              {appConfig.maintenanceMode === "true" && (
+                <EditableRow label="Message de maintenance" value={appConfig.maintenanceMessage} open={editingConfig === "maintenance_message"}
+                  onOpen={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }}
+                  editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_message`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                    setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue }));
+                    setEditingConfig(null);
+                  }} />
+              )}
+            </OffCanvasSection>
+            {(auth as any)?.adminLevel === "superadmin" && (
+              <OffCanvasSection title="Gestion des admins">
+                <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Entrez l'email pour donner ou retirer des droits.</div>
+                {([
+                  ["admin", "Nommer Admin", "#2980b9", "Accès admin sans Paiements"],
+                  ["superadmin", "Nommer Super Admin", G.rouge, "Accès total y compris Paiements"],
+                  [null, "Retirer les droits", "#888", "Revient à un compte normal"],
+                ] as [string | null, string, string, string][]).map(([level, label, color, desc]) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
                     <div>
-                      <div onClick={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, background: "rgba(231,76,60,0.06)", cursor: "pointer", border: `1px solid rgba(231,76,60,0.3)` }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: G.rouge }}>Message de maintenance</div>
-                          <div style={{ fontSize: "0.7rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{appConfig.maintenanceMessage}</div>
-                        </div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </div>
-                      {editingConfig === "maintenance_message" && (
-                        <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
-                          <textarea value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(231,76,60,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
-                          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                            <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
-                            <button onClick={async () => {
-                              if (!auth) return;
-                              await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_message`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
-                              setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue }));
-                              setEditingConfig(null);
-                            }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G.rouge, color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
-                          </div>
-                        </div>
-                      )}
+                      <div style={{ fontSize: "0.78rem", fontWeight: 700, color }}>{label}</div>
+                      <div style={{ fontSize: "0.68rem", color: "#aaa" }}>{desc}</div>
                     </div>
-                  )}
-                </div>
-              </div>
-            </div>
+                    <button onClick={async () => {
+                      if (!auth) return;
+                      const email = prompt("Email de l'utilisateur :");
+                      if (!email) return;
+                      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email.trim())}&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+                      const found = await r.json().catch(() => []);
+                      if (!Array.isArray(found) || !found[0]) { alert("Utilisateur introuvable"); return; }
+                      if (!window.confirm(`${level ? `Donner le rôle "${level}" à` : "Retirer les droits de"} ${found[0].name} ?`)) return;
+                      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${found[0].id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: level, is_admin: level !== null }) });
+                      alert(`Droits mis à jour pour ${found[0].name}`);
+                    }} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: color, color: G.blanc, fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+                      Appliquer
+                    </button>
+                  </div>
+                ))}
+              </OffCanvasSection>
+            )}
           </div>
-          {/* Fin off-canvas */}
+        </div>
+      </div>
 
       {/* Contenu Admin dans wrapper desktop */}
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
@@ -11708,6 +11692,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ═══════════════════════════════════════════ ONGLET PAIEMENTS */}
       {activeTab === "payments" && (
+        auth.adminLevel !== "superadmin" ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 60, gap: 16, textAlign: "center" }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>Accès restreint</div>
+            <div style={{ fontSize: "0.85rem", color: "#888", maxWidth: 280, lineHeight: 1.6 }}>Vous n'avez pas les autorisations nécessaires pour accéder à cette section. Contactez le Super Admin.</div>
+          </div>
+        ) : (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>💳 Demandes de paiement</div>
@@ -11776,6 +11769,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             </div>
           )}
         </div>
+        )
       )}
 
       {/* ═══════════════════════════════════════════ ONGLET HISTORIQUE */}
