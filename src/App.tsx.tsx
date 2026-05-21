@@ -106,6 +106,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   }
 }).catch(() => {});
 
+const RESEND_API_KEY = "re_Ujp5EC5q_FotdQtaJQQgcdozduXYkRX5Y";
+const RESEND_FROM = "noreply@moyo-congo.com";
 const SUPPORT_TEAM_ID = "moyo-support-team";
 const SUPPORT_TEAM_NAME = "Assistance Moyo";
 const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
@@ -7744,6 +7746,13 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const [showDelete, setShowDelete] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [emailConfirmed, setEmailConfirmed] = useState<boolean | null>(null);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+  const [verifySuccess, setVerifySuccess] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
 
   useEffect(() => {
     fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -7751,6 +7760,12 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     }).then(r => r.json()).then(data => {
       setEmailConfirmed(!!data?.email_confirmed_at);
     }).catch(() => setEmailConfirmed(false));
+    // Charger email_verified depuis profiles
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=email_verified`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    }).then(r => r.json()).then(data => {
+      if (Array.isArray(data) && data[0]) setEmailVerified(!!data[0].email_verified);
+    }).catch(() => {});
   }, [auth.token]);
   const [blockedUsers, setBlockedUsers] = useState<Array<{ id: string; blocked_id: string; profile?: Profile }>>([]);
   const [showBlocked, setShowBlocked] = useState(false);
@@ -8489,24 +8504,105 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             <div style={{ fontSize: "0.72rem", color: "#bbb", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>Email de connexion</div>
             <div style={{ fontSize: "0.88rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "-"}</div>
           </div>
-          {emailConfirmed === true ? (
+          {emailVerified ? (
             <div style={{ fontSize: "0.65rem", color: "#27ae60", background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.3)", padding: "4px 10px", borderRadius: 50, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              Confirmé
+              Email vérifié
             </div>
           ) : (
             <button onClick={async () => {
+              setVerifyLoading(true);
+              setVerifyError("");
               try {
-                await fetch(`${SUPABASE_URL}/auth/v1/resend`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
-                  body: JSON.stringify({ type: "signup", email: auth.email })
+                // Générer code 6 chiffres
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
+                // Supprimer anciens codes
+                await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?user_id=eq.${auth.userId}`, {
+                  method: "DELETE",
+                  headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
                 });
-                alert("Email de confirmation envoyé ! Vérifie ta boîte mail.");
-              } catch { alert("Erreur lors de l'envoi. Réessaie."); }
-            }} style={{ fontSize: "0.65rem", color: G.rouge, background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, padding: "4px 10px", borderRadius: 50, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}>
-              Vérifier mon email
+                // Insérer nouveau code
+                await fetch(`${SUPABASE_URL}/rest/v1/email_verifications`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+                  body: JSON.stringify({ user_id: auth.userId, code, expires_at: expiresAt })
+                });
+                // Envoyer email via Resend
+                await fetch("https://api.resend.com/emails", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
+                  body: JSON.stringify({
+                    from: RESEND_FROM,
+                    to: auth.email,
+                    subject: "Ton code de vérification Moyo",
+                    html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#fff;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><span style="font-size:2rem;font-weight:900;color:#C0392B">Mo</span><span style="font-size:2rem;font-weight:900;color:#D4A843">yo</span></div><h2 style="text-align:center;color:#1a1a1a;font-size:1.3rem">Vérifie ton adresse email</h2><p style="color:#555;text-align:center;margin:16px 0">Entre ce code dans l'application Moyo pour vérifier ton email :</p><div style="background:#F0F1F5;border-radius:12px;padding:24px;text-align:center;margin:24px 0"><span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#C0392B">${code}</span></div><p style="color:#aaa;font-size:0.8rem;text-align:center">Ce code expire dans 15 minutes.</p></div>`
+                  })
+                });
+                setCodeSent(true);
+                setShowVerifyModal(true);
+              } catch { setVerifyError("Erreur lors de l'envoi. Réessaie."); }
+              setVerifyLoading(false);
+            }} disabled={verifyLoading} style={{ fontSize: "0.65rem", color: G.rouge, background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, padding: "4px 10px", borderRadius: 50, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer", opacity: verifyLoading ? 0.6 : 1 }}>
+              {verifyLoading ? "Envoi..." : "Vérifier mon email"}
             </button>
+          )}
+          {/* Modal saisie du code */}
+          {showVerifyModal && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+              <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+                {verifySuccess ? (
+                  <>
+                    <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Email vérifié !</h3>
+                    <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Ton adresse email est maintenant vérifiée.</p>
+                    <button onClick={() => { setShowVerifyModal(false); setVerifySuccess(false); }} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: "#27ae60", color: G.blanc, fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>Fermer</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Code envoyé !</h3>
+                    <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Entre le code à 6 chiffres reçu sur <strong>{auth.email}</strong>. Valable 15 minutes.</p>
+                    <input
+                      type="number"
+                      value={verifyCode}
+                      onChange={e => { setVerifyCode(e.target.value.slice(0, 6)); setVerifyError(""); }}
+                      placeholder="000000"
+                      style={{ width: "100%", boxSizing: "border-box", padding: "14px", borderRadius: 12, border: `2px solid ${verifyError ? G.rouge : G.gris}`, fontSize: "1.5rem", textAlign: "center", letterSpacing: "8px", fontWeight: 700, outline: "none", marginBottom: 8 }}
+                    />
+                    {verifyError && <p style={{ color: G.rouge, fontSize: "0.8rem", marginBottom: 8 }}>{verifyError}</p>}
+                    <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                      <button onClick={() => { setShowVerifyModal(false); setVerifyCode(""); setVerifyError(""); }} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `1.5px solid ${G.gris}`, background: G.creme, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>Annuler</button>
+                      <button disabled={verifyCode.length !== 6 || verifyLoading} onClick={async () => {
+                        setVerifyLoading(true);
+                        setVerifyError("");
+                        try {
+                          const res = await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?user_id=eq.${auth.userId}&code=eq.${verifyCode}&used=eq.false&select=id,expires_at`, {
+                            headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+                          });
+                          const rows = await res.json();
+                          if (!Array.isArray(rows) || !rows[0]) { setVerifyError("Code incorrect."); setVerifyLoading(false); return; }
+                          if (new Date(rows[0].expires_at) < new Date()) { setVerifyError("Code expiré. Renvoie un nouveau code."); setVerifyLoading(false); return; }
+                          // Marquer comme utilisé
+                          await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?id=eq.${rows[0].id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ used: true }) });
+                          // Marquer email comme vérifié
+                          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ email_verified: true }) });
+                          setEmailVerified(true);
+                          setVerifySuccess(true);
+                        } catch { setVerifyError("Erreur technique. Réessaie."); }
+                        setVerifyLoading(false);
+                      }} style={{ flex: 2, padding: "12px", borderRadius: 50, border: "none", background: verifyCode.length === 6 ? G.rouge : "#ccc", color: G.blanc, fontWeight: 700, fontSize: "0.85rem", cursor: verifyCode.length === 6 ? "pointer" : "not-allowed" }}>
+                        {verifyLoading ? "Vérification..." : "Confirmer"}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           )}
         </div>}
 
