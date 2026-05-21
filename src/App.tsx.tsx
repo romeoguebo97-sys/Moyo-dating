@@ -6600,7 +6600,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         </div>
       )}
       {/* Chat */}
-      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, flex: isWideMsg ? 1 : undefined, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden" }}>
+      <div data-chat-container style={{ height: isWideMsg ? "100%" : "100dvh", display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, position: isWideMsg ? "relative" : "fixed", top: isWideMsg ? undefined : 0, left: isWideMsg ? undefined : 0, right: isWideMsg ? undefined : 0, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Header fixe */}
@@ -6799,7 +6799,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
       {/* Zone messages */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", WebkitOverflowScrolling: "touch" }}>
-        <img src="/msg-bg.png" alt="" style={{ position: "absolute", top: 0, left: 0, right: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
+        <img src="/msg-bg.png" alt="" style={{ position: isWideMsg ? "absolute" : "fixed", top: isWideMsg ? 0 : 0, left: 0, right: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
@@ -6935,7 +6935,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       </div>
 
       {/* Barre d'envoi */}
-      <div ref={footerRef} style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom, 8px)", zIndex: 2 }}>
+      <div ref={footerRef} style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, position: "sticky", bottom: 0, paddingBottom: "env(safe-area-inset-bottom)", zIndex: 2 }}>
         {/* Bandeau répondre style WhatsApp - visible immédiatement au-dessus du champ */}
         {replyTo && (
           <div style={{ padding: "8px 12px 0 12px" }}>
