@@ -2331,14 +2331,25 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
       // Se connecter immédiatement pour avoir le vrai token
       const loginRes = await sb.signIn(emailClean, form.password);
-      if (loginRes?.access_token) {
-        setTempToken(loginRes.access_token);
-        sessionStorage.setItem("moyo_signup_token", loginRes.access_token);
-        setTempUserId(loginRes.user?.id || authRes.user?.id || "");
-        sessionStorage.setItem("moyo_signup_uid", loginRes.user?.id || authRes.user?.id || "");
+      const finalToken = loginRes?.access_token || (authRes as any)?.access_token || (authRes as any)?.session?.access_token;
+      const finalUserId = loginRes?.user?.id || authRes?.user?.id || "";
+      if (finalToken) {
+        setTempToken(finalToken);
+        sessionStorage.setItem("moyo_signup_token", finalToken);
+      }
+      if (finalUserId) {
+        setTempUserId(finalUserId);
+        sessionStorage.setItem("moyo_signup_uid", finalUserId);
       }
       setStep(2);
-    } catch { setStep(2); }
+    } catch (err) {
+      // Même en cas d'erreur réseau, si on a le userId de signUp on continue
+      if (authRes?.user?.id) {
+        setTempUserId(authRes.user.id);
+        sessionStorage.setItem("moyo_signup_uid", authRes.user.id);
+      }
+      setStep(2);
+    }
     setLoading(false);
   };
 
@@ -2369,14 +2380,30 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     if (!form.age || isNaN(ageNum) || ageNum < 18 || ageNum > 99) {
       setErrorMsg("Vous devez avoir au moins 18 ans."); setLoading(false); return;
     }
-    if (!tempToken || !tempUserId) { setErrorMsg("Erreur de session. Recommencez."); setLoading(false); return; }
+    let token = tempToken;
+    let userId = tempUserId;
+    // Si le token est manquant, tenter un re-login silencieux
+    if (!token || !userId) {
+      try {
+        const retry = await sb.signIn(form.email?.trim() || "", form.password?.trim() || "");
+        if (retry?.access_token) {
+          token = retry.access_token;
+          userId = retry.user?.id || "";
+          setTempToken(token);
+          setTempUserId(userId);
+          sessionStorage.setItem("moyo_signup_token", token);
+          sessionStorage.setItem("moyo_signup_uid", userId);
+        }
+      } catch {}
+    }
+    if (!token || !userId) { setErrorMsg("Erreur de session. Recommencez."); setLoading(false); return; }
     try {
       // Mettre à jour le profil avec toutes les infos + photo
-      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${tempUserId}`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
         method: "PATCH",
         headers: {
           "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${tempToken}`,
+          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
           "Prefer": "return=minimal"
         },
@@ -2398,7 +2425,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       try {
         await fetch(`${SUPABASE_URL}/auth/v1/user`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${tempToken}` },
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
           body: JSON.stringify({ data: { display_name: form.name.trim() } }),
         });
       } catch {}
@@ -2406,7 +2433,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       setSuccessMsg("Compte créé !");
       sessionStorage.removeItem("moyo_signup_token");
       sessionStorage.removeItem("moyo_signup_uid");
-      setTimeout(() => { onNav("login"); }, 6000);
+      setTimeout(() => { onNav("login"); }, 2000);
     } catch {
       setErrorMsg("Erreur technique. Veuillez réessayer.");
       setLoading(false);
@@ -2416,7 +2443,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   return (
     <AuthLayout onBack={() => step === 1 ? onNav("landing") : setStep(s => s - 1)}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
-      {successMsg && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111", marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Consultez vos emails pour confirmer votre compte.</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
+      {successMsg && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111", marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Ton compte est prêt ! Connecte-toi maintenant.</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Header */}
@@ -2518,10 +2545,19 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Je suis</label>
           <div style={{ display: "flex", gap: 10 }}>
             {["Homme", "Femme"].map(g => (
-              <div key={g} onClick={() => upd("gender", g)} style={{ flex: 1, padding: "12px", borderRadius: 12, textAlign: "center", cursor: "pointer", border: `2px solid ${form.gender === g ? G.rouge : G.gris}`, background: form.gender === g ? "rgba(192,57,43,0.06)" : G.blanc, fontWeight: 600, fontSize: "0.88rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                {g === "Homme"
-                  ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={form.gender === g ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><line x1="15" y1="15" x2="22" y2="22"/><line x1="18" y1="4" x2="22" y2="4"/><line x1="22" y1="4" x2="22" y2="8"/></svg>
-                  : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={form.gender === g ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><line x1="12" y1="14" x2="12" y2="22"/><line x1="9" y1="19" x2="15" y2="19"/></svg>}
+              <div key={g} onClick={() => upd("gender", g)} style={{ flex: 1, padding: "12px", borderRadius: 12, textAlign: "center", cursor: "pointer", border: `2px solid ${form.gender === g ? G.rouge : G.gris}`, background: form.gender === g ? "rgba(192,57,43,0.06)" : G.blanc, fontWeight: 600, fontSize: "0.88rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                {g === "Homme" ? (
+                  <svg width="24" height="24" viewBox="0 0 60 60" fill={form.gender === g ? G.rouge : "#aaa"}>
+                    <ellipse cx="30" cy="16" rx="11" ry="12"/>
+                    <path d="M10 55 c0-18 10-24 20-24 s20 6 20 24z"/>
+                  </svg>
+                ) : (
+                  <svg width="24" height="24" viewBox="0 0 60 60" fill={form.gender === g ? G.rouge : "#aaa"}>
+                    <ellipse cx="30" cy="15" rx="11" ry="12"/>
+                    <path d="M12 55 c0-16 8-22 18-24 l0-2 l-4 0 l0-3 l8 0 l0 3 l-4 0 l0 2 c10 2 18 8 18 24z"/>
+                    <path d="M15 38 q15 10 30 0" fill="none" stroke={form.gender === g ? G.rouge : "#aaa"} strokeWidth="2.5"/>
+                  </svg>
+                )}
                 {g}
               </div>
             ))}
@@ -2536,7 +2572,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           </select>
         </div>
         <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Religion <span style={{ color: G.rouge, fontSize: "0.8rem", fontWeight: 600 }}>(fortement recommandé)</span></label>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Religion <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 400 }}>(optionnel)</span></label>
           <select value={form.religion} onChange={e => upd("religion", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: "#111", outline: "none" }}>
             <option value="">Sélectionne ta religion</option>
             {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
