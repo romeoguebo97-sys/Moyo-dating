@@ -65,6 +65,12 @@ const MSG_BG_STYLE: React.CSSProperties = {
 };
 const SUPER_ADMIN_ID = "2b70da16-9e1e-48b0-802e-580d8d150b44";
 const REFERRAL_BONUS_DAYS = 7;
+// Intervalles de polling — modifiables via app_settings
+let POLL_BADGES_MS = 8000;        // Fallback badges (messages/likes/matchs/vues)
+let POLL_ADMIN_BADGE_MS = 5000;   // Badge admin
+let POLL_STATS_MS = 60000;        // Stats tableau de bord
+let POLL_BROADCAST_MS = 60000;    // Broadcasts
+let POLL_SUPPORT_MS = 6000;       // Messages support
 const FREE_LIMITS = { likes: 5, messages: 3 }; // valeurs par défaut, écrasées par app_settings
 const STATUS_LIMIT = 2;
 const LIFETIME_PREMIUM_UNTIL = "2099-12-31T23:59:59.000Z";
@@ -72,7 +78,7 @@ let PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000; // valeur par défaut, écras
 let PREMIUM_PRICE_FCFA = 3500;
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,maintenance_mode,maintenance_message)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -82,6 +88,11 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["limit_messages_free"]) FREE_LIMITS.messages = parseInt(map["limit_messages_free"]) || 3;
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
   if (map["premium_price_fcfa"]) PREMIUM_PRICE_FCFA = parseInt(map["premium_price_fcfa"]) || 3500;
+  if (map["poll_badges_ms"]) POLL_BADGES_MS = parseInt(map["poll_badges_ms"]) || 8000;
+  if (map["poll_admin_badge_ms"]) POLL_ADMIN_BADGE_MS = parseInt(map["poll_admin_badge_ms"]) || 5000;
+  if (map["poll_stats_ms"]) POLL_STATS_MS = parseInt(map["poll_stats_ms"]) || 60000;
+  if (map["poll_broadcast_ms"]) POLL_BROADCAST_MS = parseInt(map["poll_broadcast_ms"]) || 60000;
+  if (map["poll_support_ms"]) POLL_SUPPORT_MS = parseInt(map["poll_support_ms"]) || 6000;
   if (map["maintenance_mode"] === "true") {
     // Bypass si admin
     const isAdminUrl = window.location.search.includes("admin=1");
@@ -3163,7 +3174,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -3221,6 +3232,34 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
               <div><div style={{ fontSize: "0.78rem", fontWeight: 700, color }}>{label}</div><div style={{ fontSize: "0.68rem", color: "#aaa" }}>{desc}</div></div>
               <button onClick={async () => { const email = prompt("Email :"); if (!email) return; const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email.trim())}&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }); const found = await r.json().catch(() => []); if (!Array.isArray(found) || !found[0]) { alert("Introuvable"); return; } if (!window.confirm(`${level ? `Rôle "${level}" à` : "Retirer les droits de"} ${found[0].name} ?`)) return; await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${found[0].id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: level, is_admin: level !== null }) }); alert(`OK - ${found[0].name}`); }} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: color, color: G.blanc, fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Appliquer</button>
             </div>
+          ))}
+        </OffCanvasSection>
+        <OffCanvasSection title="Intervalles de polling (ms)">
+          <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>
+            Valeurs en millisecondes. Ex: 8000 = 8 secondes. Min recommande: 3000ms.
+          </div>
+          {([
+            ["poll_badges_ms", "Badges (likes/vues/matchs)", String(POLL_BADGES_MS)],
+            ["poll_admin_badge_ms", "Badge admin", String(POLL_ADMIN_BADGE_MS)],
+            ["poll_stats_ms", "Stats tableau de bord", String(POLL_STATS_MS)],
+            ["poll_broadcast_ms", "Broadcasts", String(POLL_BROADCAST_MS)],
+            ["poll_support_ms", "Messages support", String(POLL_SUPPORT_MS)],
+          ] as [string, string, string][]).map(([key, label, value]) => (
+            <EditableRow key={key} label={label} value={value + " ms"} type="number"
+              open={editingConfig === key}
+              onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+              editValue={editingConfigValue} onEdit={setEditingConfigValue}
+              onSave={async () => {
+                const v = Math.max(3000, parseInt(editingConfigValue) || 8000);
+                await patch(key, String(v));
+                if (key === "poll_badges_ms") POLL_BADGES_MS = v;
+                if (key === "poll_admin_badge_ms") POLL_ADMIN_BADGE_MS = v;
+                if (key === "poll_stats_ms") POLL_STATS_MS = v;
+                if (key === "poll_broadcast_ms") POLL_BROADCAST_MS = v;
+                if (key === "poll_support_ms") POLL_SUPPORT_MS = v;
+                setEditingConfigValue(String(v));
+                setEditingConfig(null);
+              }} />
           ))}
         </OffCanvasSection>
       )}
@@ -6128,7 +6167,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   useEffect(() => {
     if (!open) return;
     if (open.id === "__support__") {
-      const supportInterval = setInterval(() => loadMsgs(open), 6000);
+      const supportInterval = setInterval(() => loadMsgs(open), POLL_SUPPORT_MS);
       return () => clearInterval(supportInterval);
     }
     const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, async () => {
@@ -9192,8 +9231,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Chargement des stats globales ──
-  const loadStats = async () => {
-    setLoading(true);
+  const loadStats = async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     console.log("[Moyo][Admin] Chargement du dashboard…");
     try {
       // Minuit UTC du jour en cours (Supabase stocke en UTC)
@@ -9291,14 +9330,15 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   useEffect(() => {
-    // Charger stats + reviews + payments au montage pour avoir les badges dès l'ouverture
     loadStats();
     loadReviews();
     loadPayments();
-    // ── Rafraîchissement automatique des KPIs toutes les 30s ──
-    const statsInterval = setInterval(() => { loadStats(); }, 30000);
+    // Rafraichissement automatique toutes les 60s ET uniquement si onglet stats actif
+    const statsInterval = setInterval(() => {
+      if (activeTab === "stats") loadStats(false);
+    }, POLL_STATS_MS);
     return () => clearInterval(statsInterval);
-  }, []);
+  }, [activeTab]);
   useEffect(() => {
     // Recharger les stats à chaque fois qu'on revient sur l'onglet "stats"
     if (activeTab === "stats") loadStats();
@@ -12232,7 +12272,7 @@ export default function App() {
       } catch {}
     };
     checkBroadcast();
-    const interval = setInterval(checkBroadcast, 60000);
+    const interval = setInterval(checkBroadcast, POLL_BROADCAST_MS);
     return () => clearInterval(interval);
   }, [auth?.userId]);
 
@@ -12487,7 +12527,7 @@ export default function App() {
       } catch {}
     };
     checkAdminBadge();
-    const adminBadgeInterval = setInterval(checkAdminBadge, 5000);
+    const adminBadgeInterval = setInterval(checkAdminBadge, POLL_ADMIN_BADGE_MS);
 
     // ── REALTIME messages ──
     const wsMessages = sb.subscribeRealtime(auth.token, "messages", `match_id=neq.null`, () => {
@@ -12576,7 +12616,7 @@ export default function App() {
       loadMatchCount();
       checkWarningsRealtime();
       checkBroadcastRealtime();
-    }, 8000);
+    }, POLL_BADGES_MS);
 
     return () => {
       try { wsMessages?.close(); } catch {}
