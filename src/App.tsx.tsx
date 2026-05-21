@@ -6568,7 +6568,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   </div>;
 
   if (open) return (
-    <div style={{ padding: isWideMsg ? 0 : undefined, display: isWideMsg ? "flex" : "block", height: isWideMsg ? "100%" : "auto" }}>
+    <div style={{ padding: isWideMsg ? 0 : undefined, display: "flex", height: isWideMsg ? "100%" : "auto" }}>
       {/* Colonne gauche liste (desktop) */}
       {isWideMsg && (
         <div style={{ width: 300, minWidth: 300, borderRight: `1px solid ${G.gris}`, background: G.blanc, display: "flex", flexDirection: "column", height: "100%" }}>
