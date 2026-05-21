@@ -3225,6 +3225,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         )}
       </OffCanvasSection>
       {(auth as any)?.adminLevel === "superadmin" && (
+        <>
         <OffCanvasSection title="Gestion des admins">
           <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Entrez l'email pour donner ou retirer des droits.</div>
           {([["admin","Nommer Admin","#2980b9","Accès admin sans Paiements"],["superadmin","Nommer Super Admin",G.rouge,"Accès total y compris Paiements"],[null,"Retirer les droits","#888","Revient à un compte normal"]] as [string|null,string,string,string][]).map(([level,label,color,desc]) => (
@@ -3262,6 +3263,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
               }} />
           ))}
         </OffCanvasSection>
+        </>
       )}
     </div>
   );
