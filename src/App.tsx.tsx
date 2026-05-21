@@ -6568,7 +6568,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   </div>;
 
   if (open) return (
-    <div style={{ padding: isWideMsg ? 0 : undefined, display: "flex", height: isWideMsg ? "100%" : "auto" }}>
+    <div style={{ padding: 0, display: "flex", height: "100%", width: "100%", overflow: "hidden" }}>
       {/* Colonne gauche liste (desktop) */}
       {isWideMsg && (
         <div style={{ width: 300, minWidth: 300, borderRight: `1px solid ${G.gris}`, background: G.blanc, display: "flex", flexDirection: "column", height: "100%" }}>
@@ -6775,7 +6775,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
 
       {/* Zone messages */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px 14px", display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
-        <img src="/msg-bg.png" alt="" style={{ position: isWideMsg ? "absolute" : "fixed", top: isWideMsg ? 0 : 48, left: 0, right: 0, width: "100%", height: isWideMsg ? "100%" : `calc(100% - 48px - ${footerHeight}px)`, objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
+        <img src="/msg-bg.png" alt="" style={{ position: "absolute", top: 0, left: 0, right: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
