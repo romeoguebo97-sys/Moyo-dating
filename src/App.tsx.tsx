@@ -3296,11 +3296,10 @@ function AdminDesktopPage() {
                     </div>
                   )}
                 </div>
-              </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+        {/* Fin off-canvas */}
 
       {/* Contenu Admin dans wrapper desktop */}
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
