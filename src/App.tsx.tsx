@@ -5936,6 +5936,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [footerHeight, setFooterHeight] = useState(65);
+  const [headerHeight, setHeaderHeight] = useState(60);
+  const headerRef = useRef<HTMLDivElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [statuses, setStatuses] = useState<StatusPost[]>([]);
   const [myStatuses, setMyStatuses] = useState<StatusPost[]>([]);
@@ -5993,12 +5995,26 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     prevMsgCountRef.current = count;
   }, [msgs]);
 
-  // Mesure la hauteur du footer
+  // Mesure header + footer + ajustement clavier iOS via visualViewport
   useEffect(() => {
+    if (!open) return;
+    // Adjust container height when keyboard opens/closes on iOS
+    const container = document.querySelector('[data-chat-container]') as HTMLElement | null;
+    const handleVV = () => {
+      const vv = (window as any).visualViewport;
+      if (!vv || !container) return;
+      container.style.height = vv.height + 'px';
+      container.style.top = vv.pageTop + 'px';
+    };
+    const vv = (window as any).visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', handleVV);
+      vv.addEventListener('scroll', handleVV);
+      handleVV();
+    }
     const measure = () => {
-      if (footerRef.current) {
-        setFooterHeight(footerRef.current.offsetHeight);
-      }
+      if (footerRef.current) setFooterHeight(footerRef.current.offsetHeight);
+      if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight);
     };
     const t = setTimeout(measure, 30);
     return () => clearTimeout(t);
@@ -6580,7 +6596,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Header fixe */}
-      <div style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0, zIndex: 2, position: "relative" }}>
+      <div ref={headerRef} style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0, zIndex: 2, position: "relative" }}>
         {/* Bouton retour cercle rouge */}
         <div onClick={() => { setOpen(null); loadConvs(); }} style={{ width: 38, height: 38, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 3px 10px rgba(192,57,43,0.35)", flexShrink: 0 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -6774,7 +6790,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       )}
 
       {/* Zone messages */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", WebkitOverflowScrolling: "touch" }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", WebkitOverflowScrolling: "touch", scrollBehavior: "smooth" }}>
         <img src="/msg-bg.png" alt="" style={{ position: "absolute", top: 0, left: 0, right: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
