@@ -3153,6 +3153,81 @@ function AdminDesktopPage() {
   );
 }
 
+function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
+  const [rules, setRules] = React.useState({ blockSameGenderLike: true });
+  const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumDurationDays: "31", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧" });
+  const [editingModal, setEditingModal] = React.useState<string | null>(null);
+  const [editingValue, setEditingValue] = React.useState("");
+  const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
+  const [editingConfigValue, setEditingConfigValue] = React.useState("");
+
+  React.useEffect(() => {
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message"];
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(data => {
+        if (!Array.isArray(data)) return;
+        const map: Record<string, string> = {};
+        data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
+        if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
+        setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage }));
+      }).catch(() => {});
+  }, [auth.token]);
+
+  const patch = async (key: string, value: string) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+  };
+
+  return (
+    <div>
+      <OffCanvasSection title="Règles">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+          <div><div style={{ fontSize: "0.83rem", fontWeight: 600 }}>Bloquer like même genre</div><div style={{ fontSize: "0.72rem", color: "#888" }}>Homme - Homme / Femme - Femme</div></div>
+          <SwitchBtn on={rules.blockSameGenderLike} onToggle={async () => { const v = !rules.blockSameGenderLike; setRules(r => ({ ...r, blockSameGenderLike: v })); await patch("rule_block_same_gender_like", String(v)); }} />
+        </div>
+      </OffCanvasSection>
+      <OffCanvasSection title="Textes des modals">
+        {([["modal_same_gender_homme","Même genre (Homme)",modalTexts.sameGenderHomme],["modal_same_gender_femme","Même genre (Femme)",modalTexts.sameGenderFemme],["modal_same_gender_sub","Même genre - sous-texte",modalTexts.sameGenderSub],["modal_match_title","Match - Titre",modalTexts.matchTitle],["modal_match_subtitle","Match - Sous-titre",modalTexts.matchSubtitle],["modal_premium_default","Premium - Message",modalTexts.premiumDefault],["modal_likes_epuises","Likes épuisés",modalTexts.likesEpuises]] as [string,string,string][]).map(([key,label,value]) => (
+          <EditableRow key={key} label={label} value={value} open={editingModal === key} onOpen={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} editValue={editingValue} onEdit={setEditingValue} hint={key.includes("subtitle") ? "Utilise {name} pour le prénom" : key.includes("likes") ? "Utilise {n} pour le nombre" : undefined} onSave={async () => { await patch(key, editingValue); const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" }; setModalTexts(t => ({ ...t, [km[key]]: editingValue })); setEditingModal(null); }} />
+        ))}
+      </OffCanvasSection>
+      <OffCanvasSection title="Limites & Quotas">
+        {([["limit_likes_free","limitLikes" as keyof typeof appConfig,"Likes gratuits/jour",appConfig.limitLikes,"number"],["limit_messages_free","limitMessages" as keyof typeof appConfig,"Messages gratuits/match",appConfig.limitMessages,"number"],["limit_photo_size_mb","limitPhotoSizeMb" as keyof typeof appConfig,"Taille max photo (Mo)",appConfig.limitPhotoSizeMb,"number"],["match_welcome_message","matchWelcomeMessage" as keyof typeof appConfig,"Message bienvenue match",appConfig.matchWelcomeMessage,"text"]] as [string, keyof typeof appConfig, string, string, string][]).map(([key,ck,label,value,type]) => (
+          <EditableRow key={key} label={label} value={value} type={type as "text"|"number"} open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setEditingConfig(null); }} />
+        ))}
+      </OffCanvasSection>
+      <OffCanvasSection title="Prix & Abonnement">
+        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix Premium (FCFA)",appConfig.premiumPriceFcfa],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée abonnement (jours)",appConfig.premiumDurationDays]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
+          <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; setEditingConfig(null); }} />
+        ))}
+      </OffCanvasSection>
+      <OffCanvasSection title="Fonctionnalités">
+        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
+          <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
+            <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => { const v = appConfig[ck] !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, [ck]: v })); await patch(key, v); }} />
+          </div>
+        ))}
+        {appConfig.maintenanceMode === "true" && (
+          <EditableRow label="Message de maintenance" value={appConfig.maintenanceMessage} open={editingConfig === "maintenance_message"} onOpen={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch("maintenance_message", editingConfigValue); setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue })); setEditingConfig(null); }} />
+        )}
+      </OffCanvasSection>
+      {(auth as any)?.adminLevel === "superadmin" && (
+        <OffCanvasSection title="Gestion des admins">
+          <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Entrez l'email pour donner ou retirer des droits.</div>
+          {([["admin","Nommer Admin","#2980b9","Accès admin sans Paiements"],["superadmin","Nommer Super Admin",G.rouge,"Accès total y compris Paiements"],[null,"Retirer les droits","#888","Revient à un compte normal"]] as [string|null,string,string,string][]).map(([level,label,color,desc]) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+              <div><div style={{ fontSize: "0.78rem", fontWeight: 700, color }}>{label}</div><div style={{ fontSize: "0.68rem", color: "#aaa" }}>{desc}</div></div>
+              <button onClick={async () => { const email = prompt("Email :"); if (!email) return; const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email.trim())}&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }); const found = await r.json().catch(() => []); if (!Array.isArray(found) || !found[0]) { alert("Introuvable"); return; } if (!window.confirm(`${level ? `Rôle "${level}" à` : "Retirer les droits de"} ${found[0].name} ?`)) return; await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${found[0].id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: level, is_admin: level !== null }) }); alert(`OK - ${found[0].name}`); }} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: color, color: G.blanc, fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Appliquer</button>
+            </div>
+          ))}
+        </OffCanvasSection>
+      )}
+    </div>
+  );
+}
+
 function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
@@ -6009,15 +6084,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       if (!container) return;
       const vv = (window as any).visualViewport;
       if (!vv) return;
-      // La différence entre window.innerHeight et vv.height = hauteur du clavier
-      const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
-      container.style.paddingBottom = keyboardHeight > 0 ? keyboardHeight + 'px' : '0px';
-      // Scroll to bottom when keyboard opens
-      if (keyboardHeight > 0) {
-        setTimeout(() => {
-          bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
+      // Recalculate exact container height to match visible area
+      const visibleHeight = vv.height;
+      const offsetTop = vv.pageTop + vv.offsetTop;
+      container.style.height = visibleHeight + 'px';
+      container.style.top = offsetTop + 'px';
+      container.style.bottom = 'auto';
     };
     const vv = (window as any).visualViewport;
     if (vv) {
@@ -6600,7 +6672,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         </div>
       )}
       {/* Chat */}
-      <div data-chat-container style={{ height: isWideMsg ? "100%" : "100dvh", display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, position: isWideMsg ? "relative" : "fixed", top: isWideMsg ? undefined : 0, left: isWideMsg ? undefined : 0, right: isWideMsg ? undefined : 0, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden" }}>
+      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Header fixe */}
@@ -6935,7 +7007,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       </div>
 
       {/* Barre d'envoi */}
-      <div ref={footerRef} style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, position: "sticky", bottom: 0, paddingBottom: "env(safe-area-inset-bottom)", zIndex: 2 }}>
+      <div ref={footerRef} style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom)", zIndex: 2 }}>
         {/* Bandeau répondre style WhatsApp - visible immédiatement au-dessus du champ */}
         {replyTo && (
           <div style={{ padding: "8px 12px 0 12px" }}>
@@ -12582,29 +12654,15 @@ export default function App() {
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
     {/* ── OFF-CANVAS CONFIG MOBILE/TABLETTE ── */}
     {showAdminConfig && <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
-    <div style={{ position: "fixed", top: 0, right: showAdminConfig ? 0 : "-110vw", width: "min(90vw, 480px)", height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
+    <div style={{ position: "fixed", top: 0, right: showAdminConfig ? 0 : "-110vw", width: "min(95vw, 480px)", height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
         <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Configuration</div>
         <button onClick={() => setShowAdminConfig(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 40 }}>
-        <div style={{ padding: "14px 20px 10px" }}>
-          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Accès rapide</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ background: G.creme, borderRadius: 12, padding: "12px 16px", fontSize: "0.85rem", color: "#555", lineHeight: 1.5 }}>
-              Pour accéder à la configuration complète, ouvrez l'admin depuis un ordinateur.
-            </div>
-            <button onClick={() => { const url = `${window.location.origin}${window.location.pathname}?admin=1`; window.open(url, "_blank"); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: G.creme, borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              <div>
-                <div style={{ fontSize: "0.83rem", fontWeight: 700, color: "#1a1a1a" }}>Ouvrir le tableau de bord</div>
-                <div style={{ fontSize: "0.72rem", color: "#888" }}>Admin complet avec toutes les fonctionnalités</div>
-              </div>
-            </button>
-          </div>
-        </div>
+      <div style={{ flex: 1, overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom, 40px)" }}>
+        <MobileAdminConfig auth={auth} onClose={() => setShowAdminConfig(false)} />
       </div>
     </div>
     {InstallBanner}
