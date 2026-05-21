@@ -2955,7 +2955,7 @@ function AdminDesktopPage() {
           </button>
         </div>
         {rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
-        <div style={{ position: "fixed", top: 0, right: rulesMenuOpen ? 0 : "-380px", width: 360, height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
+        <div style={{ position: "fixed", top: 0, right: rulesMenuOpen ? 0 : "-55vw", width: "50vw", minWidth: 380, maxWidth: 600, height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
             <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Configuration</div>
             <button onClick={() => setRulesMenuOpen(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -3080,7 +3080,7 @@ function AdminDesktopPage() {
                     </div>
                     <button onClick={async () => {
                       if (!auth) return;
-                      const email = prompt("Email de l'utilisateur :");
+                      const email = window.prompt("Entrez l'adresse email de l'utilisateur à qui vous souhaitez attribuer ce rôle :");
                       if (!email) return;
                       const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email.trim())}&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
                       const found = await r.json().catch(() => []);
@@ -3114,6 +3114,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
   const [showBot, setShowBot] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showAdminConfig, setShowAdminConfig] = useState(false);
 
   // Écoute les événements fullscreen émis par Discover
   useEffect(() => {
@@ -3304,6 +3305,11 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             <div onClick={() => setShowBot(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(26,92,58,0.35)", flexShrink: 0 }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><line x1="8" y1="21" x2="8" y2="19"/><line x1="16" y1="21" x2="16" y2="19"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
             </div>
+            {auth.isAdmin && (
+              <div onClick={() => setShowAdminConfig(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: G.creme, border: `1.5px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              </div>
+            )}
           </div>
         </div>
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
@@ -12488,6 +12494,33 @@ export default function App() {
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} />}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
+    {/* ── OFF-CANVAS CONFIG MOBILE/TABLETTE ── */}
+    {showAdminConfig && <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
+    <div style={{ position: "fixed", top: 0, right: showAdminConfig ? 0 : "-110vw", width: "min(90vw, 480px)", height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+        <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Configuration</div>
+        <button onClick={() => setShowAdminConfig(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 40 }}>
+        <div style={{ padding: "14px 20px 10px" }}>
+          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Accès rapide</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ background: G.creme, borderRadius: 12, padding: "12px 16px", fontSize: "0.85rem", color: "#555", lineHeight: 1.5 }}>
+              Pour accéder à la configuration complète, ouvrez l'admin depuis un ordinateur.
+            </div>
+            <button onClick={() => { const url = `${window.location.origin}${window.location.pathname}?admin=1`; window.open(url, "_blank"); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: G.creme, borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              <div>
+                <div style={{ fontSize: "0.83rem", fontWeight: 700, color: "#1a1a1a" }}>Ouvrir le tableau de bord</div>
+                <div style={{ fontSize: "0.72rem", color: "#888" }}>Admin complet avec toutes les fonctionnalités</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
     {InstallBanner}
   </div>;
 }
