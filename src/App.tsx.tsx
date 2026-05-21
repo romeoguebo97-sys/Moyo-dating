@@ -9196,12 +9196,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setLoading(true);
     console.log("[Moyo][Admin] Chargement du dashboard…");
     try {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const todayIso = today.toISOString();
+      // Minuit UTC du jour en cours (Supabase stocke en UTC)
+      const now = new Date();
+      const todayIso = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
 
-      // ── Utiliser count=exact pour les totaux (pas de limite à 500) ──
-      // Range "0-49" évite le 416 Range Not Satisfiable de Supabase sur les tables/filtres vides
-      const countHeader = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-49" };
+      // count=exact + Range "0-0" : récupère uniquement le total sans charger les données
+      const countHeader = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" };
       const parseCount = (r: Response) => {
         // content-range : "0-49/TOTAL" ou "*/TOTAL" ou absent si 416
         const h = r.headers.get("content-range");
@@ -11998,6 +11998,16 @@ export default function App() {
     window.addEventListener("moyo-open-admin-config", handler);
     return () => window.removeEventListener("moyo-open-admin-config", handler);
   }, []);
+
+  // Bloquer le scroll du body quand le panneau config est ouvert
+  useEffect(() => {
+    if (showAdminConfig) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [showAdminConfig]);
   const isUnmatchingRef = useRef(false);
   // Ref pour permettre à LikesPage de déclencher un refresh des badges
   const refreshBadgesRef = useRef<(() => void) | null>(null);
@@ -12205,14 +12215,18 @@ export default function App() {
       try {
         const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
         const r = await fetch(
-          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${lastSeen}&order=created_at.desc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${lastSeen}&expires_at=gt.${new Date().toISOString()}&order=created_at.desc&limit=1`,
           { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
         );
         if (!r.ok) return;
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
           const broadcast = data[0];
-          if (broadcast.expires_at && new Date(broadcast.expires_at) < new Date()) return;
+          // Marquer comme vu si expiré (nettoyage)
+          if (broadcast.expires_at && new Date(broadcast.expires_at) < new Date()) {
+            try { localStorage.setItem(`moyo_broadcast_seen_${auth.userId}`, new Date().toISOString()); } catch {}
+            return;
+          }
           setPendingBroadcast(prev => prev?.id === broadcast.id ? prev : { id: broadcast.id, message: broadcast.message });
         }
       } catch {}
@@ -12541,7 +12555,11 @@ export default function App() {
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
           const broadcast = data[0];
-          if (broadcast.expires_at && new Date(broadcast.expires_at) < new Date()) return;
+          // Marquer comme vu si expiré (nettoyage)
+          if (broadcast.expires_at && new Date(broadcast.expires_at) < new Date()) {
+            try { localStorage.setItem(`moyo_broadcast_seen_${auth.userId}`, new Date().toISOString()); } catch {}
+            return;
+          }
           setPendingBroadcast(prev => prev?.id === broadcast.id ? prev : { id: broadcast.id, message: broadcast.message });
         }
       } catch {}
