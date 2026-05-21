@@ -3081,7 +3081,8 @@ function AdminDesktopPage() {
                   }} />
               )}
             </OffCanvasSection>
-            {(auth as any)?.adminLevel === "superadmin" && (
+            {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+              <>
               <OffCanvasSection title="Gestion des admins">
                 <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Entrez l'email pour donner ou retirer des droits.</div>
                 {([
@@ -3115,6 +3116,33 @@ function AdminDesktopPage() {
                   </div>
                 ))}
               </OffCanvasSection>
+              <OffCanvasSection title="Intervalles de polling (ms)">
+                <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Valeurs en millisecondes. Ex: 8000 = 8s. Min: 3000ms.</div>
+                {([
+                  ["poll_badges_ms", "Badges (likes/vues/matchs/messages)", String(POLL_BADGES_MS)],
+                  ["poll_admin_badge_ms", "Badge admin (tableau de bord)", String(POLL_ADMIN_BADGE_MS)],
+                  ["poll_stats_ms", "Stats tableau de bord", String(POLL_STATS_MS)],
+                  ["poll_broadcast_ms", "Broadcasts / diffusions", String(POLL_BROADCAST_MS)],
+                  ["poll_support_ms", "Messages support", String(POLL_SUPPORT_MS)],
+                ] as [string, string, string][]).map(([key, label, value]) => (
+                  <EditableRow key={key} label={label} value={value + " ms"} type="number"
+                    open={editingConfig === key}
+                    onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+                    editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                    onSave={async () => {
+                      if (!auth) return;
+                      const v = Math.max(3000, parseInt(editingConfigValue) || 8000);
+                      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
+                      if (key === "poll_badges_ms") POLL_BADGES_MS = v;
+                      if (key === "poll_admin_badge_ms") POLL_ADMIN_BADGE_MS = v;
+                      if (key === "poll_stats_ms") POLL_STATS_MS = v;
+                      if (key === "poll_broadcast_ms") POLL_BROADCAST_MS = v;
+                      if (key === "poll_support_ms") POLL_SUPPORT_MS = v;
+                      setEditingConfig(null);
+                    }} />
+                ))}
+              </OffCanvasSection>
+              </>
             )}
           </div>
         </div>
@@ -3224,7 +3252,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
           <EditableRow label="Message de maintenance" value={appConfig.maintenanceMessage} open={editingConfig === "maintenance_message"} onOpen={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch("maintenance_message", editingConfigValue); setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue })); setEditingConfig(null); }} />
         )}
       </OffCanvasSection>
-      {(auth as any)?.adminLevel === "superadmin" && (
+      {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
         <>
         <OffCanvasSection title="Gestion des admins">
           <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Entrez l'email pour donner ou retirer des droits.</div>
@@ -11891,7 +11919,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ═══════════════════════════════════════════ ONGLET PAIEMENTS */}
       {activeTab === "payments" && (
-        auth.adminLevel !== "superadmin" ? (
+        (auth.adminLevel !== "superadmin" && auth.userId !== SUPER_ADMIN_ID) ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 60, gap: 16, textAlign: "center" }}>
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
