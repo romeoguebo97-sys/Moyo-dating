@@ -2716,6 +2716,16 @@ function AdminDesktopPage() {
   const [checked, setChecked] = React.useState(false);
   const [rulesMenuOpen, setRulesMenuOpen] = React.useState(false);
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
+  const [modalTexts, setModalTexts] = React.useState({
+    sameGenderHomme: "Eh frère, reste du bon côté ! 😂",
+    sameGenderFemme: "Eh sœur, reste du bon côté ! 😂",
+    matchTitle: "C'est un Match !",
+    matchSubtitle: "Toi et {name} vous plaisez mutuellement !",
+    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !",
+    likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
+  });
+  const [editingModal, setEditingModal] = React.useState<string | null>(null);
+  const [editingValue, setEditingValue] = React.useState("");
 
   React.useEffect(() => {
     if (!auth) return;
@@ -2724,6 +2734,23 @@ function AdminDesktopPage() {
     }).then(r => r.json()).then(data => {
       if (Array.isArray(data) && data.length > 0)
         setRules(r => ({ ...r, blockSameGenderLike: data[0].value === "true" }));
+    }).catch(() => {});
+    // Charger les textes des modals
+    const keys = ["modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises"];
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+    }).then(r => r.json()).then(data => {
+      if (!Array.isArray(data)) return;
+      const map: Record<string, string> = {};
+      data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
+      setModalTexts(t => ({
+        sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme,
+        sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme,
+        matchTitle: map["modal_match_title"] || t.matchTitle,
+        matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle,
+        premiumDefault: map["modal_premium_default"] || t.premiumDefault,
+        likesEpuises: map["modal_likes_epuises"] || t.likesEpuises,
+      }));
     }).catch(() => {});
   }, [auth]);
 
@@ -2843,6 +2870,51 @@ function AdminDesktopPage() {
                   }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: rules.blockSameGenderLike ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
                     <div style={{ position: "absolute", top: 3, left: rules.blockSameGenderLike ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
                   </button>
+                </div>
+              </div>
+              {/* ── TEXTES DES MODALS ── */}
+              <div style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 16px 16px" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>✏️ Textes des modals</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["modal_same_gender_homme", "Même genre (Homme)", modalTexts.sameGenderHomme],
+                    ["modal_same_gender_femme", "Même genre (Femme)", modalTexts.sameGenderFemme],
+                    ["modal_match_title", "Match — Titre", modalTexts.matchTitle],
+                    ["modal_match_subtitle", "Match — Sous-titre", modalTexts.matchSubtitle],
+                    ["modal_premium_default", "Premium — Message", modalTexts.premiumDefault],
+                    ["modal_likes_epuises", "Likes épuisés", modalTexts.likesEpuises],
+                  ] as [string, string, string][]).map(([key, label, value]) => (
+                    <div key={key}>
+                      <div onClick={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, background: editingModal === key ? "rgba(192,57,43,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingModal === key ? G.rouge : "transparent"}` }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
+                          <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </div>
+                      {editingModal === key && (
+                        <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
+                          <textarea value={editingValue} onChange={e => setEditingValue(e.target.value)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: `1.5px solid rgba(192,57,43,0.3)`, fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+                          {key.includes("subtitle") && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 4 }}>💡 Utilise {"{name}"} pour le prénom</div>}
+                          {key.includes("likes") && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 4 }}>💡 Utilise {"{n}"} pour le nombre de likes</div>}
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => setEditingModal(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+                            <button onClick={async () => {
+                              if (!auth) return;
+                              await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+                                body: JSON.stringify({ value: editingValue }),
+                              });
+                              const keyMap: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" };
+                              setModalTexts(t => ({ ...t, [keyMap[key]]: editingValue }));
+                              setEditingModal(null);
+                            }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G.rouge, color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -3539,6 +3611,33 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "", religion: "" });
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list" | "full">("card");
+  const [modalTexts, setModalTexts] = useState({
+    sameGenderHomme: "Eh frère, reste du bon côté ! 😂",
+    sameGenderFemme: "Eh sœur, reste du bon côté ! 😂",
+    matchTitle: "C'est un Match !",
+    matchSubtitle: "Toi et {name} vous plaisez mutuellement !",
+    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !",
+    likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
+  });
+
+  useEffect(() => {
+    const keys = ["modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises"];
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+    }).then(r => r.json()).then(data => {
+      if (!Array.isArray(data)) return;
+      const map: Record<string, string> = {};
+      data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
+      setModalTexts(t => ({
+        sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme,
+        sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme,
+        matchTitle: map["modal_match_title"] || t.matchTitle,
+        matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle,
+        premiumDefault: map["modal_premium_default"] || t.premiumDefault,
+        likesEpuises: map["modal_likes_epuises"] || t.likesEpuises,
+      }));
+    }).catch(() => {});
+  }, [auth.token]);
   const fullscreenScrollRef = useRef<HTMLDivElement>(null);
   const swipeStartX = useRef<number | null>(null);
   // ── Bottom Sheet menu ──
@@ -3688,7 +3787,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       } catch {}
       return;
     }
-    if (!auth.isPremium && likesToday >= FREE_LIMITS.likes) { onShowPremium(`Tu as utilisé tes ${FREE_LIMITS.likes} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !`); return; }
+    if (!auth.isPremium && likesToday >= FREE_LIMITS.likes) { onShowPremium(modalTexts.likesEpuises.replace("{n}", String(FREE_LIMITS.likes))); return; }
     // Like - mise à jour optimiste immédiate
     setLikedIds(s => new Set([...s, p.id]));
     setLikesToday(l => l + 1);
@@ -4067,7 +4166,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     <div style={{ background: G.blanc, borderRadius: 20, padding: "32px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
       <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGender === "Homme" ? "🕺" : "💃"}</div>
       <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>
-        {myGender === "Homme" ? "Eh frère, reste du bon côté ! 😂" : "Eh sœur, reste du bon côté ! 😂"}
+        {myGender === "Homme" ? modalTexts.sameGenderHomme : modalTexts.sameGenderFemme}
       </h3>
       <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20, lineHeight: 1.5 }}>
         Moyo c'est pour les rencontres hétérosexuelles 😄
@@ -4105,7 +4204,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       )}
     </div>
   </div>
-</div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>C'est un Match !</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Toi et {matchPop.name} vous plaisez mutuellement !</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
+</div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>{modalTexts.matchTitle}</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>{modalTexts.matchSubtitle.replace("{name}", matchPop.name)}</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
     </div>{/* fin contenu principal */}
 
     {/* ── PANNEAU DROIT (desktop/tablette uniquement) ── */}
