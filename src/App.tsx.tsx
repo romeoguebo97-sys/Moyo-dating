@@ -3109,12 +3109,11 @@ function AdminDesktopPage() {
   );
 }
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
   const [showBot, setShowBot] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showAdminConfig, setShowAdminConfig] = useState(false);
 
   // Écoute les événements fullscreen émis par Discover
   useEffect(() => {
@@ -11840,6 +11839,7 @@ export default function App() {
   const [openConvPartnerId, setOpenConvPartnerId] = useState<string | null>(null);
   const [adminBadgeCount, setAdminBadgeCount] = useState(0);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [showAdminConfig, setShowAdminConfig] = useState(false);
   const isUnmatchingRef = useRef(false);
   // Ref pour permettre à LikesPage de déclencher un refresh des badges
   const refreshBadgesRef = useRef<(() => void) | null>(null);
@@ -12482,7 +12482,7 @@ export default function App() {
       }
       if (t === "likes") setLikesReceived(0);
       if (t === "visitors") setViewsReceived(0);
-    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount}>
+    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
