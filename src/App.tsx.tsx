@@ -524,6 +524,9 @@ const GLOBAL_CSS = `
   html{overflow-x:hidden;width:100%;max-width:100vw}
   body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%}
   #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh}
+  /* Fix clavier iOS - la barre reste fixe au-dessus du clavier */
+  [data-chat-container]{height:100%;height:-webkit-fill-available;}
+  @supports(height:100dvh){[data-chat-container]{height:100dvh;}}
   @media(min-width:520px){body{background-color:#EDE5D8;background-image:radial-gradient(circle,rgba(192,57,43,0.06) 1px,transparent 1px),radial-gradient(circle,rgba(212,168,67,0.05) 1px,transparent 1px);background-size:30px 30px,50px 50px}}
   input,select,textarea,button{font-family:inherit;box-sizing:border-box;max-width:100%;-webkit-appearance:none}
   input,select,textarea{display:block;width:100%}
@@ -5990,24 +5993,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     prevMsgCountRef.current = count;
   }, [msgs]);
 
-  // Mesure la hauteur du footer + scroll quand ReplyBanner apparaît/disparaît
-  // + gestion clavier mobile via visualViewport
+  // Mesure la hauteur du footer
   useEffect(() => {
-    const chatDiv = footerRef.current?.closest('[data-chat-container]') as HTMLElement | null;
-    const handleViewport = () => {
-      if (!chatDiv) return;
-      const vv = (window as any).visualViewport;
-      if (vv) {
-        // Adapter la hauteur du container au viewport visible (clavier exclu)
-        chatDiv.style.height = vv.height + 'px';
-        chatDiv.style.top = vv.offsetTop + 'px';
-      }
-    };
-    const vv = (window as any).visualViewport;
-    if (vv) {
-      vv.addEventListener('resize', handleViewport);
-      vv.addEventListener('scroll', handleViewport);
-    }
     const measure = () => {
       if (footerRef.current) {
         setFooterHeight(footerRef.current.offsetHeight);
@@ -6589,7 +6576,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         </div>
       )}
       {/* Chat */}
-      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, flex: isWideMsg ? 1 : undefined, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", height: isWideMsg ? "100%" : "100dvh" }}>
+      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, flex: isWideMsg ? 1 : undefined, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Header fixe */}
@@ -6789,7 +6776,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       {/* Zone messages */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px 14px", display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
         <img src="/msg-bg.png" alt="" style={{ position: isWideMsg ? "absolute" : "fixed", top: isWideMsg ? 0 : 48, left: 0, right: 0, width: "100%", height: isWideMsg ? "100%" : `calc(100% - 48px - ${footerHeight}px)`, objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
