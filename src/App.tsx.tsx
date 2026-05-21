@@ -65,10 +65,29 @@ const MSG_BG_STYLE: React.CSSProperties = {
 };
 const SUPER_ADMIN_ID = "2b70da16-9e1e-48b0-802e-580d8d150b44";
 const REFERRAL_BONUS_DAYS = 7;
-const FREE_LIMITS = { likes: 5, messages: 3 };
-const STATUS_LIMIT = 2; // Maximum de statuts actifs par utilisateur sur 24h
+const FREE_LIMITS = { likes: 5, messages: 3 }; // valeurs par défaut, écrasées par app_settings
+const STATUS_LIMIT = 2;
 const LIFETIME_PREMIUM_UNTIL = "2099-12-31T23:59:59.000Z";
-const PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000;
+let PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000; // valeur par défaut, écrasée par app_settings
+let PREMIUM_PRICE_FCFA = 3500;
+
+// Charger les settings dynamiques depuis Supabase au démarrage
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,maintenance_mode,maintenance_message)&select=key,value`, {
+  headers: { "apikey": SUPABASE_KEY },
+}).then(r => r.json()).then((data: { key: string; value: string }[]) => {
+  if (!Array.isArray(data)) return;
+  const map: Record<string, string> = {};
+  data.forEach(d => { map[d.key] = d.value; });
+  if (map["limit_likes_free"]) FREE_LIMITS.likes = parseInt(map["limit_likes_free"]) || 5;
+  if (map["limit_messages_free"]) FREE_LIMITS.messages = parseInt(map["limit_messages_free"]) || 3;
+  if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
+  if (map["premium_price_fcfa"]) PREMIUM_PRICE_FCFA = parseInt(map["premium_price_fcfa"]) || 3500;
+  if (map["maintenance_mode"] === "true") {
+    const msg = map["maintenance_message"] || "Moyo est en maintenance. Nous revenons très vite ! 🔧";
+    const el = document.getElementById("root");
+    if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px">Mo<span style="color:#B8860B">yo</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
+  }
+}).catch(() => {});
 
 const SUPPORT_TEAM_ID = "moyo-support-team";
 const SUPPORT_TEAM_NAME = "Assistance Moyo";
@@ -792,7 +811,7 @@ const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, pr
   const borderColor = border ? (premium ? G.or : G.rouge) : "none";
   const borderStyle = border ? `3px solid ${borderColor}` : "none";
   const boxShadow = border && premium ? `0 0 0 1px ${G.or}44` : "none";
-  return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.45 }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (gender === "Femme" ? "👩🏿" : "👨🏿")}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", border: `2px solid ${G.blanc}` }}>⭐</div>}</div>;
+  return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (<svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>)}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>;
 });
 
 function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void; reason: string; userId: string; token: string }) {
@@ -923,7 +942,7 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
             <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : Juste-Emmanuelle AKOUMOU ISSOMBO</div>
             <a href="tel:*105*2*1*065132012*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              Appuyer pour payer - 3 500 FCFA
+              {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
             </a>
             <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*105*1*1*065132012*3500#</div>
           </div>
@@ -941,7 +960,7 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
                 await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" },
-                  body: JSON.stringify({ user_id: userId, operator: "MTN", tx_ref: txRef.trim(), amount: 3500, status: "pending" }),
+                  body: JSON.stringify({ user_id: userId, operator: "MTN", tx_ref: txRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending" }),
                 });
                 setTxSent(true);
               } catch { setTxSent(true); }
@@ -988,7 +1007,7 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
             <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : THEOPHILE BEAUGARD LIBALI</div>
             <a href="tel:*128*2*1*1*056230067*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              Appuyer pour payer - 3 500 FCFA
+              {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
             </a>
             <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*128*2*1*1*056230067*3500#</div>
           </div>
@@ -1004,7 +1023,7 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
                 await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" },
-                  body: JSON.stringify({ user_id: userId, operator: "Airtel", tx_ref: txRef.trim(), amount: 3500, status: "pending" }),
+                  body: JSON.stringify({ user_id: userId, operator: "Airtel", tx_ref: txRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending" }),
                 });
                 setTxSent(true);
               } catch { setTxSent(true); }
@@ -1323,7 +1342,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                         <div style={{ textAlign: "center", padding: "8px 0" }}>
                           {ratingSubmitted ? (
                             <div>
-                              <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>🎉</div>
+                              <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
                               <div style={{ fontWeight: 700, fontSize: "1rem", color: "#111", marginBottom: 4 }}>Merci pour ton avis !</div>
                               <div style={{ fontSize: "0.82rem", color: "#555" }}>Tu as noté Moyo {userRating}/5 étoiles</div>
                               <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 8 }}>
@@ -1490,7 +1509,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   </div>
                   <div style={{ padding: "4px 6px" }}>
                     <div style={{ fontSize: "0.42rem", fontWeight: 700, color: "#111" }}>Sandrine, 27</div>
-                    <div style={{ fontSize: "0.35rem", color: "#555" }}>📍 Brazzaville</div>
+                    <div style={{ fontSize: "0.35rem", color: "#555", display: "flex", alignItems: "center", gap: 2 }}><svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Brazzaville</div>
                     <div style={{ marginTop: 4, background: G.rouge, borderRadius: 50, padding: "2px 6px", textAlign: "center", fontSize: "0.38rem", color: G.blanc, fontWeight: 700 }}>Liker</div>
                   </div>
                 </div>
@@ -1506,11 +1525,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   </div>
                   <div style={{ padding: "5px 8px" }}>
                     <div style={{ fontSize: "0.52rem", fontWeight: 700, color: G.blanc }}>Romaric, 30</div>
-                    <div style={{ fontSize: "0.4rem", color: "rgba(255,255,255,0.6)" }}>📍 Pointe-Noire</div>
+                    <div style={{ fontSize: "0.4rem", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 2 }}><svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Pointe-Noire</div>
                     <div style={{ display: "flex", gap: 4, marginTop: 5, justifyContent: "center" }}>
                       <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem" }}>✕</div>
                       <div style={{ width: 24, height: 24, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: `rgba(212,168,67,0.3)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem" }}>⭐</div>
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: `rgba(212,168,67,0.3)`, display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="10" height="10" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
                     </div>
                   </div>
                 </div>
@@ -1587,7 +1606,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     {/* Header app */}
                     <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "14px 12px 10px", display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{  fontSize: "0.9rem", color: G.blanc, fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
-                      <div style={{ marginLeft: "auto", width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.55rem", color: G.blanc }}>💬</div>
+                      <div style={{ marginLeft: "auto", width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
                     </div>
                     {/* Profil card */}
                     <div style={{ padding: "12px 10px" }}>
@@ -1596,7 +1615,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                         <div style={{ position: "absolute", top: 8, right: 8, background: G.or, borderRadius: 6, padding: "2px 6px", fontSize: "0.45rem", fontWeight: 700, color: "#111" }}>Premium</div>
                       </div>
                       <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#111", marginBottom: 2 }}>Sandrine, 27</div>
-                      <div style={{ fontSize: "0.6rem", color: "#555", marginBottom: 8 }}>📍 Brazzaville</div>
+                      <div style={{ fontSize: "0.6rem", color: "#555", marginBottom: 8, display: "flex", alignItems: "center", gap: 3 }}><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Brazzaville</div>
                       {/* Like button */}
                       <div style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 20, padding: "6px", textAlign: "center", fontSize: "0.6rem", color: G.blanc, fontWeight: 600 }}>❤️ Liker</div>
                     </div>
@@ -1636,14 +1655,14 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                         <img src="/phone-homme.webp" alt="Romaric" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.6))", padding: "8px 8px 6px" }}>
                           <div style={{ fontWeight: 700, fontSize: "0.68rem", color: G.blanc }}>Romaric, 30</div>
-                          <div style={{ fontSize: "0.56rem", color: "rgba(255,255,255,0.8)" }}>📍 Pointe-Noire</div>
+                          <div style={{ fontSize: "0.56rem", color: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", gap: 2 }}><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Pointe-Noire</div>
                         </div>
                       </div>
                       {/* Actions */}
                       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                         <div style={{ flex: 1, background: G.gris, borderRadius: 16, padding: "5px", textAlign: "center", fontSize: "0.55rem", color: "#555" }}>✕</div>
                         <div style={{ flex: 2, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "5px", textAlign: "center", fontSize: "0.58rem", color: G.blanc, fontWeight: 600 }}>❤️ Liker</div>
-                        <div style={{ flex: 1, background: `rgba(212,168,67,0.15)`, border: `1px solid ${G.or}`, borderRadius: 16, padding: "5px", textAlign: "center", fontSize: "0.55rem", color: "#555" }}>⭐</div>
+                        <div style={{ flex: 1, background: `rgba(212,168,67,0.15)`, border: `1px solid ${G.or}`, borderRadius: 16, padding: "5px", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="#B8860B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
                       </div>
                     </div>
                   </div>
@@ -1684,7 +1703,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
             {/* Bulle 850+ couples */}
             <div style={{ position: "absolute", bottom: 30, right: -20, background: G.blanc, borderRadius: 18, padding: "12px 18px", boxShadow: "0 12px 36px rgba(44,26,14,0.14)", display: "flex", alignItems: "center", gap: 10, zIndex: 4 }}>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>💞</div>
+              <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
               <div>
                 <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#111" }}>850+ couples</div>
                 <div style={{ fontSize: "0.65rem", color: "#555" }}>formés sur Moyo</div>
@@ -2475,8 +2494,11 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Je suis</label>
           <div style={{ display: "flex", gap: 10 }}>
             {["Homme", "Femme"].map(g => (
-              <div key={g} onClick={() => upd("gender", g)} style={{ flex: 1, padding: "12px", borderRadius: 12, textAlign: "center", cursor: "pointer", border: `2px solid ${form.gender === g ? G.rouge : G.gris}`, background: form.gender === g ? "rgba(192,57,43,0.06)" : G.blanc, fontWeight: 600, fontSize: "0.88rem" }}>
-                {g === "Homme" ? "👨🏿 Homme" : "👩🏿 Femme"}
+              <div key={g} onClick={() => upd("gender", g)} style={{ flex: 1, padding: "12px", borderRadius: 12, textAlign: "center", cursor: "pointer", border: `2px solid ${form.gender === g ? G.rouge : G.gris}`, background: form.gender === g ? "rgba(192,57,43,0.06)" : G.blanc, fontWeight: 600, fontSize: "0.88rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                {g === "Homme"
+                  ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={form.gender === g ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><line x1="15" y1="15" x2="22" y2="22"/><line x1="18" y1="4" x2="22" y2="4"/><line x1="22" y1="4" x2="22" y2="8"/></svg>
+                  : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={form.gender === g ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><line x1="12" y1="14" x2="12" y2="22"/><line x1="9" y1="19" x2="15" y2="19"/></svg>}
+                {g}
               </div>
             ))}
           </div>
@@ -2726,23 +2748,39 @@ function AdminDesktopPage() {
   });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
+  const [appConfig, setAppConfig] = React.useState({
+    limitLikes: "5",
+    limitMessages: "3",
+    limitPhotoSizeMb: "5",
+    matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋",
+    premiumPriceFcfa: "3500",
+    premiumDurationDays: "31",
+    featureStatuses: "true",
+    featureGiftPremium: "true",
+    featureAssistant: "true",
+    maintenanceMode: "false",
+    maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧",
+  });
+  const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
+  const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
     if (!auth) return;
-    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value`, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
-    }).then(r => r.json()).then(data => {
-      if (Array.isArray(data) && data.length > 0)
-        setRules(r => ({ ...r, blockSameGenderLike: data[0].value === "true" }));
-    }).catch(() => {});
-    // Charger les textes des modals
-    const keys = ["modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises"];
-    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, {
+    const allKeys = [
+      "rule_block_same_gender_like",
+      "modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises",
+      "limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message",
+      "premium_price_fcfa","premium_duration_days",
+      "feature_statuses","feature_gift_premium","feature_assistant",
+      "maintenance_mode","maintenance_message",
+    ];
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
     }).then(r => r.json()).then(data => {
       if (!Array.isArray(data)) return;
       const map: Record<string, string> = {};
       data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
+      if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
       setModalTexts(t => ({
         sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme,
         sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme,
@@ -2750,6 +2788,19 @@ function AdminDesktopPage() {
         matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle,
         premiumDefault: map["modal_premium_default"] || t.premiumDefault,
         likesEpuises: map["modal_likes_epuises"] || t.likesEpuises,
+      }));
+      setAppConfig(c => ({
+        limitLikes: map["limit_likes_free"] || c.limitLikes,
+        limitMessages: map["limit_messages_free"] || c.limitMessages,
+        limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb,
+        matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage,
+        premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa,
+        premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays,
+        featureStatuses: map["feature_statuses"] || c.featureStatuses,
+        featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium,
+        featureAssistant: map["feature_assistant"] || c.featureAssistant,
+        maintenanceMode: map["maintenance_mode"] || c.maintenanceMode,
+        maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage,
       }));
     }).catch(() => {});
   }, [auth]);
@@ -2915,6 +2966,128 @@ function AdminDesktopPage() {
                       )}
                     </div>
                   ))}
+                </div>
+              </div>
+              {/* ── LIMITES & QUOTAS ── */}
+              <div style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 16px 16px" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>📊 Limites & Quotas</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["limit_likes_free", "Likes gratuits/jour", appConfig.limitLikes, "number", ""],
+                    ["limit_messages_free", "Messages gratuits/match", appConfig.limitMessages, "number", ""],
+                    ["limit_photo_size_mb", "Taille max photo (Mo)", appConfig.limitPhotoSizeMb, "number", ""],
+                    ["match_welcome_message", "Message de bienvenue après match", appConfig.matchWelcomeMessage, "text", ""],
+                  ] as [string, string, string, string, string][]).map(([key, label, value, type]) => (
+                    <div key={key}>
+                      <div onClick={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, background: editingConfig === key ? "rgba(41,128,185,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingConfig === key ? "#2980b9" : "transparent"}` }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
+                          <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </div>
+                      {editingConfig === key && (
+                        <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
+                          {type === "number" ? <input type="number" value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(41,128,185,0.3)", fontSize: "0.84rem", outline: "none" }} /> : <textarea value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(41,128,185,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />}
+                          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                            <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+                            <button onClick={async () => {
+                              if (!auth) return;
+                              await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                              const configKeyMap: Record<string, keyof typeof appConfig> = { limit_likes_free: "limitLikes", limit_messages_free: "limitMessages", limit_photo_size_mb: "limitPhotoSizeMb", match_welcome_message: "matchWelcomeMessage" };
+                              setAppConfig(c => ({ ...c, [configKeyMap[key]]: editingConfigValue }));
+                              setEditingConfig(null);
+                            }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: "#2980b9", color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* ── PRIX & ABONNEMENT ── */}
+              <div style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 16px 16px" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>💰 Prix & Abonnement</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["premium_price_fcfa", "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
+                    ["premium_duration_days", "Durée abonnement (jours)", appConfig.premiumDurationDays],
+                  ] as [string, string, string][]).map(([key, label, value]) => (
+                    <div key={key}>
+                      <div onClick={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, background: editingConfig === key ? "rgba(39,174,96,0.06)" : G.creme, cursor: "pointer", border: `1px solid ${editingConfig === key ? "#27ae60" : "transparent"}` }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
+                          <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2 }}>{value}</div>
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </div>
+                      {editingConfig === key && (
+                        <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
+                          <input type="number" value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(39,174,96,0.3)", fontSize: "0.84rem", outline: "none" }} />
+                          <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3 }}>{key === "premium_duration_days" ? "⚠️ Affecte les nouveaux abonnements uniquement" : "⚠️ Modifie aussi les boutons de paiement"}</div>
+                          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                            <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+                            <button onClick={async () => {
+                              if (!auth) return;
+                              await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                              const configKeyMap: Record<string, keyof typeof appConfig> = { premium_price_fcfa: "premiumPriceFcfa", premium_duration_days: "premiumDurationDays" };
+                              setAppConfig(c => ({ ...c, [configKeyMap[key]]: editingConfigValue }));
+                              setEditingConfig(null);
+                            }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: "#27ae60", color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* ── FONCTIONNALITÉS ON/OFF ── */}
+              <div style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 16px 16px" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>🔧 Fonctionnalités</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {([
+                    ["feature_statuses", "featureStatuses", "Statuts (Stories)"],
+                    ["feature_gift_premium", "featureGiftPremium", "Cadeau Premium"],
+                    ["feature_assistant", "featureAssistant", "Assistant IA"],
+                    ["maintenance_mode", "maintenanceMode", "🔴 Mode maintenance"],
+                  ] as [string, keyof typeof appConfig, string][]).map(([key, configKey, label]) => (
+                    <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
+                      <button onClick={async () => {
+                        if (!auth) return;
+                        const newVal = appConfig[configKey] !== "true" ? "true" : "false";
+                        setAppConfig(c => ({ ...c, [configKey]: newVal }));
+                        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newVal }) });
+                      }} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: appConfig[configKey] === "true" ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
+                        <div style={{ position: "absolute", top: 3, left: appConfig[configKey] === "true" ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+                      </button>
+                    </div>
+                  ))}
+                  {appConfig.maintenanceMode === "true" && (
+                    <div>
+                      <div onClick={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, background: "rgba(231,76,60,0.06)", cursor: "pointer", border: `1px solid rgba(231,76,60,0.3)` }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: G.rouge }}>Message de maintenance</div>
+                          <div style={{ fontSize: "0.7rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{appConfig.maintenanceMessage}</div>
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </div>
+                      {editingConfig === "maintenance_message" && (
+                        <div style={{ marginTop: 4, padding: "10px", background: G.blanc, borderRadius: 8, border: `1px solid ${G.gris}` }}>
+                          <textarea value={editingConfigValue} onChange={e => setEditingConfigValue(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(231,76,60,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+                          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                            <button onClick={() => setEditingConfig(null)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G.gris}`, background: G.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+                            <button onClick={async () => {
+                              if (!auth) return;
+                              await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_message`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                              setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue }));
+                              setEditingConfig(null);
+                            }} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G.rouge, color: G.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -3100,7 +3273,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: "0.83rem", color: G.brun }}>{auth.name}</div>
-            <div style={{ fontSize: "0.62rem", color: G.or, fontWeight: 600, marginTop: 1 }}>{auth.isPremium ? "⭐ Premium actif" : "Gratuit"}</div>
+            <div style={{ fontSize: "0.62rem", color: G.or, fontWeight: 600, marginTop: 1 }}>{auth.isPremium ? "★ Premium actif" : "Gratuit"}</div>
           </div>
         </div>
       </div>
@@ -4204,7 +4377,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       )}
     </div>
   </div>
-</div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ fontSize: "4rem", marginBottom: 12 }}>💞</div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>{modalTexts.matchTitle}</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>{modalTexts.matchSubtitle.replace("{name}", matchPop.name)}</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
+</div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ marginBottom: 16 }}><svg width="64" height="64" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>{modalTexts.matchTitle}</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>{modalTexts.matchSubtitle.replace("{name}", matchPop.name)}</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
     </div>{/* fin contenu principal */}
 
     {/* ── PANNEAU DROIT (desktop/tablette uniquement) ── */}
@@ -6394,7 +6567,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                     </div>
                     <div>
                       <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.72rem", fontWeight: 600 }}>Offrir à</div>
-                      <div style={{ color: G.blanc, fontSize: "1.2rem", fontWeight: 800 }}>{open.partner?.name} 🎁</div>
+                      <div style={{ color: G.blanc, fontSize: "1.2rem", fontWeight: 800 }}>{open.partner?.name}</div>
                     </div>
                     <div style={{ marginLeft: "auto", textAlign: "right" }}>
                       <div style={{ color: G.blanc, fontSize: "1.4rem", fontWeight: 800 }}>3 500 FCFA</div>
@@ -6446,7 +6619,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : Juste-Emmanuelle AKOUMOU ISSOMBO</div>
                     <a href="tel:*105*2*1*065132012*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                      Appuyer pour payer - 3 500 FCFA
+                      {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
                     </a>
                     <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*105*1*1*065132012*3500#</div>
                   </div>
@@ -6462,13 +6635,13 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                         await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                          body: JSON.stringify({ user_id: auth.userId, operator: "MTN", tx_ref: giftTxRef.trim(), amount: 3500, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
+                          body: JSON.stringify({ user_id: auth.userId, operator: "MTN", tx_ref: giftTxRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
                         });
                         setGiftTxSent(true);
                       } catch { setGiftTxSent(true); }
                       setGiftTxLoading(false);
                     }} style={{ width: "100%", background: !giftTxRef.trim() || giftTxLoading ? "#ccc" : "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !giftTxRef.trim() ? "not-allowed" : "pointer" }}>
-                      {giftTxLoading ? "Envoi en cours…" : "🎁 J'ai payé - Envoyer la preuve"}
+                      {giftTxLoading ? "Envoi en cours…" : "J'ai payé - Envoyer la preuve"}
                     </button>
                   ) : (
                     <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: "18px", textAlign: "center" }}>
@@ -6497,7 +6670,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : THEOPHILE BEAUGARD LIBALI</div>
                     <a href="tel:*128*2*1*1*056230067*3500%23" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                      Appuyer pour payer - 3 500 FCFA
+                      {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
                     </a>
                     <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>*128*2*1*1*056230067*3500#</div>
                   </div>
@@ -6513,13 +6686,13 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
                         await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                          body: JSON.stringify({ user_id: auth.userId, operator: "Airtel", tx_ref: giftTxRef.trim(), amount: 3500, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
+                          body: JSON.stringify({ user_id: auth.userId, operator: "Airtel", tx_ref: giftTxRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
                         });
                         setGiftTxSent(true);
                       } catch { setGiftTxSent(true); }
                       setGiftTxLoading(false);
                     }} style={{ width: "100%", background: !giftTxRef.trim() || giftTxLoading ? "#ccc" : "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !giftTxRef.trim() ? "not-allowed" : "pointer" }}>
-                      {giftTxLoading ? "Envoi en cours…" : "🎁 J'ai payé - Envoyer la preuve"}
+                      {giftTxLoading ? "Envoi en cours…" : "J'ai payé - Envoyer la preuve"}
                     </button>
                   ) : (
                     <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: "18px", textAlign: "center" }}>
@@ -7954,7 +8127,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             <div style={{ background: "#FAFAFA", border: `1px solid ${G.or}`, borderTop: "none", borderRadius: "0 0 16px 16px", padding: "20px 20px 16px" }}>
               {ratingSubmitted && !ratingLoading ? (
                 <div style={{ textAlign: "center", paddingBottom: 4 }}>
-                  <div style={{ fontSize: "2rem", marginBottom: 6 }}>🎉</div>
+                  <div style={{ marginBottom: 6, display: "flex", justifyContent: "center" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
                   <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111", marginBottom: 4 }}>Merci pour ton avis !</div>
                   <div style={{ display: "flex", justifyContent: "center", gap: 4, marginBottom: 14 }}>
                     {[1,2,3,4,5].map(s => (
@@ -8063,7 +8236,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             ) : blockedUsers.map(b => (
               <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid #F5F5F5` }}>
                 <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.gris, overflow: "hidden", flexShrink: 0 }}>
-                  {b.profile?.photo_url ? <img src={b.profile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}>{b.profile?.gender === "Femme" ? "👩🏿" : "👨🏿"}</div>}
+                  {b.profile?.photo_url ? <img src={b.profile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{b.profile?.name || "Utilisateur"}</div>
@@ -8092,7 +8265,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
               ) : blockedUsers.map(b => (
                 <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px" }}>
                   <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.gris, overflow: "hidden", flexShrink: 0 }}>
-                    {b.profile?.photo_url ? <img src={b.profile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}>{b.profile?.gender === "Femme" ? "👩🏿" : "👨🏿"}</div>}
+                    {b.profile?.photo_url ? <img src={b.profile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{b.profile?.name || "Utilisateur"}</div>
@@ -8176,7 +8349,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
               <rect key={i} x={(x as number)-3} y={(y as number)-3} width="6" height="6" fill={c as string} transform={`rotate(45,${x},${y})`} />
             ))}
           </svg>
-          <div style={{ fontSize: "3.5rem", marginBottom: 10, lineHeight: 1 }}>🎁</div>
+          <div style={{ marginBottom: 10, display: "flex", justifyContent: "center" }}><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
           <div style={{ color: G.blanc, fontWeight: 900, fontSize: "1.3rem", letterSpacing: "0.01em", textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>Vous avez un cadeau !</div>
           <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.78rem", marginTop: 6 }}>Quelqu'un pense à vous sur Moyo 💛</div>
         </div>
@@ -8261,7 +8434,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
             <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
               <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
               {p.operator}
-              {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>🎁 Cadeau pour {p.gift_for_name || "un match"}</span>}
+              {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Cadeau pour {p.gift_for_name || "un match"}</span>}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {p.amount.toLocaleString()} FCFA</div>
             <div style={{ fontSize: "0.62rem", color: "#bbb", fontFamily: "monospace", marginTop: 2 }}>{p.user_id}</div>
@@ -9842,8 +10015,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: "2rem" }}>
-                {reportProfilePreview.gender === "Femme" ? "👩🏿" : "👨🏿"}
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
               <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.blanc }}>{reportProfilePreview.name}</div>
               <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
@@ -10271,15 +10444,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>⚙️ Règles de la plateforme (Burger)</span>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>⚙️ Menu Burger — Configuration complète</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
-                    ["Accès", "Le bouton burger ☰ se trouve à droite du bouton 'Fermer' dans la barre du haut. Il ouvre un panneau de switchs pour gérer les règles en temps réel."],
-                    ["Switch vert = actif", "Quand un switch est vert, la règle est activée. Exemple : switch vert sur 'Bloquer like même genre' → un homme ne peut pas liker un autre homme."],
-                    ["Switch rouge = désactivé", "Quand un switch est rouge, la règle est désactivée. Tout le monde peut liker tout le monde sans restriction."],
-                    ["Sauvegarde instantanée", "Chaque basculement est sauvegardé immédiatement dans Supabase. Pas besoin de recharger la page. Le changement est effectif pour tous les utilisateurs en quelques secondes."],
-                    ["Règle actuelle", "'Bloquer like même genre' — empêche les likes Homme→Homme et Femme→Femme. Désactivez cette règle si vous souhaitez ouvrir la plateforme à tous les profils."],
+                    ["Accès", "Le bouton burger ☰ se trouve à droite du bouton 'Fermer' dans la barre du haut. Il ouvre un panneau de configuration complet divisé en 4 sections."],
+                    ["Règles — Switch même genre", "Vert = bloqué (Homme→Homme et Femme→Femme interdits). Rouge = ouvert (tous peuvent liker tous). Sauvegarde instantanée."],
+                    ["Textes des modals", "6 modals personnalisables : message même genre Homme/Femme, titre et sous-titre du match, message Premium, message likes épuisés. Cliquer sur un modal pour éditer."],
+                    ["Limites & Quotas", "Likes gratuits/jour, messages gratuits/match, taille max des photos, message de bienvenue après match. Modifier sans redéployer."],
+                    ["Prix & Abonnement", "Prix Premium en FCFA et durée en jours. ⚠️ Le prix modifie les boutons de paiement. La durée s'applique aux nouveaux abonnements uniquement."],
+                    ["Fonctionnalités on/off", "Activer/désactiver les Statuts, le Cadeau Premium, l'Assistant IA. Switch vert = actif, rouge = désactivé."],
+                    ["🔴 Mode maintenance", "Active un écran de maintenance pour tous les utilisateurs. Personnaliser le message. Désactiver pour remettre le site en ligne. ⚠️ À utiliser avec précaution."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
@@ -10584,7 +10759,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <option value="online">🟢 En ligne d'abord</option>
               <option value="age.asc">🎂 Âge croissant</option>
               <option value="age.desc">🎂 Âge décroissant</option>
-              <option value="premium">⭐ Premium d'abord</option>
+              <option value="premium">★ Premium d'abord</option>
               <option value="lifetime">♾️ Premium à vie d'abord</option>
               <option value="admin">⚙️ Admin d'abord</option>
               <option value="verified">✓ Vérifiés d'abord</option>
@@ -10646,7 +10821,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       disabled={bulkDeleting}
                       style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: G.blanc, border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
                     >
-                      {bulkDeleting ? "Suppression..." : `🗑 Supprimer (${selectedUsers.size})`}
+                      {bulkDeleting ? "Suppression..." : `Supprimer (${selectedUsers.size})`}
                     </button>
                   )}
                 </div>
@@ -11033,7 +11208,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </>
                   : <>
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                      <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucun signalement en attente 🎉</p>
+                      <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucun signalement en attente ✓</p>
                     </>
                 }
               </div>
@@ -11434,8 +11609,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         {/* Header : user + date */}
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: "50%", background: G.gris, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>
-                              {r.profile?.gender === "Femme" ? "👩🏿" : "👨🏿"}
+                            <div style={{ width: 32, height: 32, borderRadius: "50%", background: G.gris, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             </div>
                             <div>
                               <div style={{ fontWeight: 700, fontSize: "0.83rem", color: "#1a1a1a" }}>{r.profile?.name || "Utilisateur"}</div>
