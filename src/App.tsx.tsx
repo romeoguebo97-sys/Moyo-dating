@@ -5976,13 +5976,38 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   useEffect(() => {
     const count = msgs.length;
     if (count > prevMsgCountRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      // Auto-scroll uniquement si l'utilisateur est déjà en bas (±150px)
+      const container = bottomRef.current?.parentElement?.parentElement;
+      if (container) {
+        const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+        if (isAtBottom) {
+          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+      } else {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
     }
     prevMsgCountRef.current = count;
   }, [msgs]);
 
   // Mesure la hauteur du footer + scroll quand ReplyBanner apparaît/disparaît
+  // + gestion clavier mobile via visualViewport
   useEffect(() => {
+    const chatDiv = footerRef.current?.closest('[data-chat-container]') as HTMLElement | null;
+    const handleViewport = () => {
+      if (!chatDiv) return;
+      const vv = (window as any).visualViewport;
+      if (vv) {
+        // Adapter la hauteur du container au viewport visible (clavier exclu)
+        chatDiv.style.height = vv.height + 'px';
+        chatDiv.style.top = vv.offsetTop + 'px';
+      }
+    };
+    const vv = (window as any).visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', handleViewport);
+      vv.addEventListener('scroll', handleViewport);
+    }
     const measure = () => {
       if (footerRef.current) {
         setFooterHeight(footerRef.current.offsetHeight);
@@ -6564,7 +6589,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         </div>
       )}
       {/* Chat */}
-      <div style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, flex: isWideMsg ? 1 : undefined, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", height: isWideMsg ? "100%" : "100dvh" }}>
+      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, flex: isWideMsg ? 1 : undefined, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", height: isWideMsg ? "100%" : "100dvh" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Header fixe */}
@@ -12274,15 +12299,15 @@ export default function App() {
         ]);
         const likesCount = Array.isArray(likes) ? likes.filter(l => !dIds.has(l.from_user)).length : 0;
         const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
-        // ── Ne pas écraser le zéro si l'utilisateur est sur cet onglet (il vient de tout voir) ──
-        setLikesReceived(prev => {
-          const currentTab = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
-          return currentTab === 'likes' ? 0 : likesCount;
-        });
-        setViewsReceived(prev => {
-          const currentTab = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
-          return currentTab === 'visitors' ? 0 : viewsCount;
-        });
+        const currentTab = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
+        // Ne pas écraser le zéro si l'onglet est actif OU si l'utilisateur l'a consulté récemment
+        const likesSeen = localStorage.getItem(`moyo_likes_seen_${auth.userId}`);
+        const visitorsSeen = localStorage.getItem(`moyo_visitors_seen_${auth.userId}`);
+        const SEEN_THRESHOLD = 60 * 1000; // 60 secondes
+        const likesJustSeen = likesSeen && (Date.now() - new Date(likesSeen).getTime()) < SEEN_THRESHOLD;
+        const visitorsJustSeen = visitorsSeen && (Date.now() - new Date(visitorsSeen).getTime()) < SEEN_THRESHOLD;
+        setLikesReceived(currentTab === 'likes' || likesJustSeen ? 0 : likesCount);
+        setViewsReceived(currentTab === 'visitors' || visitorsJustSeen ? 0 : viewsCount);
       } catch {}
     };
     loadLikesReceived();
@@ -12325,7 +12350,10 @@ export default function App() {
         const count = Array.isArray(res) ? res.length : 0;
         setUnreadCount(prev => {
           const activeTab3 = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
-          if (activeTab3 === 'messages') return 0;
+          const msgSeen = localStorage.getItem(`moyo_messages_seen_${auth.userId}`);
+          const SEEN_THRESHOLD3 = 60 * 1000;
+          const msgJustSeen = msgSeen && (Date.now() - new Date(msgSeen).getTime()) < SEEN_THRESHOLD3;
+          if (activeTab3 === 'messages' || msgJustSeen) return 0;
           if (count > prev && prev >= 0 && 'Notification' in window && Notification.permission === 'granted') {
             new Notification('Moyo - Nouveau message', {
               body: 'Vous avez reçu un nouveau message !',
@@ -12521,14 +12549,14 @@ export default function App() {
     `}</style>}
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
-      if (t === "messages") setUnreadCount(0);
+      if (t === "messages") { setUnreadCount(0); try { localStorage.setItem(`moyo_messages_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
       // ── Remise à zéro des badges au clic sur l'onglet correspondant ──
       if (t === "matches") {
         setNotifCount(0);
         try { localStorage.setItem(`moyo_matches_seen_${auth!.userId}`, new Date().toISOString()); } catch {}
       }
-      if (t === "likes") setLikesReceived(0);
-      if (t === "visitors") setViewsReceived(0);
+      if (t === "likes") { setLikesReceived(0); try { localStorage.setItem(`moyo_likes_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
+      if (t === "visitors") { setViewsReceived(0); try { localStorage.setItem(`moyo_visitors_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
