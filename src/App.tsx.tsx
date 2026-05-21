@@ -1263,7 +1263,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche votre statut en temps réel : nombre de jours restants, ou 'Actif' si votre abonnement est en cours." },
       { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: "Depuis votre page Profil, appuyez sur 'Parrainer un ami'. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez automatiquement 7 jours de Premium offerts." },
       { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Messages → choisissez une photo. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
-      { icon: "Q", titre: "Pourquoi dois-je confirmer mon email après l'inscription ?", desc: "Après la création de votre compte, un email de confirmation vous est envoyé. Consultez votre boîte mail (y compris les spams) et cliquez sur le lien pour activer votre compte avant de vous connecter." },
+      { icon: "Q", titre: "Comment créer mon compte ?", desc: "L'inscription est gratuite et rapide en 3 étapes : email + mot de passe, photo de profil, puis informations personnelles. Votre compte est actif immédiatement." },
       { icon: "Q", titre: "Je n'ai pas reçu l'email de confirmation ?", desc: "Vérifiez vos spams ou courriers indésirables. Si vous ne le trouvez pas, contactez notre équipe via l'Assistant Moyo avec votre adresse email." },
     ]},
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
@@ -2251,10 +2251,18 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [cropSrcSignup, setCropSrcSignup] = useState<string | null>(null);
+  const [signupSuccessMsg, setSignupSuccessMsg] = useState("Ton compte est prêt ! Connecte-toi maintenant.");
   const [tempToken, setTempToken] = useState<string | null>(() => sessionStorage.getItem("moyo_signup_token"));
   const [tempUserId, setTempUserId] = useState<string | null>(() => sessionStorage.getItem("moyo_signup_uid"));
   const fileRef = useRef<HTMLInputElement>(null);
   const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.modal_signup_success&select=value`, { headers: { "apikey": SUPABASE_KEY } })
+      .then(r => r.json()).then(data => {
+        if (Array.isArray(data) && data[0]?.value) setSignupSuccessMsg(data[0].value);
+      }).catch(() => {});
+  }, []);
 
   // Étape 1 → vérifier email et créer le compte, puis passer à l'étape 2 (photo)
   const checkEmailAndContinue = async () => {
@@ -2314,12 +2322,13 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     }
 
     setLoading(true);
+    let authRes: any = null;
     try {
       const existing = await sb.query<Profile>(SUPABASE_KEY, "profiles", `?email=eq.${encodeURIComponent(emailClean)}&select=id`);
       if (existing.length > 0) { setErrorMsg("Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt."); setLoading(false); return; }
 
       // Créer le compte dès l'étape 1
-      const authRes = await sb.signUp(emailClean, form.password, { name: "...", age: "18", city: "Brazzaville", gender: "Homme", bio: "", religion: "", photo_url: null });
+      authRes = await sb.signUp(emailClean, form.password, { name: "...", age: "18", city: "Brazzaville", gender: "Homme", bio: "", religion: "", photo_url: null });
       if (authRes?.error) {
         const code = authRes.error.message || "";
         let msg = "Impossible de créer le compte.";
@@ -2443,7 +2452,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   return (
     <AuthLayout onBack={() => step === 1 ? onNav("landing") : setStep(s => s - 1)}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
-      {successMsg && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111", marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Ton compte est prêt ! Connecte-toi maintenant.</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
+      {successMsg && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111", marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{signupSuccessMsg}</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Header */}
@@ -2628,7 +2637,7 @@ const BOT_FAQ = [
   { q: ["répondre", "citer", "reply", "bandeau", "réponse message"], r: "Appuyez longuement sur un message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
   { q: ["supprimer message", "effacer message", "pour moi", "pour tous"], r: "Appuyez longuement sur un message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté)." },
   { q: ["avertissement", "sanction", "notification officielle", "banni", "suspension"], r: "Un avertissement est une notification officielle MOYO qui apparaît à votre connexion. Vous devez cliquer \"OK, j\'ai compris\" pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
-  { q: ["confirmer", "confirmation", "email confirmation", "activer compte", "lien email"], r: "Après votre inscription, un email de confirmation vous est envoyé. Consultez votre boîte mail (y compris les spams) et cliquez sur le lien pour activer votre compte avant de vous connecter." },
+  { q: ["confirmer", "confirmation", "email confirmation", "activer compte", "lien email"], r: "L'inscription est gratuite. Votre compte est actif immédiatement après les 3 étapes d'inscription. Pas besoin de confirmer votre email." },
   { q: ["pas reçu", "email introuvable", "spam", "confirmation pas reçue"], r: "Vérifiez vos spams ou courriers indésirables. Si vous ne trouvez toujours pas l'email, contactez notre équipe via l'Assistant Moyo avec votre adresse email." },
 ];
 
@@ -2852,6 +2861,7 @@ function AdminDesktopPage() {
     premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !",
     likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
     sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄",
+    signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.",
   });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
@@ -2898,6 +2908,7 @@ function AdminDesktopPage() {
         premiumDefault: map["modal_premium_default"] || t.premiumDefault,
         likesEpuises: map["modal_likes_epuises"] || t.likesEpuises,
         sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub,
+        signupSuccess: map["modal_signup_success"] || t.signupSuccess,
       }));
       setAppConfig(c => ({
         limitLikes: map["limit_likes_free"] || c.limitLikes,
@@ -3050,7 +3061,7 @@ function AdminDesktopPage() {
                   onSave={async () => {
                     if (!auth) return;
                     await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingValue }) });
-                    const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" };
+                    const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_signup_success: "signupSuccess", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" };
                     setModalTexts(t => ({ ...t, [km[key]]: editingValue }));
                     setEditingModal(null);
                   }} />
@@ -3242,7 +3253,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -3267,8 +3278,8 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         </div>
       </OffCanvasSection>
       <OffCanvasSection title="Textes des modals">
-        {([["modal_same_gender_homme","Même genre (Homme)",modalTexts.sameGenderHomme],["modal_same_gender_femme","Même genre (Femme)",modalTexts.sameGenderFemme],["modal_same_gender_sub","Même genre - sous-texte",modalTexts.sameGenderSub],["modal_match_title","Match - Titre",modalTexts.matchTitle],["modal_match_subtitle","Match - Sous-titre",modalTexts.matchSubtitle],["modal_premium_default","Premium - Message",modalTexts.premiumDefault],["modal_likes_epuises","Likes épuisés",modalTexts.likesEpuises]] as [string,string,string][]).map(([key,label,value]) => (
-          <EditableRow key={key} label={label} value={value} open={editingModal === key} onOpen={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} editValue={editingValue} onEdit={setEditingValue} hint={key.includes("subtitle") ? "Utilise {name} pour le prénom" : key.includes("likes") ? "Utilise {n} pour le nombre" : undefined} onSave={async () => { await patch(key, editingValue); const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" }; setModalTexts(t => ({ ...t, [km[key]]: editingValue })); setEditingModal(null); }} />
+        {([["modal_same_gender_homme","Même genre (Homme)",modalTexts.sameGenderHomme],["modal_same_gender_femme","Même genre (Femme)",modalTexts.sameGenderFemme],["modal_same_gender_sub","Même genre - sous-texte",modalTexts.sameGenderSub],["modal_signup_success","Inscription - Message succès",modalTexts.signupSuccess],["modal_match_title","Match - Titre",modalTexts.matchTitle],["modal_match_subtitle","Match - Sous-titre",modalTexts.matchSubtitle],["modal_premium_default","Premium - Message",modalTexts.premiumDefault],["modal_likes_epuises","Likes épuisés",modalTexts.likesEpuises]] as [string,string,string][]).map(([key,label,value]) => (
+          <EditableRow key={key} label={label} value={value} open={editingModal === key} onOpen={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} editValue={editingValue} onEdit={setEditingValue} hint={key.includes("subtitle") ? "Utilise {name} pour le prénom" : key.includes("likes") ? "Utilise {n} pour le nombre" : undefined} onSave={async () => { await patch(key, editingValue); const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_signup_success: "signupSuccess", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" }; setModalTexts(t => ({ ...t, [km[key]]: editingValue })); setEditingModal(null); }} />
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Limites & Quotas">
