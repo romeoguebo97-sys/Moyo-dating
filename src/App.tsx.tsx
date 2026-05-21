@@ -5995,13 +5995,35 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     prevMsgCountRef.current = count;
   }, [msgs]);
 
-  // Mesure header + footer + ajustement clavier iOS via visualViewport
+  // Gestion clavier iOS + mesure footer
   useEffect(() => {
     if (!open) return;
     const measure = () => {
       if (footerRef.current) setFooterHeight(footerRef.current.offsetHeight);
       if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight);
     };
+    // iOS Safari: visualViewport resize = clavier ouvert/fermé
+    // On ajuste le padding-bottom du container pour que le footer remonte
+    const container = document.querySelector('[data-chat-container]') as HTMLElement | null;
+    const handleKeyboard = () => {
+      if (!container) return;
+      const vv = (window as any).visualViewport;
+      if (!vv) return;
+      // La différence entre window.innerHeight et vv.height = hauteur du clavier
+      const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
+      container.style.paddingBottom = keyboardHeight > 0 ? keyboardHeight + 'px' : '0px';
+      // Scroll to bottom when keyboard opens
+      if (keyboardHeight > 0) {
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    };
+    const vv = (window as any).visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', handleKeyboard);
+      vv.addEventListener('scroll', handleKeyboard);
+    }
     const t = setTimeout(measure, 30);
     return () => clearTimeout(t);
   }, [replyTo, showEmojiPicker]);
