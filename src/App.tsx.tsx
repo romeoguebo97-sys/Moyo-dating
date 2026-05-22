@@ -2338,10 +2338,24 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       }
       if (authRes.user?.identities?.length === 0) { setErrorMsg("Email déjà utilisé."); setLoading(false); return; }
 
-      // Se connecter immédiatement pour avoir le vrai token
-      const loginRes = await sb.signIn(emailClean, form.password);
-      const finalToken = loginRes?.access_token || (authRes as any)?.access_token || (authRes as any)?.session?.access_token;
-      const finalUserId = loginRes?.user?.id || authRes?.user?.id || "";
+      // Récupérer le token : priorité au token retourné directement par signUp,
+      // puis tentative de signIn (peut échouer si confirmation email requise)
+      let finalToken: string | null =
+        (authRes as any)?.session?.access_token ||
+        (authRes as any)?.access_token ||
+        null;
+      let finalUserId: string = authRes?.user?.id || "";
+
+      if (!finalToken) {
+        try {
+          const loginRes = await sb.signIn(emailClean, form.password);
+          if (loginRes?.access_token) {
+            finalToken = loginRes.access_token;
+            if (loginRes?.user?.id) finalUserId = loginRes.user.id;
+          }
+        } catch {}
+      }
+
       if (finalToken) {
         setTempToken(finalToken);
         sessionStorage.setItem("moyo_signup_token", finalToken);
@@ -2350,6 +2364,11 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         setTempUserId(finalUserId);
         sessionStorage.setItem("moyo_signup_uid", finalUserId);
       }
+
+      // Stocker aussi email+password en sessionStorage pour re-login silencieux à l'étape 3
+      sessionStorage.setItem("moyo_signup_email", emailClean);
+      sessionStorage.setItem("moyo_signup_pw", form.password);
+
       setStep(2);
     } catch (err) {
       // Même en cas d'erreur réseau, si on a le userId de signUp on continue
@@ -2394,14 +2413,18 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     // Si le token est manquant, tenter un re-login silencieux
     if (!token || !userId) {
       try {
-        const retry = await sb.signIn(form.email?.trim() || "", form.password?.trim() || "");
-        if (retry?.access_token) {
-          token = retry.access_token;
-          userId = retry.user?.id || "";
-          setTempToken(token);
-          setTempUserId(userId);
-          sessionStorage.setItem("moyo_signup_token", token);
-          sessionStorage.setItem("moyo_signup_uid", userId);
+        const storedEmail = sessionStorage.getItem("moyo_signup_email") || form.email?.trim() || "";
+        const storedPw = sessionStorage.getItem("moyo_signup_pw") || form.password?.trim() || "";
+        if (storedEmail && storedPw) {
+          const retry = await sb.signIn(storedEmail, storedPw);
+          if (retry?.access_token) {
+            token = retry.access_token;
+            userId = retry.user?.id || sessionStorage.getItem("moyo_signup_uid") || "";
+            setTempToken(token);
+            setTempUserId(userId);
+            sessionStorage.setItem("moyo_signup_token", token);
+            if (userId) sessionStorage.setItem("moyo_signup_uid", userId);
+          }
         }
       } catch {}
     }
