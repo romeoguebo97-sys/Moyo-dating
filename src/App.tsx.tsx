@@ -535,9 +535,8 @@ const GLOBAL_CSS = `
   html{overflow-x:hidden;width:100%;max-width:100vw}
   body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%}
   #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh}
-  /* Fix clavier iOS - la barre reste fixe au-dessus du clavier */
-  [data-chat-container]{height:100%;height:-webkit-fill-available;}
-  @supports(height:100dvh){[data-chat-container]{height:100dvh;}}
+  /* Layout chat style WhatsApp : container fixe, translateY pour clavier */
+  [data-chat-container]{height:100%;}
   @media(min-width:520px){body{background-color:#EDE5D8;background-image:radial-gradient(circle,rgba(192,57,43,0.06) 1px,transparent 1px),radial-gradient(circle,rgba(212,168,67,0.05) 1px,transparent 1px);background-size:30px 30px,50px 50px}}
   input,select,textarea,button{font-family:inherit;box-sizing:border-box;max-width:100%;-webkit-appearance:none}
   input,select,textarea{display:block;width:100%}
@@ -4969,21 +4968,6 @@ const fmtDate = (iso?: string) => {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 };
 
-// Format court pour la liste des conversations (style WhatsApp)
-const fmtConvDate = (iso?: string) => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffH = diffMs / 3600000;
-  const diffDays = diffMs / 86400000;
-  if (diffH < 1) return `${Math.max(1, Math.floor(diffMs / 60000))} min`;
-  if (diffH < 24 && d.getDate() === now.getDate()) return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  if (diffDays < 2 && d.getDate() !== now.getDate()) return "Hier";
-  if (diffDays < 7) return d.toLocaleDateString("fr-FR", { weekday: "short" });
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-};
-
 // Switch interne réutilisable
 function InnerSwitch({ options, value, onChange }: {
   options: { id: string; label: string; icon: React.ReactNode }[];
@@ -5297,47 +5281,53 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     rightSlot?: React.ReactNode;
     onView: () => void;
   }) => (
-    <div onClick={onView} style={{ borderRadius: 18, overflow: "hidden",
-      boxShadow: "0 4px 18px rgba(44,26,14,0.14)", position: "relative", marginBottom: 12,
-      cursor: "pointer", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)",
-      height: window.innerWidth >= 768 ? 240 : 180 }}>
-      {/* Photo plein cadre */}
-      {p.photo_url
-        ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
-        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>}
-      {/* Dégradé bas */}
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)", borderRadius: 18 }} />
-      {/* Badges top-left */}
-      <div style={{ position: "absolute", top: 8, left: 8, display: "flex", flexDirection: "column", gap: 3 }}>
-        {(meta?.isMatch || meta?.status === "match") && (
-          <span style={{ background: G.vert, color: "white", borderRadius: 50, padding: "2px 7px", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match
-          </span>
+    <div style={{ background: G.blanc, borderRadius: 16, overflow: "hidden",
+      boxShadow: "0 2px 12px rgba(44,26,14,0.09)", position: "relative", marginBottom: 12 }}>
+      <div onClick={onView} style={{ height: window.innerWidth >= 768 ? 220 : 140, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)",
+        overflow: "hidden", cursor: "pointer", position: "relative" }}>
+        {p.photo_url
+          ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+          : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>}
+        {/* Badges en overlay */}
+        <div style={{ position: "absolute", top: 6, left: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+          {(meta?.isMatch || meta?.status === "match") && (
+            <span style={{ background: G.vert, color: "white", borderRadius: 50, padding: "2px 7px", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match
+            </span>
+          )}
+          {meta?.date && isRecent(meta.date) && !meta?.isMatch && meta?.status !== "match" && (
+            <span style={{ background: G.rouge, color: "white", borderRadius: 50, padding: "2px 7px", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
+              <svg width="7" height="7" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Nouveau
+            </span>
+          )}
+        </div>
+        {/* Badges vérifiés + premium - bas à droite, fidèles au design de référence */}
+        {(p.is_verified || p.is_premium) && (
+          <div style={{ position: "absolute", bottom: 8, right: 8, display: "flex", gap: 6, alignItems: "center" }}>
+            {p.is_verified && (
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#4AABDB", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.22)", border: "2.5px solid #fff", flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+            )}
+            {p.is_premium && (
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#C9A84C", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.22)", border: "2.5px solid #fff", flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#1a1a1a" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+            )}
+          </div>
         )}
-        {meta?.date && isRecent(meta.date) && !meta?.isMatch && meta?.status !== "match" && (
-          <span style={{ background: G.rouge, color: "white", borderRadius: 50, padding: "2px 7px", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
-            <svg width="7" height="7" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Nouveau
-          </span>
+        {/* Bouton action (dismiss) en overlay */}
+        {rightSlot && (
+          <div style={{ position: "absolute", top: 6, right: 6 }}>{rightSlot}</div>
         )}
       </div>
-      {/* Bouton dismiss top-right */}
-      {rightSlot && (
-        <div style={{ position: "absolute", top: 8, right: 8 }}>{rightSlot}</div>
-      )}
-      {/* Infos + badges vérif/premium + menu en bas */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 10px 10px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-            {p.name}, {p.age} ans
-            {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={13} /></span>}
-            {p.is_verified && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><VerifiedBadge size={13} /></span>}
-          </div>
-          <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.85)", marginTop: 2, display: "flex", alignItems: "center", gap: 3, textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>
-          </div>
+      <div onClick={onView} style={{ padding: "8px 10px 10px", cursor: "pointer" }}>
+        <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}, {p.age} ans</div>
+        <div style={{ fontSize: "0.68rem", color: "#777", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.city}</span>
         </div>
       </div>
     </div>
@@ -5963,56 +5953,42 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     ) : (
       <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 12 }}>
         {matches.map(m => (
-          <div key={m.id} className="card-hover" style={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 18px rgba(44,26,14,0.14)", position: "relative", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", height: window.innerWidth >= 768 ? 240 : 180 }}>
-            {/* Photo plein cadre */}
-            <div onClick={() => setSelectedMatch(m)} style={{ position: "absolute", inset: 0, cursor: "pointer" }}>
-              {m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
-            </div>
-            {/* Dégradé bas */}
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)", borderRadius: 18, pointerEvents: "none" }} />
-            {/* Badge Match top-left */}
-            <div style={{ position: "absolute", top: 8, left: 8 }}>
-              <span style={{ background: G.vert, color: "white", borderRadius: 50, padding: "2px 7px", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
-                <svg width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match
-              </span>
-            </div>
-            {/* Infos + menu 3 traits en bas */}
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 10px 10px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-              <div onClick={() => setSelectedMatch(m)} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-                  {m.partner?.name}, {m.partner?.age} ans
-                </div>
-                <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.85)", marginTop: 2, display: "flex", alignItems: "center", gap: 3, textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
-                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.partner?.city}</span>
-                </div>
+          <div key={m.id} className="card-hover" style={{ background: G.blanc, borderRadius: 16, boxShadow: "0 3px 16px rgba(44,26,14,0.08)", position: "relative" }}>
+            <div onClick={() => setSelectedMatch(m)} style={{ cursor: "pointer" }}>
+              <div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden" }}>
+                {m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "3rem" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}
               </div>
-              {/* Menu 3 traits */}
-              <div style={{ position: "relative", flexShrink: 0, marginLeft: 6 }}>
-                <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(menuMatchId === m.id ? null : m.id); }} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer" }}>
-                  {[0,1,2].map(i => <div key={i} style={{ width: 13, height: 1.5, borderRadius: 2, background: "#fff" }} />)}
-                </div>
-                {menuMatchId === m.id && (
-                  <div style={{ position: "absolute", right: 0, bottom: 34, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
-                    <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      Voir le profil
-                    </div>
-                    <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      Envoyer un message
-                    </div>
-                    <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                      Bloquer
-                    </div>
-                    <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      Annuler le match
-                    </div>
+              <div style={{ padding: "10px 10px 6px" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{m.partner?.name}, {m.partner?.age} ans</div>
+                <div style={{ fontSize: "0.72rem", color: "#555" }}>📌 {m.partner?.city}</div>
+                <div style={{ fontSize: "0.68rem", color: "#27ae60", fontWeight: 600, marginTop: 3 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#27ae60" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Match !</div>
+              </div>
+            </div>
+            {/* 3 traits en bas */}
+            <div style={{ position: "relative", padding: "4px 10px 10px", display: "flex", justifyContent: "flex-end" }}>
+              <div onClick={() => setMenuMatchId(menuMatchId === m.id ? null : m.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer", padding: 4 }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 16, height: 2, borderRadius: 2, background: "#aaa" }} />)}
+              </div>
+              {menuMatchId === m.id && (
+                <div style={{ position: "absolute", right: 10, bottom: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Voir le profil
                   </div>
-                )}
-              </div>
+                  <div onClick={() => { setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Envoyer un message
+                  </div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    Bloquer
+                  </div>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Annuler le match
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -6244,26 +6220,24 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
     prevMsgCountRef.current = count;
   }, [msgs]);
 
-  // Gestion clavier iOS + mesure footer
+  // Gestion clavier iOS style WhatsApp
+  // Le container reste FIXE (position:fixed, top:0, bottom:0).
+  // Seul le footer remonte via translateY, le header reste toujours visible.
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   useEffect(() => {
     if (!open) return;
     const measure = () => {
       if (footerRef.current) setFooterHeight(footerRef.current.offsetHeight);
       if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight);
     };
-    // iOS Safari: visualViewport resize = clavier ouvert/fermé
-    // On ajuste le padding-bottom du container pour que le footer remonte
-    const container = document.querySelector('[data-chat-container]') as HTMLElement | null;
     const handleKeyboard = () => {
-      if (!container) return;
       const vv = (window as any).visualViewport;
       if (!vv) return;
-      // Recalculate exact container height to match visible area
-      const visibleHeight = vv.height;
-      const offsetTop = vv.pageTop + vv.offsetTop;
-      container.style.height = visibleHeight + 'px';
-      container.style.top = offsetTop + 'px';
-      container.style.bottom = 'auto';
+      const kbHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardOffset(kbHeight);
+      if (kbHeight > 0) {
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      }
     };
     const vv = (window as any).visualViewport;
     if (vv) {
@@ -6271,8 +6245,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       vv.addEventListener('scroll', handleKeyboard);
     }
     const t = setTimeout(measure, 30);
-    return () => clearTimeout(t);
-  }, [replyTo, showEmojiPicker]);
+    return () => {
+      clearTimeout(t);
+      if (vv) {
+        vv.removeEventListener('resize', handleKeyboard);
+        vv.removeEventListener('scroll', handleKeyboard);
+      }
+      setKeyboardOffset(0);
+    };
+  }, [open, replyTo, showEmojiPicker]);
 
   // Auto-resize textarea + remesure footer à chaque frappe
   const autoResizeTextarea = () => {
@@ -6807,46 +6788,51 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         <span>Statuts visibles uniquement par vos matchs</span>
       </div>
     </div>
-    <div style={{ flex: 1, overflowY: "auto" }}>
+    <div style={{ flex: 1, overflowY: "auto", padding: "0" }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
-        : [...convs].sort((a, b) => {
-            const ta = a.lastMsg?.created_at ? new Date(a.lastMsg.created_at).getTime() : 0;
-            const tb = b.lastMsg?.created_at ? new Date(b.lastMsg.created_at).getTime() : 0;
-            return tb - ta;
-          }).map((c, idx, arr) => (
+        : convs.map((c, idx) => {
+          const unread = c.unreadCount || 0;
+          const lastMsgDate = c.lastMsg?.created_at ? (() => {
+            const d = new Date(c.lastMsg!.created_at!);
+            const now = new Date();
+            const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
+            if (diffDays === 0) return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+            if (diffDays === 1) return "Hier";
+            if (diffDays < 7) return d.toLocaleDateString("fr-FR", { weekday: "short" });
+            return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+          })() : "";
+          return (
           <div key={c.id}>
             <div onClick={() => {
               setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
               onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
               setOpen(c);
-            }} style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : "transparent", cursor: "pointer", WebkitTapHighlightColor: "transparent", transition: "background 0.1s" }}>
-              <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={46} />
+            }} style={{ display: "flex", gap: 12, alignItems: "center", padding: "11px 16px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : "transparent", cursor: "pointer", transition: "background 0.12s" }}>
+              <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-                  <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, fontSize: "0.92rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, marginRight: 8 }}>
+                  <div style={{ fontWeight: unread > 0 ? 700 : 600, fontSize: "0.92rem", color: unread > 0 ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, marginRight: 8 }}>
                     {c.partner?.name}
                     {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "#27ae60", marginLeft: 5, verticalAlign: "middle" }} /> : null; })()}
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#aaa", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, flexShrink: 0 }}>
-                    {fmtConvDate(c.lastMsg?.created_at)}
-                  </div>
+                  <div style={{ fontSize: "0.7rem", color: unread > 0 ? G.rouge : "#aaa", fontWeight: unread > 0 ? 600 : 400, flexShrink: 0 }}>{lastMsgDate}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontSize: "0.78rem", color: (c.unreadCount || 0) > 0 ? "#333" : "#888", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, marginRight: 8 }}>
+                  <div style={{ fontSize: "0.76rem", color: unread > 0 ? "#555" : "#999", fontWeight: unread > 0 ? 500 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, marginRight: 6 }}>
                     {c.lastMsg?.content?.startsWith("[img]") ? "📷 Photo" : c.lastMsg?.content || "Dis bonjour !"}
                   </div>
-                  {(c.unreadCount || 0) > 0 && (
+                  {unread > 0 && (
                     <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", minWidth: 20, height: 20, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>
-                      {(c.unreadCount || 0) > 9 ? "9+" : c.unreadCount}
+                      {unread > 9 ? "9+" : unread}
                     </div>
                   )}
                 </div>
               </div>
             </div>
-            {idx < arr.length - 1 && <div style={{ height: 1, background: "#F0F0F0", marginLeft: 74 }} />}
+            {idx < convs.length - 1 && <div style={{ height: 1, background: G.gris, marginLeft: 76 }} />}
           </div>
-        ))
+        )})
       }
     </div>
   </div>;
@@ -6860,11 +6846,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         </div>
       )}
       {/* Chat */}
-      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
+      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined, transform: isWideMsg ? undefined : `translateY(-${keyboardOffset}px)`, transition: "transform 0.05s linear" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
-      {/* Header fixe */}
-      <div ref={headerRef} style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0, zIndex: 2 }}>
+      {/* Header - position fixed indépendant du clavier */}
+      <div ref={headerRef} style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: isWideMsg ? undefined : 0, right: isWideMsg ? undefined : 0, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0, zIndex: isWideMsg ? 2 : 300, boxSizing: "border-box" as any }}>
         {/* Bouton retour cercle rouge */}
         <div onClick={() => { setOpen(null); loadConvs(); }} style={{ width: 38, height: 38, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 3px 10px rgba(192,57,43,0.35)", flexShrink: 0 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -7058,7 +7044,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       )}
 
       {/* Zone messages */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", WebkitOverflowScrolling: "touch" }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", paddingTop: isWideMsg ? "14px" : headerHeight + 14, paddingLeft: "14px", paddingRight: "14px", paddingBottom: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", WebkitOverflowScrolling: "touch" }}>
         <img src="/msg-bg.png" alt="" style={{ position: isWideMsg ? "absolute" : "fixed", top: isWideMsg ? 0 : 0, left: 0, right: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
