@@ -2338,24 +2338,10 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       }
       if (authRes.user?.identities?.length === 0) { setErrorMsg("Email déjà utilisé."); setLoading(false); return; }
 
-      // Récupérer le token : priorité au token retourné directement par signUp,
-      // puis tentative de signIn (peut échouer si confirmation email requise)
-      let finalToken: string | null =
-        (authRes as any)?.session?.access_token ||
-        (authRes as any)?.access_token ||
-        null;
-      let finalUserId: string = authRes?.user?.id || "";
-
-      if (!finalToken) {
-        try {
-          const loginRes = await sb.signIn(emailClean, form.password);
-          if (loginRes?.access_token) {
-            finalToken = loginRes.access_token;
-            if (loginRes?.user?.id) finalUserId = loginRes.user.id;
-          }
-        } catch {}
-      }
-
+      // Se connecter immédiatement pour avoir le vrai token
+      const loginRes = await sb.signIn(emailClean, form.password);
+      const finalToken = loginRes?.access_token || (authRes as any)?.access_token || (authRes as any)?.session?.access_token;
+      const finalUserId = loginRes?.user?.id || authRes?.user?.id || "";
       if (finalToken) {
         setTempToken(finalToken);
         sessionStorage.setItem("moyo_signup_token", finalToken);
@@ -2364,11 +2350,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         setTempUserId(finalUserId);
         sessionStorage.setItem("moyo_signup_uid", finalUserId);
       }
-
-      // Stocker aussi email+password en sessionStorage pour re-login silencieux à l'étape 3
-      sessionStorage.setItem("moyo_signup_email", emailClean);
-      sessionStorage.setItem("moyo_signup_pw", form.password);
-
       setStep(2);
     } catch (err) {
       // Même en cas d'erreur réseau, si on a le userId de signUp on continue
@@ -2413,18 +2394,14 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     // Si le token est manquant, tenter un re-login silencieux
     if (!token || !userId) {
       try {
-        const storedEmail = sessionStorage.getItem("moyo_signup_email") || form.email?.trim() || "";
-        const storedPw = sessionStorage.getItem("moyo_signup_pw") || form.password?.trim() || "";
-        if (storedEmail && storedPw) {
-          const retry = await sb.signIn(storedEmail, storedPw);
-          if (retry?.access_token) {
-            token = retry.access_token;
-            userId = retry.user?.id || sessionStorage.getItem("moyo_signup_uid") || "";
-            setTempToken(token);
-            setTempUserId(userId);
-            sessionStorage.setItem("moyo_signup_token", token);
-            if (userId) sessionStorage.setItem("moyo_signup_uid", userId);
-          }
+        const retry = await sb.signIn(form.email?.trim() || "", form.password?.trim() || "");
+        if (retry?.access_token) {
+          token = retry.access_token;
+          userId = retry.user?.id || "";
+          setTempToken(token);
+          setTempUserId(userId);
+          sessionStorage.setItem("moyo_signup_token", token);
+          sessionStorage.setItem("moyo_signup_uid", userId);
         }
       } catch {}
     }
@@ -7766,6 +7743,11 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
   const [uploadLoading, setUploadLoading] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [pwForm, setPwForm] = useState({ newPw: "", confirmPw: "" });
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState("");
+  const [pwSuccess, setPwSuccess] = useState(false);
   const [emailConfirmed, setEmailConfirmed] = useState<boolean | null>(null);
   const [emailVerified, setEmailVerified] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
@@ -7868,6 +7850,29 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     }));
     setBlockedUsers(enriched);
   };
+  const handleChangePassword = async () => {
+    setPwError("");
+    if (pwForm.newPw.length < 6) { setPwError("Le mot de passe doit faire au moins 6 caractères."); return; }
+    if (pwForm.newPw !== pwForm.confirmPw) { setPwError("Les mots de passe ne correspondent pas."); return; }
+    setPwLoading(true);
+    try {
+      const res = await sb.updatePassword(auth.token, pwForm.newPw);
+      if (res?.error) { setPwError("Erreur : " + (res.error.message || "Impossible de modifier le mot de passe.")); }
+      else {
+        // Envoyer l'email de confirmation
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-password-changed-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+            body: JSON.stringify({ email: auth.email, name: profile?.name || auth.name }),
+          });
+        } catch {}
+        setPwSuccess(true); setPwForm({ newPw: "", confirmPw: "" }); setToast({ msg: "Mot de passe modifié avec succès !", type: "success" }); setTimeout(() => { setShowChangePassword(false); setPwSuccess(false); }, 1500);
+      }
+    } catch { setPwError("Une erreur est survenue. Réessaie."); }
+    setPwLoading(false);
+  };
+
   const handleUnblock = async (blockId: string) => {
     await sb.delete(auth.token, "blocks", `?id=eq.${blockId}`);
     setBlockedUsers(prev => prev.filter(b => b.id !== blockId));
@@ -8015,6 +8020,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     { id: "rating", label: "Noter l'application", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
     { id: "preview", label: "Voir mon profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
     { id: "invite", label: "Inviter un ami", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.07 6.07l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
+    { id: "password", label: "Modifier mon mot de passe", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> },
     { id: "logout", label: "Se déconnecter", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>, danger: true },
     { id: "delete", label: "Supprimer mon compte", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>, danger: true },
   ];
@@ -8031,6 +8037,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     }
     // ── "Voir mon profil" ouvre la modale d'aperçu (desktop + mobile) ──
     if (id === "preview") { setShowPreview(true); return; }
+    if (id === "password") { setShowChangePassword(true); return; }
     setActiveSection(id);
   };
 
@@ -8039,6 +8046,59 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
+
+      {/* ── MODALE MODIFIER MOT DE PASSE ── */}
+      {showChangePassword && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 360 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#111" }}>Modifier mon mot de passe</div>
+              <div onClick={() => { setShowChangePassword(false); setPwError(""); setPwForm({ newPw: "", confirmPw: "" }); setPwSuccess(false); }} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
+            </div>
+            {pwSuccess ? (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1A5C3A" }}>Mot de passe modifié !</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ display: "block", fontWeight: 600, fontSize: "0.85rem", color: "#555", marginBottom: 6 }}>Nouveau mot de passe</label>
+                  <input
+                    type="password"
+                    value={pwForm.newPw}
+                    onChange={e => setPwForm(f => ({ ...f, newPw: e.target.value }))}
+                    placeholder="Minimum 6 caractères"
+                    style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", fontFamily: "inherit" }}
+                  />
+                </div>
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: "block", fontWeight: 600, fontSize: "0.85rem", color: "#555", marginBottom: 6 }}>Confirmer le mot de passe</label>
+                  <input
+                    type="password"
+                    value={pwForm.confirmPw}
+                    onChange={e => setPwForm(f => ({ ...f, confirmPw: e.target.value }))}
+                    placeholder="Répète ton mot de passe"
+                    style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", fontFamily: "inherit" }}
+                  />
+                </div>
+                {pwError && <div style={{ background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: "0.85rem", color: G.rouge, fontWeight: 500 }}>{pwError}</div>}
+                <button
+                  onClick={handleChangePassword}
+                  disabled={pwLoading || !pwForm.newPw || !pwForm.confirmPw}
+                  style={{ width: "100%", background: pwLoading || !pwForm.newPw || !pwForm.confirmPw ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: pwLoading || !pwForm.newPw || !pwForm.confirmPw ? "not-allowed" : "pointer", boxShadow: "0 4px 14px rgba(192,57,43,0.3)" }}
+                >
+                  {pwLoading ? "Modification..." : "Modifier mon mot de passe"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── COLONNE GAUCHE : MENU 50% - masquée sur mobile ── */}
       <div style={{ width: isWideProfile ? "50%" : "100%", background: G.blanc, borderRight: isWideProfile ? `1px solid ${G.gris}` : "none", overflowY: "auto", height: isWideProfile ? "100%" : "auto", display: isWideProfile ? "flex" : "none", flexDirection: "column" }}>
