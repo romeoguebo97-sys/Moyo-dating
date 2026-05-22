@@ -106,8 +106,6 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   }
 }).catch(() => {});
 
-const RESEND_API_KEY = "re_Ujp5EC5q_FotdQtaJQQgcdozduXYkRX5Y";
-const RESEND_FROM = "noreply@moyo-congo.com";
 const SUPPORT_TEAM_ID = "moyo-support-team";
 const SUPPORT_TEAM_NAME = "Assistance Moyo";
 const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
@@ -8528,16 +8526,11 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                   headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
                   body: JSON.stringify({ user_id: auth.userId, code, expires_at: expiresAt })
                 });
-                // Envoyer email via Resend
-                await fetch("https://api.resend.com/emails", {
+                // Envoyer email via Edge Function Supabase
+                await fetch(`${SUPABASE_URL}/functions/v1/send-verification-email`, {
                   method: "POST",
-                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
-                  body: JSON.stringify({
-                    from: RESEND_FROM,
-                    to: auth.email,
-                    subject: "Ton code de vérification Moyo",
-                    html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#fff;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><span style="font-size:2rem;font-weight:900;color:#C0392B">Mo</span><span style="font-size:2rem;font-weight:900;color:#D4A843">yo</span></div><h2 style="text-align:center;color:#1a1a1a;font-size:1.3rem">Vérifie ton adresse email</h2><p style="color:#555;text-align:center;margin:16px 0">Entre ce code dans l'application Moyo pour vérifier ton email :</p><div style="background:#F0F1F5;border-radius:12px;padding:24px;text-align:center;margin:24px 0"><span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#C0392B">${code}</span></div><p style="color:#aaa;font-size:0.8rem;text-align:center">Ce code expire dans 15 minutes.</p></div>`
-                  })
+                  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+                  body: JSON.stringify({ email: auth.email, code })
                 });
                 setCodeSent(true);
                 setShowVerifyModal(true);
