@@ -8271,18 +8271,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               </div>
               <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Voir mon<br/>profil</div>
             </div>
-
-            {/* Admin - visible uniquement si admin */}
-            {auth.isAdmin && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1 }} onClick={() => onOpenAdmin?.()}>
-                <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(192,57,43,0.08)", border: `2px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(192,57,43,0.2)", position: "relative" }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                  </svg>
-                </div>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.rouge, textAlign: "center", lineHeight: 1.3 }}>Admin</div>
-              </div>
-            )}
         </div>
       </div>}{/* fin ZONE BLANCHE */}
 
@@ -8381,6 +8369,20 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
         {/* ── ACTIONS (cartes empilées) ── */}
         <div style={{ padding: "20px 16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+
+        {/* Bouton Admin — visible uniquement si admin */}
+        {(!isWideProfile || activeSection === "main") && auth.isAdmin && (
+          <div onClick={() => onOpenAdmin?.()} style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", cursor: "pointer", boxShadow: "0 4px 16px rgba(192,57,43,0.12)", display: "flex", alignItems: "center", gap: 14, border: `1.5px solid rgba(192,57,43,0.2)` }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.rouge, marginBottom: 3 }}>Administration</div>
+              <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Tableau de bord admin</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        )}
 
         {/* CTA Premium - rouge si gratuit, doré si actif, rouge si expiré */}
         {(!isWideProfile || ["premium","main"].includes(activeSection)) && (() => {
