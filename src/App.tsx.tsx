@@ -2649,6 +2649,47 @@ function getBotResponse(input: string): string {
   return "Je n'ai pas trouvé de réponse précise à ta question. Tu peux contacter notre équipe sur WhatsApp au +242 06 513 20 12 ou via notre page Facebook.";
 }
 
+function BotFloat({ onOpen, G }: { onOpen: () => void; G: any }) {
+  const [hidden, setHidden] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [tapCount, setTapCount] = useState(0);
+  const tapTimer = useRef<any>(null);
+  const dragRef = useRef<{ startX: number; startY: number; initX: number; initY: number; moved: boolean } | null>(null);
+
+  const handleTap = () => {
+    const n = tapCount + 1;
+    setTapCount(n);
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+    if (n >= 2) { onOpen(); setTapCount(0); return; }
+    tapTimer.current = setTimeout(() => setTapCount(0), 400);
+  };
+
+  if (hidden) return (
+    <div onClick={() => setHidden(false)} style={{ position: "fixed", bottom: 78, right: 16, width: 14, height: 14, background: G.vert, borderRadius: "50%", border: "2.5px solid white", zIndex: 200, cursor: "pointer", boxShadow: "0 2px 8px rgba(39,174,96,0.6)" }} />
+  );
+
+  return (
+    <div
+      style={{ position: "fixed", bottom: Math.max(76, 76 - pos.y), right: Math.max(8, 14 - pos.x), zIndex: 200, touchAction: "none", userSelect: "none" }}
+      onTouchStart={e => { dragRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, initX: pos.x, initY: pos.y, moved: false }; }}
+      onTouchMove={e => {
+        if (!dragRef.current) return;
+        const dx = e.touches[0].clientX - dragRef.current.startX;
+        const dy = e.touches[0].clientY - dragRef.current.startY;
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragRef.current.moved = true;
+        setPos({ x: dragRef.current.initX + dx, y: dragRef.current.initY - dy });
+      }}
+      onTouchEnd={() => { if (dragRef.current && !dragRef.current.moved) handleTap(); dragRef.current = null; }}
+      onClick={handleTap}
+    >
+      <div onClick={e => { e.stopPropagation(); setHidden(true); }} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, background: "rgba(0,0,0,0.45)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "0.55rem", cursor: "pointer", border: "1.5px solid white", zIndex: 201 }}>✕</div>
+      <div style={{ width: 50, height: 50, borderRadius: "50%", background: `linear-gradient(135deg,${G.vert},#1e8449)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(39,174,96,0.5)", border: "2.5px solid white", cursor: "pointer" }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
+      </div>
+    </div>
+  );
+}
+
 function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
   const [mode, setMode] = useState<"home" | "chat" | "report">("home");
   const [msgs, setMsgs] = useState<{ from: "bot" | "user"; text: string }[]>([
@@ -3533,16 +3574,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box" }}>
           <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
-            {auth.isAdmin && (
-              <div onClick={() => openAdminPanel(() => setTab("admin"))} style={{ display: "flex", alignItems: "center", gap: 5, background: G.rouge, color: G.blanc, borderRadius: 50, padding: "5px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
-                <span>⚙️ Admin</span>
-                {adminBadgeCount && adminBadgeCount > 0 ? <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.62rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.6 }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</span> : null}
-              </div>
-            )}
-            <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.blanc, background: G.rouge, borderRadius: 50, padding: "6px 14px", cursor: "pointer", letterSpacing: "0.02em" }}>Guide</div>
-            <div onClick={() => setShowBot(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: G.vert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(26,92,58,0.35)", flexShrink: 0 }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><line x1="8" y1="21" x2="8" y2="19"/><line x1="16" y1="21" x2="16" y2="19"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
-            </div>
+            <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#333", background: "white", borderRadius: 50, padding: "5px 14px", cursor: "pointer", border: "1.5px solid #ddd", letterSpacing: "0.02em" }}>Guide</div>
           </div>
         </div>
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
@@ -3569,8 +3601,11 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       </>
     )}
 
-    {/* Bot Widget */}
+    {/* Bot Widget — fenêtre */}
     {showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
+
+    {/* Bot flottant */}
+    {!isWide && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
     {showGuide && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
       <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
         {/* Header */}
@@ -4388,16 +4423,17 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     )}
     {/* Boutons vue/filtres mobile - masqués sur desktop (panneau droit) */}
     {!isWide && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
-      {/* Filtres à gauche - icône SVG uniquement */}
-      <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? G.rouge : G.blanc, color: showFilters ? G.blanc : G.brun, border: `2px solid ${showFilters ? G.rouge : G.gris}`, borderRadius: 50, padding: "6px 8px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showFilters ? G.blanc : G.brun} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      {/* Filtres à gauche */}
+      <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? "#333" : G.blanc, color: showFilters ? G.blanc : "#333", border: `1.5px solid ${showFilters ? "#333" : "#ddd"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, lineHeight: 1, whiteSpace: "nowrap" }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={showFilters ? G.blanc : "#333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="4" y1="6" x2="20" y2="6"/>
           <line x1="4" y1="12" x2="20" y2="12"/>
           <line x1="4" y1="18" x2="20" y2="18"/>
-          <circle cx="8" cy="6" r="2" fill={showFilters ? G.blanc : G.brun} stroke="none"/>
-          <circle cx="15" cy="12" r="2" fill={showFilters ? G.blanc : G.brun} stroke="none"/>
-          <circle cx="10" cy="18" r="2" fill={showFilters ? G.blanc : G.brun} stroke="none"/>
+          <circle cx="8" cy="6" r="2" fill={showFilters ? G.blanc : "#333"} stroke="none"/>
+          <circle cx="15" cy="12" r="2" fill={showFilters ? G.blanc : "#333"} stroke="none"/>
+          <circle cx="10" cy="18" r="2" fill={showFilters ? G.blanc : "#333"} stroke="none"/>
         </svg>
+        Filtres
       </div>
       {/* Compteur likes gratuits - centré */}
       {!auth.isPremium && (
@@ -4414,14 +4450,14 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
           const next = viewMode === "list" ? "card" : "list";
           setViewMode(next);
           window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } }));
-        }} style={{ background: viewMode === "list" ? G.rouge : G.blanc, color: viewMode === "list" ? G.blanc : "#111", border: `2px solid ${viewMode === "list" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
-          {viewMode === "list" ? "Carte" : "Liste"}
+        }} style={{ background: G.blanc, color: "#333", border: `1.5px solid ${viewMode === "list" ? "#333" : "#ddd"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+          {viewMode === "list" ? "≡ Liste" : "≡ Liste"}
         </div>
         <div onClick={() => {
           setViewMode("full");
           window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: true } }));
-        }} style={{ background: viewMode === "full" ? G.rouge : G.blanc, color: viewMode === "full" ? G.blanc : "#111", border: `2px solid ${viewMode === "full" ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 7px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
-          Plein écran
+        }} style={{ background: G.blanc, color: "#333", border: `1.5px solid ${viewMode === "full" ? "#333" : "#ddd"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+          ⛶ Plein écran
         </div>
       </div>
     </div>}{(!isWide && showFilters) && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 16 }}>
@@ -7733,7 +7769,7 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   );
 }
 
-function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void }) {
+function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<Profile>>({});
@@ -8028,6 +8064,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
     { id: "password", label: "Modifier mon mot de passe", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> },
     { id: "logout", label: "Se déconnecter", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>, danger: true },
     { id: "delete", label: "Supprimer mon compte", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>, danger: true },
+    ...(auth.isAdmin ? [{ id: "admin", label: "Tableau de bord Admin", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>, danger: true }] : []),
   ];
 
   const handleMenuClick = (id: string) => {
@@ -8040,6 +8077,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
       else window.open(`https://wa.me/?text=${msg}`, "_blank");
       return;
     }
+    if (id === "admin") { onOpenAdmin?.(); return; }
     // ── "Voir mon profil" ouvre la modale d'aperçu (desktop + mobile) ──
     if (id === "preview") { setShowPreview(true); return; }
     if (id === "password") { setShowChangePassword(true); return; }
@@ -13144,7 +13182,7 @@ export default function App() {
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} />}
-      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} />}
+      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} />}
       {tab === "admin" && <AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} />}
