@@ -9101,6 +9101,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     created_at?: string;
     last_seen?: string;
     warning_count?: number;
+    email?: string;
   };
 
   // ── Onglet actif ──
@@ -9342,6 +9343,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [warnReason, setWarnReason] = useState(WARN_REASONS[0]);
   const [msgModal, setMsgModal] = useState<{ user: Profile } | null>(null);
   const [msgText, setMsgText] = useState("");
+  const [mailModal, setMailModal] = useState<{ user: AdminProfile } | null>(null);
+  const [mailHistory, setMailHistory] = useState<{ id: string; reason: string; created_at: string }[]>([]);
+  const [mailHistoryLoading, setMailHistoryLoading] = useState(false);
   const [msgHistory, setMsgHistory] = useState<{ id: string; reason: string; created_at: string }[]>([]);
   const [msgHistoryLoading, setMsgHistoryLoading] = useState(false);
   const [msgTab, setMsgTab] = useState<"modeles" | "historique">("modeles");
@@ -9370,6 +9374,45 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       // Si erreur, recharger pour remettre le bon état
       loadMsgHistory(userId);
     }
+  };
+
+  const loadMailHistory = async (userId: string) => {
+    setMailHistoryLoading(true);
+    try {
+      const res = await sb.query<{ id: string; reason: string; created_at: string }>(
+        auth.token, "user_warnings",
+        `?user_id=eq.${userId}&warning_number=eq.99&order=created_at.desc&limit=50`
+      );
+      setMailHistory(Array.isArray(res) ? res : []);
+    } catch { setMailHistory([]); }
+    setMailHistoryLoading(false);
+  };
+
+  const deleteMailHistory = async (id: string) => {
+    setMailHistory(prev => prev.filter(m => m.id !== id));
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }
+      });
+    } catch { if (mailModal) loadMailHistory(mailModal.user.id); }
+  };
+
+  const sendMailFunction = async (fnName: string, label: string, user: AdminProfile) => {
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
+        body: JSON.stringify({ email: user.email, name: user.name }),
+      });
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+        body: JSON.stringify({ user_id: user.id, admin_id: auth.userId, reason: `[EMAIL] ${label}`, warning_number: 99, acknowledged: false }),
+      });
+      showToast(`Email "${label}" envoyé à ${user.name} ✓`, "success");
+      loadMailHistory(user.id);
+    } catch { showToast("Erreur lors de l'envoi", "error"); }
   };
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
@@ -10416,6 +10459,86 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         );
       })()}
+      {/* Modal Mail */}
+      {mailModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: G.blanc, width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: window.innerWidth >= 768 ? "row" : "column" }}>
+
+            {/* ── COLONNE GAUCHE : historique + liste emails ── */}
+            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", borderRight: window.innerWidth >= 768 ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", maxHeight: window.innerWidth >= 768 ? "none" : "55vh", overflow: "hidden" }}>
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg,#f3e8ff,#e8d5f5)", padding: "20px 20px 14px", borderBottom: "1px solid rgba(142,68,173,0.15)", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Email à {mailModal.user.name}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un email à envoyer</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Historique */}
+              <div style={{ padding: "10px 16px 6px", flexShrink: 0, borderBottom: `1px solid ${G.gris}` }}>
+                <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 6 }}>
+                  Historique ({mailHistory.length} email{mailHistory.length > 1 ? "s" : ""} envoyé{mailHistory.length > 1 ? "s" : ""})
+                </div>
+                {mailHistoryLoading ? (
+                  <div style={{ textAlign: "center", padding: "8px 0", color: "#aaa", fontSize: "0.75rem" }}>Chargement…</div>
+                ) : mailHistory.length === 0 ? (
+                  <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun email envoyé pour le moment</div>
+                ) : (
+                  <div style={{ maxHeight: 140, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+                    {mailHistory.map(m => (
+                      <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#faf5ff", borderRadius: 8, padding: "7px 10px", border: "1px solid #e8d5f5" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.68rem", color: "#8e44ad", fontWeight: 600, marginBottom: 2 }}>
+                            {new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </div>
+                          <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.reason}</div>
+                        </div>
+                        <button onClick={() => deleteMailHistory(m.id)} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Liste emails */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 4 }}>Emails disponibles</div>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#8e44ad", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Relance inactivité</div>
+                {[
+                  { fn: "send-relance-5j", label: "Inactivité 5 jours — Tu nous manques !" },
+                  { fn: "send-relance-15j", label: "Inactivité 15 jours — Des profils t'attendent" },
+                  { fn: "send-relance-30j", label: "Inactivité 30 jours — Compte bientôt supprimé" },
+                ].map(item => (
+                  <div key={item.fn} onClick={() => sendMailFunction(item.fn, item.label, mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: "pointer", background: "#faf5ff", border: "1.5px solid #e8d5f5", fontSize: "0.83rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#8e44ad", flexShrink: 0 }} />
+                    {item.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── COLONNE DROITE ── */}
+            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 32px", background: "#fafafa" }}>
+              <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: "1rem", color: "#333", marginBottom: 10, textAlign: "center" }}>Envoyer un email à {mailModal.user.name}</div>
+              <div style={{ fontSize: "0.85rem", color: "#888", textAlign: "center", lineHeight: 1.6, maxWidth: 280, marginBottom: 32 }}>
+                Clique sur un email dans la liste à gauche pour l'envoyer instantanément. L'envoi sera enregistré dans l'historique.
+              </div>
+              <button onClick={() => { setMailModal(null); setMailHistory([]); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px 32px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Fermer</button>
+            </div>
+
+          </div>
+        </div>
+      )}
       {/* Modale PIN */}
       {pinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -11468,6 +11591,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           }
                           <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || isSelf} onClick={() => { if (isSelf) return; confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
                           <ActionBtn label="Message" color="#2980b9" disabled={isLoading || isSelf} onClick={() => { setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
+                          <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || isSelf} onClick={() => { setMailModal({ user: u }); setMailHistory([]); loadMailHistory(u.id); }} />
                         </div>
                       </div>
                     );
@@ -11605,6 +11729,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           }} />
                         <ActionBtn label="Message" color="#2980b9" disabled={isLoading || isSelf}
                           onClick={() => { setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
+                        <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || isSelf}
+                          onClick={() => { setMailModal({ user: u }); setMailHistory([]); loadMailHistory(u.id); }} />
                       </div>
                     </div>
                   </div>
