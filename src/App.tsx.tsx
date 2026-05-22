@@ -7867,7 +7867,12 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
             body: JSON.stringify({ email: auth.email, name: profile?.name || auth.name }),
           });
         } catch {}
-        setPwSuccess(true); setPwForm({ newPw: "", confirmPw: "" }); setToast({ msg: "Mot de passe modifié avec succès !", type: "success" }); setTimeout(() => { setShowChangePassword(false); setPwSuccess(false); }, 1500);
+        setPwSuccess(true); setPwForm({ newPw: "", confirmPw: "" });
+        // Déconnecter et rediriger pour forcer la reconnexion avec le nouveau mot de passe
+        setTimeout(async () => {
+          await sb.signOut(auth.token);
+          onLogout();
+        }, 2500);
       }
     } catch { setPwError("Une erreur est survenue. Réessaie."); }
     setPwLoading(false);
@@ -8063,6 +8068,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
                 <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1A5C3A" }}>Mot de passe modifié !</div>
+                <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 8 }}>Tu vas être déconnecté(e) pour te reconnecter avec ton nouveau mot de passe...</div>
               </div>
             ) : (
               <>
