@@ -8516,25 +8516,28 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
                 const code = Math.floor(100000 + Math.random() * 900000).toString();
                 const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
                 // Supprimer anciens codes
-                await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?user_id=eq.${auth.userId}`, {
+                const delRes = await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?user_id=eq.${auth.userId}`, {
                   method: "DELETE",
                   headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
                 });
+                if (!delRes.ok) { const t = await delRes.text(); alert("Erreur DELETE: " + t); setVerifyLoading(false); return; }
                 // Insérer nouveau code
-                await fetch(`${SUPABASE_URL}/rest/v1/email_verifications`, {
+                const insRes = await fetch(`${SUPABASE_URL}/rest/v1/email_verifications`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
                   body: JSON.stringify({ user_id: auth.userId, code, expires_at: expiresAt })
                 });
+                if (!insRes.ok) { const t = await insRes.text(); alert("Erreur INSERT: " + t); setVerifyLoading(false); return; }
                 // Envoyer email via Edge Function Supabase
-                await fetch(`${SUPABASE_URL}/functions/v1/send-verification-email`, {
+                const edgeRes = await fetch(`${SUPABASE_URL}/functions/v1/send-verification-email`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
                   body: JSON.stringify({ email: auth.email, code })
                 });
+                if (!edgeRes.ok) { const t = await edgeRes.text(); alert("Erreur Edge Function: " + t); setVerifyLoading(false); return; }
                 setCodeSent(true);
                 setShowVerifyModal(true);
-              } catch { setVerifyError("Erreur lors de l'envoi. Réessaie."); }
+              } catch (e: any) { setVerifyError("Erreur: " + (e?.message || String(e))); setVerifyLoading(false); return; }
               setVerifyLoading(false);
             }} disabled={verifyLoading} style={{ fontSize: "0.65rem", color: G.rouge, background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, padding: "4px 10px", borderRadius: 50, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer", opacity: verifyLoading ? 0.6 : 1 }}>
               {verifyLoading ? "Envoi..." : "Vérifier mon email"}
