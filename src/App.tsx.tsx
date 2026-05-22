@@ -8689,6 +8689,20 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
         })()}
 
 
+        {/* ── Modifier mon mot de passe ── */}
+        {(!isWideProfile || ["password","main"].includes(activeSection)) && (
+          <div onClick={() => setShowChangePassword(true)} style={{ background: G.blanc, borderRadius: 16, padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #E8E8E8" }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111" }}>Modifier mon mot de passe</div>
+              <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Changer ton mot de passe de connexion</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+        )}
+
         {/* ── Se déconnecter | Supprimer mon compte ── */}
         {(!isWideProfile || ["logout","delete","main"].includes(activeSection)) && <div style={{ display: "flex", gap: 10 }}>
           {(!isWideProfile || ["logout","main"].includes(activeSection)) && <div onClick={() => setShowLogout(true)} style={{ flex: 1, background: G.blanc, borderRadius: 16, padding: "15px 12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: `1.5px solid #E8E8E8`, minHeight: 82 }}>
