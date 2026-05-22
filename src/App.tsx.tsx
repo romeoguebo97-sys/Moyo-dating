@@ -8103,26 +8103,26 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
 
             {/* Modifier ma photo - descend sur la vague */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1, transform: "translateY(18px)" }} onClick={() => fileRef.current?.click()}>
-              <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(192,57,43,0.4)", position: "relative" }}>
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.10)", position: "relative" }}>
                 {uploadLoading ? (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
                 ) : (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                     <circle cx="12" cy="13" r="4"/>
                   </svg>
                 )}
-                <div style={{ position: "absolute", bottom: 0, right: 0, width: 18, height: 18, borderRadius: "50%", background: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
-                  <span style={{ fontSize: "0.65rem", color: G.rouge, fontWeight: 900, lineHeight: 1 }}>+</span>
-                </div>
+                {blockedUsers.length > 0 && (
+                  <div style={{ position: "absolute", top: -2, right: -2, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.55rem", fontWeight: 700, border: `2px solid ${G.blanc}` }}>+</div>
+                )}
               </div>
               <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier ma<br/>photo</div>
             </div>
 
             {/* Liste noire - descend sur la vague */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1, transform: "translateY(18px)" }} onClick={() => setShowBlocked(true)}>
-              <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.2)", position: "relative" }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.10)", position: "relative" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                   <circle cx="12" cy="7" r="4"/>
                   <line x1="1" y1="1" x2="23" y2="23"/>
@@ -8136,8 +8136,8 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
 
             {/* Voir mon profil - niveau normal */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1 }} onClick={() => setShowPreview(true)}>
-              <div style={{ width: 54, height: 54, borderRadius: "50%", background: `linear-gradient(135deg,${G.vert},#0D4020)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(26,92,58,0.35)" }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.10)" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
@@ -8321,6 +8321,118 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>}
+        {/* Email de connexion + Vérification */}
+        {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, borderRadius: 18, border: emailVerified ? "1.5px solid rgba(39,174,96,0.3)" : "1.5px solid rgba(192,57,43,0.2)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+          <div style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: emailVerified ? "rgba(39,174,96,0.1)" : "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={emailVerified ? "#27ae60" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "0.7rem", color: emailVerified ? "#27ae60" : G.rouge, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Email de connexion</div>
+              <div style={{ fontSize: "0.87rem", color: "#333", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "-"}</div>
+            </div>
+            {emailVerified ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 50, padding: "6px 13px", flexShrink: 0 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span style={{ fontSize: "0.72rem", color: "#27ae60", fontWeight: 800 }}>Email vérifié</span>
+              </div>
+            ) : (
+              <button onClick={async () => {
+                setVerifyLoading(true);
+                setVerifyError("");
+                try {
+                  const code = Math.floor(100000 + Math.random() * 900000).toString();
+                  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+                  const delRes = await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?user_id=eq.${auth.userId}`, {
+                    method: "DELETE",
+                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+                  });
+                  if (!delRes.ok) { const t = await delRes.text(); alert("Erreur DELETE: " + t); setVerifyLoading(false); return; }
+                  const insRes = await fetch(`${SUPABASE_URL}/rest/v1/email_verifications`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+                    body: JSON.stringify({ user_id: auth.userId, code, expires_at: expiresAt })
+                  });
+                  if (!insRes.ok) { const t = await insRes.text(); alert("Erreur INSERT: " + t); setVerifyLoading(false); return; }
+                  const edgeRes = await fetch(`${SUPABASE_URL}/functions/v1/send-verification-email`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+                    body: JSON.stringify({ email: auth.email, code })
+                  });
+                  if (!edgeRes.ok) { const t = await edgeRes.text(); alert("Erreur Edge Function: " + t); setVerifyLoading(false); return; }
+                  setCodeSent(true);
+                  setShowVerifyModal(true);
+                } catch (e: any) { setVerifyError("Erreur: " + (e?.message || String(e))); setVerifyLoading(false); return; }
+                setVerifyLoading(false);
+              }} disabled={verifyLoading} style={{ background: verifyLoading ? "#ddd" : `linear-gradient(135deg,${G.rouge} 0%,#e74c3c 100%)`, color: G.blanc, border: "none", borderRadius: 50, padding: "9px 16px", fontWeight: 800, fontSize: "0.75rem", cursor: verifyLoading ? "not-allowed" : "pointer", flexShrink: 0, boxShadow: verifyLoading ? "none" : "0 3px 10px rgba(192,57,43,0.3)", whiteSpace: "nowrap" }}>
+                {verifyLoading ? "Envoi..." : "✉ Vérifier mon email"}
+              </button>
+            )}
+          </div>
+          {!emailVerified && (
+            <div style={{ background: "rgba(192,57,43,0.04)", borderTop: "1px solid rgba(192,57,43,0.08)", padding: "9px 18px", display: "flex", alignItems: "center", gap: 7 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span style={{ fontSize: "0.71rem", color: G.rouge, fontWeight: 600 }}>Vérifie ton email pour sécuriser ton compte</span>
+            </div>
+          )}
+          {/* Modal saisie du code */}
+          {showVerifyModal && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+              <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+                {verifySuccess ? (
+                  <>
+                    <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Email vérifié !</h3>
+                    <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Ton adresse email est maintenant vérifiée.</p>
+                    <button onClick={() => { setShowVerifyModal(false); setVerifySuccess(false); }} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: "#27ae60", color: G.blanc, fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>Fermer</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Code envoyé !</h3>
+                    <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Entre le code à 6 chiffres reçu sur <strong>{auth.email}</strong>. Valable 15 minutes.</p>
+                    <input
+                      type="number"
+                      value={verifyCode}
+                      onChange={e => { setVerifyCode(e.target.value.slice(0, 6)); setVerifyError(""); }}
+                      placeholder="000000"
+                      style={{ width: "100%", boxSizing: "border-box", padding: "14px", borderRadius: 12, border: `2px solid ${verifyError ? G.rouge : G.gris}`, fontSize: "1.5rem", textAlign: "center", letterSpacing: "8px", fontWeight: 700, outline: "none", marginBottom: 8 }}
+                    />
+                    {verifyError && <p style={{ color: G.rouge, fontSize: "0.8rem", marginBottom: 8 }}>{verifyError}</p>}
+                    <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                      <button onClick={() => { setShowVerifyModal(false); setVerifyCode(""); setVerifyError(""); }} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `1.5px solid ${G.gris}`, background: G.creme, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>Annuler</button>
+                      <button disabled={verifyCode.length !== 6 || verifyLoading} onClick={async () => {
+                        setVerifyLoading(true);
+                        setVerifyError("");
+                        try {
+                          const res = await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?user_id=eq.${auth.userId}&code=eq.${verifyCode}&used=eq.false&select=id,expires_at`, {
+                            headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+                          });
+                          const rows = await res.json();
+                          if (!Array.isArray(rows) || !rows[0]) { setVerifyError("Code incorrect."); setVerifyLoading(false); return; }
+                          if (new Date(rows[0].expires_at) < new Date()) { setVerifyError("Code expiré. Renvoie un nouveau code."); setVerifyLoading(false); return; }
+                          await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?id=eq.${rows[0].id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ used: true }) });
+                          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ email_verified: true }) });
+                          setEmailVerified(true);
+                          setVerifySuccess(true);
+                        } catch { setVerifyError("Erreur technique. Réessaie."); }
+                        setVerifyLoading(false);
+                      }} style={{ flex: 2, padding: "12px", borderRadius: 50, border: "none", background: verifyCode.length === 6 ? G.rouge : "#ccc", color: G.blanc, fontWeight: 700, fontSize: "0.85rem", cursor: verifyCode.length === 6 ? "pointer" : "not-allowed" }}>
+                        {verifyLoading ? "Vérification..." : "Confirmer"}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>}
+
+
 
 
         {/* Demande de vérification */}
@@ -8493,114 +8605,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark }: { au
           );
         })()}
 
-        {/* Email de connexion */}
-        {(!isWideProfile || activeSection === "main") && <div style={{ marginTop: 4, background: G.blanc, borderRadius: 16, padding: "14px 18px", border: `1px solid #E8E8E8`, display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "0.72rem", color: "#bbb", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>Email de connexion</div>
-            <div style={{ fontSize: "0.88rem", color: "#aaa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "-"}</div>
-          </div>
-          {emailVerified ? (
-            <div style={{ fontSize: "0.65rem", color: "#27ae60", background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.3)", padding: "4px 10px", borderRadius: 50, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              Email vérifié
-            </div>
-          ) : (
-            <button onClick={async () => {
-              setVerifyLoading(true);
-              setVerifyError("");
-              try {
-                // Générer code 6 chiffres
-                const code = Math.floor(100000 + Math.random() * 900000).toString();
-                const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
-                // Supprimer anciens codes
-                const delRes = await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?user_id=eq.${auth.userId}`, {
-                  method: "DELETE",
-                  headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-                });
-                if (!delRes.ok) { const t = await delRes.text(); alert("Erreur DELETE: " + t); setVerifyLoading(false); return; }
-                // Insérer nouveau code
-                const insRes = await fetch(`${SUPABASE_URL}/rest/v1/email_verifications`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
-                  body: JSON.stringify({ user_id: auth.userId, code, expires_at: expiresAt })
-                });
-                if (!insRes.ok) { const t = await insRes.text(); alert("Erreur INSERT: " + t); setVerifyLoading(false); return; }
-                // Envoyer email via Edge Function Supabase
-                const edgeRes = await fetch(`${SUPABASE_URL}/functions/v1/send-verification-email`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
-                  body: JSON.stringify({ email: auth.email, code })
-                });
-                if (!edgeRes.ok) { const t = await edgeRes.text(); alert("Erreur Edge Function: " + t); setVerifyLoading(false); return; }
-                setCodeSent(true);
-                setShowVerifyModal(true);
-              } catch (e: any) { setVerifyError("Erreur: " + (e?.message || String(e))); setVerifyLoading(false); return; }
-              setVerifyLoading(false);
-            }} disabled={verifyLoading} style={{ fontSize: "0.65rem", color: G.rouge, background: "rgba(192,57,43,0.08)", border: `1px solid rgba(192,57,43,0.2)`, padding: "4px 10px", borderRadius: 50, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer", opacity: verifyLoading ? 0.6 : 1 }}>
-              {verifyLoading ? "Envoi..." : "Vérifier mon email"}
-            </button>
-          )}
-          {/* Modal saisie du code */}
-          {showVerifyModal && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-              <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
-                {verifySuccess ? (
-                  <>
-                    <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    </div>
-                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Email vérifié !</h3>
-                    <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Ton adresse email est maintenant vérifiée.</p>
-                    <button onClick={() => { setShowVerifyModal(false); setVerifySuccess(false); }} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: "#27ae60", color: G.blanc, fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>Fermer</button>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                    </div>
-                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Code envoyé !</h3>
-                    <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Entre le code à 6 chiffres reçu sur <strong>{auth.email}</strong>. Valable 15 minutes.</p>
-                    <input
-                      type="number"
-                      value={verifyCode}
-                      onChange={e => { setVerifyCode(e.target.value.slice(0, 6)); setVerifyError(""); }}
-                      placeholder="000000"
-                      style={{ width: "100%", boxSizing: "border-box", padding: "14px", borderRadius: 12, border: `2px solid ${verifyError ? G.rouge : G.gris}`, fontSize: "1.5rem", textAlign: "center", letterSpacing: "8px", fontWeight: 700, outline: "none", marginBottom: 8 }}
-                    />
-                    {verifyError && <p style={{ color: G.rouge, fontSize: "0.8rem", marginBottom: 8 }}>{verifyError}</p>}
-                    <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                      <button onClick={() => { setShowVerifyModal(false); setVerifyCode(""); setVerifyError(""); }} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `1.5px solid ${G.gris}`, background: G.creme, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>Annuler</button>
-                      <button disabled={verifyCode.length !== 6 || verifyLoading} onClick={async () => {
-                        setVerifyLoading(true);
-                        setVerifyError("");
-                        try {
-                          const res = await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?user_id=eq.${auth.userId}&code=eq.${verifyCode}&used=eq.false&select=id,expires_at`, {
-                            headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-                          });
-                          const rows = await res.json();
-                          if (!Array.isArray(rows) || !rows[0]) { setVerifyError("Code incorrect."); setVerifyLoading(false); return; }
-                          if (new Date(rows[0].expires_at) < new Date()) { setVerifyError("Code expiré. Renvoie un nouveau code."); setVerifyLoading(false); return; }
-                          // Marquer comme utilisé
-                          await fetch(`${SUPABASE_URL}/rest/v1/email_verifications?id=eq.${rows[0].id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ used: true }) });
-                          // Marquer email comme vérifié
-                          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ email_verified: true }) });
-                          setEmailVerified(true);
-                          setVerifySuccess(true);
-                        } catch { setVerifyError("Erreur technique. Réessaie."); }
-                        setVerifyLoading(false);
-                      }} style={{ flex: 2, padding: "12px", borderRadius: 50, border: "none", background: verifyCode.length === 6 ? G.rouge : "#ccc", color: G.blanc, fontWeight: 700, fontSize: "0.85rem", cursor: verifyCode.length === 6 ? "pointer" : "not-allowed" }}>
-                        {verifyLoading ? "Vérification..." : "Confirmer"}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>}
 
         {/* ── Se déconnecter | Supprimer mon compte ── */}
         {(!isWideProfile || ["logout","delete","main"].includes(activeSection)) && <div style={{ display: "flex", gap: 10 }}>
