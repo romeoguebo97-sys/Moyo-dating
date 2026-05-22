@@ -4969,6 +4969,21 @@ const fmtDate = (iso?: string) => {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 };
 
+// Format court pour la liste des conversations (style WhatsApp)
+const fmtConvDate = (iso?: string) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffH = diffMs / 3600000;
+  const diffDays = diffMs / 86400000;
+  if (diffH < 1) return `${Math.max(1, Math.floor(diffMs / 60000))} min`;
+  if (diffH < 24 && d.getDate() === now.getDate()) return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (diffDays < 2 && d.getDate() !== now.getDate()) return "Hier";
+  if (diffDays < 7) return d.toLocaleDateString("fr-FR", { weekday: "short" });
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+};
+
 // Switch interne réutilisable
 function InnerSwitch({ options, value, onChange }: {
   options: { id: string; label: string; icon: React.ReactNode }[];
@@ -6792,30 +6807,44 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         <span>Statuts visibles uniquement par vos matchs</span>
       </div>
     </div>
-    <div style={{ flex: 1, overflowY: "auto", padding: "8px 10px" }}>
+    <div style={{ flex: 1, overflowY: "auto" }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
-        : convs.map(c => (
-          <div key={c.id} onClick={() => {
-            setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
-            onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
-            setOpen(c);
-          }} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 10px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : (c.unreadCount || 0) > 0 ? "rgba(192,57,43,0.03)" : "transparent", borderRadius: 12, marginBottom: 4, cursor: "pointer", border: open?.id === c.id ? `1.5px solid rgba(192,57,43,0.2)` : "1.5px solid transparent", transition: "all 0.12s" }}>
-            <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={44} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
-                <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, fontSize: "0.88rem", color: (c.unreadCount || 0) > 0 ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isWideMsg ? 140 : 160 }}>{c.partner?.name}</div>
-                {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
-              </div>
-              <div style={{ fontSize: "0.76rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#888", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {c.lastMsg?.content?.startsWith("[img]") ? "Photo" : c.lastMsg?.content || "Dis bonjour !"}
+        : [...convs].sort((a, b) => {
+            const ta = a.lastMsg?.created_at ? new Date(a.lastMsg.created_at).getTime() : 0;
+            const tb = b.lastMsg?.created_at ? new Date(b.lastMsg.created_at).getTime() : 0;
+            return tb - ta;
+          }).map((c, idx, arr) => (
+          <div key={c.id}>
+            <div onClick={() => {
+              setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
+              onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
+              setOpen(c);
+            }} style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : "transparent", cursor: "pointer", WebkitTapHighlightColor: "transparent", transition: "background 0.1s" }}>
+              <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={46} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                  <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, fontSize: "0.92rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, marginRight: 8 }}>
+                    {c.partner?.name}
+                    {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "#27ae60", marginLeft: 5, verticalAlign: "middle" }} /> : null; })()}
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#aaa", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, flexShrink: 0 }}>
+                    {fmtConvDate(c.lastMsg?.created_at)}
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ fontSize: "0.78rem", color: (c.unreadCount || 0) > 0 ? "#333" : "#888", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, marginRight: 8 }}>
+                    {c.lastMsg?.content?.startsWith("[img]") ? "📷 Photo" : c.lastMsg?.content || "Dis bonjour !"}
+                  </div>
+                  {(c.unreadCount || 0) > 0 && (
+                    <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", minWidth: 20, height: 20, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>
+                      {(c.unreadCount || 0) > 9 ? "9+" : c.unreadCount}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            {(c.unreadCount || 0) > 0 && (
-              <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", minWidth: 20, height: 20, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>
-                {(c.unreadCount || 0) > 9 ? "9+" : c.unreadCount}
-              </div>
-            )}
+            {idx < arr.length - 1 && <div style={{ height: 1, background: "#F0F0F0", marginLeft: 74 }} />}
           </div>
         ))
       }
