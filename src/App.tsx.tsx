@@ -8271,6 +8271,18 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               </div>
               <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Voir mon<br/>profil</div>
             </div>
+
+            {/* Admin - visible uniquement si admin */}
+            {auth.isAdmin && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1 }} onClick={() => onOpenAdmin?.()}>
+                <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(192,57,43,0.08)", border: `2px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(192,57,43,0.2)", position: "relative" }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                  </svg>
+                </div>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.rouge, textAlign: "center", lineHeight: 1.3 }}>Admin</div>
+              </div>
+            )}
         </div>
       </div>}{/* fin ZONE BLANCHE */}
 
