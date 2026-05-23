@@ -3210,39 +3210,6 @@ function AdminDesktopPage() {
             </OffCanvasSection>
             {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
               <>
-              <OffCanvasSection title="Gestion des admins">
-                <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Entrez l'email pour donner ou retirer des droits.</div>
-                {([
-                  ["admin", "Nommer Admin", "#2980b9", "Accès admin sans Paiements"],
-                  ["superadmin", "Nommer Super Admin", G.rouge, "Accès total y compris Paiements"],
-                  [null, "Retirer les droits", "#888", "Revient à un compte normal"],
-                ] as [string | null, string, string, string][]).map(([level, label, color, desc]) => (
-                  <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
-                    <div>
-                      <div style={{ fontSize: "0.78rem", fontWeight: 700, color }}>{label}</div>
-                      <div style={{ fontSize: "0.68rem", color: "#aaa" }}>{desc}</div>
-                    </div>
-                    <button onClick={async () => {
-                      if (!auth) return;
-                      const email = await new Promise<string | null>((resolve) => {
-                        setAdminActionEmail("");
-                        setAdminActionModal({ level, label, color });
-                        // resolve sera appelé par le modal
-                        (window as any).__adminActionResolve = resolve;
-                      });
-                      if (!email) return;
-                      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email.trim())}&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-                      const found = await r.json().catch(() => []);
-                      if (!Array.isArray(found) || !found[0]) { alert("Utilisateur introuvable"); return; }
-                      if (!window.confirm(`${level ? `Donner le rôle "${level}" à` : "Retirer les droits de"} ${found[0].name} ?`)) return;
-                      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${found[0].id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: level, is_admin: level !== null }) });
-                      alert(`Droits mis à jour pour ${found[0].name}`);
-                    }} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: color, color: G.blanc, fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-                      Appliquer
-                    </button>
-                  </div>
-                ))}
-              </OffCanvasSection>
               <OffCanvasSection title="Intervalles de polling (ms)">
                 <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Valeurs en millisecondes. Ex: 8000 = 8s. Min: 3000ms.</div>
                 {([
@@ -3381,15 +3348,6 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
       </OffCanvasSection>
       {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
         <>
-        <OffCanvasSection title="Gestion des admins">
-          <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Entrez l'email pour donner ou retirer des droits.</div>
-          {([["admin","Nommer Admin","#2980b9","Accès admin sans Paiements"],["superadmin","Nommer Super Admin",G.rouge,"Accès total y compris Paiements"],[null,"Retirer les droits","#888","Revient à un compte normal"]] as [string|null,string,string,string][]).map(([level,label,color,desc]) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
-              <div><div style={{ fontSize: "0.78rem", fontWeight: 700, color }}>{label}</div><div style={{ fontSize: "0.68rem", color: "#aaa" }}>{desc}</div></div>
-              <button onClick={async () => { const email = prompt("Email :"); if (!email) return; const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email.trim())}&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }); const found = await r.json().catch(() => []); if (!Array.isArray(found) || !found[0]) { alert("Introuvable"); return; } if (!window.confirm(`${level ? `Rôle "${level}" à` : "Retirer les droits de"} ${found[0].name} ?`)) return; await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${found[0].id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: level, is_admin: level !== null }) }); alert(`OK - ${found[0].name}`); }} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: color, color: G.blanc, fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Appliquer</button>
-            </div>
-          ))}
-        </OffCanvasSection>
         <OffCanvasSection title="Intervalles de polling (ms)">
           <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>
             Valeurs en millisecondes. Ex: 8000 = 8 secondes. Min recommande: 3000ms.
@@ -9107,7 +9065,10 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
-              <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
+              {p.operator === "MTN"
+                ? <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
+                : <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#e30613" rx="4"/><text x="60" y="42" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="26" fill="white">AIRTEL</text></svg>
+              }
               {p.operator}
               {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Cadeau pour {p.gift_for_name || "un match"}</span>}
             </div>
@@ -9128,7 +9089,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
         </div>
         {!isApproved && !isRejected && (
           <div style={{ flex: 1, background: verified === "match" ? "rgba(39,174,96,0.07)" : verified === "mismatch" ? "rgba(231,76,60,0.07)" : G.creme, borderRadius: 8, padding: "8px 10px", border: `1.5px solid ${verified === "match" ? "rgba(39,174,96,0.3)" : verified === "mismatch" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
-            <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. MTN reçue</div>
+            <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. {p.operator} reçue</div>
             <input value={adminRef} onChange={e => { setAdminRef(e.target.value); setVerified(null); }} placeholder="Entrez ici…" style={{ width: "100%", border: "none", background: "transparent", fontSize: "0.82rem", fontWeight: 700, outline: "none", color: "#1a1a1a", letterSpacing: 0.5, fontFamily: "inherit" }} />
           </div>
         )}
@@ -11851,6 +11812,24 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               if (auth.userId !== SUPER_ADMIN_ID) { showToast("Seul l'administrateur principal peut retirer le statut admin.", "error"); return; }
                               confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`));
                             }} />
+                          )
+                        )}
+                        {/* Bouton Super Admin — visible uniquement pour le super admin, non affiché sur soi-même */}
+                        {auth.userId === SUPER_ADMIN_ID && !isSelf && (
+                          (u as any).admin_level !== "superadmin" ? (
+                            <ActionBtn label="⭐ Super Admin" color="#8B008B" disabled={isLoading}
+                              onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
+                                await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
+                                showToast(`${u.name} est maintenant Super Admin. ⭐`, "success");
+                                loadUsers();
+                              })} />
+                          ) : (
+                            <ActionBtn label="⭐ Rétrograder" color="#888" disabled={isLoading}
+                              onClick={() => confirm(`Rétrograder ${u.name} de Super Admin à Admin normal ?`, async () => {
+                                await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "admin" }) });
+                                showToast(`${u.name} est maintenant Admin simple.`, "success");
+                                loadUsers();
+                              })} />
                           )
                         )}
                         {u.is_admin && !isSelf && auth.userId === SUPER_ADMIN_ID && (
