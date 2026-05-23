@@ -6205,6 +6205,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
   const [footerHeight, setFooterHeight] = useState(65);
   const [headerHeight, setHeaderHeight] = useState(60);
   const headerRef = useRef<HTMLDivElement>(null);
+  const msgsAreaRef = useRef<HTMLDivElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [statuses, setStatuses] = useState<StatusPost[]>([]);
   const [myStatuses, setMyStatuses] = useState<StatusPost[]>([]);
@@ -6270,27 +6271,44 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight);
     };
     // iOS Safari: visualViewport resize = clavier ouvert/fermé
-    // On ajuste le padding-bottom du container pour que le footer remonte
     const container = document.querySelector('[data-chat-container]') as HTMLElement | null;
     const handleKeyboard = () => {
-      if (!container) return;
       const vv = (window as any).visualViewport;
       if (!vv) return;
-      // Recalculate exact container height to match visible area
       const visibleHeight = vv.height;
       const offsetTop = vv.pageTop + vv.offsetTop;
-      container.style.height = visibleHeight + 'px';
-      container.style.top = offsetTop + 'px';
-      container.style.bottom = 'auto';
+      // Ajuste le conteneur global
+      if (container) {
+        container.style.height = visibleHeight + 'px';
+        container.style.top = offsetTop + 'px';
+        container.style.bottom = 'auto';
+      }
+      // Ajuste le bottom de la zone messages pour qu'elle s'arrête juste au-dessus du footer
+      if (msgsAreaRef.current && footerRef.current) {
+        const fh = footerRef.current.offsetHeight;
+        msgsAreaRef.current.style.bottom = fh + 'px';
+      }
     };
     const vv = (window as any).visualViewport;
     if (vv) {
       vv.addEventListener('resize', handleKeyboard);
       vv.addEventListener('scroll', handleKeyboard);
+      handleKeyboard();
     }
     const t = setTimeout(measure, 30);
-    return () => clearTimeout(t);
-  }, [replyTo, showEmojiPicker]);
+    return () => {
+      clearTimeout(t);
+      if (vv) {
+        vv.removeEventListener('resize', handleKeyboard);
+        vv.removeEventListener('scroll', handleKeyboard);
+      }
+      if (container) {
+        container.style.height = '';
+        container.style.top = '0';
+        container.style.bottom = '0';
+      }
+    };
+  }, [open?.id, replyTo, showEmojiPicker]);
 
   // Auto-resize textarea + remesure footer à chaque frappe
   const autoResizeTextarea = () => {
@@ -6908,7 +6926,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Header fixe */}
-      <div ref={headerRef} style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0, zIndex: 2 }}>
+      <div ref={headerRef} style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", zIndex: 2 }}>
         {/* Bouton retour cercle rouge */}
         <div onClick={() => { setOpen(null); loadConvs(); }} style={{ width: 38, height: 38, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 3px 10px rgba(192,57,43,0.35)", flexShrink: 0 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -7101,8 +7119,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
         </div>
       )}
 
-      {/* Zone messages */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", WebkitOverflowScrolling: "touch" }}>
+      {/* Zone messages — scroll indépendant entre header et footer */}
+      <div
+        ref={msgsAreaRef as any}
+        style={{ position: "absolute", top: headerHeight || 60, left: 0, right: 0, bottom: footerHeight || 70, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, WebkitOverflowScrolling: "touch" }}
+      >
         <img src="/msg-bg.png" alt="" style={{ position: isWideMsg ? "absolute" : "fixed", top: isWideMsg ? 0 : 0, left: 0, right: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
@@ -7239,7 +7260,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       </div>
 
       {/* Barre d'envoi */}
-      <div ref={footerRef} style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom)", zIndex: 2 }}>
+      <div ref={footerRef} style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: G.blanc, borderTop: `1px solid ${G.gris}`, paddingBottom: "env(safe-area-inset-bottom)", zIndex: 2 }}>
         {/* Bandeau répondre style WhatsApp - visible immédiatement au-dessus du champ */}
         {replyTo && (
           <div style={{ padding: "8px 12px 0 12px" }}>
