@@ -5285,15 +5285,15 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     <div onClick={onView} style={{ borderRadius: 18, overflow: "hidden",
       boxShadow: "0 4px 18px rgba(44,26,14,0.14)", position: "relative", marginBottom: 12,
       cursor: "pointer", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)",
-      height: window.innerWidth >= 768 ? 240 : 180 }}>
+      height: window.innerWidth >= 768 ? 280 : 220 }}>
       {/* Photo plein cadre */}
       {p.photo_url
-        ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
+        ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: 18 }} loading="lazy" />
         : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>}
       {/* Dégradé bas */}
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)", borderRadius: 18 }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)", borderRadius: 18 }} />
       {/* Badges top-left */}
       <div style={{ position: "absolute", top: 8, left: 8, display: "flex", flexDirection: "column", gap: 3 }}>
         {(meta?.isMatch || meta?.status === "match") && (
@@ -5948,13 +5948,13 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     ) : (
       <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 12 }}>
         {matches.map(m => (
-          <div key={m.id} className="card-hover" style={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 18px rgba(44,26,14,0.14)", position: "relative", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", height: window.innerWidth >= 768 ? 240 : 180 }}>
+          <div key={m.id} className="card-hover" style={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 18px rgba(44,26,14,0.14)", position: "relative", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", height: window.innerWidth >= 768 ? 280 : 220 }}>
             {/* Photo plein cadre */}
             <div onClick={() => setSelectedMatch(m)} style={{ position: "absolute", inset: 0, cursor: "pointer" }}>
-              {m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+              {m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: 18 }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
             </div>
             {/* Dégradé bas */}
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)", borderRadius: 18, pointerEvents: "none" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)", borderRadius: 18, pointerEvents: "none" }} />
             {/* Badge Match top-left */}
             <div style={{ position: "absolute", top: 8, left: 8 }}>
               <span style={{ background: G.vert, color: "white", borderRadius: 50, padding: "2px 7px", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
