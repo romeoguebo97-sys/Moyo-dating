@@ -12745,11 +12745,9 @@ export default function App() {
           setSessionLoaded(true);
 
           // Vérifier en arrière-plan que le compte existe encore
-          sb.query<Profile>(a.token, "profiles", `?id=eq.${a.userId}&select=id,is_premium,is_admin`, a.refreshToken, handleTokenRefreshed)
+          sb.query<Profile>(a.token, "profiles", `?id=eq.${a.userId}&select=id,is_premium,is_admin,admin_level`, a.refreshToken, handleTokenRefreshed)
             .then(profiles => {
               if (!profiles || profiles.length === 0) {
-                // ── Avant de déconnecter, vérifier que ce n'est pas un 401 récupéré ──
-                // Si le token a été refreshé entre-temps, authRef.current.token ≠ a.token
                 if (authRef.current?.token !== a.token) {
                   console.log("[Moyo][Session] Token refreshé entre-temps - pas de déconnexion");
                   return;
@@ -12759,10 +12757,10 @@ export default function App() {
                 setAuth(null);
                 setPage("landing");
               } else {
-                // Mettre à jour Premium/isAdmin si changé
                 const p = profiles[0];
-                if (p.is_premium !== a.isPremium || (p.is_admin || false) !== a.isAdmin) {
-                  const updated = { ...a, isPremium: p.is_premium, isAdmin: p.is_admin || false };
+                const newAdminLevel = (p as any).admin_level || undefined;
+                if (p.is_premium !== a.isPremium || (p.is_admin || false) !== a.isAdmin || newAdminLevel !== a.adminLevel) {
+                  const updated = { ...a, isPremium: p.is_premium, isAdmin: p.is_admin || false, adminLevel: newAdminLevel };
                   authRef.current = updated;
                   setAuth(updated);
                   try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
@@ -12912,13 +12910,11 @@ export default function App() {
       try {
         const profiles = await sb.query<Profile>(
           auth.token, "profiles",
-          `?id=eq.${auth.userId}&select=id,is_premium,is_admin`,
+          `?id=eq.${auth.userId}&select=id,is_premium,is_admin,admin_level`,
           auth.refreshToken,
           handleTokenRefreshed,
         );
         if (!profiles || profiles.length === 0) {
-          // Vérification supplémentaire : le token a peut-être été refreshé
-          // entre le moment de l'appel et maintenant → authRef est à jour
           if (authRef.current && authRef.current.token !== auth.token) {
             console.log("[Moyo][Session] validateSession - token refreshé, on garde la session");
             return true;
@@ -12929,11 +12925,12 @@ export default function App() {
           setPage("landing");
           return false;
         }
-        // Mettre à jour Premium/isAdmin si changé
+        // Mettre à jour Premium/isAdmin/adminLevel si changé
         const p = profiles[0];
-        if (p.is_premium !== auth.isPremium || (p.is_admin || false) !== auth.isAdmin) {
-          console.log("[Moyo][Session] validateSession - mise à jour Premium/isAdmin");
-          const updated = { ...auth, isPremium: p.is_premium, isAdmin: p.is_admin || false };
+        const newAdminLevel = (p as any).admin_level || undefined;
+        if (p.is_premium !== auth.isPremium || (p.is_admin || false) !== auth.isAdmin || newAdminLevel !== auth.adminLevel) {
+          console.log("[Moyo][Session] validateSession - mise à jour Premium/isAdmin/adminLevel");
+          const updated = { ...auth, isPremium: p.is_premium, isAdmin: p.is_admin || false, adminLevel: newAdminLevel };
           authRef.current = updated;
           setAuth(updated);
           try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
