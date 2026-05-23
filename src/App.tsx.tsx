@@ -2665,12 +2665,12 @@ function BotFloat({ onOpen, G }: { onOpen: () => void; G: any }) {
   };
 
   if (hidden) return (
-    <div onClick={() => setHidden(false)} style={{ position: "fixed", bottom: 78, right: 16, width: 14, height: 14, background: G.vert, borderRadius: "50%", border: "2.5px solid white", zIndex: 200, cursor: "pointer", boxShadow: "0 2px 8px rgba(39,174,96,0.6)" }} />
+    <div onClick={() => setHidden(false)} style={{ position: "fixed", bottom: 78, right: 16, width: 14, height: 14, background: G.vert, borderRadius: "50%", border: "2.5px solid white", zIndex: 300, cursor: "pointer", boxShadow: "0 2px 8px rgba(39,174,96,0.6)" }} />
   );
 
   return (
     <div
-      style={{ position: "fixed", left: pos.x, top: pos.y, zIndex: 200, touchAction: "none", userSelect: "none" }}
+      style={{ position: "fixed", left: pos.x, top: pos.y, zIndex: 300, touchAction: "none", userSelect: "none" }}
       onTouchStart={e => { dragRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, initX: pos.x, initY: pos.y, moved: false }; }}
       onTouchMove={e => {
         if (!dragRef.current) return;
@@ -7114,7 +7114,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       )}
 
       {/* Zone messages */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", WebkitOverflowScrolling: "touch", zIndex: 1 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", overscrollBehavior: "contain", zIndex: 1 }}>
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
