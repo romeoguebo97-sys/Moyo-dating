@@ -10395,6 +10395,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const IcoRefresh = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>;
   const IcoArrowLeft = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
   const IcoGear = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+  const IcoKey = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8B008B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>;
   const IcoWarn = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 
   // ── Rendu d'un badge statut ──
@@ -11763,7 +11764,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         {/* Badges statuts */}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
                           <StatusBadge label="Premium" active={u.is_premium} color="#D4A843" Icon={IcoStar} />
-                          <StatusBadge label="Admin" active={!!u.is_admin} color={G.rouge} Icon={IcoGear} />
+                          {u.is_admin && (
+                            (u as any).admin_level === "superadmin"
+                              ? <StatusBadge label="Super Admin" active={true} color="#8B008B" Icon={IcoKey} />
+                              : <StatusBadge label="Admin" active={true} color={G.rouge} Icon={IcoGear} />
+                          )}
                           <StatusBadge label="Vérifié" active={!!u.is_verified} color={G.vert} Icon={IcoCheck} />
                           <StatusBadge label="Banni" active={!!u.is_banned} color="#e74c3c" Icon={IcoBan} />
                           {(u.warning_count || 0) > 0 && (
@@ -11796,46 +11801,39 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         )}
                         <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
                           onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
-                        {!u.is_admin ? (
-                          auth.userId === SUPER_ADMIN_ID && (
-                          <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
-                            onClick={() => {
-                              if (auth.userId !== SUPER_ADMIN_ID) { showToast("Seul l'administrateur principal peut attribuer le statut admin.", "error"); return; }
-                              setPinModalInput(""); setPinModal({ user: u, mode: "set" });
-                            }} />
-                          )
-                        ) : (
-                          auth.userId === SUPER_ADMIN_ID && !isSelf && (
-                          <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading || isSelf}
-                            onClick={() => {
-                              if (isSelf) { showToast("Vous ne pouvez pas retirer vos propres droits admin.", "error"); return; }
-                              if (auth.userId !== SUPER_ADMIN_ID) { showToast("Seul l'administrateur principal peut retirer le statut admin.", "error"); return; }
-                              confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`));
-                            }} />
-                          )
-                        )}
-                        {/* Bouton Super Admin — visible uniquement pour le super admin, non affiché sur soi-même */}
-                        {auth.userId === SUPER_ADMIN_ID && !isSelf && (
-                          (u as any).admin_level !== "superadmin" ? (
-                            <ActionBtn label="⭐ Super Admin" color="#8B008B" disabled={isLoading}
+                        {auth.userId === SUPER_ADMIN_ID && !isSelf && (() => {
+                          const isSuperAdmin = (u as any).admin_level === "superadmin";
+                          if (isSuperAdmin) {
+                            // Utilisateur déjà Super Admin → seulement "- Super Admin"
+                            return (
+                              <ActionBtn label="- Super Admin" color="#888" disabled={isLoading}
+                                onClick={() => confirm(`Retirer le statut Super Admin de ${u.name} ?`, async () => {
+                                  await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "admin" }) });
+                                  showToast(`${u.name} est maintenant Admin simple.`, "success");
+                                  loadUsers();
+                                })} />
+                            );
+                          }
+                          // Utilisateur pas Super Admin → boutons + Admin / - Admin / PIN / + Super Admin
+                          return <>
+                            {!u.is_admin
+                              ? <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
+                                  onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
+                              : <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading}
+                                  onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`))} />
+                            }
+                            {u.is_admin && (
+                              <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
+                                onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "reset" }); }} />
+                            )}
+                            <ActionBtn label="+ Super Admin" color="#8B008B" disabled={isLoading}
                               onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
                                 await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
-                                showToast(`${u.name} est maintenant Super Admin. ⭐`, "success");
+                                showToast(`${u.name} est maintenant Super Admin.`, "success");
                                 loadUsers();
                               })} />
-                          ) : (
-                            <ActionBtn label="⭐ Rétrograder" color="#888" disabled={isLoading}
-                              onClick={() => confirm(`Rétrograder ${u.name} de Super Admin à Admin normal ?`, async () => {
-                                await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "admin" }) });
-                                showToast(`${u.name} est maintenant Admin simple.`, "success");
-                                loadUsers();
-                              })} />
-                          )
-                        )}
-                        {u.is_admin && !isSelf && auth.userId === SUPER_ADMIN_ID && (
-                          <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
-                            onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "reset" }); }} />
-                        )}
+                          </>;
+                        })()}
                         {!u.is_verified ? (
                           <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading}
                             onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
