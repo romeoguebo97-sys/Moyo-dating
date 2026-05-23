@@ -5972,35 +5972,51 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                   <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.partner?.city}</span>
                 </div>
               </div>
-              {/* Menu 3 traits — fixed pour sortir du overflow:hidden de la carte */}
-              <div style={{ position: "relative", flexShrink: 0, marginLeft: 6 }}>
-                <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(menuMatchId === m.id ? null : m.id); }} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer" }}>
+              {/* Bouton 3 traits — positionne le menu fixed aux coords réelles du bouton */}
+              <div style={{ flexShrink: 0, marginLeft: 6 }}>
+                <div onClick={(e) => {
+                  e.stopPropagation();
+                  if (menuMatchId === m.id) { setMenuMatchId(null); return; }
+                  const btn = e.currentTarget as HTMLElement;
+                  const rect = btn.getBoundingClientRect();
+                  (window as any).__matchMenuRect = rect;
+                  setMenuMatchId(m.id);
+                }} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer" }}>
                   {[0,1,2].map(i => <div key={i} style={{ width: 13, height: 1.5, borderRadius: 2, background: "#fff" }} />)}
                 </div>
-                {menuMatchId === m.id && (
-                  <div style={{ position: "fixed", right: 16, bottom: 80, background: G.blanc, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.25)", zIndex: 500, minWidth: 210 }}>
-                    <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      Voir le profil
-                    </div>
-                    <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      Envoyer un message
-                    </div>
-                    <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                      Bloquer
-                    </div>
-                    <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      Annuler le match
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
         ))}
+        {/* Menu contextuel affiché en fixed aux coords du bouton cliqué */}
+        {menuMatchId && (() => {
+          const m = matches.find(x => x.id === menuMatchId);
+          if (!m) return null;
+          const rect: DOMRect | undefined = (window as any).__matchMenuRect;
+          const menuWidth = 210;
+          const left = rect ? Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8) : window.innerWidth - menuWidth - 16;
+          const top = rect ? (rect.top > window.innerHeight / 2 ? rect.top - 8 - 176 : rect.bottom + 8) : window.innerHeight / 2;
+          return (
+            <div style={{ position: "fixed", left, top, background: G.blanc, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.25)", zIndex: 500, minWidth: menuWidth, transform: "translateY(0)" }}>
+              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Voir le profil
+              </div>
+              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Envoyer un message
+              </div>
+              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                Bloquer
+              </div>
+              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Annuler le match
+              </div>
+            </div>
+          );
+        })()}
       </div>
     )}
 
