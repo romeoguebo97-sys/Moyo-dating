@@ -5972,13 +5972,13 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                   <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.partner?.city}</span>
                 </div>
               </div>
-              {/* Menu 3 traits */}
+              {/* Menu 3 traits — fixed pour sortir du overflow:hidden de la carte */}
               <div style={{ position: "relative", flexShrink: 0, marginLeft: 6 }}>
                 <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(menuMatchId === m.id ? null : m.id); }} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer" }}>
                   {[0,1,2].map(i => <div key={i} style={{ width: 13, height: 1.5, borderRadius: 2, background: "#fff" }} />)}
                 </div>
                 {menuMatchId === m.id && (
-                  <div style={{ position: "absolute", right: 0, bottom: 34, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
+                  <div style={{ position: "fixed", right: 16, bottom: 80, background: G.blanc, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.25)", zIndex: 500, minWidth: 210 }}>
                     <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       Voir le profil
