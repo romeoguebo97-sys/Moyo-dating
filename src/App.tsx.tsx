@@ -9199,6 +9199,140 @@ function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () =
   );
 }
 
+function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, msgTab, setMsgTab, onClose, onSend, onDeleteHistory, G, auth }: {
+  user: Profile; msgText: string; setMsgText: (v: string) => void;
+  msgHistory: { id: string; reason: string; created_at: string }[];
+  msgHistoryLoading: boolean; msgTab: "modeles" | "historique";
+  setMsgTab: (v: "modeles" | "historique") => void;
+  onClose: () => void; onSend: () => void;
+  onDeleteHistory: (id: string) => void;
+  G: any; auth: Auth;
+}) {
+  const isWide = window.innerWidth >= 768;
+  const msgTemplates = [
+    `${user.name}, bienvenue sur Moyo ! Nous vous conseillons de liker les profils qui vous intéressent. Si une personne vous like en retour, le match se débloque automatiquement pour discuter et voir ses stories. Moyo 100% Congolais !!!!`,
+    "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.",
+    "Votre abonnement Premium expire dans [X] jours.",
+    "Votre demande de vérification est en cours d'examen. Merci de patienter.",
+    "Votre profil a été vérifié avec succès ! ✓",
+    "Votre photo de profil ne respecte pas nos conditions d'utilisation. Merci d'utiliser une photo claire de votre visage, sinon votre compte sera supprimé dans 24h.",
+    "Les photos contenant des images téléchargées sur internet, célébrités, dessins ou contenus inappropriés sont interdites. Merci de mettre votre vraie photo.",
+    "Votre photo de profil est floue ou non identifiable. Merci d'ajouter une photo claire de votre visage pour continuer à utiliser votre compte.",
+    "Votre nom de profil ne respecte pas nos règles d'utilisation. Merci d'utiliser votre vrai prénom ou un nom conforme.",
+    "Les adresses e-mail, numéros de téléphone et liens sont interdits dans les noms de profil. Merci de modifier votre profil.",
+    "Votre compte a été suspendu car votre nom de profil n'est pas conforme. Vous pouvez créer un nouveau compte gratuitement avec des informations valides.",
+    "Les insultes, menaces et comportements irrespectueux sont interdits sur la plateforme. Toute récidive entraînera une suppression définitive du compte.",
+    "Pour garantir la sécurité des utilisateurs, les faux profils sont supprimés automatiquement.",
+    "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo.",
+    "Profitez de -50% sur le Premium ce weekend uniquement !",
+  ];
+
+  const formatDate = (str: string) => {
+    try {
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch { return ""; }
+  };
+
+  const HistoriqueContent = () => (
+    <div style={{ padding: "10px 16px 6px" }}>
+      <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 6 }}>
+        Historique ({msgHistory.length} message{msgHistory.length > 1 ? "s" : ""} envoyé{msgHistory.length > 1 ? "s" : ""})
+      </div>
+      {msgHistoryLoading ? (
+        <div style={{ textAlign: "center", padding: "8px 0", color: "#aaa", fontSize: "0.75rem" }}>Chargement…</div>
+      ) : msgHistory.length === 0 ? (
+        <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun message envoyé pour le moment</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {msgHistory.map(m => (
+            <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFB", borderRadius: 8, padding: "7px 10px", border: "1px solid #E8F0F8" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {formatDate(m.created_at) && <div style={{ fontSize: "0.68rem", color: "#2980b9", fontWeight: 600, marginBottom: 2 }}>{formatDate(m.created_at)}</div>}
+                <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4 }}>{m.reason || ""}</div>
+              </div>
+              <button onClick={() => onDeleteHistory(m.id)} title="Supprimer" style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const SaisieBlock = ({ compact }: { compact?: boolean }) => (
+    <div style={{ padding: compact ? "16px" : "24px", borderTop: compact ? `1px solid ${G.gris}` : "none", flexShrink: 0, background: G.blanc, display: "flex", flexDirection: "column", flex: compact ? "none" : 1 }}>
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#555", marginBottom: 8 }}>Message personnalisé</div>
+      <textarea
+        value={msgText}
+        onChange={e => setMsgText(e.target.value)}
+        placeholder={compact ? "Écrivez votre message ici ou sélectionnez un modèle ci-dessus…" : "Écrivez votre message ici ou sélectionnez un modèle à gauche…"}
+        style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: 12, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.88rem", resize: "none", outline: "none", fontFamily: "inherit", lineHeight: 1.6, minHeight: compact ? 90 : undefined, flex: compact ? "none" : 1 }}
+      />
+      {msgText && <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 4, textAlign: "right" }}>{msgText.length} caractères</div>}
+      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+        <button onClick={onClose} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+        <button onClick={onSend} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>Envoyer le message</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: G.blanc, width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: isWide ? "row" : "column" }}>
+        {/* Colonne gauche / onglets mobile */}
+        <div style={{ width: isWide ? "50%" : "100%", borderRight: isWide ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", background: G.blanc, height: isWide ? "100%" : "auto", flex: isWide ? "none" : "1 1 auto", overflow: "hidden" }}>
+          {/* Header */}
+          <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: isWide ? "20px 20px 0" : "0 20px 0", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(41,128,185,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div style={{ width: isWide ? 44 : 40, height: isWide ? 44 : 40, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Message à {user.name}</div>
+                <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un modèle ou écris un message personnalisé</div>
+              </div>
+            </div>
+            {/* Onglets */}
+            <div style={{ display: "flex" }}>
+              {(["modeles", "historique"] as const).map(tab => (
+                <button key={tab} onClick={() => setMsgTab(tab)} style={{ flex: 1, background: "transparent", border: "none", borderBottom: `3px solid ${msgTab === tab ? "#2980b9" : "transparent"}`, padding: "8px 0", fontSize: "0.82rem", fontWeight: msgTab === tab ? 700 : 500, color: msgTab === tab ? "#2980b9" : "#888", cursor: "pointer", transition: "all 0.15s", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  {tab === "modeles" ? "Modèles de messages" : `Historique (${msgHistory.length})`}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Contenu onglet Modèles */}
+          {msgTab === "modeles" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px", display: "flex", flexDirection: "column", gap: 5 }}>
+              {msgTemplates.map((t, i) => (
+                <div key={i} onClick={() => setMsgText(t)} style={{ padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: msgText === t ? "rgba(41,128,185,0.1)" : G.creme, border: `1.5px solid ${msgText === t ? "#2980b9" : "transparent"}`, fontSize: "0.8rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", flexShrink: 0 }}>
+                  {t.length > 75 ? t.slice(0, 75) + "…" : t}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Contenu onglet Historique */}
+          {msgTab === "historique" && (
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              <HistoriqueContent />
+            </div>
+          )}
+          {/* Saisie mobile */}
+          {!isWide && <SaisieBlock compact />}
+        </div>
+        {/* Colonne droite desktop */}
+        {isWide && <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}><SaisieBlock /></div>}
+      </div>
+    </div>
+  );
+}
+
 function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
@@ -10411,194 +10545,36 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         </div>
       )}
-      {msgModal && (() => {
-        const isWideMsg = window.innerWidth >= 768;
-        const msgTemplates = [
-          `${msgModal.user.name}, bienvenue sur Moyo ! Nous vous conseillons de liker les profils qui vous intéressent. Si une personne vous like en retour, le match se débloque automatiquement pour discuter et voir ses stories. Moyo 100% Congolais !!!!`,
-          "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.",
-          "Votre abonnement Premium expire dans [X] jours.",
-          "Votre demande de vérification est en cours d'examen. Merci de patienter.",
-          "Votre profil a été vérifié avec succès ! ✓",
-          "Votre photo de profil ne respecte pas nos conditions d'utilisation. Merci d'utiliser une photo claire de votre visage, sinon votre compte sera supprimé dans 24h.",
-          "Les photos contenant des images téléchargées sur internet, célébrités, dessins ou contenus inappropriés sont interdites. Merci de mettre votre vraie photo.",
-          "Votre photo de profil est floue ou non identifiable. Merci d'ajouter une photo claire de votre visage pour continuer à utiliser votre compte.",
-          "Votre nom de profil ne respecte pas nos règles d'utilisation. Merci d'utiliser votre vrai prénom ou un nom conforme.",
-          "Les adresses e-mail, numéros de téléphone et liens sont interdits dans les noms de profil. Merci de modifier votre profil.",
-          "Votre compte a été suspendu car votre nom de profil n'est pas conforme. Vous pouvez créer un nouveau compte gratuitement avec des informations valides.",
-          "Les insultes, menaces et comportements irrespectueux sont interdits sur la plateforme. Toute récidive entraînera une suppression définitive du compte.",
-          "Pour garantir la sécurité des utilisateurs, les faux profils sont supprimés automatiquement.",
-          "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo.",
-          "Profitez de -50% sur le Premium ce weekend uniquement !",
-        ];
-
-        // JSX historique inline - rendu uniquement quand l'onglet est actif pour éviter le crash mobile
-        const historiqueJSX = msgTab === "historique" ? (
-          <div style={{ padding: "10px 16px 6px", flexShrink: 0, borderBottom: isWideMsg ? `1px solid ${G.gris}` : "none" }}>
-            <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 6 }}>
-              Historique ({msgHistory.length} message{msgHistory.length > 1 ? "s" : ""} envoyé{msgHistory.length > 1 ? "s" : ""})
-            </div>
-            {msgHistoryLoading ? (
-              <div style={{ textAlign: "center", padding: "8px 0", color: "#aaa", fontSize: "0.75rem" }}>Chargement…</div>
-            ) : msgHistory.length === 0 ? (
-              <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun message envoyé pour le moment</div>
-            ) : (
-              <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-                {msgHistory.map(m => {
-                  let dateStr = "";
-                  try {
-                    const d = m.created_at ? new Date(m.created_at) : null;
-                    if (d && !isNaN(d.getTime())) {
-                      dateStr = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-                    }
-                  } catch {}
-                  return (
-                    <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFB", borderRadius: 8, padding: "7px 10px", border: "1px solid #E8F0F8" }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {dateStr ? <div style={{ fontSize: "0.68rem", color: "#2980b9", fontWeight: 600, marginBottom: 2 }}>{dateStr}</div> : null}
-                        <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4 }}>{m.reason || ""}</div>
-                      </div>
-                      <button onClick={() => deleteMsgHistory(m.id, msgModal!.user.id)} title="Supprimer" style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : null;
-
-        return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ background: G.blanc, borderRadius: 0, width: "100%", height: "100%", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden", display: "flex", flexDirection: isWideMsg ? "row" : "column" }}>
-
-              {/* ── COLONNE GAUCHE (desktop) / ONGLET MODÈLES (mobile) ── */}
-              <div style={{ width: isWideMsg ? "50%" : "100%", borderRight: isWideMsg ? `1px solid ${G.gris}` : "none", display: isWideMsg ? "flex" : (msgTab === "modeles" ? "flex" : "none"), flexDirection: "column", background: G.blanc, height: isWideMsg ? "100%" : "auto", flex: isWideMsg ? "none" : "1 1 auto", overflow: "hidden" }}>
-                {/* Header + onglets */}
-                <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: isWideMsg ? "20px 20px 0" : "0 20px 0", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
-                  {/* Titre + icône + bouton retour */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                    <button onClick={() => { setMsgModal(null); setMsgText(""); setMsgHistory([]); setMsgTab("modeles"); }} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(41,128,185,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                    </button>
-                    <div style={{ width: isWideMsg ? 44 : 40, height: isWideMsg ? 44 : 40, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Message à {msgModal.user.name}</div>
-                      <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un modèle ou écris un message personnalisé</div>
-                    </div>
-                  </div>
-                  {/* Onglets */}
-                  <div style={{ display: "flex", gap: 0 }}>
-                    {(["modeles", "historique"] as const).map(tab => (
-                      <button key={tab} onClick={() => setMsgTab(tab)} style={{ flex: 1, background: "transparent", border: "none", borderBottom: `3px solid ${msgTab === tab ? "#2980b9" : "transparent"}`, padding: "8px 0", fontSize: "0.82rem", fontWeight: msgTab === tab ? 700 : 500, color: msgTab === tab ? "#2980b9" : "#888", cursor: "pointer", transition: "all 0.15s", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                        {tab === "modeles" ? "Modèles de messages" : `Historique (${msgHistory.length})`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* Contenu onglet Modèles */}
-                {msgTab === "modeles" && (
-                  <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px", display: "flex", flexDirection: "column", gap: 5 }}>
-                    {msgTemplates.map((t, i) => (
-                      <div key={i} onClick={() => setMsgText(t)} style={{ padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: msgText === t ? "rgba(41,128,185,0.1)" : G.creme, border: `1.5px solid ${msgText === t ? "#2980b9" : "transparent"}`, fontSize: "0.8rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", flexShrink: 0 }}>
-                        {t.length > 75 ? t.slice(0, 75) + "…" : t}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* Contenu onglet Historique */}
-                {msgTab === "historique" && (
-                  <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
-                    {historiqueJSX}
-                  </div>
-                )}
-                {/* Saisie + boutons sur mobile (dans l'onglet Modèles) */}
-                {!isWideMsg && (
-                  <div style={{ padding: "16px", borderTop: `1px solid ${G.gris}`, flexShrink: 0, background: G.blanc }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#555", marginBottom: 8 }}>Message personnalisé</div>
-                    <textarea
-                      value={msgText}
-                      onChange={e => setMsgText(e.target.value)}
-                      placeholder="Écrivez votre message ici ou sélectionnez un modèle ci-dessus…"
-                      style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: 12, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.88rem", resize: "none", outline: "none", fontFamily: "inherit", lineHeight: 1.6, minHeight: 90 }}
-                    />
-                    {msgText && <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 4, textAlign: "right" }}>{msgText.length} caractères</div>}
-                    <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                      <button onClick={() => { setMsgModal(null); setMsgText(""); setMsgHistory([]); setMsgTab("modeles"); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-                      <button onClick={async () => {
-                        if (!msgText.trim()) return;
-                        try {
-                          const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                            body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
-                          });
-                          if (!r.ok) {
-                            const err = await r.json().catch(() => null);
-                            showToast(`Erreur envoi : ${err?.message || r.status}`, "error");
-                            return;
-                          }
-                          showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
-                          logAdminAction(auth.token, auth.userId, auth.name, `Message envoyé à ${msgModal.user.name}`, msgModal.user.id);
-                          setMsgText("");
-                          loadMsgHistory(msgModal.user.id);
-                        } catch (e: any) {
-                          showToast("Erreur réseau. Le message n'a pas été envoyé.", "error");
-                        }
-                      }} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
-                        Envoyer le message
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ── COLONNE DROITE : saisie (desktop uniquement) ── */}
-              {isWideMsg && (
-                <div style={{ width: "50%", flex: 1, display: "flex", flexDirection: "column", padding: "24px", overflowY: "auto", minHeight: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#555", marginBottom: 10 }}>Message personnalisé</div>
-                  <textarea
-                    value={msgText}
-                    onChange={e => setMsgText(e.target.value)}
-                    placeholder="Écrivez votre message ici ou sélectionnez un modèle à gauche…"
-                    style={{ flex: 1, width: "100%", boxSizing: "border-box", padding: "14px", borderRadius: 12, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.88rem", resize: "none", outline: "none", fontFamily: "inherit", lineHeight: 1.6 }}
-                  />
-                  {msgText && <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 6, textAlign: "right" }}>{msgText.length} caractères</div>}
-                  <div style={{ display: "flex", gap: 10, marginTop: 16, flexShrink: 0 }}>
-                    <button onClick={() => { setMsgModal(null); setMsgText(""); setMsgHistory([]); setMsgTab("modeles"); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-                    <button onClick={async () => {
-                      if (!msgText.trim()) return;
-                      try {
-                        const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                          body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
-                        });
-                        if (!r.ok) {
-                          const err = await r.json().catch(() => null);
-                          showToast(`Erreur envoi : ${err?.message || r.status}`, "error");
-                          return;
-                        }
-                        showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
-                        logAdminAction(auth.token, auth.userId, auth.name, `Message envoyé à ${msgModal.user.name}`, msgModal.user.id);
-                        setMsgText("");
-                        loadMsgHistory(msgModal.user.id);
-                      } catch (e: any) {
-                        showToast("Erreur réseau. Le message n'a pas été envoyé.", "error");
-                      }
-                    }} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
-                      Envoyer le message
-                    </button>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-        );
-      })()}
+      {msgModal && (
+        <MsgModal
+          user={msgModal.user}
+          msgText={msgText}
+          setMsgText={setMsgText}
+          msgHistory={msgHistory}
+          msgHistoryLoading={msgHistoryLoading}
+          msgTab={msgTab}
+          setMsgTab={setMsgTab}
+          onClose={() => { setMsgModal(null); setMsgText(""); setMsgHistory([]); setMsgTab("modeles"); }}
+          onSend={async () => {
+            if (!msgText.trim()) return;
+            try {
+              const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+                body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
+              });
+              if (!r.ok) { const err = await r.json().catch(() => null); showToast(`Erreur envoi : ${err?.message || r.status}`, "error"); return; }
+              showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
+              logAdminAction(auth.token, auth.userId, auth.name, `Message envoyé à ${msgModal.user.name}`, msgModal.user.id);
+              setMsgText("");
+              loadMsgHistory(msgModal.user.id);
+            } catch { showToast("Erreur réseau. Le message n'a pas été envoyé.", "error"); }
+          }}
+          onDeleteHistory={(id) => deleteMsgHistory(id, msgModal.user.id)}
+          G={G}
+          auth={auth}
+        />
+      )}
       {/* Modal Mail */}
       {mailModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
