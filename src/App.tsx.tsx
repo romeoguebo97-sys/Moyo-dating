@@ -2651,7 +2651,7 @@ function getBotResponse(input: string): string {
 
 function BotFloat({ onOpen, G }: { onOpen: () => void; G: any }) {
   const [hidden, setHidden] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [pos, setPos] = useState({ x: window.innerWidth - 66, y: window.innerHeight - 140 });
   const [tapCount, setTapCount] = useState(0);
   const tapTimer = useRef<any>(null);
   const dragRef = useRef<{ startX: number; startY: number; initX: number; initY: number; moved: boolean } | null>(null);
@@ -2670,17 +2670,34 @@ function BotFloat({ onOpen, G }: { onOpen: () => void; G: any }) {
 
   return (
     <div
-      style={{ position: "fixed", bottom: Math.max(76, 76 - pos.y), right: Math.max(8, 14 - pos.x), zIndex: 200, touchAction: "none", userSelect: "none" }}
+      style={{ position: "fixed", left: pos.x, top: pos.y, zIndex: 200, touchAction: "none", userSelect: "none" }}
       onTouchStart={e => { dragRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, initX: pos.x, initY: pos.y, moved: false }; }}
       onTouchMove={e => {
         if (!dragRef.current) return;
         const dx = e.touches[0].clientX - dragRef.current.startX;
         const dy = e.touches[0].clientY - dragRef.current.startY;
         if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragRef.current.moved = true;
-        setPos({ x: dragRef.current.initX + dx, y: dragRef.current.initY - dy });
+        const newX = Math.max(0, Math.min(window.innerWidth - 54, dragRef.current.initX + dx));
+        const newY = Math.max(0, Math.min(window.innerHeight - 54, dragRef.current.initY + dy));
+        setPos({ x: newX, y: newY });
       }}
       onTouchEnd={() => { if (dragRef.current && !dragRef.current.moved) handleTap(); dragRef.current = null; }}
-      onClick={handleTap}
+      onMouseDown={e => { dragRef.current = { startX: e.clientX, startY: e.clientY, initX: pos.x, initY: pos.y, moved: false };
+        const onMove = (ev: MouseEvent) => {
+          if (!dragRef.current) return;
+          const dx = ev.clientX - dragRef.current.startX;
+          const dy = ev.clientY - dragRef.current.startY;
+          if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragRef.current.moved = true;
+          const newX = Math.max(0, Math.min(window.innerWidth - 54, dragRef.current.initX + dx));
+          const newY = Math.max(0, Math.min(window.innerHeight - 54, dragRef.current.initY + dy));
+          setPos({ x: newX, y: newY });
+        };
+        const onUp = () => { if (dragRef.current && !dragRef.current.moved) handleTap(); dragRef.current = null; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+        e.preventDefault();
+      }}
+      onClick={e => { if (dragRef.current === null) handleTap(); }}
     >
       <div onClick={e => { e.stopPropagation(); setHidden(true); }} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, background: "rgba(0,0,0,0.45)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "0.55rem", cursor: "pointer", border: "1.5px solid white", zIndex: 201 }}>✕</div>
       <div style={{ width: 50, height: 50, borderRadius: "50%", background: `linear-gradient(135deg,${G.vert},#1e8449)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(39,174,96,0.5)", border: "2.5px solid white", cursor: "pointer" }}>
@@ -10414,8 +10431,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           "Profitez de -50% sur le Premium ce weekend uniquement !",
         ];
 
-        // Bloc historique réutilisable
-        const HistoriqueBlock = () => (
+        // JSX historique inline (pas de composant imbriqué pour éviter le crash mobile)
+        const historiqueJSX = (
           <div style={{ padding: "10px 16px 6px", flexShrink: 0, borderBottom: isWideMsg ? `1px solid ${G.gris}` : "none" }}>
             <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 6 }}>
               Historique ({msgHistory.length} message{msgHistory.length > 1 ? "s" : ""} envoyé{msgHistory.length > 1 ? "s" : ""})
@@ -10487,7 +10504,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {/* Contenu onglet Historique */}
                 {msgTab === "historique" && (
                   <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
-                    <HistoriqueBlock />
+                    {historiqueJSX}
                   </div>
                 )}
                 {/* Saisie + boutons sur mobile (dans l'onglet Modèles) */}
