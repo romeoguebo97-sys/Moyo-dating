@@ -10431,8 +10431,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           "Profitez de -50% sur le Premium ce weekend uniquement !",
         ];
 
-        // JSX historique inline (pas de composant imbriqué pour éviter le crash mobile)
-        const historiqueJSX = (
+        // JSX historique inline - rendu uniquement quand l'onglet est actif pour éviter le crash mobile
+        const historiqueJSX = msgTab === "historique" ? (
           <div style={{ padding: "10px 16px 6px", flexShrink: 0, borderBottom: isWideMsg ? `1px solid ${G.gris}` : "none" }}>
             <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 6 }}>
               Historique ({msgHistory.length} message{msgHistory.length > 1 ? "s" : ""} envoyé{msgHistory.length > 1 ? "s" : ""})
@@ -10443,23 +10443,30 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun message envoyé pour le moment</div>
             ) : (
               <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-                {msgHistory.map(m => (
-                  <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFB", borderRadius: 8, padding: "7px 10px", border: "1px solid #E8F0F8" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: "0.68rem", color: "#2980b9", fontWeight: 600, marginBottom: 2 }}>
-                        {new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                {msgHistory.map(m => {
+                  let dateStr = "";
+                  try {
+                    const d = m.created_at ? new Date(m.created_at) : null;
+                    if (d && !isNaN(d.getTime())) {
+                      dateStr = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+                    }
+                  } catch {}
+                  return (
+                    <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFB", borderRadius: 8, padding: "7px 10px", border: "1px solid #E8F0F8" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {dateStr ? <div style={{ fontSize: "0.68rem", color: "#2980b9", fontWeight: 600, marginBottom: 2 }}>{dateStr}</div> : null}
+                        <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4 }}>{m.reason || ""}</div>
                       </div>
-                      <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4 }}>{m.reason}</div>
+                      <button onClick={() => deleteMsgHistory(m.id, msgModal!.user.id)} title="Supprimer" style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      </button>
                     </div>
-                    <button onClick={() => deleteMsgHistory(m.id, msgModal!.user.id)} title="Supprimer" style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
-        );
+        ) : null;
 
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
