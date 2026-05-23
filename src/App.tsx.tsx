@@ -6917,6 +6917,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
+      {/* Arrière-plan fixe — ne scroll pas */}
+      <img src="/msg-bg.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none" }} />
       {/* Header fixe */}
       <div ref={headerRef} style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0, zIndex: 2 }}>
         {/* Bouton retour cercle rouge */}
@@ -7112,8 +7114,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       )}
 
       {/* Zone messages */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", WebkitOverflowScrolling: "touch" }}>
-        <img src="/msg-bg.png" alt="" style={{ position: isWideMsg ? "absolute" : "fixed", top: isWideMsg ? 0 : 0, left: 0, right: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none", opacity: 1 }} />
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", WebkitOverflowScrolling: "touch", zIndex: 1 }}>
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
