@@ -3626,6 +3626,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
                     {t.id === "likes" && likesReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{likesReceived > 9 ? "9+" : likesReceived}</div>}
                     {t.id === "visitors" && viewsReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: "#111", borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{viewsReceived > 9 ? "9+" : viewsReceived}</div>}
                     {t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{notifCount > 9 ? "9+" : notifCount}</div>}
+                    {t.id === "profile" && auth.isAdmin && adminBadgeCount && adminBadgeCount > 0 ? <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</div> : null}
                   </div>
                   <div style={{ fontSize: "0.56rem", fontWeight: 700, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>{t.label}</div>
                 </div>
@@ -7881,7 +7882,7 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   );
 }
 
-function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void }) {
+function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin, adminBadgeCount }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void; adminBadgeCount?: number }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<Profile>>({});
@@ -8484,13 +8485,22 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
         {/* Bouton Admin — visible uniquement si admin */}
         {(!isWideProfile || activeSection === "main") && auth.isAdmin && (
-          <div onClick={() => onOpenAdmin?.()} style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", cursor: "pointer", boxShadow: "0 4px 16px rgba(192,57,43,0.12)", display: "flex", alignItems: "center", gap: 14, border: `1.5px solid rgba(192,57,43,0.2)` }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <div onClick={() => onOpenAdmin?.()} style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", cursor: "pointer", boxShadow: adminBadgeCount && adminBadgeCount > 0 ? "0 4px 20px rgba(192,57,43,0.28)" : "0 4px 16px rgba(192,57,43,0.12)", display: "flex", alignItems: "center", gap: 14, border: `1.5px solid ${adminBadgeCount && adminBadgeCount > 0 ? G.rouge : "rgba(192,57,43,0.2)"}`, position: "relative" }}>
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: adminBadgeCount && adminBadgeCount > 0 ? "rgba(192,57,43,0.15)" : "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              </div>
+              {adminBadgeCount && adminBadgeCount > 0 ? (
+                <div style={{ position: "absolute", top: -4, right: -4, background: G.rouge, color: G.blanc, borderRadius: "50px", minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 800, padding: "0 4px", boxShadow: "0 2px 6px rgba(192,57,43,0.5)", border: `2px solid ${G.blanc}` }}>
+                  {adminBadgeCount > 99 ? "99+" : adminBadgeCount}
+                </div>
+              ) : null}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 800, fontSize: "1rem", color: G.rouge, marginBottom: 3 }}>Administration</div>
-              <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Tableau de bord admin</div>
+              <div style={{ fontSize: "0.78rem", color: adminBadgeCount && adminBadgeCount > 0 ? G.rouge : "#888", lineHeight: 1.4, fontWeight: adminBadgeCount && adminBadgeCount > 0 ? 600 : 400 }}>
+                {adminBadgeCount && adminBadgeCount > 0 ? `${adminBadgeCount} notification${adminBadgeCount > 1 ? "s" : ""} en attente` : "Tableau de bord admin"}
+              </div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </div>
@@ -9266,7 +9276,26 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
     } catch { return ""; }
   };
 
-  const HistoriqueContent = () => (
+  // ── Bloc de saisie inliné (évite le re-mount à chaque frappe) ──
+  const renderSaisieBlock = (compact?: boolean) => (
+    <div style={{ padding: compact ? "16px" : "24px", borderTop: compact ? `1px solid ${G.gris}` : "none", flexShrink: 0, background: G.blanc, display: "flex", flexDirection: "column", flex: compact ? "none" : 1 }}>
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#555", marginBottom: 8 }}>Message personnalisé</div>
+      <textarea
+        value={msgText}
+        onChange={e => setMsgText(e.target.value)}
+        placeholder={compact ? "Écrivez votre message ici ou sélectionnez un modèle ci-dessus…" : "Écrivez votre message ici ou sélectionnez un modèle à gauche…"}
+        style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: 12, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.88rem", resize: "none", outline: "none", fontFamily: "inherit", lineHeight: 1.6, minHeight: compact ? 90 : undefined, flex: compact ? "none" : 1 }}
+      />
+      {msgText && <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 4, textAlign: "right" }}>{msgText.length} caractères</div>}
+      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+        <button onClick={onClose} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+        <button onClick={onSend} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>Envoyer le message</button>
+      </div>
+    </div>
+  );
+
+  // ── Contenu historique inliné (évite le re-mount) ──
+  const renderHistoriqueContent = () => (
     <div style={{ padding: "10px 16px 6px" }}>
       <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 6 }}>
         Historique ({msgHistory.length} message{msgHistory.length > 1 ? "s" : ""} envoyé{msgHistory.length > 1 ? "s" : ""})
@@ -9290,23 +9319,6 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
           ))}
         </div>
       )}
-    </div>
-  );
-
-  const SaisieBlock = ({ compact }: { compact?: boolean }) => (
-    <div style={{ padding: compact ? "16px" : "24px", borderTop: compact ? `1px solid ${G.gris}` : "none", flexShrink: 0, background: G.blanc, display: "flex", flexDirection: "column", flex: compact ? "none" : 1 }}>
-      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#555", marginBottom: 8 }}>Message personnalisé</div>
-      <textarea
-        value={msgText}
-        onChange={e => setMsgText(e.target.value)}
-        placeholder={compact ? "Écrivez votre message ici ou sélectionnez un modèle ci-dessus…" : "Écrivez votre message ici ou sélectionnez un modèle à gauche…"}
-        style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: 12, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.88rem", resize: "none", outline: "none", fontFamily: "inherit", lineHeight: 1.6, minHeight: compact ? 90 : undefined, flex: compact ? "none" : 1 }}
-      />
-      {msgText && <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 4, textAlign: "right" }}>{msgText.length} caractères</div>}
-      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-        <button onClick={onClose} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-        <button onClick={onSend} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>Envoyer le message</button>
-      </div>
     </div>
   );
 
@@ -9351,14 +9363,14 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
           {/* Contenu onglet Historique */}
           {msgTab === "historique" && (
             <div style={{ flex: 1, overflowY: "auto" }}>
-              <HistoriqueContent />
+              {renderHistoriqueContent()}
             </div>
           )}
           {/* Saisie mobile */}
-          {!isWide && <SaisieBlock compact />}
+          {!isWide && renderSaisieBlock(true)}
         </div>
         {/* Colonne droite desktop */}
-        {isWide && <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}><SaisieBlock /></div>}
+        {isWide && <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>{renderSaisieBlock()}</div>}
       </div>
     </div>
   );
@@ -13292,7 +13304,7 @@ export default function App() {
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} />}
-      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} />}
+      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} />}
       {tab === "admin" && <AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} />}
