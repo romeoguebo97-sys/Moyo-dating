@@ -2656,6 +2656,24 @@ function BotFloat({ onOpen, G }: { onOpen: () => void; G: any }) {
   const tapTimer = useRef<any>(null);
   const dragRef = useRef<{ startX: number; startY: number; initX: number; initY: number; moved: boolean } | null>(null);
 
+  // Hauteur visible réelle (réduite quand clavier ouvert)
+  const getViewH = () => ((window as any).visualViewport?.height || window.innerHeight);
+  const getViewW = () => ((window as any).visualViewport?.width || window.innerWidth);
+
+  // Recentre le bot si le clavier le pousse hors de la zone visible
+  useEffect(() => {
+    const vv = (window as any).visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      setPos(p => ({
+        x: Math.max(0, Math.min(getViewW() - 54, p.x)),
+        y: Math.max(0, Math.min(getViewH() - 54, p.y)),
+      }));
+    };
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
+
   const handleTap = () => {
     const n = tapCount + 1;
     setTapCount(n);
@@ -2677,8 +2695,8 @@ function BotFloat({ onOpen, G }: { onOpen: () => void; G: any }) {
         const dx = e.touches[0].clientX - dragRef.current.startX;
         const dy = e.touches[0].clientY - dragRef.current.startY;
         if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragRef.current.moved = true;
-        const newX = Math.max(0, Math.min(window.innerWidth - 54, dragRef.current.initX + dx));
-        const newY = Math.max(0, Math.min(window.innerHeight - 54, dragRef.current.initY + dy));
+        const newX = Math.max(0, Math.min(getViewW() - 54, dragRef.current.initX + dx));
+        const newY = Math.max(0, Math.min(getViewH() - 54, dragRef.current.initY + dy));
         setPos({ x: newX, y: newY });
       }}
       onTouchEnd={() => { if (dragRef.current && !dragRef.current.moved) handleTap(); dragRef.current = null; }}
@@ -2688,8 +2706,8 @@ function BotFloat({ onOpen, G }: { onOpen: () => void; G: any }) {
           const dx = ev.clientX - dragRef.current.startX;
           const dy = ev.clientY - dragRef.current.startY;
           if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragRef.current.moved = true;
-          const newX = Math.max(0, Math.min(window.innerWidth - 54, dragRef.current.initX + dx));
-          const newY = Math.max(0, Math.min(window.innerHeight - 54, dragRef.current.initY + dy));
+          const newX = Math.max(0, Math.min(getViewW() - 54, dragRef.current.initX + dx));
+          const newY = Math.max(0, Math.min(getViewH() - 54, dragRef.current.initY + dy));
           setPos({ x: newX, y: newY });
         };
         const onUp = () => { if (dragRef.current && !dragRef.current.moved) handleTap(); dragRef.current = null; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
@@ -7114,8 +7132,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId }: { au
       )}
 
       {/* Zone messages */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", gap: 10, position: "relative", overscrollBehavior: "contain", zIndex: 1 }}>
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "scroll", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", position: "relative", overscrollBehavior: "contain", zIndex: 1 }}>
+        <div style={{ flex: 1 }} />{/* spacer pour pousser les messages vers le bas */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8, minHeight: "100%" }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
