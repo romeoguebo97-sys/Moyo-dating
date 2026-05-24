@@ -3014,6 +3014,7 @@ function AdminDesktopPage() {
         limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb,
         matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage,
         premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa,
+        premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur,
         premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays,
         featureStatuses: map["feature_statuses"] || c.featureStatuses,
         featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium,
