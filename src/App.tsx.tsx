@@ -1324,51 +1324,68 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
       {/* ── VERSION MOBILE ── */}
       {isMobile && (
-        <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "linear-gradient(160deg,#1A5C3A,#0D2E1C)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 9999, fontFamily: "Arial, sans-serif" }}>
+        <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "#1a0505", display: "flex", flexDirection: "column", alignItems: "stretch", zIndex: 9999, fontFamily: "Arial, sans-serif" }}>
           <style>{`
-            @keyframes logoPulse { 0%,100%{transform:scale(1);text-shadow:0 0 0px rgba(212,168,67,0)} 50%{transform:scale(1.04);text-shadow:0 0 28px rgba(212,168,67,0.35)} }
-            @keyframes mfadeInDown { from{opacity:0;transform:translateY(-24px)} to{opacity:1;transform:translateY(0)} }
-            @keyframes mfadeInUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+            @keyframes amePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+            @keyframes mfadeInDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+            @keyframes mfadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
             @keyframes mfadeIn { from{opacity:0} to{opacity:1} }
-            @keyframes mbounce { 0%,80%,100%{transform:scale(1);opacity:0.35} 40%{transform:scale(1.5);opacity:1;background:#D4A843} }
+            @keyframes mbounce { 0%,80%,100%{transform:scale(1);opacity:0.3} 40%{transform:scale(1.6);opacity:1;background:#C0392B} }
+            @keyframes mbounceArrow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
           `}</style>
 
-          {/* Logo */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", animation: "mfadeInDown 1s ease both" }}>
-            <div style={{ fontSize: "4.5rem", fontWeight: 900, color: "#fff", letterSpacing: "-3px", lineHeight: 1, animation: "logoPulse 2.5s ease-in-out infinite" }}>
-              Mo<span style={{ color: "#D4A843" }}>yo</span>
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.85rem", fontWeight: 500, marginTop: 10, textAlign: "center", lineHeight: 1.6 }}>
-              L'application de rencontres 100% Congolaise<br/>
-              <span style={{ opacity: 0.5, fontSize: "0.75rem" }}>Congo et diaspora</span>
+          {/* Nav blanche */}
+          <div style={{ background: "#fff", padding: "52px 20px 14px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
+            <div style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-1px" }}>
+              <span style={{ color: "#C0392B" }}>Mo</span><span style={{ color: "#D4A843" }}>yo</span>
             </div>
           </div>
 
-          {/* 3 points animés */}
-          <div style={{ display: "flex", gap: 8, margin: "44px 0 48px", animation: "mfadeIn 1s 0.4s ease both" }}>
-            {[0, 0.2, 0.4].map((delay, i) => (
-              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.35)", animation: `mbounce 1.3s ${delay}s ease-in-out infinite` }} />
-            ))}
+          {/* Corps avec photo */}
+          <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 28px 60px" }}>
+            {/* Photo couple */}
+            <div style={{ position: "absolute", inset: 0, backgroundImage: `url("https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/Photo_de_couple_moyo.png/Photo%20de%20couple%20moyo.png")`, backgroundSize: "cover", backgroundPosition: "center 10%", opacity: 0.55 }} />
+            {/* Overlay dégradé */}
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(247,244,240,0.45) 0%, rgba(247,244,240,0.2) 40%, rgba(247,244,240,0.7) 65%, rgba(247,244,240,0.97) 100%)" }} />
+
+            {/* Contenu */}
+            <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              {/* Slogan */}
+              <div style={{ textAlign: "center", marginBottom: 18, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
+                <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#1a1a1a", lineHeight: 1.25, textShadow: "0 1px 8px rgba(247,244,240,0.9)" }}>
+                  Trouve ton<br/>
+                  <em style={{ color: "#C0392B", fontStyle: "italic", display: "inline-block", animation: "amePulse 2.5s ease-in-out infinite" }}>âme sœur</em><br/>
+                  Congolais.e
+                </div>
+              </div>
+
+              {/* 3 points */}
+              <div style={{ display: "flex", gap: 7, margin: "14px 0 18px", animation: "mfadeIn 0.8s 0.4s ease both" }}>
+                {[0, 0.2, 0.4].map((delay, i) => (
+                  <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(192,57,43,0.3)", animation: `mbounce 1.3s ${delay}s ease-in-out infinite` }} />
+                ))}
+              </div>
+
+              {/* Boutons */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", animation: "mfadeInUp 0.8s 0.5s ease both" }}>
+                <button onClick={() => onNav("signup")} style={{ background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "15px 0", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 5px 18px rgba(192,57,43,0.4)" }}>
+                  Créer mon compte gratuit
+                </button>
+                <button onClick={() => onNav("login")} style={{ background: "#fff", color: "#1a1a1a", border: "2px solid #1a1a1a", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
+                  Se connecter
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Boutons */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 320, padding: "0 28px", animation: "mfadeInUp 1s 0.6s ease both" }}>
-            <button onClick={() => onNav("signup")} style={{ background: "#D4A843", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px 0", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 6px 20px rgba(212,168,67,0.4)" }}>
-              Créer mon compte gratuit
-            </button>
-            <button onClick={() => onNav("login")} style={{ background: "transparent", color: "#fff", border: "2px solid rgba(255,255,255,0.4)", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
-              Se connecter
-            </button>
-          </div>
-
-          {/* Voir site complet */}
-          <div style={{ position: "absolute", bottom: 28, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, animation: "mfadeIn 1s 1s ease both", cursor: "pointer" }}
+          {/* Congo & Diaspora + Voir notre site */}
+          <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", animation: "mfadeIn 1s 1s ease both", zIndex: 4 }}
             onClick={() => { document.querySelector<HTMLDivElement>("[data-moyo-mobile-landing]")!.style.display = "none"; }}>
-            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Version complète</div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
+            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>Congo &amp; Diaspora</div>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.5rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg>
-            <style>{`@keyframes mbounceArrow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }`}</style>
           </div>
         </div>
       )}
@@ -1580,7 +1597,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             <h1 className="fu2" style={{ fontSize: "clamp(2.4rem,5.5vw,3.8rem)", lineHeight: 1.08, fontWeight: 700, marginBottom: 20, color: "#111" }}>
               Trouve ton{" "}
               <span className="heart" style={{ color: G.rouge, fontStyle: "italic" }}>âme sœur</span>
-              <br />au Congo
+              <br />Congolais.e
             </h1>
             <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440, width: "100%" }}>
               Moyo connecte les Congolais à la recherche d'une relation sincère et durable.
