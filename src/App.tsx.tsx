@@ -1322,6 +1322,57 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     <div style={{ minHeight: "100vh", background: G.creme, overflow: "hidden" }}>
       <style>{GLOBAL_CSS}</style>
 
+      {/* ── VERSION MOBILE ── */}
+      {isMobile && (
+        <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "linear-gradient(160deg,#1A5C3A,#0D2E1C)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 9999, fontFamily: "Arial, sans-serif" }}>
+          <style>{`
+            @keyframes logoPulse { 0%,100%{transform:scale(1);text-shadow:0 0 0px rgba(212,168,67,0)} 50%{transform:scale(1.04);text-shadow:0 0 28px rgba(212,168,67,0.35)} }
+            @keyframes mfadeInDown { from{opacity:0;transform:translateY(-24px)} to{opacity:1;transform:translateY(0)} }
+            @keyframes mfadeInUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+            @keyframes mfadeIn { from{opacity:0} to{opacity:1} }
+            @keyframes mbounce { 0%,80%,100%{transform:scale(1);opacity:0.35} 40%{transform:scale(1.5);opacity:1;background:#D4A843} }
+          `}</style>
+
+          {/* Logo */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", animation: "mfadeInDown 1s ease both" }}>
+            <div style={{ fontSize: "4.5rem", fontWeight: 900, color: "#fff", letterSpacing: "-3px", lineHeight: 1, animation: "logoPulse 2.5s ease-in-out infinite" }}>
+              Mo<span style={{ color: "#D4A843" }}>yo</span>
+            </div>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.85rem", fontWeight: 500, marginTop: 10, textAlign: "center", lineHeight: 1.6 }}>
+              L'application de rencontres 100% Congolaise<br/>
+              <span style={{ opacity: 0.5, fontSize: "0.75rem" }}>Congo et diaspora</span>
+            </div>
+          </div>
+
+          {/* 3 points animés */}
+          <div style={{ display: "flex", gap: 8, margin: "44px 0 48px", animation: "mfadeIn 1s 0.4s ease both" }}>
+            {[0, 0.2, 0.4].map((delay, i) => (
+              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.35)", animation: `mbounce 1.3s ${delay}s ease-in-out infinite` }} />
+            ))}
+          </div>
+
+          {/* Boutons */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 320, padding: "0 28px", animation: "mfadeInUp 1s 0.6s ease both" }}>
+            <button onClick={() => onNav("signup")} style={{ background: "#D4A843", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px 0", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 6px 20px rgba(212,168,67,0.4)" }}>
+              Créer mon compte gratuit
+            </button>
+            <button onClick={() => onNav("login")} style={{ background: "transparent", color: "#fff", border: "2px solid rgba(255,255,255,0.4)", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
+              Se connecter
+            </button>
+          </div>
+
+          {/* Voir site complet */}
+          <div style={{ position: "absolute", bottom: 28, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, animation: "mfadeIn 1s 1s ease both", cursor: "pointer" }}
+            onClick={() => { document.querySelector<HTMLDivElement>("[data-moyo-mobile-landing]")!.style.display = "none"; }}>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Version complète</div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+            <style>{`@keyframes mbounceArrow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }`}</style>
+          </div>
+        </div>
+      )}
+
       {/* ── NAV ── */}
       <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100 }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
