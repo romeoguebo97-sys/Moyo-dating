@@ -79,7 +79,7 @@ let PREMIUM_PRICE_FCFA = 3500;
 let PREMIUM_PRICE_EUR = 10;
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -2976,6 +2976,7 @@ function AdminDesktopPage() {
     matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋",
     premiumPriceFcfa: "3500",
     premiumPriceEur: "10",
+    likesNotifDelayHours: "24",
     premiumDurationDays: "31",
     featureStatuses: "true",
     featureGiftPremium: "true",
@@ -3023,6 +3024,7 @@ function AdminDesktopPage() {
         premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa,
         premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur,
         premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays,
+        likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours,
         featureStatuses: map["feature_statuses"] || c.featureStatuses,
         featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium,
         featureAssistant: map["feature_assistant"] || c.featureAssistant,
@@ -3196,6 +3198,7 @@ function AdminDesktopPage() {
                 ["premium_price_fcfa", "premiumPriceFcfa" as keyof typeof appConfig, "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
                 ["premium_price_eur", "premiumPriceEur" as keyof typeof appConfig, "Prix Premium Diaspora (€)", appConfig.premiumPriceEur],
                 ["premium_duration_days", "premiumDurationDays" as keyof typeof appConfig, "Durée abonnement (jours)", appConfig.premiumDurationDays],
+                ["likes_notification_delay_hours", "likesNotifDelayHours" as keyof typeof appConfig, "Notif likes après (heures)", appConfig.likesNotifDelayHours],
               ] as [string, keyof typeof appConfig, string, string][]).map(([key, ck, label, value]) => (
                 <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} open={editingConfig === key} type="number"
                   onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
@@ -3321,7 +3324,7 @@ function AdminDesktopPage() {
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", premiumDurationDays: "31", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -3336,7 +3339,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage }));
       }).catch(() => {});
   }, [auth.token]);
 
@@ -3363,7 +3366,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Prix & Abonnement">
-        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix Premium (FCFA)",appConfig.premiumPriceFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée abonnement (jours)",appConfig.premiumDurationDays]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
+        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix Premium (FCFA)",appConfig.premiumPriceFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée abonnement (jours)",appConfig.premiumDurationDays],["likes_notification_delay_hours","likesNotifDelayHours" as keyof typeof appConfig,"Notif likes après (heures)",appConfig.likesNotifDelayHours]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
           <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; setEditingConfig(null); }} />
         ))}
       </OffCanvasSection>
