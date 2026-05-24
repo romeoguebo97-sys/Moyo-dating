@@ -1335,7 +1335,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           `}</style>
 
           {/* Nav blanche */}
-          <div style={{ background: "#fff", padding: "16px 20px 14px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
+          <div style={{ background: "#fff", padding: "10px 20px 10px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
             <div style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-1px" }}>
               <span style={{ color: "#C0392B" }}>Mo</span><span style={{ color: "#D4A843" }}>yo</span>
             </div>
