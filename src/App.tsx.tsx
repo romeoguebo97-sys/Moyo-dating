@@ -921,14 +921,20 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8 }}>Diaspora — Payer par carte</div>
             <button onClick={async () => {
               try {
+                // Ouvrir la fenêtre AVANT le fetch (sinon bloqué sur mobile)
+                const win = window.open("", "_blank");
                 const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY },
                   body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }),
                 });
                 const data = await r.json();
-                if (data.url) { window.open(data.url, "_blank"); }
-                else { alert("Erreur : " + (data.error || "inconnue")); }
+                if (data.url && win) {
+                  win.location.href = data.url;
+                } else {
+                  win?.close();
+                  alert("Erreur : " + (data.error || "inconnue"));
+                }
               } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
             }} style={{ width: "100%", background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "white", border: "none", borderRadius: 14, padding: "13px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(39,174,96,0.4)" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
