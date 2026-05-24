@@ -905,7 +905,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           </div>
           {reason && <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: "0.8rem", color: G.blanc, fontWeight: 600, marginBottom: 12 }}>{reason}</div>}
           {/* Boutons opérateurs dans le header */}
-          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.8)", textAlign: "center", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>Payez avec</div>
+          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.8)", textAlign: "center", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>Congo - Payez avec</div>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => setStep("mtn")} style={{ flex: 1, background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "12px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 14px rgba(0,0,0,0.15)" }}>
               <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
@@ -918,7 +918,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           </div>
           {/* Bouton Stripe pour la diaspora */}
           <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8 }}>Diaspora — Payer par carte</div>
+            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8 }}>Diaspora - Payer par carte</div>
             <button onClick={async () => {
               try {
                 // Ouvrir la fenêtre AVANT le fetch (sinon bloqué sur mobile)
@@ -936,7 +936,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
                   alert("Erreur : " + (data.error || "inconnue"));
                 }
               } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
-            }} style={{ width: "100%", background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "white", border: "none", borderRadius: 14, padding: "13px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(39,174,96,0.4)" }}>
+            }} style={{ width: "100%", background: "linear-gradient(135deg,#1A5C3A,#0D2E1C)", color: "white", border: "none", borderRadius: 14, padding: "13px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(26,92,58,0.4)" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
               Visa / Mastercard · {PREMIUM_PRICE_EUR}€
             </button>
@@ -1285,8 +1285,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment répondre à un message précis ?", desc: "Appuyez longuement sur le message → Répondre. Un bandeau s'affiche avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
       { icon: "Q", titre: "Comment supprimer un message ?", desc: "Appuyez longuement sur le message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque uniquement de votre côté)." },
       { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Vous devez cliquer 'OK, j'ai compris' pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
-      { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → choisissez votre opérateur → effectuez le paiement → entrez le numéro de transaction (ID) reçu par SMS → appuyez sur 'J'ai payé'. L'activation est manuelle sous 24h." },
-      { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "L'activation est manuelle par notre équipe. Délai habituel : quelques minutes à 24h. Si après 24h vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo." },
+      { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → section Congo → choisissez votre opérateur → effectuez le paiement → entrez le numéro de transaction (ID) reçu par SMS → appuyez sur 'J'ai payé'. L'activation est manuelle sous 24h." },
+      { icon: "Q", titre: "Je suis en Europe, comment payer le Premium ?", desc: "Appuyez sur 'Passer Premium' → section Diaspora → bouton 'Visa / Mastercard'. Vous êtes redirigé vers une page de paiement sécurisée Stripe. Entrez votre carte bancaire et confirmez. L'activation est automatique et immédiate." },
+      { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "Pour MTN/Airtel : l'activation est manuelle par notre équipe. Délai habituel : quelques minutes à 24h. Pour les paiements par carte (Stripe) : l'activation est automatique et immédiate. Si après 24h vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo." },
       { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche votre statut en temps réel : nombre de jours restants, ou 'Actif' si votre abonnement est en cours." },
       { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: "Depuis votre page Profil, appuyez sur 'Parrainer un ami'. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez automatiquement 7 jours de Premium offerts." },
       { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Messages → choisissez une photo. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
@@ -1306,7 +1307,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "verified", titre: "Vos droits (RGPD)", desc: "Accès, modification et suppression de vos données sur demande à contact@moyo-congo.com" },
       { icon: "chat", titre: "CGU - Utilisation", desc: "Moyo est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
       { icon: "alert", titre: "Contenus interdits", desc: "Faux profils, harcèlement, contenus illégaux, tentatives d'arnaque ou usurpation d'identité sont strictement interdits." },
-      { icon: "star2", titre: "Premium & paiement", desc: "Certaines fonctionnalités sont accessibles via abonnement. Paiements via prestataires sécurisés (MTN MoMo, Airtel Money)." },
+      { icon: "star2", titre: "Premium & paiement", desc: "Certaines fonctionnalités sont accessibles via abonnement. Paiements via prestataires sécurisés (MTN MoMo, Airtel Money) pour le Congo, et Stripe (carte Visa/Mastercard) pour la diaspora." },
     ]},
     { id: "mentions", title: "Mentions légales", emoji: "⚖️", items: [
       { icon: "user", titre: "Éditeur du site", desc: "Romeo GUEBO - contact@moyo-congo.com" },
@@ -3713,6 +3714,12 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Vue carte ou liste disponible via le bouton en haut à droite.",
             ]},
       { title: "Mode sombre", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>, items: ["Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes. Votre choix est mémorisé automatiquement.", "Le mode sombre s'applique à toutes les pages sauf la page d'accueil."] },
+      { title: "Passer Premium", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
+        "Appuyez sur 'Passer Premium' depuis n'importe quel écran.",
+        "🇨🇬 Congo - Payez avec MTN MoMo ou Airtel Money : effectuez le paiement sur votre téléphone, entrez le numéro de transaction reçu par SMS, puis appuyez sur 'J'ai payé'. L'activation est manuelle par notre équipe sous 24h.",
+        "🌍 Diaspora - Payez par carte : appuyez sur le bouton vert 'Visa / Mastercard'. Vous êtes redirigé vers une page de paiement sécurisée Stripe. Entrez votre carte bancaire et confirmez. L'activation est automatique et immédiate.",
+        "Une fois Premium activé, déconnectez-vous puis reconnectez-vous pour que le statut soit mis à jour.",
+      ]},
       { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo est réservé aux personnes majeures de 18 ans et plus.", "La modération automatique bloque les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement est automatiquement transmis à notre équipe.", "Si votre comportement enfreint les règles, un administrateur peut vous envoyer un avertissement officiel. Une notification apparaît à votre prochaine connexion. Après plusieurs avertissements, le compte peut être banni.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
       { title: "Assistant Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/></svg>, items: ["L'icône verte en forme de robot à côté du bouton Guide ouvre l'Assistant Moyo.", "Il propose deux options : Besoin d'aide (répond instantanément à vos questions sur l'app) et Signaler un problème (comportement abusif, arnaque, harcèlement).", "Les signalements sont traités par notre équipe sous 24h."] },
           ].map((s, i) => (
@@ -6989,7 +6996,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                   </div>
                 </div>
                 <div style={{ padding: "20px 20px 28px" }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 14, textTransform: "uppercase", letterSpacing: 0.5 }}>Choisissez votre opérateur</div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 14, textTransform: "uppercase", letterSpacing: 0.5 }}>Congo - Choisissez votre opérateur</div>
                   <button onClick={() => setGiftStep("mtn")} style={{ width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 14px rgba(245,166,35,0.35)" }}>
                     <div style={{ width: "18%", display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
                       <svg viewBox="0 0 120 60" width="54" height="27" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
@@ -7006,6 +7013,24 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                       </svg>
                     </div>
                     <span style={{ flex: 1, textAlign: "center" }}>Airtel Money</span>
+                  </button>
+                  {/* Stripe pour la diaspora */}
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#888", textAlign: "center", margin: "14px 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>Diaspora - Payer par carte</div>
+                  <button onClick={async () => {
+                    try {
+                      const win = window.open("", "_blank");
+                      const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
+                        body: JSON.stringify({ user_id: open.partner?.id || auth.userId, user_email: auth.email || "", amount_euros: PREMIUM_PRICE_EUR }),
+                      });
+                      const data = await r.json();
+                      if (data.url && win) { win.location.href = data.url; }
+                      else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
+                    } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
+                  }} style={{ width: "100%", background: "linear-gradient(135deg,#1A5C3A,#0D2E1C)", color: "white", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(26,92,58,0.4)" }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    Visa / Mastercard · {PREMIUM_PRICE_EUR}€
                   </button>
                   <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ width: "100%", fontSize: "0.88rem", color: "#555", cursor: "pointer", fontWeight: 600, padding: "13px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc }}>Non merci, plus tard</button>
                 </div>
@@ -9821,6 +9846,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     maleCount: 0, femaleCount: 0,
     topCities: [] as { city: string; count: number }[],
     recentUsers: [] as AdminProfile[],
+    totalLikes: 0, likesToday: 0,
+    likesPerDay: [] as { date: string; count: number }[],
+    topLikedProfiles: [] as { name: string; city: string; count: number }[],
   });
 
   // ── Reports ──
@@ -9905,7 +9933,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       };
 
       const [rTotalUsers, rMatches, rMessages, rTotalReports,
-             rPremium, rVerified, rBanned, rMale, rFemale, rTodayUsers] = await Promise.all([
+             rPremium, rVerified, rBanned, rMale, rFemale, rTodayUsers,
+             rTotalLikes, rLikesToday] = await Promise.all([
         fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/matches?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/messages?select=id`, { headers: countHeader }),
@@ -9916,7 +9945,40 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         fetch(`${SUPABASE_URL}/rest/v1/profiles?gender=eq.Homme&select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/profiles?gender=eq.Femme&select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/profiles?created_at=gte.${todayIso}&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/likes?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${todayIso}&select=id`, { headers: countHeader }),
       ]);
+
+      // ── Likes par jour (30 derniers jours) ──
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const likesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      }).then(r => r.json()).catch(() => []);
+
+      const likesByDay: Record<string, number> = {};
+      (likesRaw as { created_at: string }[]).forEach(l => {
+        const d = l.created_at?.slice(0, 10);
+        if (d) likesByDay[d] = (likesByDay[d] || 0) + 1;
+      });
+      const likesPerDay = Object.entries(likesByDay).map(([date, count]) => ({ date, count })).slice(-14);
+
+      // ── Top 5 profils les plus likés ──
+      const topLikesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?select=to_user&limit=5000`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      }).then(r => r.json()).catch(() => []);
+      const likeCount: Record<string, number> = {};
+      (topLikesRaw as { to_user: string }[]).forEach(l => { if (l.to_user) likeCount[l.to_user] = (likeCount[l.to_user] || 0) + 1; });
+      const topIds = Object.entries(likeCount).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id);
+      let topLikedProfiles: { name: string; city: string; count: number }[] = [];
+      if (topIds.length > 0) {
+        const topProfiles = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${topIds.join(",")})&select=id,name,city`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        }).then(r => r.json()).catch(() => []);
+        topLikedProfiles = topIds.map(id => {
+          const p = (topProfiles as { id: string; name: string; city: string }[]).find(x => x.id === id);
+          return { name: p?.name || "?", city: p?.city || "", count: likeCount[id] };
+        });
+      }
 
       // ── Charger un échantillon de profils pour top villes + derniers inscrits ──
       const [recentProfilesRes, reps] = await Promise.all([
@@ -9943,6 +10005,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         femaleCount: parseCount(rFemale),
         topCities,
         recentUsers,
+        totalLikes: parseCount(rTotalLikes),
+        likesToday: parseCount(rLikesToday),
+        likesPerDay,
+        topLikedProfiles,
       });
       setReports(reps);
       console.log(`[Moyo][Admin] ✅ Dashboard chargé - ${parseCount(rTotalUsers)} profils, ${reps.length} signalements`);
@@ -11519,6 +11585,61 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               )}
 
               </div>{/* /admgrid-row */}
+
+              {/* ── LIKES ── */}
+              {/* Total + Aujourd'hui */}
+              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>❤️ Likes</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+                  <div style={{ background: "rgba(231,76,60,0.07)", borderRadius: 12, padding: "12px", border: "1px solid rgba(231,76,60,0.15)" }}>
+                    <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.rouge }}>{stats.totalLikes.toLocaleString()}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>Total likes</div>
+                  </div>
+                  <div style={{ background: "rgba(231,76,60,0.07)", borderRadius: 12, padding: "12px", border: "1px solid rgba(231,76,60,0.15)" }}>
+                    <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.rouge }}>+{stats.likesToday}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>Aujourd'hui</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Likes par jour (14 derniers jours) */}
+              {stats.likesPerDay.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Likes par jour (14 derniers jours)</h3>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80 }}>
+                    {(() => {
+                      const max = Math.max(...stats.likesPerDay.map(d => d.count), 1);
+                      return stats.likesPerDay.map((d, i) => (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <div style={{ width: "100%", background: G.rouge, borderRadius: "4px 4px 0 0", height: `${Math.round((d.count / max) * 64)}px`, minHeight: 3, opacity: 0.8 }} />
+                          <div style={{ fontSize: "0.52rem", color: "#aaa", transform: "rotate(-30deg)", whiteSpace: "nowrap" }}>{d.date.slice(5)}</div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Top 5 profils les plus likés */}
+              {stats.topLikedProfiles.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>🏆 Top profils les plus likés</h3>
+                  {stats.topLikedProfiles.map((p, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < stats.topLikedProfiles.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: i === 0 ? "#FFD700" : i === 1 ? "#C0C0C0" : i === 2 ? "#CD7F32" : G.creme, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.75rem", color: i < 3 ? "#333" : "#888", flexShrink: 0 }}>
+                        {i + 1}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.85rem" }}>{p.name}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#888" }}>{p.city}</div>
+                      </div>
+                      <div style={{ background: "rgba(231,76,60,0.1)", borderRadius: 8, padding: "4px 8px", fontSize: "0.78rem", fontWeight: 700, color: G.rouge }}>
+                        ❤️ {p.count}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}>
                 <IcoRefresh />Actualiser
