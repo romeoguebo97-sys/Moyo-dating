@@ -76,9 +76,10 @@ const STATUS_LIMIT = 2;
 const LIFETIME_PREMIUM_UNTIL = "2099-12-31T23:59:59.000Z";
 let PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000; // valeur par défaut, écrasée par app_settings
 let PREMIUM_PRICE_FCFA = 3500;
+let PREMIUM_PRICE_EUR = 10;
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -88,6 +89,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["limit_messages_free"]) FREE_LIMITS.messages = parseInt(map["limit_messages_free"]) || 3;
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
   if (map["premium_price_fcfa"]) PREMIUM_PRICE_FCFA = parseInt(map["premium_price_fcfa"]) || 3500;
+  if (map["premium_price_eur"]) PREMIUM_PRICE_EUR = parseFloat(map["premium_price_eur"]) || 10;
   if (map["poll_badges_ms"]) POLL_BADGES_MS = parseInt(map["poll_badges_ms"]) || 8000;
   if (map["poll_admin_badge_ms"]) POLL_ADMIN_BADGE_MS = parseInt(map["poll_admin_badge_ms"]) || 5000;
   if (map["poll_stats_ms"]) POLL_STATS_MS = parseInt(map["poll_stats_ms"]) || 60000;
@@ -834,7 +836,7 @@ const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, pr
   return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (<svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>)}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>;
 });
 
-function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void; reason: string; userId: string; token: string }) {
+function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "proof">("offer");
   const [txRef, setTxRef] = useState("");
   const [txSent, setTxSent] = useState(false);
@@ -922,15 +924,15 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
                 const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY },
-                  body: JSON.stringify({ user_id: userId, user_email: "", amount_euros: 5 }),
+                  body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }),
                 });
                 const data = await r.json();
                 if (data.url) { window.open(data.url, "_blank"); }
                 else { alert("Erreur : " + (data.error || "inconnue")); }
-              } catch { alert("Erreur réseau"); }
-            }} style={{ width: "100%", background: "linear-gradient(135deg,#635BFF,#4B44CC)", color: "white", border: "none", borderRadius: 14, padding: "13px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(99,91,255,0.4)" }}>
+              } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
+            }} style={{ width: "100%", background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "white", border: "none", borderRadius: 14, padding: "13px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(39,174,96,0.4)" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-              Visa / Mastercard · ~5€
+              Visa / Mastercard · {PREMIUM_PRICE_EUR}€
             </button>
           </div>
         </div>
@@ -2966,6 +2968,7 @@ function AdminDesktopPage() {
     limitPhotoSizeMb: "5",
     matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋",
     premiumPriceFcfa: "3500",
+    premiumPriceEur: "10",
     premiumDurationDays: "31",
     featureStatuses: "true",
     featureGiftPremium: "true",
@@ -3183,9 +3186,10 @@ function AdminDesktopPage() {
             <OffCanvasSection title="Prix & Abonnement">
               {([
                 ["premium_price_fcfa", "premiumPriceFcfa" as keyof typeof appConfig, "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
+                ["premium_price_eur", "premiumPriceEur" as keyof typeof appConfig, "Prix Premium Diaspora (€)", appConfig.premiumPriceEur],
                 ["premium_duration_days", "premiumDurationDays" as keyof typeof appConfig, "Durée abonnement (jours)", appConfig.premiumDurationDays],
               ] as [string, keyof typeof appConfig, string, string][]).map(([key, ck, label, value]) => (
-                <EditableRow key={key} label={label} value={value} open={editingConfig === key} type="number"
+                <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} open={editingConfig === key} type="number"
                   onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
                   editValue={editingConfigValue} onEdit={setEditingConfigValue}
                   onSave={async () => {
@@ -3193,6 +3197,7 @@ function AdminDesktopPage() {
                     await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
                     setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
                     if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500;
+                    if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10;
                     if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000;
                     setEditingConfig(null);
                   }} />
@@ -3308,7 +3313,7 @@ function AdminDesktopPage() {
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumDurationDays: "31", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", premiumDurationDays: "31", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -3323,7 +3328,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage }));
       }).catch(() => {});
   }, [auth.token]);
 
@@ -3350,8 +3355,8 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Prix & Abonnement">
-        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix Premium (FCFA)",appConfig.premiumPriceFcfa],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée abonnement (jours)",appConfig.premiumDurationDays]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
-          <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; setEditingConfig(null); }} />
+        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix Premium (FCFA)",appConfig.premiumPriceFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée abonnement (jours)",appConfig.premiumDurationDays]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
+          <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; setEditingConfig(null); }} />
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
@@ -13358,7 +13363,7 @@ export default function App() {
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} />}
       {tab === "admin" && <AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
     </AppShell>
-    {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} />}
+    {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} />}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
     {/* ── OFF-CANVAS CONFIG MOBILE/TABLETTE ── */}
