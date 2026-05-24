@@ -9617,6 +9617,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [mailModal, setMailModal] = useState<{ user: AdminProfile } | null>(null);
   const [mailHistory, setMailHistory] = useState<{ id: string; reason: string; created_at: string }[]>([]);
   const [mailHistoryLoading, setMailHistoryLoading] = useState(false);
+  const [mailCustomSubject, setMailCustomSubject] = useState("");
+  const [mailCustomBody, setMailCustomBody] = useState("");
   const [msgHistory, setMsgHistory] = useState<{ id: string; reason: string; created_at: string }[]>([]);
   const [msgHistoryLoading, setMsgHistoryLoading] = useState(false);
   const [msgTab, setMsgTab] = useState<"modeles" | "historique">("modeles");
@@ -9679,7 +9681,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-        body: JSON.stringify({ user_id: user.id, admin_id: auth.userId, reason: `[EMAIL] ${label}`, warning_number: 99, acknowledged: false }),
+        body: JSON.stringify({ user_id: user.id, admin_id: auth.userId, reason: `[EMAIL] ${label}`, warning_number: 99, acknowledged: true }),
       });
       showToast(`Email "${label}" envoyé à ${user.name} ✓`, "success");
       loadMailHistory(user.id);
@@ -10645,16 +10647,59 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             </div>
 
-            {/* ── COLONNE DROITE ── */}
-            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 32px", background: "#fafafa" }}>
-              <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            {/* ── COLONNE DROITE : saisie libre ── */}
+            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", flex: 1, display: "flex", flexDirection: "column", padding: "24px", background: "#fafafa", borderTop: window.innerWidth < 768 ? `1px solid ${G.gris}` : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#333" }}>Email personnalisé</div>
+                  <div style={{ fontSize: "0.72rem", color: "#aaa" }}>à {mailModal.user.name} · {mailModal.user.email || "pas d'email"}</div>
+                </div>
               </div>
-              <div style={{ fontWeight: 700, fontSize: "1rem", color: "#333", marginBottom: 10, textAlign: "center" }}>Envoyer un email à {mailModal.user.name}</div>
-              <div style={{ fontSize: "0.85rem", color: "#888", textAlign: "center", lineHeight: 1.6, maxWidth: 280, marginBottom: 32 }}>
-                Clique sur un email dans la liste à gauche pour l'envoyer instantanément. L'envoi sera enregistré dans l'historique.
+              <div style={{ fontWeight: 600, fontSize: "0.75rem", color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>Sujet</div>
+              <input
+                value={mailCustomSubject}
+                onChange={e => setMailCustomSubject(e.target.value)}
+                placeholder="Ex: Votre compte Moyo"
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e8d5f5", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", marginBottom: 12, background: G.blanc }}
+              />
+              <div style={{ fontWeight: 600, fontSize: "0.75rem", color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>Message</div>
+              <textarea
+                value={mailCustomBody}
+                onChange={e => setMailCustomBody(e.target.value)}
+                placeholder="Écrivez votre message ici…"
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e8d5f5", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", resize: "none", flex: 1, minHeight: 140, lineHeight: 1.6, background: G.blanc }}
+              />
+              {mailCustomBody && <div style={{ fontSize: "0.7rem", color: "#aaa", textAlign: "right", marginTop: 3 }}>{mailCustomBody.length} caractères</div>}
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <button onClick={() => { setMailModal(null); setMailHistory([]); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Fermer</button>
+                <button
+                  disabled={!mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email}
+                  onClick={async () => {
+                    if (!mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email) return;
+                    try {
+                      await fetch(`${SUPABASE_URL}/functions/v1/send-custom-email`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
+                        body: JSON.stringify({ email: mailModal.user.email, name: mailModal.user.name, subject: mailCustomSubject.trim(), message: mailCustomBody.trim() }),
+                      });
+                      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+                        body: JSON.stringify({ user_id: mailModal.user.id, admin_id: auth.userId, reason: `[EMAIL] ${mailCustomSubject.trim()}`, warning_number: 99, acknowledged: true }),
+                      });
+                      showToast(`Email envoyé à ${mailModal.user.name} ✓`, "success");
+                      setMailCustomSubject("");
+                      setMailCustomBody("");
+                      loadMailHistory(mailModal.user.id);
+                    } catch { showToast("Erreur lors de l'envoi", "error"); }
+                  }}
+                  style={{ flex: 2, background: !mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email ? "#ddd" : "linear-gradient(135deg,#8e44ad,#6c3483)", color: !mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email ? "#aaa" : G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: !mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email ? "not-allowed" : "pointer" }}>
+                  Envoyer ✉️
+                </button>
               </div>
-              <button onClick={() => { setMailModal(null); setMailHistory([]); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px 32px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Fermer</button>
             </div>
 
           </div>
@@ -12802,7 +12847,7 @@ export default function App() {
     const checkWarnings = async () => {
       try {
         const r = await fetch(
-          `${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${auth.userId}&acknowledged=eq.false&order=created_at.asc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${auth.userId}&acknowledged=eq.false&warning_number=neq.99&order=created_at.asc&limit=1`,
           { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
         );
         if (!r.ok) return;
@@ -13126,7 +13171,7 @@ export default function App() {
     const checkWarningsRealtime = async () => {
       try {
         const r = await fetch(
-          `${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${auth.userId}&acknowledged=eq.false&order=created_at.asc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${auth.userId}&acknowledged=eq.false&warning_number=neq.99&order=created_at.asc&limit=1`,
           { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
         );
         if (!r.ok) return;
