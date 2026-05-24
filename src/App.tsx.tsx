@@ -914,6 +914,25 @@ function PremiumModal({ onClose, reason, userId, token }: { onClose: () => void;
               Airtel Money
             </button>
           </div>
+          {/* Bouton Stripe pour la diaspora */}
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8 }}>Diaspora — Payer par carte</div>
+            <button onClick={async () => {
+              try {
+                const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY },
+                  body: JSON.stringify({ user_id: userId, user_email: "", amount_euros: 5 }),
+                });
+                const data = await r.json();
+                if (data.url) { window.open(data.url, "_blank"); }
+                else { alert("Erreur : " + (data.error || "inconnue")); }
+              } catch { alert("Erreur réseau"); }
+            }} style={{ width: "100%", background: "linear-gradient(135deg,#635BFF,#4B44CC)", color: "white", border: "none", borderRadius: 14, padding: "13px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(99,91,255,0.4)" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              Visa / Mastercard · ~5€
+            </button>
+          </div>
         </div>
         <div style={{ padding: "8px 0", flex: 1 }}>
           {avantages.map((a) => (
