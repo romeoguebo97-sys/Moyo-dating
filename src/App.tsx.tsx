@@ -9937,6 +9937,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         "last_seen.desc": "last_seen.desc",
         "age.asc": "age.asc",
         "age.desc": "age.desc",
+        "admin":    "is_admin.desc.nullslast,created_at.desc",
+        "premium":  "is_premium.desc.nullslast,created_at.desc",
+        "verified": "is_verified.desc.nullslast,created_at.desc",
+        "banned":   "is_banned.desc.nullslast,created_at.desc",
       };
       const serverSort = serverSorts[sort] || "created_at.desc";
       let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
@@ -10592,6 +10596,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* Header */}
               <div style={{ background: "linear-gradient(135deg,#f3e8ff,#e8d5f5)", padding: "20px 20px 14px", borderBottom: "1px solid rgba(142,68,173,0.15)", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <button onClick={() => { setMailModal(null); setMailHistory([]); }} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(142,68,173,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  </button>
                   <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                   </div>
@@ -10639,7 +10646,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   { fn: "send-relance-15j", label: "Inactivité 15 jours — Des profils t'attendent" },
                   { fn: "send-relance-30j", label: "Inactivité 30 jours — Compte bientôt supprimé" },
                 ].map(item => (
-                  <div key={item.fn} onClick={() => sendMailFunction(item.fn, item.label, mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: "pointer", background: "#faf5ff", border: "1.5px solid #e8d5f5", fontSize: "0.83rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div key={item.fn} onClick={() => {
+                    if (!mailModal.user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
+                    sendMailFunction(item.fn, item.label, mailModal.user);
+                  }} style={{ padding: "12px 14px", borderRadius: 12, cursor: "pointer", background: "#faf5ff", border: "1.5px solid #e8d5f5", fontSize: "0.83rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#8e44ad", flexShrink: 0 }} />
                     {item.label}
                   </div>
@@ -10673,18 +10683,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e8d5f5", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", resize: "none", flex: 1, minHeight: 140, lineHeight: 1.6, background: G.blanc }}
               />
               {mailCustomBody && <div style={{ fontSize: "0.7rem", color: "#aaa", textAlign: "right", marginTop: 3 }}>{mailCustomBody.length} caractères</div>}
+              {!mailModal.user.email && <div style={{ fontSize: "0.72rem", color: "#e74c3c", marginTop: 4, fontWeight: 600 }}>⚠️ Cet utilisateur n'a pas d'email enregistré</div>}
               <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
                 <button onClick={() => { setMailModal(null); setMailHistory([]); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Fermer</button>
                 <button
-                  disabled={!mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email}
+                  disabled={!mailCustomSubject.trim() || !mailCustomBody.trim()}
                   onClick={async () => {
-                    if (!mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email) return;
+                    if (!mailCustomSubject.trim() || !mailCustomBody.trim()) return;
+                    if (!mailModal.user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
                     try {
-                      await fetch(`${SUPABASE_URL}/functions/v1/send-custom-email`, {
+                      const r = await fetch(`${SUPABASE_URL}/functions/v1/send-custom-email`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
                         body: JSON.stringify({ email: mailModal.user.email, name: mailModal.user.name, subject: mailCustomSubject.trim(), message: mailCustomBody.trim() }),
                       });
+                      if (!r.ok) { const err = await r.json().catch(() => null); showToast(`Erreur : ${err?.message || r.status}`, "error"); return; }
                       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
@@ -10694,10 +10707,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       setMailCustomSubject("");
                       setMailCustomBody("");
                       loadMailHistory(mailModal.user.id);
-                    } catch { showToast("Erreur lors de l'envoi", "error"); }
+                    } catch (e: any) { showToast(`Erreur : ${e?.message || "inconnue"}`, "error"); }
                   }}
-                  style={{ flex: 2, background: !mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email ? "#ddd" : "linear-gradient(135deg,#8e44ad,#6c3483)", color: !mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email ? "#aaa" : G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: !mailCustomSubject.trim() || !mailCustomBody.trim() || !mailModal.user.email ? "not-allowed" : "pointer" }}>
-                  Envoyer ✉️
+                  style={{ flex: 2, background: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "#ddd" : "linear-gradient(135deg,#8e44ad,#6c3483)", color: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "#aaa" : G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "not-allowed" : "pointer" }}>
+                  Envoyer
                 </button>
               </div>
             </div>
