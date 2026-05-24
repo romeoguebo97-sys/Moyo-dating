@@ -1335,7 +1335,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           `}</style>
 
           {/* Nav blanche */}
-          <div style={{ background: "#fff", padding: "52px 20px 14px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
+          <div style={{ background: "#fff", padding: "16px 20px 14px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
             <div style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-1px" }}>
               <span style={{ color: "#C0392B" }}>Mo</span><span style={{ color: "#D4A843" }}>yo</span>
             </div>
@@ -1352,7 +1352,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
               {/* Slogan */}
               <div style={{ textAlign: "center", marginBottom: 18, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
-                <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#1a1a1a", lineHeight: 1.25, textShadow: "0 1px 8px rgba(247,244,240,0.9)" }}>
+                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#1a1a1a", lineHeight: 1.25, textShadow: "0 1px 8px rgba(247,244,240,0.9)" }}>
                   Trouve ton<br/>
                   <em style={{ color: "#C0392B", fontStyle: "italic", display: "inline-block", animation: "amePulse 2.5s ease-in-out infinite" }}>âme sœur</em><br/>
                   Congolais.e
@@ -1381,9 +1381,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           {/* Congo & Diaspora + Voir notre site */}
           <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", animation: "mfadeIn 1s 1s ease both", zIndex: 4 }}
             onClick={() => { document.querySelector<HTMLDivElement>("[data-moyo-mobile-landing]")!.style.display = "none"; }}>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>Congo &amp; Diaspora</div>
-            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.5rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
+            <div style={{ color: "#1a1a1a", fontSize: "0.82rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>Congo &amp; Diaspora</div>
+            <div style={{ color: "#1a1a1a", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </div>
