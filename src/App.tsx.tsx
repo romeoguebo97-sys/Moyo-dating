@@ -6332,6 +6332,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     });
   }, []);
   useEffect(() => { if (open) loadMsgs(open); }, [open]);
+
+  // Scroll immédiat en bas à l'ouverture de la conversation
+  useEffect(() => {
+    if (open && msgs.length > 0) {
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "instant" });
+      }, 50);
+    }
+  }, [open?.id]);
+
   // Scroll uniquement si un nouveau message est apparu (count augmente), pas sur les mises à jour de is_read/reactions
   const prevMsgCountRef = useRef(0);
   useEffect(() => {
@@ -10871,23 +10881,26 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   onClick={async () => {
                     if (!mailCustomSubject.trim() || !mailCustomBody.trim()) return;
                     if (!mailModal.user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
+                    const btn = document.activeElement as HTMLButtonElement;
+                    if (btn) { btn.disabled = true; btn.textContent = "Envoi en cours…"; }
                     try {
                       const r = await fetch(`${SUPABASE_URL}/functions/v1/send-custom-email`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
                         body: JSON.stringify({ email: mailModal.user.email, name: mailModal.user.name, subject: mailCustomSubject.trim(), message: mailCustomBody.trim() }),
                       });
-                      if (!r.ok) { const err = await r.json().catch(() => null); showToast(`Erreur : ${err?.message || r.status}`, "error"); return; }
+                      if (!r.ok) { const err = await r.json().catch(() => null); showToast(`Erreur : ${err?.message || r.status}`, "error"); if (btn) { btn.disabled = false; btn.textContent = "Envoyer"; } return; }
                       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
                         body: JSON.stringify({ user_id: mailModal.user.id, admin_id: auth.userId, reason: `[EMAIL] ${mailCustomSubject.trim()}`, warning_number: 99, acknowledged: true }),
                       });
-                      showToast(`Email envoyé à ${mailModal.user.name} ✓`, "success");
+                      showToast(`✅ Email envoyé à ${mailModal.user.name} !`, "success");
                       setMailCustomSubject("");
                       setMailCustomBody("");
                       loadMailHistory(mailModal.user.id);
                     } catch (e: any) { showToast(`Erreur : ${e?.message || "inconnue"}`, "error"); }
+                    if (btn) { btn.disabled = false; btn.textContent = "Envoyer"; }
                   }}
                   style={{ flex: 2, background: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "#ddd" : "linear-gradient(135deg,#8e44ad,#6c3483)", color: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "#aaa" : G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "not-allowed" : "pointer" }}>
                   Envoyer
