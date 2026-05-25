@@ -9857,9 +9857,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
     }).then(r => r.json()).then(data => { setPremiumProfiles(Array.isArray(data) ? data : []); setPremiumListLoading(false); }).catch(() => setPremiumListLoading(false));
   }, [showPremiumList]);
-  const [broadcastText, setBroadcastText] = useState("");
-  const [broadcastLoading, setBroadcastLoading] = useState(false);
-  const [broadcastExpiresAt, setBroadcastExpiresAt] = useState("");
 
   // ── ÉVÉNEMENT PREMIUM ──
   const [premiumEventActive, setPremiumEventActive] = useState(false);
