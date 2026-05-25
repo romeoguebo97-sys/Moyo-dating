@@ -9522,6 +9522,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     last_seen?: string;
     warning_count?: number;
     email?: string;
+    photo_url?: string | null;
+    admin_level?: string | null;
   };
 
   // ── Onglet actif ──
@@ -9843,6 +9845,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [showPremiumList, setShowPremiumList] = useState(false);
   const [premiumProfiles, setPremiumProfiles] = useState<AdminProfile[]>([]);
   const [premiumListLoading, setPremiumListLoading] = useState(false);
+  const [broadcastModal, setBroadcastModal] = useState(false);
+  const [broadcastText, setBroadcastText] = useState("");
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastExpiresAt, setBroadcastExpiresAt] = useState("");
 
   useEffect(() => {
     if (!showPremiumList) return;
