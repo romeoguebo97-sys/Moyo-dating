@@ -1203,6 +1203,7 @@ function useWindowWidth() {
 
 function Landing({ onNav }: { onNav: (p: string) => void }) {
   const [featuredAvis, setFeaturedAvis] = React.useState<{ id: string; name: string; city: string; comment: string; rating: number }[]>([]);
+  const [showMobileLanding, setShowMobileLanding] = React.useState(true);
 
   React.useEffect(() => {
     fetch(`${SUPABASE_URL}/rest/v1/app_ratings?is_featured=eq.true&select=id,rating,comment,user_id&order=created_at.desc&limit=10`, {
@@ -1323,14 +1324,14 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <style>{GLOBAL_CSS}</style>
 
       {/* ── VERSION MOBILE ── */}
-      {isMobile && (
+      {isMobile && showMobileLanding && (
         <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "#1a0505", display: "flex", flexDirection: "column", alignItems: "stretch", zIndex: 9999, fontFamily: "Arial, sans-serif" }}>
           <style>{`
             @keyframes amePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
             @keyframes mfadeInDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
             @keyframes mfadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
             @keyframes mfadeIn { from{opacity:0} to{opacity:1} }
-            @keyframes mbounce { 0%,80%,100%{transform:scale(1);opacity:0.3} 40%{transform:scale(1.6);opacity:1;background:#C0392B} }
+            @keyframes mbounce { 0%,80%,100%{transform:scale(1);opacity:0.4} 40%{transform:scale(1.6);opacity:1;background:white} }
             @keyframes mbounceArrow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
           `}</style>
 
@@ -1352,7 +1353,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
               {/* Slogan */}
               <div style={{ textAlign: "center", marginBottom: 18, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
-                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#1a1a1a", lineHeight: 1.25, textShadow: "0 1px 8px rgba(247,244,240,0.9)" }}>
+                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#1a1a1a", lineHeight: 1.25, WebkitTextStroke: "0.5px white", textShadow: "none" }}>
                   Trouve ton<br/>
                   <em style={{ color: "#C0392B", fontStyle: "italic", display: "inline-block", animation: "amePulse 2.5s ease-in-out infinite" }}>âme sœur</em><br/>
                   Congolais.e
@@ -1362,7 +1363,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               {/* 3 points */}
               <div style={{ display: "flex", gap: 7, margin: "14px 0 18px", animation: "mfadeIn 0.8s 0.4s ease both" }}>
                 {[0, 0.2, 0.4].map((delay, i) => (
-                  <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(192,57,43,0.3)", animation: `mbounce 1.3s ${delay}s ease-in-out infinite` }} />
+                  <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.5)", animation: `mbounce 1.3s ${delay}s ease-in-out infinite` }} />
                 ))}
               </div>
 
@@ -1380,10 +1381,10 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
           {/* Congo & Diaspora + Voir notre site */}
           <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", animation: "mfadeIn 1s 1s ease both", zIndex: 4 }}
-            onClick={() => { document.querySelector<HTMLDivElement>("[data-moyo-mobile-landing]")!.style.display = "none"; }}>
-            <div style={{ color: "#1a1a1a", fontSize: "0.82rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>Congo &amp; Diaspora</div>
-            <div style={{ color: "#1a1a1a", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
+            onClick={() => setShowMobileLanding(false)}>
+            <div style={{ color: "#ffffff", fontSize: "0.82rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>Congo &amp; Diaspora</div>
+            <div style={{ color: "#ffffff", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </div>
@@ -1391,7 +1392,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       )}
 
       {/* ── NAV ── */}
-      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: isMobile ? "none" : undefined }}>
+      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: (isMobile && showMobileLanding) ? "none" : "block" }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
             <span>Mo</span><span style={{ color: G.or }}>yo</span>
