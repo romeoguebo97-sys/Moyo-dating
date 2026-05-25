@@ -1343,10 +1343,10 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
           {/* Corps avec photo */}
           <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 28px 60px" }}>
-            {/* Photo couple */}
-            <div style={{ position: "absolute", inset: 0, backgroundImage: `url("https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/render/image/public/Photo_de_couple_moyo.png/Photo%20de%20couple%20moyo.png?width=800&quality=70")`, backgroundSize: "cover", backgroundPosition: "center 10%", opacity: 0.55 }} />
-            {/* Overlay dégradé */}
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(247,244,240,0.45) 0%, rgba(247,244,240,0.2) 40%, rgba(247,244,240,0.7) 65%, rgba(247,244,240,0.97) 100%)" }} />
+            {/* Dégradé rouge → blanc */}
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, #7B1515 0%, #C0392B 25%, #E8A0A0 55%, #F5E8E8 75%, #F7F4F0 100%)" }} />
+            {/* Photo couple par-dessus avec blend mode */}
+            <div style={{ position: "absolute", inset: 0, backgroundImage: `url("https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/Photo_de_couple_moyo.png/Photo%20de%20couple%20moyo.jpg")`, backgroundSize: "cover", backgroundPosition: "center 10%", mixBlendMode: "multiply", opacity: 0.9 }} />
 
             {/* Contenu */}
             <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -1368,7 +1368,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
               {/* Boutons */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", animation: "mfadeInUp 0.8s 0.5s ease both" }}>
-                <button onClick={() => onNav("signup")} style={{ background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "15px 0", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 5px 18px rgba(192,57,43,0.4)" }}>
+                <button onClick={() => onNav("signup")} style={{ background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "2px solid rgba(255,255,255,0.7)", borderRadius: 50, padding: "15px 0", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 5px 18px rgba(192,57,43,0.4)" }}>
                   Créer mon compte gratuit
                 </button>
                 <button onClick={() => onNav("login")} style={{ background: "#fff", color: "#1a1a1a", border: "2px solid #1a1a1a", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
