@@ -6834,7 +6834,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     }
     if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
     if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
-    const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content.substring(0, 60)}]\n` : "";
+    const quotedContent = replyTo ? (replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content.replace(/\]/g, "）").substring(0, 60)) : "";
+    const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${quotedContent}]\n` : "";
     const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: prefix + text, is_read: false });
     if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); setReplyTo(null); }
   }, [auth, open, text, replyTo, msgCount, onShowPremium]);
@@ -7295,7 +7296,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isMine ? "rgba(255,255,255,0.85)" : "#555"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                       </div>
                       {(() => {
-                        const replyMatch = m.content.match(/^\[↩ (.+?) : (.+?)\]\n([\s\S]*)$/);
+                        const replyMatch = m.content.match(/^\[↩ (.+?) : ([\s\S]+?)\]\n([\s\S]*)$/);
                         if (replyMatch) {
                           const [, who, quoted, body] = replyMatch;
                           const isPhoto = quoted === "Photo";
