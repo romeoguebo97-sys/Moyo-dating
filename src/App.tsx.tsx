@@ -6775,14 +6775,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         created_at: r.created_at,
       }));
       setMsgs(supportMsgs);
-      setMsgCount(supportMsgs.filter(m => m.sender_id === auth.userId).length);
+      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      setMsgCount(supportMsgs.filter(m => m.sender_id === auth.userId && (m.created_at || "") >= since24h).length);
       loadConvs();
       return;
     }
     const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
     const visible = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId));
     setMsgs(visible);
-    setMsgCount(visible.filter(m => m.sender_id === auth.userId).length);
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    setMsgCount(visible.filter(m => m.sender_id === auth.userId && (m.created_at || "") >= since24h).length);
     // Marquer comme lu ET livré
     await sb.markMessagesRead(auth.token, conv.id, auth.userId);
     // Recharger après marquage lu
