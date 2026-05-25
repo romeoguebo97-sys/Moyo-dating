@@ -141,9 +141,11 @@ type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null
 // ── Optimisation images Supabase Storage ──
 const optimizeImg = (url: string | null | undefined, width = 400): string | undefined => {
   if (!url) return undefined;
-  if (url.includes('supabase.co/storage/v1/object/public/')) {
-    return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + `?width=${width}&quality=75`;
-  }
+  try {
+    if (url.includes('supabase.co/storage/v1/object/public/')) {
+      return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + `?width=${width}&quality=75`;
+    }
+  } catch {}
   return url;
 };
 
