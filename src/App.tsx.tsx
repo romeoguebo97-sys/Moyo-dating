@@ -1353,7 +1353,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           {/* Corps avec photo */}
           <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 28px 60px" }}>
             {/* Photo couple */}
-            <div style={{ position: "absolute", inset: 0, backgroundImage: `url("https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/Photo_de_couple_moyo.png/Photo%20de%20couple%20moyo.png")`, backgroundSize: "cover", backgroundPosition: "center 10%", opacity: 0.55 }} />
+            <div style={{ position: "absolute", inset: 0, backgroundImage: `url("https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/render/image/public/Photo_de_couple_moyo.png/Photo%20de%20couple%20moyo.png?width=800&quality=70")`, backgroundSize: "cover", backgroundPosition: "center 10%", opacity: 0.55 }} />
             {/* Overlay dégradé */}
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(247,244,240,0.45) 0%, rgba(247,244,240,0.2) 40%, rgba(247,244,240,0.7) 65%, rgba(247,244,240,0.97) 100%)" }} />
 
