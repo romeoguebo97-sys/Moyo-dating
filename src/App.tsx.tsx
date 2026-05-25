@@ -7301,7 +7301,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         const replyMatch = m.content.match(/^\[↩ (.+?) : ([\s\S]+?)\]\n([\s\S]*)$/);
                         if (replyMatch) {
                           const [, who, quoted, body] = replyMatch;
-                          const isPhoto = quoted === "Photo";
+                          // Nettoyer la citation imbriquée
+                          const cleanQuoted = quoted.replace(/^\[↩ .+? : /, "").replace(/\]\s*/, "").replace(/[）]/g, "]");
+                          const isPhoto = cleanQuoted === "Photo";
                           return <>
                             <div style={{ background: isMine ? "rgba(0,0,0,0.18)" : "rgba(192,57,43,0.07)", borderRadius: 8, marginBottom: 6, overflow: "hidden", display: "flex" }}>
                               {/* Barre colorée gauche */}
@@ -7311,7 +7313,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: isMine ? "rgba(255,255,255,0.9)" : G.rouge, marginBottom: 2 }}>{who}</div>
                                 <div style={{ fontSize: "0.75rem", color: isMine ? "rgba(255,255,255,0.7)" : "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
                                   {isPhoto && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>}
-                                  {quoted}
+                                  {cleanQuoted}
                                 </div>
                               </div>
                             </div>
