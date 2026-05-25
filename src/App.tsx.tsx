@@ -10830,6 +10830,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* Liste emails */}
               <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 4 }}>Emails disponibles</div>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A5C3A", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Bienvenue</div>
+                <div onClick={() => {
+                  if (!mailModal.user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
+                  sendMailFunction("send-bienvenue", "Email de bienvenue", mailModal.user);
+                }} style={{ padding: "12px 14px", borderRadius: 12, cursor: "pointer", background: "#f0fff4", border: "1.5px solid #c3e6cb", fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#1A5C3A", flexShrink: 0 }} />
+                  Email de bienvenue
+                </div>
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#8e44ad", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Relance inactivité</div>
                 {[
                   { fn: "send-relance-5j", label: "Inactivité 5 jours — Tu nous manques !" },
@@ -10889,16 +10897,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
                         body: JSON.stringify({ email: mailModal.user.email, name: mailModal.user.name, subject: mailCustomSubject.trim(), message: mailCustomBody.trim() }),
                       });
-                      if (!r.ok) { const err = await r.json().catch(() => null); showToast(`Erreur : ${err?.message || r.status}`, "error"); if (btn) { btn.disabled = false; btn.textContent = "Envoyer"; } return; }
+                      // Enregistrer dans l'historique
                       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
                         body: JSON.stringify({ user_id: mailModal.user.id, admin_id: auth.userId, reason: `[EMAIL] ${mailCustomSubject.trim()}`, warning_number: 99, acknowledged: true }),
                       });
-                      showToast(`✅ Email envoyé à ${mailModal.user.name} !`, "success");
+                      // Toujours vider les champs et recharger l'historique
                       setMailCustomSubject("");
                       setMailCustomBody("");
                       loadMailHistory(mailModal.user.id);
+                      showToast(`✅ Email envoyé à ${mailModal.user.name} !`, "success");
                     } catch (e: any) { showToast(`Erreur : ${e?.message || "inconnue"}`, "error"); }
                     if (btn) { btn.disabled = false; btn.textContent = "Envoyer"; }
                   }}
