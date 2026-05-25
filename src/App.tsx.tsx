@@ -138,6 +138,15 @@ type Message = { id?: string; match_id: string; sender_id: string; content: stri
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
+// ── Optimisation images Supabase Storage ──
+const optimizeImg = (url: string | null | undefined, width = 400): string | undefined => {
+  if (!url) return undefined;
+  if (url.includes('supabase.co/storage/v1/object/public/')) {
+    return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + `?width=${width}&quality=75`;
+  }
+  return url;
+};
+
 const STATUS_BUCKETS = ["statuses", "status"] as const;
 // ── Envoie un message automatique de bienvenue dans un nouveau match ──
 const sendMatchWelcomeMessage = async (token: string, matchId: string, myName: string, partnerName: string) => {
@@ -833,7 +842,7 @@ const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, pr
   const borderColor = border ? (premium ? G.or : G.rouge) : "none";
   const borderStyle = border ? `3px solid ${borderColor}` : "none";
   const boxShadow = border && premium ? `0 0 0 1px ${G.or}44` : "none";
-  return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (<svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>)}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>;
+  return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>{url ? <img src={optimizeImg(url)} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (<svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>)}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>;
 });
 
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
@@ -1391,7 +1400,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       )}
 
       {/* ── NAV ── */}
-      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100 }}>
+      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: isMobile ? "none" : undefined }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
             <span>Mo</span><span style={{ color: G.or }}>yo</span>
@@ -1577,7 +1586,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             "/bg12.webp",
           ].map((url, i) => (
             <div key={i} style={{ overflow: "hidden" }}>
-              <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "grayscale(100%)" }} />
+              <img src={optimizeImg(url)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "grayscale(100%)" }} />
             </div>
           ))}
         </div>
@@ -3837,7 +3846,7 @@ const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onB
     <div className="profile-card" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
       <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)" }}>
         {prof.photo_url
-          ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          ? <img src={optimizeImg(prof.photo_url)} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         }
       </div>
@@ -4425,7 +4434,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
                 {/* Avatar */}
                 <div style={{ width: 42, height: 42, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#E8C5A0,#C47A4A)" }}>
                   {prof.photo_url
-                    ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                    ? <img src={optimizeImg(prof.photo_url)} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
                     : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
                   }
                 </div>
@@ -4481,7 +4490,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
           {/* Header */}
           <div style={{ padding: "12px 20px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {bottomSheetProfile.photo_url && <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}><img src={bottomSheetProfile.photo_url} alt={bottomSheetProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>}
+              {bottomSheetProfile.photo_url && <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}><img src={optimizeImg(bottomSheetProfile.photo_url)} alt={bottomSheetProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>}
               <div>
                 <div style={{ fontSize: "0.97rem", fontWeight: 700, color: "#1a1a1a", lineHeight: 1.2 }}>{bottomSheetProfile.name}, {bottomSheetProfile.age} ans</div>
                 {bottomSheetProfile.city && <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 1 }}>{bottomSheetProfile.city}</div>}
@@ -4605,7 +4614,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
     <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 110px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: isWide ? 0 : 12, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
-      {prof.photo_url ? <img src={prof.photo_url} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+      {prof.photo_url ? <img src={optimizeImg(prof.photo_url)} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
       {/* ✕ haut droite - sur chaque carte */}
       <button onClick={() => { setViewMode("card"); window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } })); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
@@ -4656,7 +4665,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : 210, flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : "none", position: "relative" }}>{p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
+  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : 210, flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : "none", position: "relative" }}>{p.photo_url ? <img src={optimizeImg(p.photo_url)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div>
     {/* 3 traits menu - single tap/click → bottom sheet */}
@@ -4700,7 +4709,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
-          {viewedProfile.photo_url ? <img src={viewedProfile.photo_url} alt={viewedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+          {viewedProfile.photo_url ? <img src={optimizeImg(viewedProfile.photo_url)} alt={viewedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
           <div onClick={() => setViewedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16 }}>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{viewedProfile.name}, {viewedProfile.age} ans {viewedProfile.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>}{viewedProfile.is_verified && <VerifiedBadge size={14} />}</div>
@@ -4960,7 +4969,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
             <div key={p.id} onClick={() => setSelectedProfile(p)} style={{ background: G.blanc, borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.07)", cursor: "pointer" }}>
               <div style={{ height: 120, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
                 {p.photo_url
-                  ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                  ? <img src={optimizeImg(p.photo_url)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
                   : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     </div>
@@ -4987,7 +4996,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
           <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
             <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
               {selectedProfile.photo_url
-                ? <img src={selectedProfile.photo_url} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                ? <img src={optimizeImg(selectedProfile.photo_url)} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               }
               <div onClick={() => setSelectedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
@@ -5028,7 +5037,7 @@ function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClos
       <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         {/* Photo */}
         <div style={{ height: 220, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
-          {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+          {p.photo_url ? <img src={optimizeImg(p.photo_url)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
           <div onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
           <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
             <div style={{  fontSize: "1.6rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age} ans</div>
@@ -5391,7 +5400,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       height: window.innerWidth >= 768 ? 280 : 220 }}>
       {/* Photo plein cadre */}
       {p.photo_url
-        ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: 18 }} loading="lazy" />
+        ? <img src={optimizeImg(p.photo_url)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: 18 }} loading="lazy" />
         : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>}
@@ -5444,7 +5453,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       <div onClick={onView} style={{ width: 52, height: 52, borderRadius: 13, overflow: "hidden",
         flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", cursor: "pointer" }}>
         {p.photo_url
-          ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+          ? <img src={optimizeImg(p.photo_url)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
           : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>}
@@ -5827,7 +5836,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             onClick={e => e.stopPropagation()}>
             <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
               {selectedProfile.photo_url
-                ? <img src={selectedProfile.photo_url} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                ? <img src={optimizeImg(selectedProfile.photo_url)} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
               <div onClick={() => setSelectedProfile(null)}
                 style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)",
@@ -6126,7 +6135,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     {selectedMatch && p && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedMatch(null)}>
       <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 220, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
-          {p.photo_url ? <img src={p.photo_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+          {p.photo_url ? <img src={optimizeImg(p.photo_url)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
           <div onClick={() => setSelectedMatch(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
             <div style={{  fontSize: "1.5rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age} ans</div>
