@@ -6834,8 +6834,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     }
     if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
     if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
-    const quotedContent = replyTo ? (replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content.replace(/\]/g, "）").substring(0, 60)) : "";
-    const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${quotedContent}]\n` : "";
+    const rawQuoted = replyTo ? (replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
+    // Supprimer la citation imbriquée si le message cité est lui-même une réponse
+    const cleanQuoted = rawQuoted.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/\]/g, "）").substring(0, 60);
+    const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${cleanQuoted}]\n` : "";
     const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: prefix + text, is_read: false });
     if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); setReplyTo(null); }
   }, [auth, open, text, replyTo, msgCount, onShowPremium]);
