@@ -9820,7 +9820,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     } catch { if (mailModal) loadMailHistory(mailModal.user.id); }
   };
 
+  const [mailSending, setMailSending] = useState<string | null>(null);
   const sendMailFunction = async (fnName: string, label: string, user: AdminProfile) => {
+    if (mailSending) return;
+    setMailSending(fnName);
     try {
       await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
         method: "POST",
@@ -9832,11 +9835,22 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
         body: JSON.stringify({ user_id: user.id, admin_id: auth.userId, reason: `[EMAIL] ${label}`, warning_number: 99, acknowledged: true }),
       });
-      showToast(`Email "${label}" envoyé à ${user.name} ✓`, "success");
+      showToast(`✅ Email "${label}" envoyé à ${user.name} !`, "success");
       loadMailHistory(user.id);
-    } catch { showToast("Erreur lors de l'envoi", "error"); }
+    } catch { showToast("❌ Erreur lors de l'envoi", "error"); }
+    setMailSending(null);
   };
-  const [broadcastModal, setBroadcastModal] = useState(false);
+  const [showPremiumList, setShowPremiumList] = useState(false);
+  const [premiumProfiles, setPremiumProfiles] = useState<AdminProfile[]>([]);
+  const [premiumListLoading, setPremiumListLoading] = useState(false);
+
+  useEffect(() => {
+    if (!showPremiumList) return;
+    setPremiumListLoading(true);
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?is_premium=eq.true&select=id,name,age,city,gender,photo_url,premium_until,created_at&order=premium_until.desc&limit=100`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    }).then(r => r.json()).then(data => { setPremiumProfiles(Array.isArray(data) ? data : []); setPremiumListLoading(false); }).catch(() => setPremiumListLoading(false));
+  }, [showPremiumList]);
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
   const [broadcastExpiresAt, setBroadcastExpiresAt] = useState("");
@@ -10834,22 +10848,22 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div onClick={() => {
                   if (!mailModal.user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
                   sendMailFunction("send-bienvenue", "Email de bienvenue", mailModal.user);
-                }} style={{ padding: "12px 14px", borderRadius: 12, cursor: "pointer", background: "#f0fff4", border: "1.5px solid #c3e6cb", fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                }} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === "send-bienvenue" ? "not-allowed" : "pointer", background: mailSending === "send-bienvenue" ? "#e8f5e9" : "#f0fff4", border: `1.5px solid ${mailSending === "send-bienvenue" ? "#a5d6a7" : "#c3e6cb"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: mailSending && mailSending !== "send-bienvenue" ? 0.5 : 1 }}>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#1A5C3A", flexShrink: 0 }} />
-                  Email de bienvenue
+                  {mailSending === "send-bienvenue" ? "Envoi en cours..." : "Email de bienvenue"}
                 </div>
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#8e44ad", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Relance inactivité</div>
                 {[
-                  { fn: "send-relance-5j", label: "Inactivité 5 jours — Tu nous manques !" },
-                  { fn: "send-relance-15j", label: "Inactivité 15 jours — Des profils t'attendent" },
-                  { fn: "send-relance-30j", label: "Inactivité 30 jours — Compte bientôt supprimé" },
+                  { fn: "send-relance-5j", label: "Inactivité 5 jours - Tu nous manques !" },
+                  { fn: "send-relance-15j", label: "Inactivité 15 jours - Des profils t'attendent" },
+                  { fn: "send-relance-30j", label: "Inactivité 30 jours - Compte bientôt supprimé" },
                 ].map(item => (
                   <div key={item.fn} onClick={() => {
                     if (!mailModal.user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
                     sendMailFunction(item.fn, item.label, mailModal.user);
-                  }} style={{ padding: "12px 14px", borderRadius: 12, cursor: "pointer", background: "#faf5ff", border: "1.5px solid #e8d5f5", fontSize: "0.83rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", display: "flex", alignItems: "center", gap: 10 }}>
+                  }} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === item.fn ? "not-allowed" : "pointer", background: mailSending === item.fn ? "#f3e8ff" : "#faf5ff", border: `1.5px solid ${mailSending === item.fn ? "#d8b4fe" : "#e8d5f5"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", display: "flex", alignItems: "center", gap: 10, opacity: mailSending && mailSending !== item.fn ? 0.5 : 1 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#8e44ad", flexShrink: 0 }} />
-                    {item.label}
+                    {mailSending === item.fn ? "Envoi en cours..." : item.label}
                   </div>
                 ))}
               </div>
@@ -10920,7 +10934,44 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         </div>
       )}
-      {/* Modale PIN */}
+      {/* ── Modal liste Premium ── */}
+      {showPremiumList && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg,#D4A843,#b8922a)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff" }}>⭐ Membres Premium</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{premiumProfiles.length} membre{premiumProfiles.length > 1 ? "s" : ""} actif{premiumProfiles.length > 1 ? "s" : ""}</div>
+              </div>
+              <button onClick={() => setShowPremiumList(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            {/* Liste */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+              {premiumListLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement...</div>
+              ) : premiumProfiles.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Aucun membre Premium</div>
+              ) : premiumProfiles.map(p => (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden" }}>
+                    {p.photo_url && <img src={p.photo_url ?? undefined} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{p.name}</div>
+                    <div style={{ fontSize: "0.72rem", color: "#888" }}>{p.age} ans · {p.city}</div>
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: "#D4A843", fontWeight: 700, textAlign: "right", flexShrink: 0 }}>
+                    {p.premium_until ? `Expire le\n${new Date(p.premium_until).toLocaleDateString("fr-FR")}` : "Premium"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {pinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
@@ -11606,14 +11657,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 14 }}>Statistiques avancées</h3>
                 <div data-admgrid="adv" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
                   {([
-                    ["Nouveaux aujourd'hui", stats.todayUsers, "#27ae60"],
-                    ["Premium actifs", stats.premiumUsers, "#D4A843"],
-                    ["Profils vérifiés", stats.verifiedUsers, G.vert],
-                    ["Profils bannis", stats.bannedUsers, "#e74c3c"],
-                  ] as [string, number, string][]).map(([label, val, color]) => (
-                    <div key={label} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25` }}>
+                    ["Nouveaux aujourd'hui", stats.todayUsers, "#27ae60", null],
+                    ["Premium actifs", stats.premiumUsers, "#D4A843", "premium"],
+                    ["Profils vérifiés", stats.verifiedUsers, G.vert, null],
+                    ["Profils bannis", stats.bannedUsers, "#e74c3c", null],
+                  ] as [string, number, string, string | null][]).map(([label, val, color, action]) => (
+                    <div key={label} onClick={() => { if (action === "premium") setShowPremiumList(true); }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
                       <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val}</div>
                       <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>{label}</div>
+                      {action && <div style={{ position: "absolute", top: 8, right: 8, fontSize: "0.55rem", color, fontWeight: 700, opacity: 0.7 }}>Voir ›</div>}
                     </div>
                   ))}
                 </div>
@@ -11668,27 +11720,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               )}
 
-              {/* Derniers inscrits */}
-              {stats.recentUsers.length > 0 && (
-                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Derniers inscrits</h3>
-                  {stats.recentUsers.map(u => (
-                    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${G.gris}` }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 5 }}>
-                          {u.name}{u.is_premium && <IcoStar />}
-                        </div>
-                        <div style={{ fontSize: "0.72rem", color: "#888" }}>{u.city} · {u.age} ans</div>
-                      </div>
-                      <div style={{ fontSize: "0.68rem", color: "#aaa" }}>{formatDate(u.created_at)}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
+              {/* Derniers inscrits - déplacé avant admgrid-row */}
               </div>{/* /admgrid-row */}
 
               {/* ── LIKES ── */}
@@ -11741,6 +11773,27 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ background: "rgba(231,76,60,0.1)", borderRadius: 8, padding: "4px 8px", fontSize: "0.78rem", fontWeight: 700, color: G.rouge }}>
                         ❤️ {p.count}
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Derniers inscrits */}
+              {stats.recentUsers.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Derniers inscrits</h3>
+                  {stats.recentUsers.map(u => (
+                    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${G.gris}` }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 5 }}>
+                          {u.name}{u.is_premium && <IcoStar />}
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: "#888" }}>{u.city} · {u.age} ans</div>
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "#aaa" }}>{formatDate(u.created_at)}</div>
                     </div>
                   ))}
                 </div>
