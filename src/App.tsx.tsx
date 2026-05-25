@@ -1353,11 +1353,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
               {/* Slogan */}
               <div style={{ textAlign: "center", marginBottom: 18, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
-                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#1a1a1a", lineHeight: 1.25, WebkitTextStroke: "0.5px white", textShadow: "none" }}>
-                  Trouve ton<br/>
-                  <em style={{ color: "#C0392B", fontStyle: "italic", display: "inline-block", animation: "amePulse 2.5s ease-in-out infinite" }}>âme sœur</em><br/>
-                  Congolais.e
-                </div>
+                <div style={{ textAlign: "center", lineHeight: 1.2, WebkitTextStroke: "0.5px white" }}>
+                <div style={{ fontSize: "1rem", fontWeight: 700, color: "#fff", letterSpacing: "0.15em", textTransform: "uppercase" }}>Trouve ton</div>
+                <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#fff", fontStyle: "italic", fontFamily: "Georgia, serif", letterSpacing: "-1px", animation: "amePulse 2.5s ease-in-out infinite", display: "inline-block" }}>âme sœur</div>
+                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#fff", letterSpacing: "0.08em", textTransform: "uppercase" }}>Congolais.e</div>
+              </div>
               </div>
 
               {/* 3 points */}
