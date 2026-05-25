@@ -7301,8 +7301,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         const replyMatch = m.content.match(/^\[↩ (.+?) : ([\s\S]+?)\]\n([\s\S]*)$/);
                         if (replyMatch) {
                           const [, who, quoted, body] = replyMatch;
-                          // Nettoyer la citation imbriquée
-                          const cleanQuoted = quoted.replace(/^\[↩ .+? : /, "").replace(/\]\s*/, "").replace(/[）]/g, "]");
+                          // Supprimer toute citation imbriquée et nettoyer
+                          const cleanQuoted = quoted
+                            .replace(/\[↩[^\]]*\]\s*/g, "")
+                            .replace(/[）]/g, "]")
+                            .trim()
+                            .substring(0, 80);
                           const isPhoto = cleanQuoted === "Photo";
                           return <>
                             <div style={{ background: isMine ? "rgba(0,0,0,0.18)" : "rgba(192,57,43,0.07)", borderRadius: 8, marginBottom: 6, overflow: "hidden", display: "flex" }}>
