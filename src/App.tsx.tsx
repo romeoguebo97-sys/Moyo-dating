@@ -5123,62 +5123,59 @@ const Badge = memo(function Badge({ label, color = G.rouge, bg = "rgba(192,57,43
 
 // Bloc flou Premium CTA
 function PremiumBlur({ count, label, onShowPremium, gender, isViews }: { count: number; label: string; onShowPremium: () => void; gender?: string; isViews?: boolean }) {
+  const titre = count > 0
+    ? isViews
+      ? gender === "Femme"
+        ? count === 1 ? "1 homme a consulté ton profil" : `${count} hommes ont consulté ton profil`
+        : count === 1 ? "1 femme a consulté ton profil" : `${count} femmes ont consulté ton profil`
+      : gender === "Femme"
+        ? count === 1 ? "1 homme a liké ton profil" : `${count} hommes ont liké ton profil`
+        : count === 1 ? "1 femme a liké ton profil" : `${count} femmes ont liké ton profil`
+    : label;
+  const btnLabel = isViews ? "Voir qui m'a rendu visite" : "Voir qui m'a liké";
   return (
-    <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", minHeight: 200 }}>
-      {/* Cartes fantômes floutées */}
-      <div style={{ filter: "blur(7px)", pointerEvents: "none", userSelect: "none" }}>
+    <div style={{ borderRadius: 16, overflow: "hidden", background: G.blanc, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
+      {/* Cartes fantômes floutées en arrière-plan */}
+      <div style={{ filter: "blur(6px)", pointerEvents: "none", userSelect: "none", padding: "12px 12px 80px" }}>
         {[1,2,3].map(i => (
-          <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc,
-            borderRadius: 16, padding: 12, marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}>
-            <div style={{ width: 56, height: 56, borderRadius: 14, background: `linear-gradient(135deg,#E8C5A0,#C47A4A)`, flexShrink: 0 }} />
+          <div key={i} style={{ display: "flex", gap: 12, alignItems: "center",
+            background: "#f9f5f2", borderRadius: 12, padding: 10, marginBottom: 8 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 10, background: `linear-gradient(135deg,#E8C5A0,#C47A4A)`, flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ height: 14, background: "#ddd", borderRadius: 50, width: "60%", marginBottom: 8 }} />
-              <div style={{ height: 10, background: "#eee", borderRadius: 50, width: "40%" }} />
+              <div style={{ height: 12, background: "#ddd", borderRadius: 50, width: "55%", marginBottom: 7 }} />
+              <div style={{ height: 9, background: "#eee", borderRadius: 50, width: "35%" }} />
             </div>
           </div>
         ))}
       </div>
-      {/* Overlay CTA */}
+      {/* CTA par-dessus — uniquement icône + texte, PAS les profils */}
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: 14, padding: 24,
-        background: "rgba(255,255,255,0.96)", backdropFilter: "blur(8px)" }}>
-        <div style={{ width: 52, height: 52, borderRadius: "50%",
+        alignItems: "center", justifyContent: "center", gap: 10, padding: "20px 24px 80px" }}>
+        <div style={{ width: 48, height: 48, borderRadius: "50%",
           background: `linear-gradient(135deg,${G.or},#B8860B)`,
           display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="#111" stroke="none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#111" stroke="none">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
           </svg>
         </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#111", marginBottom: 6 }}>
-            {count > 0
-              ? isViews
-                ? gender === "Femme"
-                  ? count === 1 ? "1 homme a consulté ton profil" : `${count} hommes ont consulté ton profil`
-                  : count === 1 ? "1 femme a consulté ton profil" : `${count} femmes ont consulté ton profil`
-                : gender === "Femme"
-                  ? count === 1 ? "1 homme a liké ton profil" : `${count} hommes ont liké ton profil`
-                  : count === 1 ? "1 femme a liké ton profil" : `${count} femmes ont liké ton profil`
-              : label}
-          </div>
-          <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, margin: "0 auto", textAlign: "center" }}>
-            {count > 0
-              ? isViews
-                ? "Passe Premium pour voir qui s'intéresse à toi."
-                : "Passe Premium pour voir qui s'intéresse à toi."
-              : isViews
-                ? "Passe Premium pour voir tes visiteurs."
-                : "Passe Premium pour voir qui s'intéresse à toi."}
-          </div>
+        <div style={{ fontWeight: 800, fontSize: "1rem", color: "#111", textAlign: "center", lineHeight: 1.4 }}>
+          {titre}
         </div>
+        <div style={{ fontSize: "0.8rem", color: "#555", textAlign: "center" }}>
+          Passe Premium pour voir qui s'intéresse à toi.
+        </div>
+      </div>
+      {/* Bouton en bas — fond blanc pour le séparer du flou */}
+      <div style={{ background: G.blanc, padding: "12px 16px", borderTop: `1px solid ${G.gris}` }}>
         <button onClick={onShowPremium}
-          style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111",
-            border: "none", borderRadius: 50, padding: "13px 32px", fontWeight: 800,
-            fontSize: "0.92rem", cursor: "pointer", boxShadow: "0 4px 18px rgba(212,168,67,0.5)",
-            display: "flex", alignItems: "center", gap: 8,
-            letterSpacing: "0.01em" }}>
-          {isViews ? "Voir qui m'a rendu visite" : "Voir qui m'a liké"}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#111" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          style={{ width: "100%", background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111",
+            border: "none", borderRadius: 50, padding: "12px 24px", fontWeight: 800,
+            fontSize: "0.9rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(212,168,67,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          {btnLabel}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#111" stroke="none">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
         </button>
       </div>
     </div>
