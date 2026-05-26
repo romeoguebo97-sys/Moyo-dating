@@ -534,9 +534,10 @@ const sb = {
 
 const GLOBAL_CSS = `
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
-  html{overflow-x:hidden;width:100%;max-width:100vw}
-  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%}
-  #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh}
+  html{overflow-x:hidden;width:100%;max-width:100vw;background-color:#FFFFFF}
+  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;background-color:#FFFFFF}
+  html{background-color:#FFFFFF}
+  #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;background-color:#FFFFFF}
   /* Fix clavier iOS - la barre reste fixe au-dessus du clavier */
   [data-chat-container]{height:100%;height:-webkit-fill-available;}
   @supports(height:100dvh){[data-chat-container]{height:100dvh;}}
