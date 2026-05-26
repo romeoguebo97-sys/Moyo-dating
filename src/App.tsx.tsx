@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "
 
 const SUPABASE_URL = "https://mcswcapxpruiffzrxfvl.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nx44ipF3_X98flDVXxBZ5A_aztvDdgN";
-const APP_URL = "https://moyo-congo-appe.vercel.app";
+const APP_URL = "https://www.moyo-congo.com";
 
 const VILLES = [
   "Brazzaville","Pointe-Noire","Dolisie","Nkayi","Owando",
