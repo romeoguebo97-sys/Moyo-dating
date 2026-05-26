@@ -4658,7 +4658,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : "min(56vw, 260px)", maxHeight: isWide ? "calc(100vh - 320px)" : "min(56vw, 260px)", flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : 180, position: "relative" }}>{p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
+  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : "min(65vw, 320px)", maxHeight: isWide ? "calc(100vh - 280px)" : "min(65vw, 320px)", flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : 200, position: "relative" }}>{p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div>
     {/* 3 traits menu - single tap/click → bottom sheet */}
@@ -13136,7 +13136,42 @@ export default function App() {
   // Défini ici (pas dans useEffect) pour être stable dès le premier render
   const authRef = useRef<Auth | null>(null);
   const handleSessionExpired = React.useCallback(() => {
-    console.warn("[Moyo][Session] Session expirée - déconnexion propre");
+    // Tenter un refresh silencieux avant de déconnecter
+    const saved = localStorage.getItem("moyo_session");
+    if (saved) {
+      try {
+        const a: Auth = JSON.parse(saved);
+        if (a?.refreshToken) {
+          console.log("[Moyo][Session] Token expiré - tentative refresh silencieux…");
+          sb.refreshSession(a.refreshToken).then(refreshed => {
+            if (refreshed) {
+              const newExpiresAt = Date.now() + refreshed.expires_in * 1000;
+              const updated: Auth = { ...a, token: refreshed.access_token, refreshToken: refreshed.refresh_token, expiresAt: newExpiresAt };
+              authRef.current = updated;
+              try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
+              setAuth(updated);
+              console.log("[Moyo][Session] Refresh silencieux réussi - session prolongée");
+            } else {
+              // Refresh impossible → déconnecter uniquement là
+              console.warn("[Moyo][Session] Refresh silencieux échoué - déconnexion");
+              localStorage.removeItem("moyo_session");
+              authRef.current = null;
+              setAuth(null);
+              setPage("landing");
+              setUnreadCount(0);
+              setNotifCount(0);
+              setLikesReceived(0);
+            }
+          }).catch(() => {
+            // Erreur réseau → garder la session, l'utilisateur restera connecté
+            console.warn("[Moyo][Session] Refresh échoué (réseau) - session conservée");
+          });
+          return; // Ne pas déconnecter tout de suite
+        }
+      } catch {}
+    }
+    // Pas de refresh token → déconnecter
+    console.warn("[Moyo][Session] Session expirée sans refresh token - déconnexion");
     localStorage.removeItem("moyo_session");
     authRef.current = null;
     setAuth(null);
@@ -13234,11 +13269,11 @@ export default function App() {
                 try { localStorage.setItem("moyo_session", JSON.stringify(updated)); } catch {}
                 setAuth(updated);
               } else {
-                // Refresh échoué → pas de session utilisable
-                console.warn("[Moyo][Session] Refresh préventif échoué - retour landing");
-                localStorage.removeItem("moyo_session");
-                setAuth(null);
-                setPage("landing");
+                // Refresh échoué → garder la session locale et laisser l'utilisateur dedans
+                // Il sera re-authentifié automatiquement à la prochaine action réseau
+                console.warn("[Moyo][Session] Refresh préventif échoué - session conservée");
+                authRef.current = a;
+                setAuth(a);
               }
               setSessionLoaded(true);
             });
@@ -13259,14 +13294,9 @@ export default function App() {
           sb.query<Profile>(a.token, "profiles", `?id=eq.${a.userId}&select=id,is_premium,is_admin,admin_level`, a.refreshToken, handleTokenRefreshed)
             .then(profiles => {
               if (!profiles || profiles.length === 0) {
-                if (authRef.current?.token !== a.token) {
-                  console.log("[Moyo][Session] Token refreshé entre-temps - pas de déconnexion");
-                  return;
-                }
-                console.warn("[Moyo][Session] Profil introuvable au chargement - déconnexion");
-                localStorage.removeItem("moyo_session");
-                setAuth(null);
-                setPage("landing");
+                // Profil introuvable = possible erreur réseau → ne pas déconnecter
+                console.warn("[Moyo][Session] Profil introuvable - session conservée (peut être hors ligne)");
+                return;
               } else {
                 const p = profiles[0];
                 const newAdminLevel = (p as any).admin_level || undefined;
