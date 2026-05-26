@@ -1295,6 +1295,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Messages → choisissez une photo. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
       { icon: "Q", titre: "Comment créer mon compte ?", desc: "L'inscription est gratuite et rapide en 3 étapes : email + mot de passe, photo de profil, puis informations personnelles. Votre compte est actif immédiatement." },
       { icon: "Q", titre: "Je n'ai pas reçu l'email de confirmation ?", desc: "Vérifiez vos spams ou courriers indésirables. Si vous ne le trouvez pas, contactez notre équipe via l'Assistant Moyo avec votre adresse email." },
+      { icon: "Q", titre: "Je me suis retrouvé déconnecté, pourquoi ?", desc: "Moyo essaie toujours de maintenir votre session active automatiquement. Si une déconnexion survient, elle est due à une expiration de session trop longue sans activité. Il vous suffit de vous reconnecter une fois et la session reste active." },
+      { icon: "Q", titre: "Puis-je supprimer ma conversation avec Assistance Moyo ?", desc: "Oui. Dans Messages → conversation Assistance Moyo → icône 🗑️ en haut à droite → Supprimer. L'historique disparaît de votre côté. Notre équipe conserve les échanges pour le suivi." },
+      { icon: "Q", titre: "Combien de temps avant qu'on me réponde sur Assistance Moyo ?", desc: "Notre équipe répond sous 24h. Le statut 'Répond sous 24h' s'affiche en haut de la conversation." },
     ]},
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
       { icon: "shield", titre: "Données sécurisées", desc: "Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers." },
@@ -4933,10 +4936,14 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
           <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>
             {auth.isPremium
               ? count > 0 ? `${count} personne${count > 1 ? "s ont" : " a"} liké ton profil` : "Personne n'a encore liké ton profil"
-              : count > 0 ? `${count} personne${count > 1 ? "s ont" : " a"} liké ton profil` : "Des personnes ont liké ton profil"}
+              : count > 0
+                ? myGender === "Femme"
+                  ? count === 1 ? "Félicitations ! 1 homme a liké ton profil" : `Félicitations ! ${count} hommes ont liké ton profil`
+                  : count === 1 ? "Félicitations ! 1 femme a liké ton profil" : `Félicitations ! ${count} femmes ont liké ton profil`
+                : "Des personnes ont liké ton profil"}
           </div>
           <div style={{ fontSize: "0.78rem", opacity: 0.85 }}>
-            {auth.isPremium ? "Accès Premium activé ✓" : "Passe Premium pour découvrir qui 👀"}
+            {auth.isPremium ? "Accès Premium activé ✓" : "Passe Premium pour voir qui s'est intéressé(e) à toi"}
           </div>
         </div>
         {!auth.isPremium && count > 0 && (
@@ -5110,7 +5117,7 @@ const Badge = memo(function Badge({ label, color = G.rouge, bg = "rgba(192,57,43
 });
 
 // Bloc flou Premium CTA
-function PremiumBlur({ count, label, onShowPremium }: { count: number; label: string; onShowPremium: () => void }) {
+function PremiumBlur({ count, label, onShowPremium, gender, isViews }: { count: number; label: string; onShowPremium: () => void; gender?: string; isViews?: boolean }) {
   return (
     <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", minHeight: 200 }}>
       {/* Cartes fantômes floutées */}
@@ -5138,18 +5145,35 @@ function PremiumBlur({ count, label, onShowPremium }: { count: number; label: st
           </svg>
         </div>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#111", marginBottom: 6 }}>
-            {count > 0 ? `${count} ${label}` : label}
+          <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#111", marginBottom: 6 }}>
+            {count > 0
+              ? isViews
+                ? gender === "Femme"
+                  ? count === 1 ? "1 homme a consulté ton profil" : `${count} hommes ont consulté ton profil`
+                  : count === 1 ? "1 femme a consulté ton profil" : `${count} femmes ont consulté ton profil`
+                : gender === "Femme"
+                  ? count === 1 ? "1 homme a liké ton profil" : `${count} hommes ont liké ton profil`
+                  : count === 1 ? "1 femme a liké ton profil" : `${count} femmes ont liké ton profil`
+              : label}
           </div>
-          <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5 }}>
-            Passe Premium pour tout voir
+          <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.6, maxWidth: 260, margin: "0 auto" }}>
+            {count > 0
+              ? isViews
+                ? "Découvre qui s'intéresse à ton profil. Passe Premium pour voir leur identité."
+                : "Découvre qui s'intéresse à toi. Passe Premium et entre en contact."
+              : isViews
+                ? "Passe Premium pour ne manquer aucun visiteur"
+                : "Passe Premium pour tout voir et ne manquer aucune opportunité"}
           </div>
         </div>
         <button onClick={onShowPremium}
           style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111",
-            border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700,
-            fontSize: "0.88rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(212,168,67,0.4)" }}>
-          Passer à Premium <svg width="11" height="11" viewBox="0 0 24 24" fill="#111" stroke="none" style={{ display: "inline", verticalAlign: "middle", marginLeft: 3 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            border: "none", borderRadius: 50, padding: "13px 32px", fontWeight: 800,
+            fontSize: "0.92rem", cursor: "pointer", boxShadow: "0 4px 18px rgba(212,168,67,0.5)",
+            display: "flex", alignItems: "center", gap: 8,
+            letterSpacing: "0.01em" }}>
+          {isViews ? "Voir qui m'a rendu visite" : "Voir qui m'a liké"}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#111" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </button>
       </div>
     </div>
@@ -5519,7 +5543,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                 {count > 0 ? `${count} personne${count > 1?"s ont":" a"} liké ton profil` : "Aucun like reçu pour l'instant"}
               </div>
               <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>
-                {isPremiumReal ? "Historique complet activé" : "Passe Premium pour voir qui"}
+                {isPremiumReal ? "Historique complet activé" : "Passe Premium pour découvrir leur identité"}
               </div>
             </div>
             {!isPremiumReal && count > 0 && (
@@ -5594,6 +5618,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                 <PremiumBlur
                   count={count}
                   label={count > 0 ? `personne${count>1?"s ont":" a"} liké ton profil` : "Découvre qui t'a liké"}
+                  gender={myGender}
                   onShowPremium={() => onShowPremium("Découvre qui a liké ton profil en passant Premium !")}
                 />
               )}
@@ -5683,7 +5708,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                {viewsCount > 0 ? `${viewsCount} visiteur${viewsCount>1?"s ont":" a"} consulté ton profil` : "Aucune visite pour l'instant"}
+                {viewsCount > 0
+                ? myGender === "Femme"
+                  ? viewsCount === 1 ? "1 homme a consulté ton profil" : `${viewsCount} hommes ont consulté ton profil`
+                  : viewsCount === 1 ? "1 femme a consulté ton profil" : `${viewsCount} femmes ont consulté ton profil`
+                : "Aucune visite pour l'instant"}
               </div>
               <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>
                 {isPremiumReal ? "Historique complet activé" : "Passe Premium pour voir qui"}
@@ -5759,6 +5788,8 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
               ) : (
                 <PremiumBlur
                   count={viewsCount}
+                  gender={myGender}
+                  isViews={true}
                   label={viewsCount > 0 ? `personne${viewsCount>1?"s ont":" a"} visité ton profil` : "Découvre qui t'a rendu visite"}
                   onShowPremium={() => onShowPremium("Découvre qui a visité ton profil en passant Premium !")}
                 />
@@ -6806,7 +6837,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
 
   const deleteConv = async () => {
     if (!open) return;
-    await sb.delete(auth.token, "messages", `?match_id=eq.${open.id}`);
+    if (open.id === "__support__") {
+      // Supprimer uniquement les messages envoyés par l'utilisateur (SUPPORT_USER)
+      // Les réponses admin (SUPPORT_REPLY) sont conservées côté dashboard
+      await sb.delete(auth.token, "reports", `?reporter_id=eq.${auth.userId}&reason=like.*%5BSUPPORT_USER%5D*`).catch(() => {});
+      // Masquer côté UI uniquement — vider les msgs localement
+      setMsgs([]);
+    } else {
+      await sb.delete(auth.token, "messages", `?match_id=eq.${open.id}`);
+    }
     setShowDeleteConv(false); setOpen(null); loadConvs();
   };
 
@@ -7036,7 +7075,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>{open.partner?.name}</div>
-          {(() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
+          {open.partner?.id === SUPPORT_TEAM_ID ? <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>● Répond sous 24h</div> : (() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
         {/* Bouton cadeau - offrir Premium : visible UNIQUEMENT aux utilisateurs Premium */}
@@ -11275,7 +11314,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["En attente (tous)", "Vue par défaut. Affiche tous les signalements non encore traités. Le badge rouge indique le nombre en attente."],
                     ["Profils", "Filtre les signalements manuels d'utilisateurs contre d'autres profils. À examiner en priorité."],
                     ["Système", "Signalements générés automatiquement par la modération (insultes, arnaques, contenus sexuels, alertes techniques)."],
-                    ["Messagerie", "Messages envoyés par les utilisateurs via Guide → Contacter notre équipe. Les admins peuvent répondre directement, la réponse apparaît dans la messagerie utilisateur sous le nom Assistance Moyo."],
+                    ["Messagerie", "Boîte de réception regroupant tous les échanges avec les utilisateurs (signalements + support). Chaque conversation est groupée par utilisateur avec photo, nom, dernier message et badge non lu. Le bouton Répondre ouvre une modale pour répondre directement — le message arrive dans la messagerie de l'utilisateur sous le nom Assistance Moyo (\"Répond sous 24h\")."],
                     ["Archivés", "Signalements traités, rejetés ou ayant entraîné un bannissement. Chaque archive peut être supprimée définitivement. Le bouton 'Tout supprimer' nettoie toutes les archives d'un coup."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
@@ -11301,6 +11340,29 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   ] as [string, string, string][]).map(([label, color, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
                       <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, marginTop: 3, flexShrink: 0 }} />
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 5b - Carte de signalement profil */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Carte de signalement — Profil</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Signalé par (bleu)", "Bloc bleu en haut de la carte : photo + nom + âge + ville de la personne qui a fait le signalement. Le bouton 'Répondre' envoie un message directement dans sa messagerie Assistance Moyo."],
+                    ["Profil signalé (rouge)", "Bloc rouge : photo + nom + âge + ville du profil accusé. Un badge ⚠️ x/3 s'affiche si ce profil a déjà des avertissements. Un badge 'Banni' s'affiche s'il est déjà banni."],
+                    ["Bouton Répondre", "Sur le bloc 'Signalé par' — ouvre une modale pour écrire un message à la personne qui a signalé. Elle reçoit la réponse dans Messages → Assistance Moyo."],
+                    ["Bouton Voir profil", "Ouvre la fiche complète du profil concerné (signalé ou support selon le contexte)."],
+                    ["Bouton Avertir", "Envoie un avertissement officiel au profil signalé. Il voit un modal à sa prochaine connexion."],
+                    ["Bouton Traité / Rejeter / Bannir", "Actions finales sur le signalement. Traité = pris en charge. Rejeter = sans suite. Bannir = interdit d'accès."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
                       <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
                     </div>
                   ))}
@@ -12453,8 +12515,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 const isLoading = reportActionLoading === r.id;
                 const alreadyHandled = r.status !== "pending";
                 const isArchiveView = reportFilter === "archived";
-                const supportUserId = r.reason?.startsWith(SUPPORT_PREFIX_REPLY) ? r.reported_id : r.reporter_id;
-                const targetProfileId = isSupport ? supportUserId : (r.reported_id || r.reporter_id);
+                // Pour répondre : toujours cibler le reporter_id (la personne qui a signalé)
+                // reported_id = profil accusé (on lui applique des actions, pas des messages)
+                const supportUserId = r.reporter_id;
+                const targetProfileId = isSupport ? supportUserId : r.reported_id;
                 return (
                   <div key={r.id || i} style={{ padding: "14px 0", borderBottom: i < filteredReports.length - 1 ? `1px solid ${G.gris}` : "none" }}>
                     {/* Ligne 1 : badges catégorie + statut */}
@@ -12493,7 +12557,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               </div>
                             </div>
                             {!isSupport && reporterP && (
-                              <button onClick={() => setSupportReply({ report: { ...r, reporter_id: r.reporter_id }, userId: r.reporter_id })} style={{ flexShrink: 0, background: "rgba(26,92,58,0.1)", color: G.vert, border: "1px solid rgba(26,92,58,0.2)", borderRadius: 6, padding: "3px 8px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer" }}>
+                              <button onClick={() => setSupportReply({ report: r, userId: r.reporter_id })} style={{ flexShrink: 0, background: "rgba(26,92,58,0.1)", color: G.vert, border: "1px solid rgba(26,92,58,0.2)", borderRadius: 6, padding: "3px 8px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer" }}>
                                 Répondre
                               </button>
                             )}
