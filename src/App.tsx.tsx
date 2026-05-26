@@ -4869,6 +4869,11 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
   const [activeTab, setActiveTab] = useState<"likes" | "visitors">("likes");
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [liking, setLiking] = useState(false);
+  const [myGender, setMyGender] = useState("");
+  useEffect(() => {
+    sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
+      .then(res => { if (res[0]) setMyGender(res[0].gender); });
+  }, []);
 
   const handleLikeFromBanner = async (p: Profile) => {
     setLiking(true);
@@ -5156,14 +5161,14 @@ function PremiumBlur({ count, label, onShowPremium, gender, isViews }: { count: 
                   : count === 1 ? "1 femme a liké ton profil" : `${count} femmes ont liké ton profil`
               : label}
           </div>
-          <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.6, maxWidth: 260, margin: "0 auto" }}>
+          <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, maxWidth: 240, margin: "0 auto" }}>
             {count > 0
               ? isViews
-                ? "Découvre qui s'intéresse à ton profil. Passe Premium pour voir leur identité."
-                : "Découvre qui s'intéresse à toi. Passe Premium et entre en contact."
+                ? "Découvre qui s'intéresse à toi. Passe Premium pour les voir."
+                : "Découvre qui s'intéresse à toi. Passe Premium pour leur écrire."
               : isViews
-                ? "Passe Premium pour ne manquer aucun visiteur"
-                : "Passe Premium pour tout voir et ne manquer aucune opportunité"}
+                ? "Passe Premium pour voir qui s'intéresse à ton profil."
+                : "Passe Premium pour voir qui s'intéresse à toi."}
           </div>
         </div>
         <button onClick={onShowPremium}
@@ -5201,6 +5206,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   // ── Sub-tab state ──
   const [likesSubTab, setLikesSubTab] = useState<"received" | "sent">("received");
   const [visitorsSubTab, setVisitorsSubTab] = useState<"visitors" | "visited">("visitors");
+  const [myGender, setMyGender] = useState("");
+  useEffect(() => {
+    sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
+      .then(res => { if (res[0]) setMyGender(res[0].gender); });
+  }, []);
 
   // ── Données likes ──
   const [count, setCount] = useState(0);
