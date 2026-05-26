@@ -4869,11 +4869,6 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
   const [activeTab, setActiveTab] = useState<"likes" | "visitors">("likes");
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [liking, setLiking] = useState(false);
-  const [myGender, setMyGender] = useState("");
-  useEffect(() => {
-    sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
-      .then(res => { if (res[0]) setMyGender(res[0].gender); });
-  }, []);
 
   const handleLikeFromBanner = async (p: Profile) => {
     setLiking(true);
@@ -5229,11 +5224,6 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
   const [liking, setLiking] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [isPremiumReal, setIsPremiumReal] = useState(auth.isPremium);
-  const [myGender, setMyGender] = useState("");
-  useEffect(() => {
-    sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
-      .then(res => { if (res[0]) setMyGender(res[0].gender); });
-  }, []);
   const loadData = async (premiumOverride?: boolean) => {
     const isPrem = premiumOverride !== undefined ? premiumOverride : isPremiumReal;
     setLoading(true);
