@@ -5141,7 +5141,7 @@ function PremiumBlur({ count, label, onShowPremium, gender, isViews }: { count: 
       {/* Overlay CTA */}
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center", gap: 14, padding: 24,
-        background: "rgba(255,255,255,0.72)", backdropFilter: "blur(2px)" }}>
+        background: "rgba(255,255,255,0.96)", backdropFilter: "blur(8px)" }}>
         <div style={{ width: 52, height: 52, borderRadius: "50%",
           background: `linear-gradient(135deg,${G.or},#B8860B)`,
           display: "flex", alignItems: "center", justifyContent: "center" }}>
