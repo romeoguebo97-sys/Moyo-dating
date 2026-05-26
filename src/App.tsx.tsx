@@ -6334,11 +6334,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   useEffect(() => { if (open) loadMsgs(open); }, [open]);
 
   // Scroll immédiat en bas à l'ouverture de la conversation
+  const justOpenedRef = useRef(false);
   useEffect(() => {
-    if (open && msgs.length > 0) {
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "instant" });
-      }, 50);
+    if (open) {
+      justOpenedRef.current = true;
+      // Scroll immédiat si les messages sont déjà là
+      if (msgs.length > 0) {
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "instant" });
+        }, 50);
+      }
     }
   }, [open?.id]);
 
@@ -6347,15 +6352,23 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   useEffect(() => {
     const count = msgs.length;
     if (count > prevMsgCountRef.current) {
-      // Auto-scroll uniquement si l'utilisateur est déjà en bas (±150px)
-      const container = bottomRef.current?.parentElement?.parentElement;
-      if (container) {
-        const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
-        if (isAtBottom) {
+      if (justOpenedRef.current) {
+        // Premier chargement à l'ouverture : scroll instantané vers le bas
+        justOpenedRef.current = false;
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "instant" });
+        }, 50);
+      } else {
+        // Nouveau message reçu en cours de conversation : scroll seulement si déjà en bas
+        const container = bottomRef.current?.parentElement?.parentElement;
+        if (container) {
+          const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+          if (isAtBottom) {
+            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+          }
+        } else {
           bottomRef.current?.scrollIntoView({ behavior: "smooth" });
         }
-      } else {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
       }
     }
     prevMsgCountRef.current = count;
