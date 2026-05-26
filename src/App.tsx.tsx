@@ -5161,13 +5161,13 @@ function PremiumBlur({ count, label, onShowPremium, gender, isViews }: { count: 
                   : count === 1 ? "1 femme a liké ton profil" : `${count} femmes ont liké ton profil`
               : label}
           </div>
-          <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, maxWidth: 240, margin: "0 auto" }}>
+          <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, margin: "0 auto", textAlign: "center" }}>
             {count > 0
               ? isViews
-                ? "Découvre qui s'intéresse à toi. Passe Premium pour les voir."
-                : "Découvre qui s'intéresse à toi. Passe Premium pour leur écrire."
+                ? "Passe Premium pour voir qui s'intéresse à toi."
+                : "Passe Premium pour voir qui s'intéresse à toi."
               : isViews
-                ? "Passe Premium pour voir qui s'intéresse à ton profil."
+                ? "Passe Premium pour voir tes visiteurs."
                 : "Passe Premium pour voir qui s'intéresse à toi."}
           </div>
         </div>
