@@ -4658,7 +4658,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : 210, flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : "none", position: "relative" }}>{p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
+  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : "min(56vw, 260px)", maxHeight: isWide ? "calc(100vh - 320px)" : "min(56vw, 260px)", flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : 180, position: "relative" }}>{p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div>
     {/* 3 traits menu - single tap/click → bottom sheet */}
@@ -9968,6 +9968,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [reportActionLoading, setReportActionLoading] = useState<string | null>(null); // report id en cours
   const [reportProfilePreview, setReportProfilePreview] = useState<AdminProfile | null>(null);
   const [reportProfileLoading, setReportProfileLoading] = useState<string | null>(null);
+  const [reportProfilesCache, setReportProfilesCache] = useState<Record<string, AdminProfile>>({});
   const [supportReply, setSupportReply] = useState<{ report: ReportRow; userId: string } | null>(null);
   const [supportReplyText, setSupportReplyText] = useState("");
 
@@ -10122,6 +10123,22 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         topLikedProfiles,
       });
       setReports(reps);
+      // ── Charger automatiquement les profils reporter + reported ──
+      const idsToFetch = [...new Set(
+        reps.flatMap((r: ReportRow) => [r.reporter_id, r.reported_id].filter(Boolean) as string[])
+      )];
+      if (idsToFetch.length > 0) {
+        try {
+          const chunk = idsToFetch.slice(0, 50);
+          const profilesRes = await sb.query<AdminProfile>(
+            auth.token, "profiles",
+            "?select=id,name,age,city,gender,photo_url,is_premium,is_verified,is_banned,warning_count,created_at&id=in.(" + chunk.join(",") + ")"
+          );
+          const cache: Record<string, AdminProfile> = {};
+          profilesRes.forEach((p: AdminProfile) => { cache[p.id] = p; });
+          setReportProfilesCache(cache);
+        } catch (_) {}
+      }
       console.log(`[Moyo][Admin] ✅ Dashboard chargé - ${parseCount(rTotalUsers)} profils, ${reps.length} signalements`);
     } catch (e: any) {
       console.error("[Moyo][Admin] ❌ Erreur chargement dashboard :", e?.message || e);
@@ -10565,7 +10582,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const ARCHIVED_STATUSES = ["reviewed", "rejected", "banned"];
   const isPending = (r: ReportRow) => !ARCHIVED_STATUSES.includes(r.status);
   const isSupportReport = (r: ReportRow) => isSupportReason(r.reason);
-  const isSupportUserMessage = (r: ReportRow) => !!r.reason?.startsWith(SUPPORT_PREFIX_USER);
+  // Messagerie = messages envoyés par l'utilisateur (SUPPORT_USER) OU réponses utilisateur à nos messages (SUPPORT_USER après un SUPPORT_REPLY)
+  const isSupportUserMessage = (r: ReportRow) => !!r.reason?.startsWith(SUPPORT_PREFIX_USER) || (!!r.reason?.startsWith(SUPPORT_PREFIX_REPLY) === false && isSupportReason(r.reason));
+  const isSupportInbox = (r: ReportRow) => isSupportReason(r.reason); // tout échange support
   const isSupportAdminReply = (r: ReportRow) => !!r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
   const isSystemReport = (r: ReportRow) => !isSupportReport(r) && (r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id);
   const isProfileReport = (r: ReportRow) => !isSupportReport(r) && !isSystemReport(r) && !!r.reported_id;
@@ -10576,7 +10595,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
     if (!isPending(r)) return false;
     if (reportFilter === "user") return isProfileReport(r);
     if (reportFilter === "system") return isSystemReport(r);
-    if (reportFilter === "messaging") return isSupportUserMessage(r);
+    if (reportFilter === "messaging") return isSupportInbox(r);
     return true; // "all" = tous les éléments en attente, toutes catégories confondues
   });
 
@@ -10584,7 +10603,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const pendingCount = reports.filter(isPending).length;
   const profilePendingCount = reports.filter(r => isPending(r) && isProfileReport(r)).length;
   const systemPendingCount = reports.filter(r => isPending(r) && isSystemReport(r)).length;
-  const messagingPendingCount = reports.filter(r => isPending(r) && isSupportUserMessage(r)).length;
+  const messagingPendingCount = reports.filter(r => isPending(r) && isSupportInbox(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   // ── Badge global = signalements en attente + avis non lus + paiements en attente ──
   const adminBadgeCount = pendingCount + unreadReviewsCount + pendingPaymentsCount;
@@ -12358,7 +12377,74 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             ) : (
               <div data-admlist="">
-              {filteredReports.map((r, i) => {
+              {reportFilter === "messaging" ? (() => {
+                // ── Vue Messagerie : grouper les échanges par utilisateur ──
+                const convMap: Record<string, { userId: string; messages: ReportRow[] }> = {};
+                filteredReports.forEach(r => {
+                  const userId = r.reason?.startsWith(SUPPORT_PREFIX_REPLY) ? (r.reported_id || r.reporter_id) : r.reporter_id;
+                  if (!userId) return;
+                  if (!convMap[userId]) convMap[userId] = { userId, messages: [] };
+                  convMap[userId].messages.push(r);
+                });
+                const convList = Object.values(convMap).sort((a, b) => {
+                  const aLast = a.messages[0]?.created_at || "";
+                  const bLast = b.messages[0]?.created_at || "";
+                  return bLast.localeCompare(aLast);
+                });
+                return convList.map((conv, ci) => {
+                  const userProfile = reportProfilesCache[conv.userId];
+                  const lastMsg = conv.messages[0];
+                  const unread = conv.messages.filter(r => isPending(r) && r.reason?.startsWith(SUPPORT_PREFIX_USER)).length;
+                  const isExpanded = (reportActionLoading === conv.userId + "_expanded") || false;
+                  return (
+                    <div key={conv.userId} style={{ padding: "12px 0", borderBottom: ci < convList.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {/* Avatar */}
+                        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#dbeafe", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {userProfile?.photo_url
+                            ? <img src={userProfile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          }
+                        </div>
+                        {/* Infos */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>
+                              {userProfile ? `${userProfile.name}, ${userProfile.age} ans` : conv.userId.slice(0, 10) + "…"}
+                            </span>
+                            {unread > 0 && <span style={{ background: G.rouge, color: "#fff", borderRadius: 50, padding: "1px 7px", fontSize: "0.62rem", fontWeight: 800 }}>{unread}</span>}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {lastMsg?.reason?.startsWith(SUPPORT_PREFIX_REPLY) ? "✉️ Vous : " : "👤 "}{cleanSupportReason(lastMsg?.reason || "")}
+                          </div>
+                          {lastMsg?.created_at && <div style={{ fontSize: "0.67rem", color: "#bbb", marginTop: 2 }}>{formatDateTime(lastMsg.created_at)}</div>}
+                        </div>
+                        {/* Bouton Répondre */}
+                        <button
+                          onClick={() => { setSupportReply({ report: lastMsg, userId: conv.userId }); setSupportReplyText(""); }}
+                          style={{ flexShrink: 0, background: "rgba(26,92,58,0.1)", color: G.vert, border: `1px solid rgba(26,92,58,0.2)`, borderRadius: 8, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Répondre
+                        </button>
+                      </div>
+                      {/* Historique des messages */}
+                      <div style={{ marginTop: 10, paddingLeft: 52, display: "flex", flexDirection: "column", gap: 6 }}>
+                        {conv.messages.slice(0, 5).map((r, mi) => {
+                          const isAdminMsg = r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
+                          return (
+                            <div key={r.id || mi} style={{ display: "flex", justifyContent: isAdminMsg ? "flex-end" : "flex-start" }}>
+                              <div style={{ maxWidth: "80%", background: isAdminMsg ? G.rouge : "#f0f0f0", color: isAdminMsg ? "#fff" : "#1a1a1a", borderRadius: isAdminMsg ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "7px 12px", fontSize: "0.78rem", lineHeight: 1.5 }}>
+                                {cleanSupportReason(r.reason || "")}
+                                <div style={{ fontSize: "0.62rem", opacity: 0.65, marginTop: 3, textAlign: isAdminMsg ? "right" : "left" }}>{formatDateTime(r.created_at || "")}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                });
+              })() : filteredReports.map((r, i) => {
                 const cat = classifyReport(r);
                 const statusStyle = reportStatusStyle(r.status);
                 const isSupport = isSupportReport(r);
@@ -12386,17 +12472,69 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     {/* Ligne 2 : raison */}
                     <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a", marginBottom: 5, lineHeight: 1.4 }}>{isSupport ? cleanSupportReason(r.reason) : r.reason}</div>
 
-                    {/* Ligne 3 : IDs + date */}
-                    <div style={{ fontSize: "0.72rem", color: "#999", display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        {r.reporter_id?.slice(0, 12)}…
-                      </span>
+                    {/* Ligne 3 : Profils reporter + reported avec noms */}
+                    {(() => {
+                      const reporterP = reportProfilesCache[r.reporter_id];
+                      const reportedP = r.reported_id ? reportProfilesCache[r.reported_id] : null;
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+                          {/* Signalé par */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(52,152,219,0.07)", borderRadius: 8, padding: "6px 10px" }}>
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#dbeafe", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {reporterP?.photo_url
+                                ? <img src={reporterP.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                              }
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: "0.65rem", color: "#2980b9", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Signalé par</div>
+                              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {reporterP ? `${reporterP.name}, ${reporterP.age} ans · ${reporterP.city}` : `${r.reporter_id?.slice(0, 14)}…`}
+                              </div>
+                            </div>
+                            {!isSupport && reporterP && (
+                              <button onClick={() => setSupportReply({ report: { ...r, reporter_id: r.reporter_id }, userId: r.reporter_id })} style={{ flexShrink: 0, background: "rgba(26,92,58,0.1)", color: G.vert, border: "1px solid rgba(26,92,58,0.2)", borderRadius: 6, padding: "3px 8px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer" }}>
+                                Répondre
+                              </button>
+                            )}
+                          </div>
+                          {/* Profil signalé */}
+                          {!isSupport && r.reported_id && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(192,57,43,0.07)", borderRadius: 8, padding: "6px 10px" }}>
+                              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#fde8e8", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                {reportedP?.photo_url
+                                  ? <img src={reportedP.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                }
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: "0.65rem", color: G.rouge, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Profil signalé</div>
+                                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {reportedP ? `${reportedP.name}, ${reportedP.age} ans · ${reportedP.city}` : `${r.reported_id?.slice(0, 14)}…`}
+                                </div>
+                              </div>
+                              {reportedP?.is_banned && <span style={{ fontSize: "0.6rem", background: "rgba(192,57,43,0.12)", color: G.rouge, borderRadius: 4, padding: "2px 6px", fontWeight: 700, flexShrink: 0 }}>Banni</span>}
+                              {(reportedP?.warning_count || 0) > 0 && <span style={{ fontSize: "0.6rem", background: "rgba(243,156,18,0.12)", color: "#e67e22", borderRadius: 4, padding: "2px 6px", fontWeight: 700, flexShrink: 0 }}>⚠️ {reportedP?.warning_count}/3</span>}
+                            </div>
+                          )}
+                          {isSupport && <span style={{ fontSize: "0.72rem", color: G.vert, paddingLeft: 4 }}>Conversation support</span>}
+                          {/* Date */}
+                          {r.created_at && (
+                            <div style={{ fontSize: "0.69rem", color: "#bbb", display: "flex", alignItems: "center", gap: 3, paddingLeft: 4 }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                              {formatDateTime(r.created_at)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {/* Ligne IDs masquée — remplacée par les profils ci-dessus */}
+                    <div style={{ display: "none" }}>
+                      <span>{r.reporter_id?.slice(0, 12)}…</span>
                       {isSupport
                         ? <span style={{ color: G.vert }}>Conversation support</span>
                         : r.reported_id
-                          ? <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                          ? <span>
                               {r.reported_id?.slice(0, 12)}…
                             </span>
                           : <span style={{ color: "#ccc" }}>Alerte système</span>
