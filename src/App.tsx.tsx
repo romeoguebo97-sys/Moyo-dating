@@ -5134,41 +5134,44 @@ function PremiumBlur({ count, label, onShowPremium, gender, isViews }: { count: 
     : label;
   const btnLabel = isViews ? "Voir qui m'a rendu visite" : "Voir qui m'a liké";
   return (
-    <div style={{ borderRadius: 16, overflow: "hidden", background: G.blanc, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
-      {/* Cartes fantômes floutées en arrière-plan */}
-      <div style={{ filter: "blur(6px)", pointerEvents: "none", userSelect: "none", padding: "12px 12px 80px" }}>
-        {[1,2,3].map(i => (
-          <div key={i} style={{ display: "flex", gap: 12, alignItems: "center",
-            background: "#f9f5f2", borderRadius: 12, padding: 10, marginBottom: 8 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 10, background: `linear-gradient(135deg,#E8C5A0,#C47A4A)`, flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ height: 12, background: "#ddd", borderRadius: 50, width: "55%", marginBottom: 7 }} />
-              <div style={{ height: 9, background: "#eee", borderRadius: 50, width: "35%" }} />
+    <div style={{ borderRadius: 16, background: G.blanc, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}>
+      {/* Zone floutée */}
+      <div style={{ position: "relative", borderRadius: "16px 16px 0 0", overflow: "hidden" }}>
+        {/* Cartes fantômes */}
+        <div style={{ filter: "blur(6px)", pointerEvents: "none", userSelect: "none", padding: "12px 12px 80px" }}>
+          {[1,2,3].map(i => (
+            <div key={i} style={{ display: "flex", gap: 12, alignItems: "center",
+              background: "#f9f5f2", borderRadius: 12, padding: 10, marginBottom: 8 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 10, background: "linear-gradient(135deg,#E8C5A0,#C47A4A)", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ height: 12, background: "#ddd", borderRadius: 50, width: "55%", marginBottom: 7 }} />
+                <div style={{ height: 9, background: "#eee", borderRadius: 50, width: "35%" }} />
+              </div>
             </div>
+          ))}
+        </div>
+        {/* Texte par-dessus */}
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", gap: 10, padding: "20px 24px 80px" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%",
+            background: "linear-gradient(135deg,#D4A843,#B8860B)",
+            display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#111" stroke="none">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
           </div>
-        ))}
-      </div>
-      {/* CTA par-dessus — uniquement icône + texte, PAS les profils */}
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: 10, padding: "20px 24px 80px" }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%",
-          background: `linear-gradient(135deg,${G.or},#B8860B)`,
-          display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="#111" stroke="none">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-          </svg>
-        </div>
-        <div style={{ fontWeight: 800, fontSize: "1rem", color: "#111", textAlign: "center", lineHeight: 1.4 }}>
-          {titre}
-        </div>
-        <div style={{ fontSize: "0.8rem", color: "#555", textAlign: "center" }}>
-          Passe Premium pour voir qui s'intéresse à toi.
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#111", textAlign: "center", lineHeight: 1.4 }}>
+            {titre}
+          </div>
+          <div style={{ fontSize: "0.8rem", color: "#555", textAlign: "center" }}>
+            Passe Premium pour voir qui s'intéresse à toi.
+          </div>
         </div>
       </div>
-      {/* Bouton en bas — fond blanc pour le séparer du flou */}
-      <div style={{ background: G.blanc, padding: "12px 16px", borderTop: `1px solid ${G.gris}` }}>
+      {/* Bouton hors zone floutée — toujours cliquable */}
+      <div style={{ padding: "12px 16px", borderTop: "1px solid #E8DDD0" }}>
         <button onClick={onShowPremium}
-          style={{ width: "100%", background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111",
+          style={{ width: "100%", background: "linear-gradient(135deg,#D4A843,#B8860B)", color: "#111",
             border: "none", borderRadius: 50, padding: "12px 24px", fontWeight: 800,
             fontSize: "0.9rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(212,168,67,0.4)",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
