@@ -4,11 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="google" content="notranslate">
     <link rel="icon" type="image/png" href="/favicon.png" />
-
-    <!-- ✅ CORRIGÉ : suppression de maximum-scale=1.0 et user-scalable=no -->
-    <!-- + ajout de interactive-widget=resizes-content pour le clavier PWA -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Moyo Congo</title>
     <meta name="description" content="Moyo connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora." />
     <meta property="og:type" content="website" />
@@ -32,10 +28,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-      /* ✅ CORRIGÉ : touch-action:manipulation retiré du sélecteur universel *
-         et appliqué uniquement aux boutons/liens pour ne pas bloquer les inputs */
       * { font-family: 'Inter', sans-serif !important; box-sizing: border-box; }
       button, a, [role="button"] { touch-action: manipulation; }
+
+      /* Bloque le zoom pinch sans casser le clavier iOS */
+      html {
+        touch-action: pan-x pan-y;
+      }
 
       html, body {
         overflow-x: hidden;
@@ -54,6 +53,65 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <script>
+      // ── Bloquer zoom pinch + double-tap sans bloquer le clavier iOS ──
+      var lastTap = 0;
+
+      document.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) e.preventDefault(); // pinch zoom
+      }, { passive: false });
+
+      document.addEventListener('touchend', function(e) {
+        var now = Date.now();
+        if (now - lastTap < 300) e.preventDefault(); // double-tap zoom
+        lastTap = now;
+      }, { passive: false });
+
+      // ── Fix clavier iOS PWA ──
+      // Sur iPhone en mode standalone, scrollIntoView après ouverture clavier
+      (function () {
+        var isIosPwa = (
+          window.navigator.standalone === true &&
+          /iphone|ipad|ipod/i.test(window.navigator.userAgent)
+        );
+        if (!isIosPwa) return;
+
+        function onFocusIn(e) {
+          var el = e.target;
+          if (!el) return;
+          var tag = el.tagName.toLowerCase();
+          if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return;
+          setTimeout(function () {
+            if (el.scrollIntoView) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 400);
+        }
+
+        function onFocusOut() {
+          setTimeout(function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, 100);
+        }
+
+        document.addEventListener('focusin', onFocusIn, true);
+        document.addEventListener('focusout', onFocusOut, true);
+
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', function () {
+            var activeEl = document.activeElement;
+            if (!activeEl) return;
+            var tag = activeEl.tagName.toLowerCase();
+            if (tag !== 'input' && tag !== 'textarea') return;
+            setTimeout(function () {
+              activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+          });
+        }
+      })();
+    </script>
+
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
