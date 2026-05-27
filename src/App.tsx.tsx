@@ -9917,6 +9917,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [showPremiumList, setShowPremiumList] = useState(false);
   const [premiumProfiles, setPremiumProfiles] = useState<AdminProfile[]>([]);
   const [premiumListLoading, setPremiumListLoading] = useState(false);
+
+  // ── Liste des matchs ──
+  const [showMatchList, setShowMatchList] = useState(false);
+  const [matchList, setMatchList] = useState<{ id: string; created_at: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
+  const [matchListLoading, setMatchListLoading] = useState(false);
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
@@ -9929,6 +9934,31 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
     }).then(r => r.json()).then(data => { setPremiumProfiles(Array.isArray(data) ? data : []); setPremiumListLoading(false); }).catch(() => setPremiumListLoading(false));
   }, [showPremiumList]);
+
+  // ── Charger la liste des matchs avec les profils des deux partenaires ──
+  useEffect(() => {
+    if (!showMatchList) return;
+    setMatchListLoading(true);
+    fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,created_at,user1,user2&order=created_at.desc&limit=200`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    }).then(r => r.json()).then(async (data) => {
+      if (!Array.isArray(data)) { setMatchListLoading(false); return; }
+      // Récupérer tous les IDs uniques
+      const ids = [...new Set(data.flatMap((m: any) => [m.user1, m.user2]))];
+      const profiles: Record<string, AdminProfile> = {};
+      // Charger les profils par batch de 50
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await r.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
+      }
+      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, profile1: profiles[m.user1], profile2: profiles[m.user2] })));
+      setMatchListLoading(false);
+    }).catch(() => setMatchListLoading(false));
+  }, [showMatchList]);
 
   // ── ÉVÉNEMENT PREMIUM ──
   const [premiumEventActive, setPremiumEventActive] = useState(false);
@@ -11066,6 +11096,62 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         </div>
       )}
+      {/* ── MODAL LISTE DES MATCHS ── */}
+      {showMatchList && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 520, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff" }}>💑 Liste des Matchs</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{matchList.length} match{matchList.length > 1 ? "s" : ""}</div>
+              </div>
+              <button onClick={() => setShowMatchList(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            {/* Liste */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+              {matchListLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement...</div>
+              ) : matchList.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Aucun match trouvé</div>
+              ) : matchList.map((m, i) => (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < matchList.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                  {/* Profil 1 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>
+                      {m.profile1?.photo_url && <img src={m.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.82rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.profile1?.name || "?"}</div>
+                      <div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile1?.age ? `${m.profile1.age} ans` : ""}{m.profile1?.city ? ` · ${m.profile1.city}` : ""}</div>
+                    </div>
+                  </div>
+                  {/* Icône cœur central */}
+                  <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <div style={{ fontSize: "0.55rem", color: "#aaa", whiteSpace: "nowrap" }}>
+                      {new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" })}
+                    </div>
+                  </div>
+                  {/* Profil 2 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>
+                      {m.profile2?.photo_url && <img src={m.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                    </div>
+                    <div style={{ minWidth: 0, textAlign: "right" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.82rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.profile2?.name || "?"}</div>
+                      <div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile2?.age ? `${m.profile2.age} ans` : ""}{m.profile2?.city ? ` · ${m.profile2.city}` : ""}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {pinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
@@ -11757,7 +11843,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div data-admgrid="main" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
                 {([
                   ["Membres total", stats.users, G.rouge, <IcoUsers key="u"/>],
-                  ["Matchs", stats.matches, "#8e44ad", <svg key="m" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
+                  ["Matchs", stats.matches, "#8e44ad", <svg key="m" onClick={() => setShowMatchList(true)} style={{cursor:"pointer"}} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
                   ["Messages", stats.messages, "#2980b9", <svg key="ms" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
                   ["Signalements", stats.reports, "#e67e22", <IcoAlert key="a"/>],
                 ] as [string, number, string, React.ReactNode][]).map(([label, value, color, icon]) => (
@@ -11779,7 +11865,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Profils vérifiés", stats.verifiedUsers, G.vert, null],
                     ["Profils bannis", stats.bannedUsers, "#e74c3c", null],
                   ] as [string, number, string, string | null][]).map(([label, val, color, action]) => (
-                    <div key={label} onClick={() => { if (action === "premium") setShowPremiumList(true); }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
+                    <div key={label} onClick={() => { if (action === "premium") setShowPremiumList(true); if (action === "matches") setShowMatchList(true); }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
                       <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val}</div>
                       <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>{label}</div>
                       {action && <div style={{ position: "absolute", top: 8, right: 8, fontSize: "0.55rem", color, fontWeight: 700, opacity: 0.7 }}>Voir ›</div>}
