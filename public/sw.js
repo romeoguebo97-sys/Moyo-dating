@@ -1,10 +1,9 @@
-const CACHE_NAME = 'moyo-v2';
+const CACHE_NAME = 'moyo-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/favicon.png',
 ];
-
 // Installation — mise en cache des assets statiques
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -14,7 +13,6 @@ self.addEventListener('install', (event) => {
   );
   self.skipWaiting();
 });
-
 // Activation — suppression des anciens caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
@@ -26,13 +24,11 @@ self.addEventListener('activate', (event) => {
   );
   self.clients.claim();
 });
-
 // Fetch — stratégie Network First (toujours les données fraîches)
 // Si pas de réseau → fallback sur le cache
 self.addEventListener('fetch', (event) => {
   // Ne pas intercepter les requêtes Supabase (toujours en ligne)
   if (event.request.url.includes('supabase.co')) return;
-
   event.respondWith(
     fetch(event.request)
       .then((response) => {
