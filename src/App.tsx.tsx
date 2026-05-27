@@ -664,24 +664,46 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
     : icon === "user" ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     : icon === "cake" ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v2"/><path d="M12 8v2"/><path d="M17 8v2"/><path d="M7 4h.01"/><path d="M12 4h.01"/><path d="M17 4h.01"/></svg>
     : icon ? <span style={{ opacity: 0.5 }}>{icon}</span> : null;
+
   const [focus, setFocus] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
+  const [iosReady, setIosReady] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const isPwd = type === "password";
+
+  // ✅ FIX iOS PWA : Safari standalone n'ouvre pas le clavier sans ce trick.
+  // On démarre avec readOnly=true, puis on le retire au premier touch,
+  // ce qui force Safari à reconnaître le champ comme éditable et ouvrir le clavier.
+  const handleTouchStart = () => {
+    if (!iosReady) {
+      setIosReady(true);
+      setTimeout(() => { inputRef.current?.focus(); }, 50);
+    }
+  };
+
   return (
     <div style={{ marginBottom: 18, width: "100%" }}>
       {label && <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>{label}</label>}
       <div style={{ position: "relative", width: "100%" }}>
         {svgIcon && <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.5, pointerEvents: "none", zIndex: 1, color: "#555", display: "flex" }}>{svgIcon}</span>}
         <input
+          ref={inputRef}
           type={isPwd ? (showPwd ? "text" : "password") : type}
-          value={value} onChange={onChange} placeholder={placeholder}
-          onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          readOnly={!iosReady}
+          onTouchStart={handleTouchStart}
+          onFocus={() => setFocus(true)}
+          onBlur={() => { setFocus(false); setIosReady(false); }}
           style={{
             width: "100%", boxSizing: "border-box",
             padding: icon ? (isPwd ? "13px 42px 13px 40px" : "13px 14px 13px 40px") : (isPwd ? "13px 42px 13px 14px" : "13px 14px"),
             border: `2px solid ${error ? "#e74c3c" : focus ? G.or : G.gris}`,
-            borderRadius: 12, fontSize: "0.93rem", background: G.blanc,
-            color: "#111", outline: "none", transition: "border-color 0.2s", display: "block",
+            borderRadius: 12,
+            fontSize: "16px", // ← 16px minimum sinon iOS zoome automatiquement au focus
+            background: G.blanc, color: "#111", outline: "none",
+            transition: "border-color 0.2s", display: "block",
           }}
         />
         {isPwd && <span onClick={() => setShowPwd(s => !s)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", cursor: "pointer", opacity: 0.6, zIndex: 1 }}>
