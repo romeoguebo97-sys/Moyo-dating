@@ -570,6 +570,7 @@ const GLOBAL_CSS = `
   @supports (-webkit-touch-callout: none) {
     .chat-textarea { font-size: 16px !important; }
   }
+  .admin-tabs::-webkit-scrollbar{display:none}
   .msg-arrow{opacity:0;transition:opacity 0.15s}
   .msg-row:hover .msg-arrow{opacity:1}
   @media(hover:none){.msg-arrow{opacity:1}}
@@ -9599,7 +9600,126 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Onglet actif ──
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches">("stats");
+
+  // ── Match Proposals ──
+  type MatchProposal = {
+    id: string;
+    user1_id: string;
+    user2_id: string;
+    status: "pending" | "accepted" | "refused" | "expired";
+    user1_response: "accepted" | "refused" | null;
+    user2_response: "accepted" | "refused" | null;
+    refused_by: string | null;
+    expires_at: string;
+    created_by: string;
+    created_at: string;
+    profile1?: AdminProfile;
+    profile2?: AdminProfile;
+  };
+  const [proposals, setProposals] = useState<MatchProposal[]>([]);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [showCreateMatch, setShowCreateMatch] = useState(false);
+  const [showProposeMatch, setShowProposeMatch] = useState(false);
+  const [createSearch1, setCreateSearch1] = useState("");
+  const [createSearch2, setCreateSearch2] = useState("");
+  const [createResults1, setCreateResults1] = useState<AdminProfile[]>([]);
+  const [createResults2, setCreateResults2] = useState<AdminProfile[]>([]);
+  const [createSelected1, setCreateSelected1] = useState<AdminProfile | null>(null);
+  const [createSelected2, setCreateSelected2] = useState<AdminProfile | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [proposeSearch1, setProposeSearch1] = useState("");
+  const [proposeSearch2, setProposeSearch2] = useState("");
+  const [proposeResults1, setProposeResults1] = useState<AdminProfile[]>([]);
+  const [proposeResults2, setProposeResults2] = useState<AdminProfile[]>([]);
+  const [proposeSelected1, setProposeSelected1] = useState<AdminProfile | null>(null);
+  const [proposeSelected2, setProposeSelected2] = useState<AdminProfile | null>(null);
+  const [proposeDuration, setProposeDuration] = useState("48");
+  const [proposeLoading, setProposeLoading] = useState(false);
+
+  const searchProfilesForMatch = async (query: string): Promise<AdminProfile[]> => {
+    if (!query.trim()) return [];
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(query)}*&select=id,name,age,city,photo_url&limit=6`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    });
+    const data = await r.json().catch(() => []);
+    return Array.isArray(data) ? data : [];
+  };
+
+  const loadProposals = async () => {
+    setProposalsLoading(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&expires_at=lt.${new Date().toISOString()}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ status: "expired" })
+      });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?order=created_at.desc&limit=100`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      if (!Array.isArray(data)) { setProposalsLoading(false); return; }
+      const ids = [...new Set(data.flatMap((p: any) => [p.user1_id, p.user2_id]))];
+      const profiles: Record<string, AdminProfile> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await pr.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
+      }
+      setProposals(data.map((p: any) => ({ ...p, profile1: profiles[p.user1_id], profile2: profiles[p.user2_id] })));
+    } catch {}
+    setProposalsLoading(false);
+  };
+
+  const handleCreateMatch = async () => {
+    if (!createSelected1 || !createSelected2) return;
+    if (createSelected1.id === createSelected2.id) { showToast("\u274C Impossible de matcher quelqu\'un avec lui-m\u00eame", "error"); return; }
+    setCreateLoading(true);
+    try {
+      const existing = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${createSelected1.id},user2.eq.${createSelected2.id}),and(user1.eq.${createSelected2.id},user2.eq.${createSelected1.id}))&select=id&limit=1`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const exData = await existing.json().catch(() => []);
+      if (Array.isArray(exData) && exData.length > 0) { showToast("\u26A0\uFE0F Ces deux personnes ont d\u00e9j\u00e0 un match", "error"); setCreateLoading(false); return; }
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+        body: JSON.stringify({ user1: createSelected1.id, user2: createSelected2.id })
+      });
+      const matchData = await r.json().catch(() => null);
+      const matchId = Array.isArray(matchData) ? matchData[0]?.id : matchData?.id;
+      if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, createSelected1.name, createSelected2.name);
+      showToast(`\u2705 Match cr\u00e9\u00e9 entre ${createSelected1.name} et ${createSelected2.name} !`, "success");
+      setShowCreateMatch(false);
+      setCreateSelected1(null); setCreateSelected2(null);
+      setCreateSearch1(""); setCreateSearch2("");
+    } catch { showToast("\u274C Erreur lors de la cr\u00e9ation", "error"); }
+    setCreateLoading(false);
+  };
+
+  const handleProposeMatch = async () => {
+    if (!proposeSelected1 || !proposeSelected2) return;
+    if (proposeSelected1.id === proposeSelected2.id) { showToast("\u274C Impossible de proposer quelqu\'un avec lui-m\u00eame", "error"); return; }
+    setProposeLoading(true);
+    try {
+      const expiresAt = new Date(Date.now() + parseInt(proposeDuration) * 3600 * 1000).toISOString();
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ user1_id: proposeSelected1.id, user2_id: proposeSelected2.id, expires_at: expiresAt, created_by: auth.userId })
+      });
+      showToast(`\u2705 Proposition envoy\u00e9e !`, "success");
+      setShowProposeMatch(false);
+      setProposeSelected1(null); setProposeSelected2(null);
+      setProposeSearch1(""); setProposeSearch2("");
+      loadProposals();
+    } catch { showToast("\u274C Erreur lors de la proposition", "error"); }
+    setProposeLoading(false);
+  };
+
   // ── Vue & tri utilisateurs admin ──
   const [usersViewMode, setUsersViewMode] = useState<"grid" | "list">("grid");
   const [usersSort, setUsersSort] = useState<"created_at.desc" | "created_at.asc" | "name.asc" | "name.desc" | "last_seen.desc" | "age.asc" | "age.desc" | "online" | "premium" | "lifetime" | "admin" | "verified" | "banned" | "male" | "female">("created_at.desc");
@@ -11779,8 +11899,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
         </div>
-        {/* Onglets - toujours visibles mobile ET desktop */}
-        <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}` }}>
+        {/* Onglets - scroll horizontal sur mobile */}
+        <div className="admin-tabs" style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}`, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}>
           {([
             ["stats", "Statistiques", IcoStats],
             ["users", "Utilisateurs", IcoUsers],
@@ -11788,6 +11908,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["reviews", "Avis", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["payments", "Paiements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
+            ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
             <div
               key={key}
@@ -11797,13 +11918,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "reviews") loadReviews();
                 if (key === "payments") loadPayments();
                 if (key === "logs") loadAdminLogs();
+                if (key === "matches") loadProposals();
               }}
               style={{
-                flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                padding: "10px 0 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
+                flexShrink: 0, minWidth: 80, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                padding: "10px 12px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
                 color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge) : "#999",
                 borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge}` : "2.5px solid transparent",
-                transition: "all 0.2s",
+                transition: "all 0.2s", whiteSpace: "nowrap",
               }}
             >
               <Icon />
@@ -13271,6 +13393,305 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           )}
         </div>
       )}
+
+      {/* ═══════════════════════════════════════════ ONGLET MATCHS */}
+      {activeTab === "matches" && (
+        <div style={{ padding: "16px" }}>
+          {/* Header avec boutons */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>💑 Gestion des Matchs</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setShowCreateMatch(true); }} style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Créer un match
+              </button>
+              <button onClick={() => { setShowProposeMatch(true); }} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+                Proposer un match
+              </button>
+              <button onClick={loadProposals} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555" }}>
+                <IcoRefresh />
+              </button>
+            </div>
+          </div>
+
+          {/* Légende statuts */}
+          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+            {[["🟡","En attente","#f39c12"],["🔵","En attente de réponse","#2980b9"],["🟢","Acceptée","#27ae60"],["🔴","Refusée","#e74c3c"],["⚫","Expirée","#888"]].map(([emoji, label, color]) => (
+              <div key={label as string} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: color as string, fontWeight: 600 }}>
+                <span>{emoji}</span><span>{label}</span>
+              </div>
+            ))}
+          </div>
+
+          {proposalsLoading ? (
+            <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+          ) : proposals.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>💑</div>
+              <div style={{ color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition de match</div>
+              <div style={{ color: "#ccc", fontSize: "0.78rem", marginTop: 6 }}>Utilisez les boutons ci-dessus pour créer ou proposer un match</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {proposals.map(p => {
+                const statusInfo = p.status === "pending"
+                  ? { emoji: "🟡", label: p.user1_response === "accepted" ? `En attente de ${p.profile2?.name || "..."}` : p.user2_response === "accepted" ? `En attente de ${p.profile1?.name || "..."}` : "En attente", color: "#f39c12", bg: "rgba(243,156,18,0.08)" }
+                  : p.status === "accepted"
+                  ? { emoji: "🟢", label: "Match créé ✅", color: "#27ae60", bg: "rgba(39,174,96,0.08)" }
+                  : p.status === "refused"
+                  ? { emoji: "🔴", label: `Refusée par ${p.refused_by === p.user1_id ? p.profile1?.name : p.profile2?.name || "..."}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
+                  : { emoji: "⚫", label: "Expirée", color: "#888", bg: "rgba(0,0,0,0.04)" };
+                return (
+                  <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}` }}>
+                    {/* Deux profils + statut */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {/* Profil 1 */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user1_response === "accepted" ? "#27ae60" : p.user1_response === "refused" ? "#e74c3c" : G.gris}` }}>
+                          {p.profile1?.photo_url && <img src={p.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile1?.name || "?"}</div>
+                          <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile1?.city || ""}</div>
+                          <div style={{ fontSize: "0.62rem", color: p.user1_response === "accepted" ? "#27ae60" : p.user1_response === "refused" ? "#e74c3c" : "#aaa", fontWeight: 600 }}>
+                            {p.user1_response === "accepted" ? "✅ Accepté" : p.user1_response === "refused" ? "❌ Refusé" : "⏳ En attente"}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Centre */}
+                      <div style={{ flexShrink: 0, textAlign: "center" }}>
+                        <div style={{ fontSize: "1.2rem" }}>💑</div>
+                        <div style={{ fontSize: "0.55rem", color: statusInfo.color, fontWeight: 700 }}>{statusInfo.emoji}</div>
+                      </div>
+                      {/* Profil 2 */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user2_response === "accepted" ? "#27ae60" : p.user2_response === "refused" ? "#e74c3c" : G.gris}` }}>
+                          {p.profile2?.photo_url && <img src={p.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                        </div>
+                        <div style={{ minWidth: 0, textAlign: "right" }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile2?.name || "?"}</div>
+                          <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile2?.city || ""}</div>
+                          <div style={{ fontSize: "0.62rem", color: p.user2_response === "accepted" ? "#27ae60" : p.user2_response === "refused" ? "#e74c3c" : "#aaa", fontWeight: 600 }}>
+                            {p.user2_response === "accepted" ? "✅ Accepté" : p.user2_response === "refused" ? "❌ Refusé" : "⏳ En attente"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Footer carte : statut + date + expiration */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: `1px solid ${G.gris}` }}>
+                      <div style={{ fontSize: "0.68rem", fontWeight: 700, color: statusInfo.color, background: statusInfo.bg, padding: "3px 8px", borderRadius: 50 }}>{statusInfo.label}</div>
+                      <div style={{ fontSize: "0.62rem", color: "#aaa" }}>
+                        {new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── MODAL CRÉER UN MATCH DIRECT ── */}
+      {showCreateMatch && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 500, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff" }}>⚡ Créer un match direct</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Le match est créé immédiatement sans demande</div>
+              </div>
+              <button onClick={() => { setShowCreateMatch(false); setCreateSelected1(null); setCreateSelected2(null); setCreateSearch1(""); setCreateSearch2(""); setCreateResults1([]); setCreateResults2([]); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 12, alignItems: "start", marginBottom: 20 }}>
+                {/* Profil 1 */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 1</div>
+                  {createSelected1 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                        {createSelected1.photo_url && <img src={createSelected1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{createSelected1.name}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#888" }}>{createSelected1.age} ans · {createSelected1.city}</div>
+                      </div>
+                      <button onClick={() => { setCreateSelected1(null); setCreateSearch1(""); setCreateResults1([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={createSearch1} onChange={async e => { setCreateSearch1(e.target.value); setCreateResults1(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {createResults1.length > 0 && (
+                        <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                          {createResults1.map(p => (
+                            <div key={p.id} onClick={() => { setCreateSelected1(p); setCreateSearch1(""); setCreateResults1([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                              <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                              </div>
+                              <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Icône centre */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+                {/* Profil 2 */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 2</div>
+                  {createSelected2 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                        {createSelected2.photo_url && <img src={createSelected2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{createSelected2.name}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#888" }}>{createSelected2.age} ans · {createSelected2.city}</div>
+                      </div>
+                      <button onClick={() => { setCreateSelected2(null); setCreateSearch2(""); setCreateResults2([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={createSearch2} onChange={async e => { setCreateSearch2(e.target.value); setCreateResults2(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {createResults2.length > 0 && (
+                        <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                          {createResults2.map(p => (
+                            <div key={p.id} onClick={() => { setCreateSelected2(p); setCreateSearch2(""); setCreateResults2([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                              <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                              </div>
+                              <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button onClick={handleCreateMatch} disabled={!createSelected1 || !createSelected2 || createLoading} style={{ width: "100%", background: createSelected1 && createSelected2 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ddd", color: createSelected1 && createSelected2 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: createSelected1 && createSelected2 ? "pointer" : "not-allowed" }}>
+                {createLoading ? "Création en cours..." : "⚡ Créer le match"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL PROPOSER UN MATCH ── */}
+      {showProposeMatch && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 500, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff" }}>✉️ Proposer un match</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Les deux personnes choisissent d'accepter ou refuser</div>
+              </div>
+              <button onClick={() => { setShowProposeMatch(false); setProposeSelected1(null); setProposeSelected2(null); setProposeSearch1(""); setProposeSearch2(""); setProposeResults1([]); setProposeResults2([]); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 12, alignItems: "start", marginBottom: 16 }}>
+                {/* Profil 1 */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 1</div>
+                  {proposeSelected1 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(230,126,34,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(230,126,34,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                        {proposeSelected1.photo_url && <img src={proposeSelected1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{proposeSelected1.name}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#888" }}>{proposeSelected1.age} ans · {proposeSelected1.city}</div>
+                      </div>
+                      <button onClick={() => { setProposeSelected1(null); setProposeSearch1(""); setProposeResults1([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={proposeSearch1} onChange={async e => { setProposeSearch1(e.target.value); setProposeResults1(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {proposeResults1.length > 0 && (
+                        <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                          {proposeResults1.map(p => (
+                            <div key={p.id} onClick={() => { setProposeSelected1(p); setProposeSearch1(""); setProposeResults1([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                              <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                              </div>
+                              <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Icône centre */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+                </div>
+                {/* Profil 2 */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 2</div>
+                  {proposeSelected2 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(230,126,34,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(230,126,34,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                        {proposeSelected2.photo_url && <img src={proposeSelected2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{proposeSelected2.name}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#888" }}>{proposeSelected2.age} ans · {proposeSelected2.city}</div>
+                      </div>
+                      <button onClick={() => { setProposeSelected2(null); setProposeSearch2(""); setProposeResults2([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={proposeSearch2} onChange={async e => { setProposeSearch2(e.target.value); setProposeResults2(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {proposeResults2.length > 0 && (
+                        <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                          {proposeResults2.map(p => (
+                            <div key={p.id} onClick={() => { setProposeSelected2(p); setProposeSearch2(""); setProposeResults2([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                              <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                              </div>
+                              <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Durée expiration */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>⏰ Durée avant expiration</div>
+                <select value={proposeDuration} onChange={e => setProposeDuration(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", background: G.blanc, cursor: "pointer" }}>
+                  <option value="12">12 heures</option>
+                  <option value="24">24 heures</option>
+                  <option value="48">48 heures (recommandé)</option>
+                  <option value="72">72 heures</option>
+                  <option value="168">7 jours</option>
+                </select>
+              </div>
+              {/* Info */}
+              <div style={{ background: "rgba(230,126,34,0.07)", borderRadius: 10, padding: "10px 12px", marginBottom: 16, fontSize: "0.75rem", color: "#555", lineHeight: 1.6 }}>
+                💡 Les deux personnes recevront un modal avec le profil de l'autre. Si les deux acceptent, le match est créé automatiquement. Si l'un refuse, la proposition est annulée.
+              </div>
+              <button onClick={handleProposeMatch} disabled={!proposeSelected1 || !proposeSelected2 || proposeLoading} style={{ width: "100%", background: proposeSelected1 && proposeSelected2 ? "linear-gradient(135deg,#e67e22,#d35400)" : "#ddd", color: proposeSelected1 && proposeSelected2 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: proposeSelected1 && proposeSelected2 ? "pointer" : "not-allowed" }}>
+                {proposeLoading ? "Envoi en cours..." : "✉️ Envoyer la proposition"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -13287,6 +13708,8 @@ export default function App() {
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
+  const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2" } | null>(null);
+  const [proposalResponding, setProposalResponding] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
   const [openConvPartnerId, setOpenConvPartnerId] = useState<string | null>(null);
@@ -13899,6 +14322,40 @@ export default function App() {
     });
 
     // Fallback polling toutes les 8s (le realtime gère l'instantané)
+    // ── Vérifier les propositions de match en attente ──
+    const checkProposals = async () => {
+      try {
+        const now = new Date().toISOString();
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/match_proposals?or=(and(user1_id.eq.${auth.userId},user1_response.is.null),and(user2_id.eq.${auth.userId},user2_response.is.null))&status=eq.pending&expires_at=gt.${now}&order=created_at.desc&limit=1`,
+          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
+        );
+        if (!r.ok) return;
+        const data = await r.json().catch(() => []);
+        if (!Array.isArray(data) || data.length === 0) return;
+        const prop = data[0];
+        const myRole: "user1" | "user2" = prop.user1_id === auth.userId ? "user1" : "user2";
+        const proposerId = myRole === "user1" ? prop.user2_id : prop.user1_id;
+        // Charger le profil de l'autre personne
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${proposerId}&select=id,name,age,city,photo_url&limit=1`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await pr.json().catch(() => []);
+        if (!Array.isArray(pdata) || pdata.length === 0) return;
+        const proposer = pdata[0];
+        setPendingProposal(prev => prev?.id === prop.id ? prev : {
+          id: prop.id,
+          proposerId,
+          proposerName: proposer.name,
+          proposerPhoto: proposer.photo_url,
+          proposerAge: proposer.age,
+          proposerCity: proposer.city,
+          myRole
+        });
+      } catch {}
+    };
+    checkProposals();
+
     const fallbackInterval = setInterval(() => {
       if (isUnmatchingRef.current) return;
       checkUnread();
@@ -13906,6 +14363,7 @@ export default function App() {
       loadMatchCount();
       checkWarningsRealtime();
       checkBroadcastRealtime();
+      checkProposals();
     }, POLL_BADGES_MS);
 
     return () => {
@@ -14007,6 +14465,102 @@ export default function App() {
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} />}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
+    {/* ── MODAL PROPOSITION DE MATCH ── */}
+    {pendingProposal && !pendingWarning && !pendingBroadcast && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
+          {/* Header */}
+          <div style={{ background: `linear-gradient(135deg,#e67e22,#d35400)`, padding: "24px 20px 18px", textAlign: "center" }}>
+            <div style={{ fontSize: "2rem", marginBottom: 6 }}>💑</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>On pense à toi !</div>
+            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", marginTop: 4 }}>L'équipe Moyo te propose une rencontre</div>
+          </div>
+          {/* Profil proposé */}
+          <div style={{ padding: "24px 20px 8px", textAlign: "center" }}>
+            <div style={{ width: 90, height: 90, borderRadius: "50%", background: G.creme, margin: "0 auto 12px", overflow: "hidden", border: `3px solid #e67e22`, boxShadow: "0 4px 16px rgba(230,126,34,0.3)" }}>
+              {pendingProposal.proposerPhoto
+                ? <img src={pendingProposal.proposerPhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+              }
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>{pendingProposal.proposerName}</div>
+            {(pendingProposal.proposerAge || pendingProposal.proposerCity) && (
+              <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 4 }}>
+                {pendingProposal.proposerAge ? `${pendingProposal.proposerAge} ans` : ""}{pendingProposal.proposerAge && pendingProposal.proposerCity ? " · " : ""}{pendingProposal.proposerCity || ""}
+              </div>
+            )}
+            <div style={{ fontSize: "0.78rem", color: "#aaa", marginTop: 12, lineHeight: 1.6, padding: "0 10px" }}>
+              Tu es intéressé(e) par cette rencontre ?
+            </div>
+          </div>
+          {/* Boutons */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "16px 20px 24px" }}>
+            <button
+              disabled={proposalResponding}
+              onClick={async () => {
+                setProposalResponding(true);
+                try {
+                  const myResponseField = pendingProposal.myRole === "user1" ? "user1_response" : "user2_response";
+                  // Récupérer la proposition actuelle pour vérifier l'autre réponse
+                  const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}&select=user1_response,user2_response,user1_id,user2_id&limit=1`, {
+                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}` }
+                  });
+                  const pdata = await r.json().catch(() => []);
+                  const prop = Array.isArray(pdata) ? pdata[0] : null;
+                  const otherResponse = pendingProposal.myRole === "user1" ? prop?.user2_response : prop?.user1_response;
+                  const newStatus = otherResponse === "accepted" ? "accepted" : "pending";
+                  await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
+                    method: "PATCH",
+                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+                    body: JSON.stringify({ [myResponseField]: "accepted", status: newStatus })
+                  });
+                  // Si les deux ont accepté → créer le match
+                  if (newStatus === "accepted" && prop) {
+                    const mr = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
+                      method: "POST",
+                      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+                      body: JSON.stringify({ user1: prop.user1_id, user2: prop.user2_id })
+                    });
+                    const matchData = await mr.json().catch(() => null);
+                    const matchId = Array.isArray(matchData) ? matchData[0]?.id : matchData?.id;
+                    if (matchId) await sendMatchWelcomeMessage(auth!.token, matchId, auth!.name, pendingProposal.proposerName);
+                    await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
+                      method: "PATCH",
+                      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+                      body: JSON.stringify({ status: "accepted" })
+                    });
+                  }
+                  setPendingProposal(null);
+                } catch {}
+                setProposalResponding(false);
+              }}
+              style={{ background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+            >
+              💚 Accepter
+            </button>
+            <button
+              disabled={proposalResponding}
+              onClick={async () => {
+                setProposalResponding(true);
+                try {
+                  const myResponseField = pendingProposal.myRole === "user1" ? "user1_response" : "user2_response";
+                  await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
+                    method: "PATCH",
+                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+                    body: JSON.stringify({ [myResponseField]: "refused", status: "refused", refused_by: auth!.userId })
+                  });
+                  setPendingProposal(null);
+                } catch {}
+                setProposalResponding(false);
+              }}
+              style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+            >
+              ❌ Refuser
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {/* ── OFF-CANVAS CONFIG MOBILE/TABLETTE ── */}
     {showAdminConfig && <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
     <div style={{ position: "fixed", top: 0, right: showAdminConfig ? 0 : "-110vw", width: "min(95vw, 480px)", height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
