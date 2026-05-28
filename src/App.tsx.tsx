@@ -4984,7 +4984,7 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
       {/* Onglets likes / visiteurs - Premium uniquement */}
       {auth.isPremium && (likers.length > 0 || visitors.length > 0) && (
         <div style={{ display: "flex", background: G.gris, borderRadius: 50, padding: 3, gap: 2, marginBottom: 10 }}>
-          {[{ id: "likes", label: <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{`Likes (${likers.length})`}</span> }, { id: "visitors", label: <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{`Vues (${visitors.length})`}</span> }].map(t => (
+          {[{ id: "likes", label: <span style={{display: "flex",alignItems: "center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{`Likes (${likers.length})`}</span> }, { id: "visitors", label: <span style={{display: "flex",alignItems: "center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{`Vues (${visitors.length})`}</span> }].map(t => (
             <div key={t.id} onClick={() => setActiveTab(t.id as "likes" | "visitors")} style={{ flex: 1, padding: "6px 10px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", textAlign: "center", background: activeTab === t.id ? G.blanc : "transparent", color: activeTab === t.id ? G.rouge : "#888", boxShadow: activeTab === t.id ? "0 2px 6px rgba(0,0,0,0.1)" : "none", transition: "all 0.2s" }}>
               {t.label}
             </div>
@@ -5511,11 +5511,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
       <div onClick={onView} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111" }}>{p.name}, {p.age} ans</span>
-          {meta?.isMatch && <Badge label={<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill={G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match</span>} color={G.vert} bg="rgba(26,92,58,0.1)" />}
-          {meta?.status === "match" && <Badge label={<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill={G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match</span>} color={G.vert} bg="rgba(26,92,58,0.1)" />}
+          {meta?.isMatch && <Badge label={<span style={{display: "flex",alignItems: "center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill={G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match</span>} color={G.vert} bg="rgba(26,92,58,0.1)" />}
+          {meta?.status === "match" && <Badge label={<span style={{display: "flex",alignItems: "center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill={G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match</span>} color={G.vert} bg="rgba(26,92,58,0.1)" />}
           {meta?.status === "pending" && <Badge label="En attente" color="#888" bg="#F0F0F0" />}
           {meta?.status === "unavailable" && <Badge label="Profil indispo" color="#aaa" bg="#F5F5F5" />}
-          {meta?.date && isRecent(meta.date) && !meta?.isMatch && meta?.status !== "match" && <Badge label={<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Nouveau</span>} color={G.rouge} bg="rgba(192,57,43,0.08)" />}
+          {meta?.date && isRecent(meta.date) && !meta?.isMatch && meta?.status !== "match" && <Badge label={<span style={{display: "flex",alignItems: "center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Nouveau</span>} color={G.rouge} bg="rgba(192,57,43,0.08)" />}
         </div>
         <div style={{ fontSize: "0.73rem", color: "#777", marginTop: 3, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <span>
@@ -9823,6 +9823,29 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     return Array.isArray(data) ? data : [];
   };
 
+  const loadMatchListData = async () => {
+    setMatchListLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,created_at,user1,user2&order=created_at.desc&limit=200`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      if (!Array.isArray(data)) { setMatchListLoading(false); return; }
+      const ids = [...new Set(data.flatMap((m: any) => [m.user1, m.user2]))];
+      const profiles: Record<string, AdminProfile> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await pr.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
+      }
+      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, profile1: profiles[m.user1], profile2: profiles[m.user2] })));
+    } catch {}
+    setMatchListLoading(false);
+  };
+
   const loadProposals = async () => {
     setProposalsLoading(true);
     try {
@@ -11083,6 +11106,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const IcoTrash = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>;
   const IcoSearch = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
   const IcoRefresh = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>;
+  const IcoHeart = ({ color = "currentColor" }: { color?: string }) => <svg width="16" height="16" viewBox="0 0 24 24" fill={color} stroke="none"><path d={"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"} /></svg>;
+  const IcoBolt = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+  const IcoSend = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d={"M22 2L11 13"}/><path d={"M22 2L15 22 11 13 2 9l20-7z"}/></svg>;
   const IcoArrowLeft = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
   const IcoGear = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
   const IcoKey = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8B008B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>;
@@ -11459,7 +11485,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             {/* Header */}
             <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
-                <div style={{ display:"flex", alignItems:"center", gap:8, fontWeight: 800, fontSize: "1rem", color: "#fff" }><svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Liste des Matchs</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1rem", color: "#fff" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none" aria-hidden="true"><path fillRule="nonzero" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>{" "}Liste des Matchs</div>
                 <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{matchList.length} match{matchList.length > 1 ? "s" : ""}</div>
               </div>
               <button onClick={() => setShowMatchList(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -13652,7 +13678,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ] as [string, string, string][]).map(([key, label, color]) => (
               <button key={key} onClick={() => {
                 setMatchSubTab(key as any);
-                if (key === "list") { setMatchListLoading(true); fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,created_at,user1,user2&order=created_at.desc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).then(async (data) => { if (!Array.isArray(data)) { setMatchListLoading(false); return; } const ids = [...new Set(data.flatMap((m: any) => [m.user1, m.user2]))]; const profiles: Record<string, AdminProfile> = {}; for (let i = 0; i < ids.length; i += 50) { const batch = ids.slice(i, i + 50); const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }); const pdata = await r.json().catch(() => []); if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; }); } setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, profile1: profiles[m.user1], profile2: profiles[m.user2] }))); setMatchListLoading(false); }).catch(() => setMatchListLoading(false)); }
+                if (key === "list") { loadMatchListData(); }
                 if (key === "requests") { loadMatchRequests(); localStorage.setItem("moyo_requests_seen", new Date().toISOString()); setMatchRequestsBadge(0); }
                 if (key === "propose") loadProposals();
               }} style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 50, border: `2px solid ${matchSubTab === key ? color : G.gris}`, background: matchSubTab === key ? color : G.blanc, color: matchSubTab === key ? "#fff" : "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
@@ -13742,7 +13768,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             <div style={{ minWidth: 0 }}>
                               <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile1?.name || "?"}</div>
                               <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile1?.city || ""}</div>
-                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user1_response === "accepted" ? <span style={{display:"flex",alignItems:"center",gap:3,color:"#27ae60"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : p.user1_response === "refused" ? <span style={{display:"flex",alignItems:"center",gap:3,color:"#e74c3c"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user1_response === "accepted" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#27ae60"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : p.user1_response === "refused" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#e74c3c"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
                             </div>
                           </div>
                           <div style={{ flexShrink: 0, textAlign: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><div style={{ marginTop: 2 }}><svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={statusInfo.color}/></svg></div></div>
@@ -13751,7 +13777,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             <div style={{ minWidth: 0, textAlign: "right" }}>
                               <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile2?.name || "?"}</div>
                               <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile2?.city || ""}</div>
-                              <div style={{ fontSize: "0.62rem", fontWeight: 600, justifyContent: "flex-end" }}>{p.user2_response === "accepted" ? <span style={{display:"flex",alignItems:"center",gap:3,color:"#27ae60",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : p.user2_response === "refused" ? <span style={{display:"flex",alignItems:"center",gap:3,color:"#e74c3c",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600, justifyContent: "flex-end" }}>{p.user2_response === "accepted" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#27ae60",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : p.user2_response === "refused" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#e74c3c",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
                             </div>
                           </div>
                         </div>
@@ -13774,7 +13800,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           {matchSubTab === "list" && (
             <div>
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-                <button onClick={() => { setMatchListLoading(true); fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,created_at,user1,user2&order=created_at.desc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).then(async (data) => { if (!Array.isArray(data)) { setMatchListLoading(false); return; } const ids = [...new Set(data.flatMap((m: any) => [m.user1, m.user2]))]; const profiles: Record<string, AdminProfile> = {}; for (let i = 0; i < ids.length; i += 50) { const batch = ids.slice(i, i + 50); const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }); const pdata = await r.json().catch(() => []); if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; }); } setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, profile1: profiles[m.user1], profile2: profiles[m.user2] }))); setMatchListLoading(false); }).catch(() => setMatchListLoading(false)); }} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
+                <button onClick={() => { loadMatchListData(); }} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
               </div>
               {matchListLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
@@ -13894,7 +13920,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 500, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
-                <div style={{ display:"flex", alignItems:"center", gap:8, fontWeight: 800, fontSize: "1rem", color: "#fff" }><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Créer un match direct</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1rem", color: "#fff" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>{" "}Créer un match direct</div>
                 <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Le match est créé immédiatement sans demande</div>
               </div>
               <button onClick={() => { setShowCreateMatch(false); setCreateSelected1(null); setCreateSelected2(null); setCreateSearch1(""); setCreateSearch2(""); setCreateResults1([]); setCreateResults2([]); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -13986,7 +14012,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 500, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <div style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
-                <div style={{ display:"flex", alignItems:"center", gap:8, fontWeight: 800, fontSize: "1rem", color: "#fff" }><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg> Proposer un match</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1rem", color: "#fff" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>{" "}Proposer un match</div>
                 <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Les deux personnes choisissent d'accepter ou refuser</div>
               </div>
               <button onClick={() => { setShowProposeMatch(false); setProposeSelected1(null); setProposeSelected2(null); setProposeSearch1(""); setProposeSearch2(""); setProposeResults1([]); setProposeResults2([]); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
