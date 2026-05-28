@@ -12199,9 +12199,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["stats", "Statistiques", IcoStats],
             ["users", "Utilisateurs", IcoUsers],
             ["reports", "Signalements", IcoAlert],
+            ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
             ["reviews", "Avis", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["payments", "Paiements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>],
-            ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
             <div
@@ -12219,11 +12219,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 }
               }}
               style={{
-                flex: 1, minWidth: 72, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                padding: "10px 8px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
+                flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                padding: "10px 6px 12px", cursor: "pointer", fontSize: "0.62rem", fontWeight: 600,
                 color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge) : "#999",
                 borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge}` : "2.5px solid transparent",
-                transition: "all 0.2s", whiteSpace: "nowrap",
+                transition: "all 0.2s", whiteSpace: "nowrap", overflow: "hidden",
               }}
             >
               <Icon />
@@ -13937,6 +13937,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {req.status === "pending" && <button onClick={() => updateRequestStatus(req.id, "processing")} style={{ background: "rgba(41,128,185,0.08)", color: "#2980b9", border: "1.5px solid rgba(41,128,185,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Prendre en charge</button>}
                           {req.status === "processing" && <button onClick={() => updateRequestStatus(req.id, "done")} style={{ background: "rgba(39,174,96,0.08)", color: "#27ae60", border: "1.5px solid rgba(39,174,96,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Marquer traitée</button>}
                           {(req.status === "pending" || req.status === "processing") && <button onClick={() => updateRequestStatus(req.id, "cancelled")} style={{ background: "rgba(231,76,60,0.06)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.15)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>}
+                        {(req.status === "done" || req.status === "cancelled") && <button onClick={async () => {
+                          try {
+                            await fetch(`${SUPABASE_URL}/rest/v1/match_requests?id=eq.${req.id}`, {
+                              method: "DELETE",
+                              headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+                            });
+                            setMatchRequests(prev => prev.filter(r => r.id !== req.id));
+                            logAdminAction(auth.token, auth.userId, auth.name, `Demande de mise en relation supprimée`, req.id);
+                          } catch {}
+                        }} style={{ background: "rgba(231,76,60,0.06)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.15)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                          Supprimer
+                        </button>}
                         </div>
                       </div>
                     );
@@ -14691,10 +14704,12 @@ export default function App() {
           fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id&status=eq.pending`, { headers: h }),
         ]);
         const parseCount = (r: Response) => { const h2 = r.headers.get("content-range"); return h2 ? parseInt(h2.split("/")[1]) || 0 : 0; };
-        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments);
+        // Ajouter les nouvelles demandes de mise en relation
+        const lastReqSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
+        const rMatchReqs = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&created_at=gt.${lastReqSeen}&select=id`, { headers: h });
+        const matchReqCount = parseCount(rMatchReqs);
+        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount;
         setAdminBadgeCount(prev => prev === newCount ? prev : newCount);
-
-
       } catch {}
     };
     checkAdminBadge();
