@@ -724,43 +724,51 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
 }
 
 function Toast({ msg, type = "success", onClose }: { msg: string; type?: string; onClose: () => void }) {
-  useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, []);
-  const borderColor = type === "error" ? "rgba(192,57,43,0.4)" : type === "premium" ? "rgba(212,168,67,0.4)" : "rgba(26,92,58,0.4)";
-  const iconColor = type === "error" ? "#ff6b6b" : type === "premium" ? G.or : "#52d68a";
-  const icon = type === "error"
-    ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  useEffect(() => { const t = setTimeout(onClose, type === "error" ? 6000 : 4000); return () => clearTimeout(t); }, []);
+  const isError = type === "error";
+  const borderColor = isError ? "rgba(192,57,43,0.5)" : type === "premium" ? "rgba(212,168,67,0.4)" : "rgba(26,92,58,0.4)";
+  const iconColor = isError ? "#ff6b6b" : type === "premium" ? G.or : "#52d68a";
+  const bgColor = isError ? "rgba(30,10,10,0.88)" : "rgba(20,20,20,0.82)";
+  const icon = isError
+    ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     : type === "premium"
-    ? <svg width="15" height="15" viewBox="0 0 24 24" fill={iconColor} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+    ? <svg width="16" height="16" viewBox="0 0 24 24" fill={iconColor} stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>;
   return (
     <div style={{
       position: "fixed",
       bottom: "calc(env(safe-area-inset-bottom) + 76px)",
       left: "50%",
       transform: "translateX(-50%)",
-      background: "rgba(20, 20, 20, 0.75)",
+      background: bgColor,
       backdropFilter: "blur(24px)",
       WebkitBackdropFilter: "blur(24px)",
-      color: "rgba(255,255,255,0.92)",
-      padding: "11px 18px",
-      borderRadius: 50,
+      color: "rgba(255,255,255,0.95)",
+      padding: isError ? "14px 20px" : "11px 18px",
+      borderRadius: isError ? 16 : 50,
       fontSize: "0.84rem",
       fontWeight: 600,
       zIndex: 9999,
-      boxShadow: "0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12)",
-      maxWidth: "88vw",
-      textAlign: "center",
+      boxShadow: isError
+        ? "0 12px 40px rgba(192,57,43,0.35), inset 0 1px 0 rgba(255,255,255,0.1)"
+        : "0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12)",
+      maxWidth: "min(480px, 90vw)",
+      width: isError ? "min(480px, 90vw)" : "auto",
+      textAlign: "left",
       display: "flex",
-      alignItems: "center",
-      gap: 8,
-      border: `1px solid ${borderColor}`,
+      alignItems: isError ? "flex-start" : "center",
+      gap: 10,
+      border: `1.5px solid ${borderColor}`,
       animation: "fadeUp 0.25s ease",
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
+      lineHeight: 1.5,
     }}>
       {icon}
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{msg}</span>
+      <span style={{ flex: 1 }}>{msg}</span>
+      {isError && (
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", padding: 0, flexShrink: 0, marginLeft: 4 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -9797,11 +9805,89 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [matchRequests, setMatchRequests] = useState<MatchRequest[]>([]);
   const [matchRequestsLoading, setMatchRequestsLoading] = useState(false);
   const [matchRequestsBadge, setMatchRequestsBadge] = useState(0);
+  const [archivedItems, setArchivedItems] = useState<{ id: string; type: "proposal" | "request"; created_at: string; label: string; detail: string }[]>([]);
+  const [matchArchiveLoading, setMatchArchiveLoading] = useState(false);
+
+  const loadArchivedItems = async () => {
+    setMatchArchiveLoading(true);
+    try {
+      // Charger propositions archivées
+      const rProps = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?archived=eq.true&order=created_at.desc&limit=100`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const props = await rProps.json().catch(() => []);
+      // Charger demandes archivées
+      const rReqs = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?archived=eq.true&order=created_at.desc&limit=100`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const reqs = await rReqs.json().catch(() => []);
+      // Charger les profils des demandes
+      const reqUserIds = Array.isArray(reqs) ? reqs.map((r: any) => r.user_id) : [];
+      const profiles: Record<string, string> = {};
+      if (reqUserIds.length > 0) {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${reqUserIds.join(",")})&select=id,name`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await pr.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: any) => { profiles[p.id] = p.name; });
+      }
+      // Charger les profils des propositions
+      const propUserIds = Array.isArray(props) ? [...new Set(props.flatMap((p: any) => [p.user1_id, p.user2_id]))] : [];
+      const propProfiles: Record<string, string> = {};
+      if (propUserIds.length > 0) {
+        const pr2 = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${propUserIds.join(",")})&select=id,name`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata2 = await pr2.json().catch(() => []);
+        if (Array.isArray(pdata2)) pdata2.forEach((p: any) => { propProfiles[p.id] = p.name; });
+      }
+      const items = [
+        ...(Array.isArray(props) ? props.map((p: any) => ({
+          id: p.id, type: "proposal" as const, created_at: p.created_at,
+          label: "Proposition",
+          detail: `${propProfiles[p.user1_id] || "?"} ↔ ${propProfiles[p.user2_id] || "?"} · ${p.status}`
+        })) : []),
+        ...(Array.isArray(reqs) ? reqs.map((r: any) => ({
+          id: r.id, type: "request" as const, created_at: r.created_at,
+          label: "Demande",
+          detail: `${profiles[r.user_id] || "?"} · ${r.target_gender || "?"} · ${r.target_city || "toute ville"}`
+        })) : []),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setArchivedItems(items);
+    } catch {}
+    setMatchArchiveLoading(false);
+  };
+
+  const deleteArchivedItem = async (id: string, type: "proposal" | "request") => {
+    try {
+      const table = type === "proposal" ? "match_proposals" : "match_requests";
+      await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+      });
+      setArchivedItems(prev => prev.filter(i => i.id !== id));
+    } catch { showToast("❌ Erreur suppression", "error"); }
+  };
+
+  const deleteAllArchived = async () => {
+    try {
+      await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/match_proposals?archived=eq.true`, {
+          method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+        }),
+        fetch(`${SUPABASE_URL}/rest/v1/match_requests?archived=eq.true`, {
+          method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+        }),
+      ]);
+      setArchivedItems([]);
+      showToast("✅ Archives vidées", "success");
+    } catch { showToast("❌ Erreur suppression", "error"); }
+  };
 
   const loadMatchRequests = async () => {
     setMatchRequestsLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?order=created_at.desc&limit=100`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?archived=not.eq.true&order=created_at.desc&limit=100`, {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
       });
       const data = await r.json().catch(() => []);
@@ -9946,7 +10032,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
         body: JSON.stringify({ status: "expired" })
       });
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?order=created_at.desc&limit=100`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?archived=not.eq.true&order=created_at.desc&limit=100`, {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
       });
       const data = await r.json().catch(() => []);
@@ -10045,6 +10131,16 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     }
     setProposeLoading(true);
     try {
+      // Vérifier si un match existe déjà entre ces deux personnes
+      const existingMatch = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${proposeSelected1.id},user2.eq.${proposeSelected2.id}),and(user1.eq.${proposeSelected2.id},user2.eq.${proposeSelected1.id}))&select=id&limit=1`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const exData = await existingMatch.json().catch(() => []);
+      if (Array.isArray(exData) && exData.length > 0) {
+        showToast(`⚠️ Ces deux personnes ont déjà un match`, "error");
+        setProposeLoading(false);
+        return;
+      }
       const expiresAt = new Date(Date.now() + parseInt(proposeDuration) * 3600 * 1000).toISOString();
       await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, {
         method: "POST",
@@ -13751,12 +13847,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               ["propose", "Propositions", "#e67e22"],
               ["list", "Voir les matchs", "#2980b9"],
               ["requests", "Demandes", G.rouge],
+              ["archived", "Archivés", "#555"],
             ] as [string, string, string][]).map(([key, label, color]) => (
               <button key={key} onClick={() => {
                 setMatchSubTab(key as any);
                 if (key === "list") { loadMatchListData(); }
                 if (key === "requests") { loadMatchRequests(); localStorage.setItem("moyo_requests_seen", new Date().toISOString()); setMatchRequestsBadge(0); }
                 if (key === "propose") loadProposals();
+                if (key === "archived") loadArchivedItems();
               }} style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 50, border: `2px solid ${matchSubTab === key ? color : G.gris}`, background: matchSubTab === key ? color : G.blanc, color: matchSubTab === key ? "#fff" : "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                 {label}
                 {key === "requests" && matchRequestsBadge > 0 && <span style={{ background: "#fff", color: G.rouge, borderRadius: 50, fontSize: "0.55rem", fontWeight: 800, padding: "1px 5px" }}>{matchRequestsBadge}</span>}
@@ -13862,7 +13960,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ fontSize: "0.62rem", color: "#aaa" }}>{new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
                             {p.status === "pending" && <button onClick={() => handleCancelProposal(p.id)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Annuler</button>}
-                        {(p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={() => handleDeleteProposal(p.id)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button>}
+                        {(p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={async () => {
+                          await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ archived: true }) });
+                          setProposals(prev => prev.filter(x => x.id !== p.id));
+                          showToast("✅ Archivé", "success");
+                        }} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#555", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>Archiver</button>}
                           </div>
                         </div>
                       </div>
@@ -13955,8 +14057,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                                     <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>{cp.name}</div>
                                     <div style={{ fontSize: "0.65rem", color: "#888" }}>{cp.age} ans · {cp.city}</div>
                                   </div>
-                                  <button onClick={() => {
+                                  <button onClick={async () => {
                                     if (req.profile) {
+                                      // Vérifier si match existant
+                                      const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${req.profile.id},user2.eq.${cp.id}),and(user1.eq.${cp.id},user2.eq.${req.profile.id}))&select=id&limit=1`, {
+                                        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+                                      });
+                                      const d = await r.json().catch(() => []);
+                                      if (Array.isArray(d) && d.length > 0) { showToast("⚠️ Ces deux personnes ont déjà un match", "error"); return; }
                                       setProposeSelected1(req.profile);
                                       setProposeSelected2(cp);
                                       setShowProposeMatch(true);
@@ -13985,15 +14093,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         {(req.status === "done" || req.status === "cancelled") && <button onClick={async () => {
                           try {
                             await fetch(`${SUPABASE_URL}/rest/v1/match_requests?id=eq.${req.id}`, {
-                              method: "DELETE",
-                              headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+                              method: "PATCH",
+                              headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+                              body: JSON.stringify({ archived: true })
                             });
                             setMatchRequests(prev => prev.filter(r => r.id !== req.id));
-                            logAdminAction(auth.token, auth.userId, auth.name, `Demande de mise en relation supprimée`, req.id);
+                            showToast("✅ Archivé", "success");
                           } catch {}
-                        }} style={{ background: "rgba(231,76,60,0.06)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.15)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                          Supprimer
+                        }} style={{ background: "rgba(85,85,85,0.06)", color: "#555", border: "1.5px solid rgba(85,85,85,0.15)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                          Archiver
                         </button>}
                         </div>
                       </div>
@@ -14096,6 +14205,54 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </button>
             </div>
           </div>
+          {/* ══ ARCHIVÉS ══ */}
+          {matchSubTab === "archived" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ fontSize: "0.82rem", color: "#888", fontWeight: 600 }}>{archivedItems.length} élément{archivedItems.length > 1 ? "s" : ""} archivé{archivedItems.length > 1 ? "s" : ""}</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {archivedItems.length > 0 && (
+                    <button onClick={() => { if (window.confirm(`Supprimer définitivement les ${archivedItems.length} éléments archivés ? Cette action est irréversible.`)) deleteAllArchived(); }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "7px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                      Tout supprimer
+                    </button>
+                  )}
+                  <button onClick={loadArchivedItems} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "7px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+                </div>
+              </div>
+              {matchArchiveLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : archivedItems.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                  <div style={{ fontSize: "0.88rem", color: "#aaa", marginBottom: 6 }}>Aucun élément archivé</div>
+                  <div style={{ fontSize: "0.75rem", color: "#ccc" }}>Les propositions et demandes archivées apparaissent ici</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {archivedItems.map(item => (
+                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, background: G.blanc, borderRadius: 14, padding: "12px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)", border: `1px solid ${G.gris}` }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: item.type === "proposal" ? "rgba(142,68,173,0.1)" : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {item.type === "proposal"
+                          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+                        }
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: "0.65rem", fontWeight: 700, background: item.type === "proposal" ? "rgba(142,68,173,0.1)" : "rgba(192,57,43,0.1)", color: item.type === "proposal" ? "#8e44ad" : G.rouge, borderRadius: 50, padding: "2px 8px" }}>{item.label}</span>
+                          <span style={{ fontSize: "0.65rem", color: "#aaa" }}>{new Date(item.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" })}</span>
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#444", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.detail}</div>
+                      </div>
+                      <button onClick={() => deleteArchivedItem(item.id, item.type)} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
