@@ -133,7 +133,7 @@ type Auth = {
   expiresAt?: number;
 };
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; warning_count?: number };
-type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number };
+type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
@@ -534,8 +534,8 @@ const sb = {
 
 const GLOBAL_CSS = `
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
-  html{overflow-x:hidden;width:100%;max-width:100vw;background-color:#FFFFFF}
-  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;background-color:#FFFFFF}
+  html{overflow-x:hidden;width:100%;max-width:100vw;background-color:#FFFFFF;-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:pan-x pan-y}
+  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:#FFFFFF;touch-action:pan-x pan-y}
   html{background-color:#FFFFFF}
   #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;background-color:#FFFFFF}
   /* Fix clavier iOS - la barre reste fixe au-dessus du clavier */
@@ -569,6 +569,7 @@ const GLOBAL_CSS = `
   /* iOS : empêche le zoom automatique sur focus */
   @supports (-webkit-touch-callout: none) {
     .chat-textarea { font-size: 16px !important; }
+    input, select, textarea { font-size: 16px !important; }
   }
   .admin-tabs::-webkit-scrollbar{display:none}
   .match-subtabs::-webkit-scrollbar{display:none}
@@ -6882,7 +6883,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
 
   const loadConvs = async () => {
     setLoading(true);
-    const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})`);
+    const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&order=created_at.desc`);
     const supportRows = await sb.query<ReportRowLike>(auth.token, "reports", `?select=id,reason,reporter_id,reported_id,status,created_at&or=(reporter_id.eq.${auth.userId},reported_id.eq.${auth.userId})&order=created_at.desc&limit=50`).catch(() => [] as ReportRowLike[]);
     const hasSupport = supportRows.some(r => isSupportReason(r.reason));
     if (!res.length) {
@@ -7112,35 +7113,73 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
               }
             };
+            const convTs = (c: Match): number => {
+              const created = c.created_at ? new Date(c.created_at).getTime() : 0;
+              const last = c.lastMsg?.created_at ? new Date(c.lastMsg.created_at).getTime() : 0;
+              return Math.max(created, last);
+            };
+            // ── Un nouveau match (aucun message échangé hors bienvenue auto) marqué visuellement ──
+            const NEW_MATCH_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
+            const isNewMatch = (c: Match): boolean => {
+              if (c.id === "__support__") return false;
+              if (!c.created_at) return false;
+              const age = Date.now() - new Date(c.created_at).getTime();
+              if (age > NEW_MATCH_WINDOW_MS) return false;
+              // Pas encore de vraie discussion : seul le message de bienvenue auto (SUPPORT_TEAM_ID) existe
+              const last = c.lastMsg;
+              if (!last) return true;
+              return last.sender_id === SUPPORT_TEAM_ID;
+            };
             const sorted = [...convs].sort((a, b) => {
-              const ta = a.lastMsg?.created_at ? new Date(a.lastMsg.created_at).getTime() : 0;
-              const tb = b.lastMsg?.created_at ? new Date(b.lastMsg.created_at).getTime() : 0;
-              return tb - ta;
+              // Support toujours tout en haut
+              if (a.id === "__support__") return -1;
+              if (b.id === "__support__") return 1;
+              return convTs(b) - convTs(a);
             });
-            return sorted.map((c, idx) => (
+            return sorted.map((c, idx) => {
+              const nouveau = isNewMatch(c);
+              return (
               <div key={c.id}>
                 <div onClick={() => {
                   setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
                   onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
                   setOpen(c);
-                }} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 12px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : "transparent", cursor: "pointer", transition: "background 0.12s" }}>
-                  <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
+                }} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 12px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : (nouveau ? "rgba(192,57,43,0.04)" : "transparent"), cursor: "pointer", transition: "background 0.12s" }}>
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <div style={{ borderRadius: "50%", padding: nouveau ? 2 : 0, background: nouveau ? `linear-gradient(135deg, ${G.rouge}, ${G.or})` : "transparent" }}>
+                      <div style={{ borderRadius: "50%", padding: nouveau ? 2 : 0, background: nouveau ? "#fff" : "transparent" }}>
+                        <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
+                      </div>
+                    </div>
+                    {nouveau && (
+                      <div style={{ position: "absolute", right: -2, bottom: -2, width: 20, height: 20, borderRadius: "50%", background: G.rouge, border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      </div>
+                    )}
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Ligne 1 : nom + point online à gauche, heure à droite */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
-                        <div style={{ fontWeight: (c.unreadCount || 0) > 0 ? 700 : 600, fontSize: "0.9rem", color: (c.unreadCount || 0) > 0 ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.partner?.name}</div>
+                        <div style={{ fontWeight: (nouveau || (c.unreadCount || 0) > 0) ? 700 : 600, fontSize: "0.9rem", color: (nouveau || (c.unreadCount || 0) > 0) ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.partner?.name}</div>
                         {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
                       </div>
                       <div style={{ fontSize: "0.72rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#aaa", fontWeight: (c.unreadCount || 0) > 0 ? 700 : 400, flexShrink: 0, marginLeft: 8 }}>
-                        {formatConvTime(c.lastMsg?.created_at)}
+                        {formatConvTime(c.lastMsg?.created_at || c.created_at)}
                       </div>
                     </div>
                     {/* Ligne 2 : aperçu message + badge */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      {nouveau ? (
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(192,57,43,0.1)", color: G.rouge, borderRadius: 10, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 700, flexShrink: 0 }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                          Nouveau match · Dis bonjour !
+                        </div>
+                      ) : (
                       <div style={{ fontSize: "0.77rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#888", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, minWidth: 0 }}>
                         {c.lastMsg?.content?.startsWith("[img]") ? "📷 Photo" : c.lastMsg?.content || "Dis bonjour !"}
                       </div>
+                      )}
                       {(c.unreadCount || 0) > 0 && (
                         <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", minWidth: 20, height: 20, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>
                           {(c.unreadCount || 0) > 9 ? "9+" : c.unreadCount}
@@ -7154,7 +7193,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                   <div style={{ marginLeft: 72, height: 1, background: G.gris, opacity: 0.7 }} />
                 )}
               </div>
-            ));
+            );});
           })()
       }
     </div>
@@ -8092,7 +8131,7 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
       <div style={{ background: G.blanc, borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
         <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Pince pour zoomer</div>
-        <div ref={canvasContainerRef} style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
+        <div ref={canvasContainerRef} data-zoomable="true" style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
           onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onWheel={onWheel}
         >
           <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
@@ -14459,6 +14498,33 @@ export default function App() {
     const handler = () => setShowAdminConfig(true);
     window.addEventListener("moyo-open-admin-config", handler);
     return () => window.removeEventListener("moyo-open-admin-config", handler);
+  }, []);
+
+  // ── Viewport mobile : adapter à la largeur de l'écran, empêcher le zoom intempestif ──
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "viewport";
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute(
+      "content",
+      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
+    );
+    // Sécurité iOS Safari : empêche le double-tap zoom et le pinch-zoom de page,
+    // sauf dans les zones interactives qui gèrent leur propre zoom (ex: éditeur de photo)
+    const preventGesture = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('[data-zoomable="true"]')) return;
+      e.preventDefault();
+    };
+    document.addEventListener("gesturestart", preventGesture);
+    document.addEventListener("gesturechange", preventGesture);
+    return () => {
+      document.removeEventListener("gesturestart", preventGesture);
+      document.removeEventListener("gesturechange", preventGesture);
+    };
   }, []);
 
   // Bloquer le scroll sous le panneau config
