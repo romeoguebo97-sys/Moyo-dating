@@ -10143,9 +10143,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
   const [proposalsBadgeCount, setProposalsBadgeCount] = useState(0);
-  // États globaux badges matchs (mis à jour par le polling admin App)
-  const [matchRequestsBadgeGlobal, setMatchRequestsBadgeGlobal] = useState(0);
-  const [proposalsBadgeGlobal, setProposalsBadgeGlobal] = useState(0);
+
   const loadPayments = async () => {
     setPaymentsLoading(true);
     try {
@@ -11175,7 +11173,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   // ── Badge global = signalements en attente + avis non lus + paiements en attente ──
   const adminBadgeCount = pendingCount + unreadReviewsCount + pendingPaymentsCount;
-  const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge + matchRequestsBadgeGlobal + proposalsBadgeGlobal;
+  const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
 
@@ -14696,17 +14694,7 @@ export default function App() {
         const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments);
         setAdminBadgeCount(prev => prev === newCount ? prev : newCount);
 
-        // ── Badge match requests (nouvelles demandes de mise en relation) ──
-        const lastReqSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
-        const rRequests = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&created_at=gt.${lastReqSeen}&select=id`, { headers: h });
-        const reqCount = parseCount(rRequests);
-        setMatchRequestsBadgeGlobal(reqCount);
 
-        // ── Badge propositions (réponses reçues non vues) ──
-        const lastPropSeen = localStorage.getItem("moyo_proposals_seen") || "1970-01-01";
-        const rProps = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(status.eq.accepted,status.eq.refused)&created_at=gt.${lastPropSeen}&select=id`, { headers: h });
-        const propCount = parseCount(rProps);
-        setProposalsBadgeGlobal(propCount);
       } catch {}
     };
     checkAdminBadge();
