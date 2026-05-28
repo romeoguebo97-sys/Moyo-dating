@@ -571,6 +571,7 @@ const GLOBAL_CSS = `
     .chat-textarea { font-size: 16px !important; }
   }
   .admin-tabs::-webkit-scrollbar{display:none}
+  .match-subtabs::-webkit-scrollbar{display:none}
   .msg-arrow{opacity:0;transition:opacity 0.15s}
   .msg-row:hover .msg-arrow{opacity:1}
   @media(hover:none){.msg-arrow{opacity:1}}
@@ -2459,8 +2460,45 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     setLoading(true);
     let authRes: any = null;
     try {
-      const existing = await sb.query<Profile>(SUPABASE_KEY, "profiles", `?email=eq.${encodeURIComponent(emailClean)}&select=id`);
-      if (existing.length > 0) { setErrorMsg("Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt."); setLoading(false); return; }
+      // Vérifier si le compte existe déjà
+      const existing = await sb.query<Profile>(SUPABASE_KEY, "profiles", `?email=eq.${encodeURIComponent(emailClean)}&select=id,name,photo_url`);
+
+      if (existing.length > 0) {
+        const existingProfile = existing[0] as any;
+        const isIncomplete = existingProfile.name === "..." || !existingProfile.name || !existingProfile.photo_url;
+
+        if (!isIncomplete) {
+          // Compte complet → on bloque
+          setErrorMsg("Cette adresse e-mail est déjà utilisée. Connectez-vous plutôt.");
+          setLoading(false);
+          return;
+        }
+
+        // Compte incomplet → on tente de se connecter avec le nouveau mot de passe
+        // pour récupérer le token et écraser le profil existant
+        const loginTry = await sb.signIn(emailClean, form.password);
+        if (loginTry?.access_token && loginTry?.user?.id) {
+          // Connexion réussie → on écrase le profil incomplet
+          setTempToken(loginTry.access_token);
+          setTempUserId(loginTry.user.id);
+          sessionStorage.setItem("moyo_signup_token", loginTry.access_token);
+          sessionStorage.setItem("moyo_signup_uid", loginTry.user.id);
+          // Réinitialiser le profil
+          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${loginTry.user.id}`, {
+            method: "PATCH",
+            headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${loginTry.access_token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+            body: JSON.stringify({ name: "...", photo_url: null, bio: "", age: 18, city: "Brazzaville", gender: "Homme" })
+          });
+          setStep(2);
+          setLoading(false);
+          return;
+        } else {
+          // Mot de passe différent de l'ancien → compte incomplet mais mot de passe différent
+          setErrorMsg("Cette adresse e-mail a déjà un compte incomplet. Connectez-vous avec votre ancien mot de passe ou utilisez 'Mot de passe oublié'.");
+          setLoading(false);
+          return;
+        }
+      }
 
       // Créer le compte dès l'étape 1
       authRes = await sb.signUp(emailClean, form.password, { name: "...", age: "18", city: "Brazzaville", gender: "Homme", bio: "", religion: "", photo_url: null });
@@ -2499,7 +2537,8 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
   // Étape 2 → upload photo en arrière-plan pendant que l'utilisateur remplit l'étape 3
   const handlePhotoAndContinue = async () => {
-    if (!photoFile || !tempToken || !tempUserId) { setStep(3); return; }
+    if (!photoFile) { setErrorMsg("Une photo est obligatoire pour continuer."); return; }
+    if (!tempToken || !tempUserId) { setErrorMsg("Session expir\u00e9e. Recommencez l'inscription."); return; }
     setUploadingPhoto(true);
     try {
       const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -13841,7 +13880,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "matches" && (
         <div style={{ padding: "16px" }}>
           {/* ── Sous-onglets Matchs ── */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none" }}>
+          <div className="match-subtabs" style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", flexWrap: "nowrap" }}>
             {([
               ["create", "Créer un match", "#8e44ad"],
               ["propose", "Propositions", "#e67e22"],
