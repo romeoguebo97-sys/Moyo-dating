@@ -2346,6 +2346,20 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         setErrorMsg("Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à contact@moyo-congo.com");
         setLoading(false); return;
       }
+
+      // ── Vérifier si le profil est incomplet (pas de photo) ──
+      const profile = profiles[0] as any;
+      const isIncomplete = !profile.photo_url || profile.name === "..." || !profile.name;
+      if (isIncomplete) {
+        // Stocker le token pour reprendre l'inscription à l'étape 2
+        sessionStorage.setItem("moyo_signup_token", res.access_token);
+        sessionStorage.setItem("moyo_signup_uid", res.user.id);
+        sessionStorage.setItem("moyo_signup_resume", "true");
+        setLoading(false);
+        onNav("signup");
+        return;
+      }
+
       onAuth({
         token: res.access_token,
         userId: res.user.id,
@@ -2376,7 +2390,16 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
 }
 
 function SignUp({ onNav }: { onNav: (p: string) => void }) {
-  const [step, setStep] = useState(1);
+  // Reprendre l'inscription si redirigé depuis la connexion avec un profil incomplet
+  const resumeToken = sessionStorage.getItem("moyo_signup_token");
+  const resumeUid = sessionStorage.getItem("moyo_signup_uid");
+  const isResume = sessionStorage.getItem("moyo_signup_resume") === "true";
+  // Nettoyer le flag après lecture
+  if (isResume) sessionStorage.removeItem("moyo_signup_resume");
+
+  const [step, setStep] = useState(isResume && resumeToken && resumeUid ? 2 : 1);
+  const [tempToken, setTempToken] = useState<string | null>(isResume ? resumeToken : sessionStorage.getItem("moyo_signup_token"));
+  const [tempUserId, setTempUserId] = useState<string | null>(isResume ? resumeUid : sessionStorage.getItem("moyo_signup_uid"));
   const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "", profession: "", hobbies: "" });
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -2388,8 +2411,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [cropSrcSignup, setCropSrcSignup] = useState<string | null>(null);
   const [signupSuccessMsg, setSignupSuccessMsg] = useState("Ton compte est prêt ! Connecte-toi maintenant.");
-  const [tempToken, setTempToken] = useState<string | null>(() => sessionStorage.getItem("moyo_signup_token"));
-  const [tempUserId, setTempUserId] = useState<string | null>(() => sessionStorage.getItem("moyo_signup_uid"));
   const fileRef = useRef<HTMLInputElement>(null);
   const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
@@ -2487,6 +2508,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           setTempUserId(loginTry.user.id);
           sessionStorage.setItem("moyo_signup_token", loginTry.access_token);
           sessionStorage.setItem("moyo_signup_uid", loginTry.user.id);
+          sessionStorage.removeItem("moyo_signup_resume");
           // Réinitialiser le profil
           await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${loginTry.user.id}`, {
             method: "PATCH",
