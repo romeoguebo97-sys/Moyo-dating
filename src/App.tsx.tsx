@@ -6478,19 +6478,46 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   }, []);
   useEffect(() => { if (open) loadMsgs(open); }, [open]);
 
-  // Scroll immédiat en bas à l'ouverture de la conversation
+  // Scroll immédiat en bas à l'ouverture de la conversation.
+  // Déclenché à la fois sur le changement de conversation ET sur l'arrivée des messages,
+  // avec plusieurs tentatives pour absorber le délai réseau et le chargement des images.
+  const justOpenedRef = useRef(false);
   useEffect(() => {
-    if (open && msgs.length > 0) {
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "instant" });
-      }, 50);
-    }
+    if (open) justOpenedRef.current = true;
   }, [open?.id]);
+  useEffect(() => {
+    if (!open || !justOpenedRef.current || msgs.length === 0) return;
+    const jumpToBottom = () => bottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    // Tentatives échelonnées : layout immédiat, après rendu, après images
+    jumpToBottom();
+    const t1 = setTimeout(jumpToBottom, 50);
+    const t2 = setTimeout(jumpToBottom, 150);
+    const t3 = setTimeout(jumpToBottom, 350);
+    requestAnimationFrame(() => requestAnimationFrame(jumpToBottom));
+    // Si des images sont présentes, re-scroller une fois chargées
+    const container = bottomRef.current?.parentElement?.parentElement;
+    const imgs = container ? Array.from(container.querySelectorAll("img")) : [];
+    const onImgLoad = () => jumpToBottom();
+    imgs.forEach(img => { if (!img.complete) img.addEventListener("load", onImgLoad, { once: true }); });
+    justOpenedRef.current = false;
+    return () => {
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+      imgs.forEach(img => img.removeEventListener("load", onImgLoad));
+    };
+  }, [open?.id, msgs.length]);
 
   // Scroll uniquement si un nouveau message est apparu (count augmente), pas sur les mises à jour de is_read/reactions
   const prevMsgCountRef = useRef(0);
+  // Au changement de conversation, on réinitialise le compteur :
+  // le saut initial en bas est géré par l'effet d'ouverture ci-dessus, pas ici.
+  const prevOpenIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     const count = msgs.length;
+    if (prevOpenIdRef.current !== open?.id) {
+      prevOpenIdRef.current = open?.id;
+      prevMsgCountRef.current = count;
+      return;
+    }
     if (count > prevMsgCountRef.current) {
       // Auto-scroll uniquement si l'utilisateur est déjà en bas (±150px)
       const container = bottomRef.current?.parentElement?.parentElement;
