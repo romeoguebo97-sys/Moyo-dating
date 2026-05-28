@@ -534,8 +534,10 @@ const sb = {
 
 const GLOBAL_CSS = `
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
-  html{overflow-x:hidden;width:100%;max-width:100vw;background-color:#FFFFFF;-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:pan-x pan-y}
-  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:#FFFFFF;touch-action:pan-x pan-y}
+  html{overflow-x:hidden;width:100%;max-width:100vw;background-color:#FFFFFF;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:#FFFFFF}
+  /* PWA iOS 18 : forcer touch-action:auto sur les champs pour que le clavier natif apparaisse */
+  input,textarea,select{touch-action:auto !important}
   html{background-color:#FFFFFF}
   #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;background-color:#FFFFFF}
   /* Fix clavier iOS - la barre reste fixe au-dessus du clavier */
@@ -14589,7 +14591,7 @@ export default function App() {
     }
     meta.setAttribute(
       "content",
-      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
+      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
     );
     // Sécurité iOS Safari : empêche le double-tap zoom et le pinch-zoom de page,
     // sauf dans les zones interactives qui gèrent leur propre zoom (ex: éditeur de photo)
