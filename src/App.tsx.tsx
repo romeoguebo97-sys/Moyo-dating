@@ -3808,8 +3808,10 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     {/* Bot Widget — fenêtre */}
     {showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
 
-    {/* Bot flottant */}
-    {!isWide && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
+    {/* Bot flottant — masqué quand une conversation est ouverte pour ne pas surcharger
+        l'écran de chat (la flèche "descendre" prend sa place). L'Assistant reste accessible
+        depuis le bouton dédié dans le header/menu Découvrir. */}
+    {!isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
     {showGuide && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
       <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
         {/* Header */}
@@ -6458,6 +6460,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [statusPaused, setStatusPaused] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollDown, setShowScrollDown] = useState(false);
   const imgRef = useRef<HTMLInputElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -6483,11 +6487,21 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   // avec plusieurs tentatives pour absorber le délai réseau et le chargement des images.
   const justOpenedRef = useRef(false);
   useEffect(() => {
-    if (open) justOpenedRef.current = true;
+    if (open) {
+      justOpenedRef.current = true;
+      setShowScrollDown(false);
+    }
   }, [open?.id]);
   useEffect(() => {
     if (!open || !justOpenedRef.current || msgs.length === 0) return;
-    const jumpToBottom = () => bottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    const jumpToBottom = () => {
+      const el = scrollContainerRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      } else {
+        bottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+      }
+    };
     // Tentatives échelonnées : layout immédiat, après rendu, après images
     jumpToBottom();
     const t1 = setTimeout(jumpToBottom, 50);
@@ -6495,7 +6509,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     const t3 = setTimeout(jumpToBottom, 350);
     requestAnimationFrame(() => requestAnimationFrame(jumpToBottom));
     // Si des images sont présentes, re-scroller une fois chargées
-    const container = bottomRef.current?.parentElement?.parentElement;
+    const container = scrollContainerRef.current;
     const imgs = container ? Array.from(container.querySelectorAll("img")) : [];
     const onImgLoad = () => jumpToBottom();
     imgs.forEach(img => { if (!img.complete) img.addEventListener("load", onImgLoad, { once: true }); });
@@ -6520,7 +6534,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     }
     if (count > prevMsgCountRef.current) {
       // Auto-scroll uniquement si l'utilisateur est déjà en bas (±150px)
-      const container = bottomRef.current?.parentElement?.parentElement;
+      const container = scrollContainerRef.current;
       if (container) {
         const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
         if (isAtBottom) {
@@ -7453,7 +7467,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       )}
 
       {/* Zone messages */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "scroll", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", position: "relative", overscrollBehavior: "contain", zIndex: 1 }}>
+      <div ref={scrollContainerRef} onScroll={(e) => {
+        const el = e.currentTarget;
+        const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+        setShowScrollDown(dist > 250);
+      }} style={{ flex: 1, minHeight: 0, overflowY: "scroll", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", position: "relative", overscrollBehavior: "contain", zIndex: 1 }}>
         <div style={{ flex: 1 }} />{/* spacer pour pousser les messages vers le bas */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8, minHeight: "100%" }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
@@ -7594,6 +7612,40 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           <div ref={bottomRef} />
         </div>
       </div>
+
+      {/* Flèche "descendre au dernier message" style WhatsApp.
+          Le bot flottant est masqué pendant la conversation, la flèche prend sa place habituelle à droite. */}
+      {showScrollDown && (
+        <div
+          onClick={() => {
+            const el = scrollContainerRef.current;
+            if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+            setShowScrollDown(false);
+          }}
+          style={{
+            position: "absolute",
+            right: 16,
+            bottom: (footerRef.current?.offsetHeight || 64) + 12,
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: G.blanc,
+            boxShadow: "0 3px 12px rgba(0,0,0,0.18)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 3,
+            border: `1px solid ${G.gris}`,
+            transition: "opacity 0.15s",
+          }}
+          aria-label="Descendre au dernier message"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      )}
 
       {/* Barre d'envoi */}
       <div ref={footerRef} style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom)", zIndex: 2 }}>
