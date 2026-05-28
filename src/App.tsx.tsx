@@ -12194,7 +12194,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </button>
         </div>
         {/* Onglets - scroll horizontal sur mobile */}
-        <div className="admin-tabs" style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}`, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        <div className="admin-tabs" style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}`, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", minWidth: 0 }}>
           {([
             ["stats", "Statistiques", IcoStats],
             ["users", "Utilisateurs", IcoUsers],
@@ -12219,11 +12219,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 }
               }}
               style={{
-                flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                padding: "10px 6px 12px", cursor: "pointer", fontSize: "0.62rem", fontWeight: 600,
+                flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                padding: "10px 16px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
                 color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge) : "#999",
                 borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge}` : "2.5px solid transparent",
-                transition: "all 0.2s", whiteSpace: "nowrap", overflow: "hidden",
+                transition: "all 0.2s", whiteSpace: "nowrap",
               }}
             >
               <Icon />
