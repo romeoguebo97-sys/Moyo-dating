@@ -14112,8 +14112,57 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               )}
             </div>
           )}
+          {/* ══ ARCHIVÉS ══ */}
+          {matchSubTab === "archived" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ fontSize: "0.82rem", color: "#888", fontWeight: 600 }}>{archivedItems.length} élément{archivedItems.length > 1 ? "s" : ""} archivé{archivedItems.length > 1 ? "s" : ""}</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {archivedItems.length > 0 && (
+                    <button onClick={() => { if (window.confirm(`Supprimer définitivement les ${archivedItems.length} éléments archivés ? Cette action est irréversible.`)) deleteAllArchived(); }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "7px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                      Tout supprimer
+                    </button>
+                  )}
+                  <button onClick={loadArchivedItems} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "7px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+                </div>
+              </div>
+              {matchArchiveLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : archivedItems.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                  <div style={{ fontSize: "0.88rem", color: "#aaa", marginBottom: 6 }}>Aucun élément archivé</div>
+                  <div style={{ fontSize: "0.75rem", color: "#ccc" }}>Les propositions et demandes archivées apparaissent ici</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {archivedItems.map(item => (
+                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, background: G.blanc, borderRadius: 14, padding: "12px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)", border: `1px solid ${G.gris}` }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: item.type === "proposal" ? "rgba(142,68,173,0.1)" : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {item.type === "proposal"
+                          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+                        }
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: "0.65rem", fontWeight: 700, background: item.type === "proposal" ? "rgba(142,68,173,0.1)" : "rgba(192,57,43,0.1)", color: item.type === "proposal" ? "#8e44ad" : G.rouge, borderRadius: 50, padding: "2px 8px" }}>{item.label}</span>
+                          <span style={{ fontSize: "0.65rem", color: "#aaa" }}>{new Date(item.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" })}</span>
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#444", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.detail}</div>
+                      </div>
+                      <button onClick={() => deleteArchivedItem(item.id, item.type)} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
+
 
 
       {/* ── MODAL CRÉER UN MATCH DIRECT ── */}
@@ -14204,57 +14253,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {createLoading ? "Création en cours..." : "Créer le match"}
               </button>
             </div>
-          </div>
-          {/* ══ ARCHIVÉS ══ */}
-          {matchSubTab === "archived" && (
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <div style={{ fontSize: "0.82rem", color: "#888", fontWeight: 600 }}>{archivedItems.length} élément{archivedItems.length > 1 ? "s" : ""} archivé{archivedItems.length > 1 ? "s" : ""}</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {archivedItems.length > 0 && (
-                    <button onClick={() => { if (window.confirm(`Supprimer définitivement les ${archivedItems.length} éléments archivés ? Cette action est irréversible.`)) deleteAllArchived(); }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "7px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                      Tout supprimer
-                    </button>
-                  )}
-                  <button onClick={loadArchivedItems} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "7px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
-                </div>
-              </div>
-              {matchArchiveLoading ? (
-                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
-              ) : archivedItems.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                  <div style={{ fontSize: "0.88rem", color: "#aaa", marginBottom: 6 }}>Aucun élément archivé</div>
-                  <div style={{ fontSize: "0.75rem", color: "#ccc" }}>Les propositions et demandes archivées apparaissent ici</div>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {archivedItems.map(item => (
-                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, background: G.blanc, borderRadius: 14, padding: "12px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)", border: `1px solid ${G.gris}` }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: item.type === "proposal" ? "rgba(142,68,173,0.1)" : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {item.type === "proposal"
-                          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
-                        }
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                          <span style={{ fontSize: "0.65rem", fontWeight: 700, background: item.type === "proposal" ? "rgba(142,68,173,0.1)" : "rgba(192,57,43,0.1)", color: item.type === "proposal" ? "#8e44ad" : G.rouge, borderRadius: 50, padding: "2px 8px" }}>{item.label}</span>
-                          <span style={{ fontSize: "0.65rem", color: "#aaa" }}>{new Date(item.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" })}</span>
-                        </div>
-                        <div style={{ fontSize: "0.78rem", color: "#444", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.detail}</div>
-                      </div>
-                      <button onClick={() => deleteArchivedItem(item.id, item.type)} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
-      )}
+          </div>
+          )}
 
       {/* ── MODAL PROPOSER UN MATCH ── */}
       {showProposeMatch && (
