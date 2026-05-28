@@ -2748,8 +2748,8 @@ const BOT_FAQ = [
   { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium coûte ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money ou Airtel Money. Activation manuelle sous 24h.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: "Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez automatiquement 7 jours Premium offerts. Pas de limite !" },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
-  { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: "Moyo propose un service de mise en relation personnalisé. Depuis votre page Profil, appuyez sur le bouton rouge 'Demander une mise en relation', précisez vos critères (genre, ville, âge) et envoyez votre demande. Notre équipe recherche la personne qui vous correspond et vous envoie une proposition directement dans l'application." },
-  { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand notre équipe vous propose une rencontre, un modal apparaît avec la photo et le profil de la personne. Vous avez deux choix : 'Accepter' (si les deux acceptent, un match est créé automatiquement) ou 'Refuser' (la proposition est annulée). La proposition expire automatiquement si vous ne répondez pas dans le délai indiqué." },
+  { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: "Moyo propose un service de mise en relation personnalisé réservé aux membres Premium. Depuis votre page Profil, appuyez sur le bouton rouge 'Demander une mise en relation', précisez vos critères (genre recherché, ville, tranche d'âge) et ajoutez un message optionnel. Notre équipe analyse votre demande et vous envoie une proposition dans l'application. Vous pouvez faire plusieurs demandes." },
+  { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand l'équipe Moyo vous propose une rencontre, un modal s'affiche automatiquement avec la photo, le nom, l'âge et la ville de la personne. Deux choix : 'Accepter' ou 'Refuser'. Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée pour les deux. La proposition expire si vous ne répondez pas dans le délai fixé par l'équipe." },
   { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: `Compte gratuit : ${FREE_LIMITS.likes} likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément.` },
   { q: ["message", "envoyer", "écrire", "conversation"], r: `Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message.` },
   { q: ["réaction", "réagir", "emoji", "like message"], r: "Appuyez longuement sur un message pour ouvrir le menu de réactions. Une seule réaction par message est autorisée : choisir une nouvelle réaction remplace automatiquement l'ancienne." },
@@ -3767,7 +3767,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Le menu fonctionne sur chaque profil indépendamment en mode carte, liste et plein écran.",
             ]},
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
-            { title: "Mise en relation Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Notre équipe peut vous proposer une rencontre personnalisée. C'est gratuit et accessible à tous les membres.", "Pour faire une demande : allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → précisez vos critères (genre recherché, ville, tranche d'âge) → ajoutez un message optionnel → envoyez.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
+            { title: "Mise en relation Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Ce service est réservé aux membres Premium. Notre équipe recherche personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : passez Premium → allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → précisez vos critères (genre recherché, ville, tranche d'âge) → ajoutez un message optionnel → envoyez.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe."] },
@@ -3803,7 +3803,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             ]},
             { title: "Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: [
               "Sur ordinateur et tablette, votre page Profil s'affiche en deux colonnes 50/50 : le menu à gauche, le contenu à droite. Cliquez sur un item du menu pour afficher son contenu à droite sans quitter la page.",
-              "Menu disponible : Mon profil, Modifier mon profil, Modifier ma photo, Premium, Demander une mise en relation, Parrainer un ami, Vérification, Profil visible/invisible, Liste noire, Mode sombre, Noter l'application, Voir mon profil, Inviter un ami, Se déconnecter, Supprimer mon compte.",
+              "Menu disponible : Mon profil, Modifier mon profil, Modifier ma photo, Premium, Demander une mise en relation (Premium - service de matchmaking personnalisé par l'équipe), Parrainer un ami, Vérification, Profil visible/invisible, Liste noire, Mode sombre, Noter l'application, Voir mon profil, Inviter un ami, Se déconnecter, Supprimer mon compte.",
               "Sur mobile, tout s'affiche verticalement dans une seule colonne, comme avant.",
             ]},
             { title: "Likes", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: [
@@ -10004,6 +10004,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const handleCreateMatch = async () => {
     if (!createSelected1 || !createSelected2) return;
     if (createSelected1.id === createSelected2.id) { showToast("❌ Impossible de matcher quelqu'un avec lui-même", "error"); return; }
+    // Vérifier même genre si toggle activé
+    const { g1, g2 } = await getGenders(createSelected1.id, createSelected2.id);
+    if (g1 && g2 && g1 === g2 && await isSameGenderBlocked()) {
+      showToast(`❌ Même genre (${g1}). Désactivez "Bloquer like même genre" dans Configuration pour créer ce match.`, "error");
+      return;
+    }
     setCreateLoading(true);
     try {
       const existing = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${createSelected1.id},user2.eq.${createSelected2.id}),and(user1.eq.${createSelected2.id},user2.eq.${createSelected1.id}))&select=id&limit=1`, {
@@ -10031,6 +10037,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const handleProposeMatch = async () => {
     if (!proposeSelected1 || !proposeSelected2) return;
     if (proposeSelected1.id === proposeSelected2.id) { showToast("❌ Impossible de proposer quelqu'un avec lui-même", "error"); return; }
+    // Vérifier même genre si toggle activé
+    const { g1, g2 } = await getGenders(proposeSelected1.id, proposeSelected2.id);
+    if (g1 && g2 && g1 === g2 && await isSameGenderBlocked()) {
+      showToast(`❌ Même genre (${g1}). Désactivez "Bloquer like même genre" dans Configuration pour proposer ce match.`, "error");
+      return;
+    }
     setProposeLoading(true);
     try {
       const expiresAt = new Date(Date.now() + parseInt(proposeDuration) * 3600 * 1000).toISOString();
@@ -10047,6 +10059,18 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       loadProposals();
     } catch { showToast("❌ Erreur lors de la proposition", "error"); }
     setProposeLoading(false);
+  };
+
+  // ── Supprimer une proposition (refusée/expirée/acceptée) ──
+  const handleDeleteProposal = async (proposalId: string) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${proposalId}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+      });
+      setProposals(prev => prev.filter(p => p.id !== proposalId));
+      showToast("✅ Proposition supprimée", "success");
+    } catch { showToast("❌ Erreur suppression", "error"); }
   };
 
   // ── Annuler une proposition côté admin ──
@@ -10751,11 +10775,30 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     loadStats();
     loadReviews();
     loadPayments();
-    // Rafraichissement automatique toutes les 60s ET uniquement si onglet stats actif
     const statsInterval = setInterval(() => {
       if (activeTab === "stats") loadStats(false);
     }, POLL_STATS_MS);
-    return () => clearInterval(statsInterval);
+
+    // ── Polling badges matchs (demandes + propositions) toutes les 8s ──
+    const checkMatchBadges = async () => {
+      try {
+        const h = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" };
+        // Nouvelles demandes de mise en relation
+        const lastReqSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
+        const rReq = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&created_at=gt.${encodeURIComponent(lastReqSeen)}&select=id`, { headers: h });
+        const reqCount = (() => { const c = rReq.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
+        setMatchRequestsBadge(reqCount);
+        // Propositions ayant reçu une réponse depuis la dernière visite
+        const lastPropSeen = localStorage.getItem("moyo_proposals_seen") || "1970-01-01";
+        const rProp = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(status.eq.accepted,status.eq.refused)&created_at=gt.${encodeURIComponent(lastPropSeen)}&select=id`, { headers: h });
+        const propCount = (() => { const c = rProp.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
+        setProposalsBadgeCount(propCount);
+      } catch {}
+    };
+    checkMatchBadges();
+    const matchBadgeInterval = setInterval(checkMatchBadges, POLL_BADGES_MS);
+
+    return () => { clearInterval(statsInterval); clearInterval(matchBadgeInterval); };
   }, [activeTab]);
   useEffect(() => {
     // Recharger les stats à chaque fois qu'on revient sur l'onglet "stats"
@@ -12194,7 +12237,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </button>
         </div>
         {/* Onglets - scroll horizontal sur mobile */}
-        <div className="admin-tabs" style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}`, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", minWidth: 0 }}>
+        <div className="admin-tabs" style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}`, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}>
           {([
             ["stats", "Statistiques", IcoStats],
             ["users", "Utilisateurs", IcoUsers],
@@ -12219,8 +12262,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 }
               }}
               style={{
-                flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                padding: "10px 16px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
+                ...(window.innerWidth >= 640 ? { flex: 1 } : { flexShrink: 0 }),
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                padding: "10px 12px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
                 color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge) : "#999",
                 borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge}` : "2.5px solid transparent",
                 transition: "all 0.2s", whiteSpace: "nowrap",
@@ -13818,6 +13862,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ fontSize: "0.62rem", color: "#aaa" }}>{new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
                             {p.status === "pending" && <button onClick={() => handleCancelProposal(p.id)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Annuler</button>}
+                        {(p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={() => handleDeleteProposal(p.id)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button>}
                           </div>
                         </div>
                       </div>
