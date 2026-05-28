@@ -668,13 +668,16 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
 
   const [focus, setFocus] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
-  const [iosReady, setIosReady] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isPwd = type === "password";
 
-  // ✅ FIX iOS PWA : Safari standalone n'ouvre pas le clavier sans ce trick.
-  // On démarre avec readOnly=true, puis on le retire au premier touch,
-  // ce qui force Safari à reconnaître le champ comme éditable et ouvrir le clavier.
+  // ✅ FIX iOS PWA : uniquement sur iPhone en mode standalone
+  // Sur desktop et navigateur normal, readOnly reste false
+  const isIosPwa = typeof window !== "undefined" &&
+    (window.navigator as any).standalone === true &&
+    /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  const [iosReady, setIosReady] = useState(!isIosPwa);
+
   const handleTouchStart = () => {
     if (!iosReady) {
       setIosReady(true);
@@ -696,7 +699,7 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
           readOnly={!iosReady}
           onTouchStart={handleTouchStart}
           onFocus={() => setFocus(true)}
-          onBlur={() => { setFocus(false); setIosReady(false); }}
+          onBlur={() => { setFocus(false); if (isIosPwa) setIosReady(false); }}
           style={{
             width: "100%", boxSizing: "border-box",
             padding: icon ? (isPwd ? "13px 42px 13px 40px" : "13px 14px 13px 40px") : (isPwd ? "13px 42px 13px 14px" : "13px 14px"),
