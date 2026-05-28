@@ -9782,7 +9782,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const [proposals, setProposals] = useState<MatchProposal[]>([]);
   const [proposalsLoading, setProposalsLoading] = useState(false);
-  const [matchSubTab, setMatchSubTab] = useState<"create" | "propose" | "list" | "requests">("propose");
+  const [matchSubTab, setMatchSubTab] = useState<"create" | "propose" | "list" | "requests" | "archived">("propose");
   const [showCreateMatch, setShowCreateMatch] = useState(false);
   const [showProposeMatch, setShowProposeMatch] = useState(false);
 
