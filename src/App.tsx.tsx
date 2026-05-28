@@ -2745,6 +2745,8 @@ const BOT_FAQ = [
   { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium coûte ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money ou Airtel Money. Activation manuelle sous 24h.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: "Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez automatiquement 7 jours Premium offerts. Pas de limite !" },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
+  { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: "Moyo propose un service de mise en relation personnalisé. Depuis votre page Profil, appuyez sur le bouton rouge 'Demander une mise en relation', précisez vos critères (genre, ville, âge) et envoyez votre demande. Notre équipe recherche la personne qui vous correspond et vous envoie une proposition directement dans l'application." },
+  { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand notre équipe vous propose une rencontre, un modal apparaît avec la photo et le profil de la personne. Vous avez deux choix : 'Accepter' (si les deux acceptent, un match est créé automatiquement) ou 'Refuser' (la proposition est annulée). La proposition expire automatiquement si vous ne répondez pas dans le délai indiqué." },
   { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: `Compte gratuit : ${FREE_LIMITS.likes} likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément.` },
   { q: ["message", "envoyer", "écrire", "conversation"], r: `Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message.` },
   { q: ["réaction", "réagir", "emoji", "like message"], r: "Appuyez longuement sur un message pour ouvrir le menu de réactions. Une seule réaction par message est autorisée : choisir une nouvelle réaction remplace automatiquement l'ancienne." },
@@ -3762,6 +3764,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Le menu fonctionne sur chaque profil indépendamment en mode carte, liste et plein écran.",
             ]},
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
+            { title: "Mise en relation Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Notre équipe peut vous proposer une rencontre personnalisée. C'est gratuit et accessible à tous les membres.", "Pour faire une demande : allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → précisez vos critères (genre recherché, ville, tranche d'âge) → ajoutez un message optionnel → envoyez.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe."] },
@@ -3797,7 +3800,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             ]},
             { title: "Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: [
               "Sur ordinateur et tablette, votre page Profil s'affiche en deux colonnes 50/50 : le menu à gauche, le contenu à droite. Cliquez sur un item du menu pour afficher son contenu à droite sans quitter la page.",
-              "Menu disponible : Mon profil, Modifier mon profil, Modifier ma photo, Premium, Parrainer un ami, Vérification, Profil visible/invisible, Liste noire, Mode sombre, Noter l'application, Voir mon profil, Inviter un ami, Se déconnecter, Supprimer mon compte.",
+              "Menu disponible : Mon profil, Modifier mon profil, Modifier ma photo, Premium, Demander une mise en relation, Parrainer un ami, Vérification, Profil visible/invisible, Liste noire, Mode sombre, Noter l'application, Voir mon profil, Inviter un ami, Se déconnecter, Supprimer mon compte.",
               "Sur mobile, tout s'affiche verticalement dans une seule colonne, comme avant.",
             ]},
             { title: "Likes", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: [
@@ -8067,6 +8070,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
   const [form, setForm] = useState({ target_gender: "", target_city: "", target_age_min: "", target_age_max: "", message: "" });
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [errorModal, setErrorModal] = useState<string | null>(null);
   return (
     <>
       <div onClick={() => setShowModal(true)} style={{ background: `linear-gradient(135deg,${G.rouge} 0%,${G.rougeDark} 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(192,57,43,0.3)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 10 }}>
@@ -8079,6 +8083,26 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </div>
+      {/* ── Modal erreur même genre ── */}
+      {errorModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.25s ease" }}>
+            <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "28px 24px 20px", textAlign: "center" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>Action non autorisée</div>
+            </div>
+            <div style={{ padding: "20px 24px 24px", textAlign: "center" }}>
+              <p style={{ fontSize: "0.88rem", color: "#444", lineHeight: 1.7, marginBottom: 20 }}>{errorModal}</p>
+              <button onClick={() => setErrorModal(null)} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: "pointer" }}>
+                Compris
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 400, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
@@ -8109,7 +8133,23 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Genre recherché</label>
                     <div style={{ display: "flex", gap: 8 }}>
                       {["Homme", "Femme"].map(g => (
-                        <button key={g} onClick={() => setForm(f => ({ ...f, target_gender: f.target_gender === g ? "" : g }))} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `2px solid ${form.target_gender === g ? G.rouge : G.gris}`, background: form.target_gender === g ? "rgba(192,57,43,0.08)" : G.blanc, color: form.target_gender === g ? G.rouge : "#555", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}>{g}</button>
+                        <button key={g} onClick={async () => {
+                          // Vérifier si même genre bloqué
+                          try {
+                            const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+                            const data = await r.json().catch(() => []);
+                            const blocked = Array.isArray(data) && data[0]?.value === "true";
+                            // Récupérer le genre du demandeur
+                            const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=gender&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+                            const pdata = await pr.json().catch(() => []);
+                            const myGender = Array.isArray(pdata) ? pdata[0]?.gender : "";
+                            if (blocked && myGender && myGender === g) {
+                              setErrorModal(`Le site est hétérosexuel. Vous ne pouvez pas rechercher une personne du même genre (${g}).`);
+                              return;
+                            }
+                          } catch {}
+                          setForm(f => ({ ...f, target_gender: f.target_gender === g ? "" : g }));
+                        }} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `2px solid ${form.target_gender === g ? G.rouge : G.gris}`, background: form.target_gender === g ? "rgba(192,57,43,0.08)" : G.blanc, color: form.target_gender === g ? G.rouge : "#555", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}>{g}</button>
                       ))}
                     </div>
                   </div>
@@ -8839,9 +8879,23 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
 
         {/* Parrainage - mis en avant */}
-        {/* ── Bouton Demande de mise en relation ── */}
+        {/* ── Bouton Demande de mise en relation (Premium uniquement) ── */}
         {(!isWideProfile || ["main"].includes(activeSection)) && (
-          <MatchRequestButton auth={auth} />
+          auth.isPremium
+            ? <MatchRequestButton auth={auth} />
+            : <div onClick={() => onShowPremium("Passez Premium pour accéder au service de mise en relation personnalisé par l'équipe Moyo !")} style={{ background: `linear-gradient(135deg,${G.rouge} 0%,${G.rougeDark} 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(192,57,43,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 10, opacity: 0.75 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Demander une mise en relation</div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span>Réservé aux membres Premium</span>
+                  </div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
         )}
 
         {(!isWideProfile || ["parrainage","main"].includes(activeSection)) && <div onClick={() => {
@@ -9735,6 +9789,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     profile?: AdminProfile;
     compatibleProfiles?: AdminProfile[];
     showCompatible?: boolean;
+    compatibleNote?: string;
   };
   const [matchRequests, setMatchRequests] = useState<MatchRequest[]>([]);
   const [matchRequestsLoading, setMatchRequestsLoading] = useState(false);
@@ -9770,20 +9825,54 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     try {
       const ageMin = (req.target_age_min || 18) - 2;
       const ageMax = (req.target_age_max || 99) + 2;
-      let query = `${SUPABASE_URL}/rest/v1/profiles?age=gte.${ageMin}&age=lte.${ageMax}&select=id,name,age,city,photo_url,gender&limit=20`;
-      if (req.target_gender) query += `&gender=eq.${encodeURIComponent(req.target_gender)}`;
-      // Exclure le demandeur lui-même
-      query += `&id=neq.${req.user_id}`;
+
+      // Construire les filtres
+      const params: string[] = [
+        `select=id,name,age,city,photo_url,gender`,
+        `age=gte.${ageMin}`,
+        `age=lte.${ageMax}`,
+        `id=neq.${req.user_id}`,
+        `limit=20`,
+      ];
+
+      // Filtrer par genre : genre cible ou opposé du demandeur par défaut
+      if (req.target_gender) {
+        params.push(`gender=eq.${encodeURIComponent(req.target_gender)}`);
+      } else if (req.profile?.gender) {
+        const opposite = req.profile.gender === "Homme" ? "Femme" : "Homme";
+        params.push(`gender=eq.${encodeURIComponent(opposite)}`);
+      }
+
+      // Filtrer STRICTEMENT par ville si précisée
+      if (req.target_city) {
+        params.push(`city=eq.${encodeURIComponent(req.target_city)}`);
+      }
+
+      const query = `${SUPABASE_URL}/rest/v1/profiles?${params.join("&")}`;
       const r = await fetch(query, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (!Array.isArray(data)) return;
-      // Trier : ville correspondante en premier
-      const sorted = data.sort((a: any, b: any) => {
-        const aMatch = req.target_city && a.city?.toLowerCase().includes(req.target_city.toLowerCase()) ? 0 : 1;
-        const bMatch = req.target_city && b.city?.toLowerCase().includes(req.target_city.toLowerCase()) ? 0 : 1;
-        return aMatch - bMatch;
-      });
-      setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: sorted, showCompatible: true } : mr));
+
+      // Si aucun résultat avec la ville exacte, relancer sans filtre ville (résultats approx)
+      if (Array.isArray(data) && data.length === 0 && req.target_city) {
+        const paramsNoCity = params.filter(p => !p.startsWith("city="));
+        const queryNoCity = `${SUPABASE_URL}/rest/v1/profiles?${paramsNoCity.join("&")}`;
+        const r2 = await fetch(queryNoCity, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data2 = await r2.json().catch(() => []);
+        if (Array.isArray(data2) && data2.length > 0) {
+          // Trier par âge le plus proche
+          const targetAge = req.target_age_min ? (req.target_age_min + (req.target_age_max || req.target_age_min)) / 2 : 25;
+          const sorted2 = [...data2].sort((a: any, b: any) => Math.abs(a.age - targetAge) - Math.abs(b.age - targetAge));
+          setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: sorted2, showCompatible: true, compatibleNote: `Aucun profil à ${req.target_city}, voici des profils similaires` } : mr));
+          return;
+        }
+      }
+
+      // Trier par âge le plus proche de la cible
+      const targetAge = req.target_age_min ? (req.target_age_min + (req.target_age_max || req.target_age_min)) / 2 : 25;
+      const sorted = [...data].sort((a: any, b: any) => Math.abs(a.age - targetAge) - Math.abs(b.age - targetAge));
+
+      setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: sorted, showCompatible: true, compatibleNote: undefined } : mr));
     } catch {}
   };
 
@@ -9871,12 +9960,16 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       }
       const mapped = data.map((p: any) => ({ ...p, profile1: profiles[p.user1_id], profile2: profiles[p.user2_id] }));
       setProposals(mapped);
-      // Badge = propositions avec une réponse depuis la dernière visite
+      // Badge = propositions ayant reçu une réponse (acceptée ou refusée) non encore vues
       const lastSeen = localStorage.getItem("moyo_proposals_seen") || "1970-01-01";
       const newResponses = mapped.filter((p: any) =>
-        (p.user1_response || p.user2_response || p.status === "accepted" || p.status === "refused") &&
-        new Date(p.created_at) > new Date(lastSeen)
-      ).length;
+        (p.status === "accepted" || p.status === "refused") &&
+        (p.user1_response || p.user2_response)
+      ).filter((p: any) => {
+        // Considérer comme "nouveau" si la proposition est plus récente que la dernière visite
+        const refDate = p.updated_at || p.created_at;
+        return new Date(refDate) > new Date(lastSeen);
+      }).length;
       setProposalsBadgeCount(newResponses);
     } catch {}
     setProposalsLoading(false);
@@ -9908,11 +10001,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const handleCreateMatch = async () => {
     if (!createSelected1 || !createSelected2) return;
     if (createSelected1.id === createSelected2.id) { showToast("❌ Impossible de matcher quelqu'un avec lui-même", "error"); return; }
-    const { g1, g2 } = await getGenders(createSelected1.id, createSelected2.id);
-    if (g1 && g2 && g1 === g2 && await isSameGenderBlocked()) {
-      showToast(`❌ Même genre (${g1}). Le paramètre "Bloquer like même genre" est activé.`, "error");
-      return;
-    }
     setCreateLoading(true);
     try {
       const existing = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${createSelected1.id},user2.eq.${createSelected2.id}),and(user1.eq.${createSelected2.id},user2.eq.${createSelected1.id}))&select=id&limit=1`, {
@@ -9940,11 +10028,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const handleProposeMatch = async () => {
     if (!proposeSelected1 || !proposeSelected2) return;
     if (proposeSelected1.id === proposeSelected2.id) { showToast("❌ Impossible de proposer quelqu'un avec lui-même", "error"); return; }
-    const { g1, g2 } = await getGenders(proposeSelected1.id, proposeSelected2.id);
-    if (g1 && g2 && g1 === g2 && await isSameGenderBlocked()) {
-      showToast(`❌ Même genre (${g1}). Le paramètre "Bloquer like même genre" est activé.`, "error");
-      return;
-    }
     setProposeLoading(true);
     try {
       const expiresAt = new Date(Date.now() + parseInt(proposeDuration) * 3600 * 1000).toISOString();
@@ -10057,6 +10140,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
   const [proposalsBadgeCount, setProposalsBadgeCount] = useState(0);
+  // États globaux badges matchs (mis à jour par le polling admin App)
+  const [matchRequestsBadgeGlobal, setMatchRequestsBadgeGlobal] = useState(0);
+  const [proposalsBadgeGlobal, setProposalsBadgeGlobal] = useState(0);
   const loadPayments = async () => {
     setPaymentsLoading(true);
     try {
@@ -11086,7 +11172,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   // ── Badge global = signalements en attente + avis non lus + paiements en attente ──
   const adminBadgeCount = pendingCount + unreadReviewsCount + pendingPaymentsCount;
-  const matchesBadgeCount = proposalsBadgeCount;
+  const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge + matchRequestsBadgeGlobal + proposalsBadgeGlobal;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
 
@@ -11471,61 +11557,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                   <div style={{ fontSize: "0.68rem", color: "#D4A843", fontWeight: 700, textAlign: "right", flexShrink: 0 }}>
                     {p.premium_until ? `Expire le\n${new Date(p.premium_until).toLocaleDateString("fr-FR")}` : "Premium"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-      {/* ── MODAL LISTE DES MATCHS ── */}
-      {showMatchList && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 520, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
-            {/* Header */}
-            <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1rem", color: "#fff" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none" aria-hidden="true"><path fillRule="nonzero" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>{" "}Liste des Matchs</div>
-                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{matchList.length} match{matchList.length > 1 ? "s" : ""}</div>
-              </div>
-              <button onClick={() => setShowMatchList(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </div>
-            {/* Liste */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
-              {matchListLoading ? (
-                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement...</div>
-              ) : matchList.length === 0 ? (
-                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Aucun match trouvé</div>
-              ) : matchList.map((m, i) => (
-                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < matchList.length - 1 ? `1px solid ${G.gris}` : "none" }}>
-                  {/* Profil 1 */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>
-                      {m.profile1?.photo_url && <img src={m.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.82rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.profile1?.name || "?"}</div>
-                      <div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile1?.age ? `${m.profile1.age} ans` : ""}{m.profile1?.city ? ` · ${m.profile1.city}` : ""}</div>
-                    </div>
-                  </div>
-                  {/* Icône cœur central */}
-                  <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                    <div style={{ fontSize: "0.55rem", color: "#aaa", whiteSpace: "nowrap" }}>
-                      {new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" })}
-                    </div>
-                  </div>
-                  {/* Profil 2 */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
-                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>
-                      {m.profile2?.photo_url && <img src={m.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                    </div>
-                    <div style={{ minWidth: 0, textAlign: "right" }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.82rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.profile2?.name || "?"}</div>
-                      <div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile2?.age ? `${m.profile2.age} ans` : ""}{m.profile2?.city ? ` · ${m.profile2.city}` : ""}</div>
-                    </div>
                   </div>
                 </div>
               ))}
@@ -12236,7 +12267,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div data-admgrid="main" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
                 {([
                   ["Membres total", stats.users, G.rouge, <IcoUsers key="u"/>],
-                  ["Matchs", stats.matches, "#8e44ad", <svg key="m" onClick={() => setShowMatchList(true)} style={{cursor:"pointer"}} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
+                  ["Matchs", stats.matches, "#8e44ad", <svg key="m" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
                   ["Messages", stats.messages, "#2980b9", <svg key="ms" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
                   ["Signalements", stats.reports, "#e67e22", <IcoAlert key="a"/>],
                 ] as [string, number, string, React.ReactNode][]).map(([label, value, color, icon]) => (
@@ -13866,7 +13897,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         {/* Profils compatibles */}
                         {req.showCompatible && req.compatibleProfiles && req.compatibleProfiles.length > 0 && (
                           <div style={{ borderTop: `1px solid ${G.gris}`, paddingTop: 12, marginBottom: 10 }}>
-                            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>Profils compatibles ({req.compatibleProfiles.length})</div>
+                            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>
+                Profils compatibles ({req.compatibleProfiles.length})
+                {req.compatibleNote && <span style={{ marginLeft: 8, fontSize: "0.65rem", color: "#e67e22", fontWeight: 600 }}>⚠ {req.compatibleNote}</span>}
+              </div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                               {req.compatibleProfiles.map(cp => (
                                 <div key={cp.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: G.creme, borderRadius: 10 }}>
@@ -14658,6 +14692,18 @@ export default function App() {
         const parseCount = (r: Response) => { const h2 = r.headers.get("content-range"); return h2 ? parseInt(h2.split("/")[1]) || 0 : 0; };
         const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments);
         setAdminBadgeCount(prev => prev === newCount ? prev : newCount);
+
+        // ── Badge match requests (nouvelles demandes de mise en relation) ──
+        const lastReqSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
+        const rRequests = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&created_at=gt.${lastReqSeen}&select=id`, { headers: h });
+        const reqCount = parseCount(rRequests);
+        setMatchRequestsBadgeGlobal(reqCount);
+
+        // ── Badge propositions (réponses reçues non vues) ──
+        const lastPropSeen = localStorage.getItem("moyo_proposals_seen") || "1970-01-01";
+        const rProps = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(status.eq.accepted,status.eq.refused)&created_at=gt.${lastPropSeen}&select=id`, { headers: h });
+        const propCount = parseCount(rProps);
+        setProposalsBadgeGlobal(propCount);
       } catch {}
     };
     checkAdminBadge();
