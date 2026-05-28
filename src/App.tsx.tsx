@@ -675,20 +675,6 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
   const inputRef = useRef<HTMLInputElement>(null);
   const isPwd = type === "password";
 
-  // ✅ FIX iOS PWA : uniquement sur iPhone en mode standalone
-  // Sur desktop et navigateur normal, readOnly reste false
-  const isIosPwa = typeof window !== "undefined" &&
-    (window.navigator as any).standalone === true &&
-    /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-  const [iosReady, setIosReady] = useState(!isIosPwa);
-
-  const handleTouchStart = () => {
-    if (!iosReady) {
-      setIosReady(true);
-      setTimeout(() => { inputRef.current?.focus(); }, 50);
-    }
-  };
-
   return (
     <div style={{ marginBottom: 18, width: "100%" }}>
       {label && <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>{label}</label>}
@@ -700,10 +686,8 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          readOnly={!iosReady}
-          onTouchStart={handleTouchStart}
           onFocus={() => setFocus(true)}
-          onBlur={() => { setFocus(false); if (isIosPwa) setIosReady(false); }}
+          onBlur={() => setFocus(false)}
           style={{
             width: "100%", boxSizing: "border-box",
             padding: icon ? (isPwd ? "13px 42px 13px 40px" : "13px 14px 13px 40px") : (isPwd ? "13px 42px 13px 14px" : "13px 14px"),
