@@ -2461,11 +2461,15 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     let authRes: any = null;
     try {
       // Vérifier si le compte existe déjà
-      const existing = await sb.query<Profile>(SUPABASE_KEY, "profiles", `?email=eq.${encodeURIComponent(emailClean)}&select=id,name,photo_url`);
+      const existing = await sb.query<Profile>(SUPABASE_KEY, "profiles", `?email=eq.${encodeURIComponent(emailClean)}&select=id,name,photo_url,age,city`);
 
       if (existing.length > 0) {
         const existingProfile = existing[0] as any;
-        const isIncomplete = existingProfile.name === "..." || !existingProfile.name || !existingProfile.photo_url;
+        // Incomplet si : pas de photo OU nom par défaut "..." OU (âge=18 ET ville=Brazzaville = valeurs par défaut jamais modifiées)
+        const isIncomplete = !existingProfile.photo_url
+          || existingProfile.name === "..."
+          || !existingProfile.name
+          || (existingProfile.age === 18 && existingProfile.city === "Brazzaville" && !existingProfile.photo_url);
 
         if (!isIncomplete) {
           // Compte complet → on bloque
