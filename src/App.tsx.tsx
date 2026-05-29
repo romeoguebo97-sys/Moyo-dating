@@ -9778,6 +9778,20 @@ function logAdminAction(token: string, adminId: string, adminName: string, actio
   } catch {}
 }
 
+// Range une action (texte libre) dans une catégorie, pour le tableau de bord d'activité.
+function categorizeAction(action: string): string {
+  const a = (action || "").toLowerCase();
+  if (a.includes("proposition")) return "Propositions";
+  if (a.includes("match")) return "Matchs";
+  if (a.includes("mise en relation") || a.includes("demande")) return "Mises en relation";
+  if (a.includes("avertissement")) return "Avertissements";
+  if (a.includes("diffus") || a.includes("broadcast")) return "Diffusions";
+  if (a.includes("premium") || a.includes("paiement")) return "Premium / Paiements";
+  if (a.includes("signalement") || a.includes("banni") || a.includes("rejet") || a.includes("modér")) return "Modération";
+  if (a.includes("supprim")) return "Suppressions";
+  return "Autres";
+}
+
 function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount: (n: number) => void }) {
   const [pinVerified, setPinVerified] = useState(false);
   const [pinInput, setPinInput] = useState("");
@@ -10499,10 +10513,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   type AdminLog = { id: string; admin_id: string; admin_name: string; action: string; target_user_id?: string; target_user_name?: string; created_at: string };
   const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [logsPeriod, setLogsPeriod] = useState<"today" | "7d" | "30d" | "all">("7d");
   const loadAdminLogs = async () => {
     setLogsLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_logs?select=id,admin_id,admin_name,action,target_user_id,created_at&order=created_at.desc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_logs?select=id,admin_id,admin_name,action,target_user_id,created_at&order=created_at.desc&limit=1000`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) setAdminLogs(data);
     } catch {}
@@ -14145,6 +14160,56 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               )}
             </div>
           </div>
+          {/* ── Tableau de bord d'activité par employé ── */}
+          {adminLogs.length > 0 && (() => {
+            const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+            const now = Date.now();
+            const cutoff = logsPeriod === "today" ? startToday.getTime()
+              : logsPeriod === "7d" ? now - 7 * 24 * 3600 * 1000
+              : logsPeriod === "30d" ? now - 30 * 24 * 3600 * 1000
+              : 0;
+            const filtered = adminLogs.filter(l => new Date(l.created_at).getTime() >= cutoff);
+            const byEmp: Record<string, { total: number; types: Record<string, number> }> = {};
+            filtered.forEach(l => {
+              const name = l.admin_name || "Inconnu";
+              if (!byEmp[name]) byEmp[name] = { total: 0, types: {} };
+              byEmp[name].total++;
+              const cat = categorizeAction(l.action || "");
+              byEmp[name].types[cat] = (byEmp[name].types[cat] || 0) + 1;
+            });
+            const employees = Object.entries(byEmp).sort((a, b) => b[1].total - a[1].total);
+            return (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>Activité par employé</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                  {([["today", "Aujourd'hui"], ["7d", "7 jours"], ["30d", "30 jours"], ["all", "Tout"]] as [string, string][]).map(([k, label]) => (
+                    <button key={k} onClick={() => setLogsPeriod(k as any)} style={{ flex: 1, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${logsPeriod === k ? "#8e44ad" : G.gris}`, background: logsPeriod === k ? "rgba(142,68,173,0.08)" : G.blanc, color: logsPeriod === k ? "#8e44ad" : "#888", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                  ))}
+                </div>
+                {employees.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "20px", color: "#aaa", fontSize: "0.82rem" }}>Aucune action sur cette période</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {employees.map(([name, stats]) => (
+                      <div key={name} style={{ background: G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                          <span style={{ fontWeight: 800, fontSize: "0.86rem", color: "#1a1a1a" }}>{name}</span>
+                          <span style={{ background: "rgba(142,68,173,0.1)", color: "#8e44ad", borderRadius: 50, padding: "2px 10px", fontSize: "0.74rem", fontWeight: 800 }}>{stats.total} action{stats.total > 1 ? "s" : ""}</span>
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {Object.entries(stats.types).sort((a, b) => b[1] - a[1]).map(([cat, n]) => (
+                            <span key={cat} style={{ background: G.creme, borderRadius: 8, padding: "3px 8px", fontSize: "0.7rem", color: "#555", fontWeight: 600 }}>{cat} : {n}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ borderTop: "1px solid #eee", margin: "16px 0 4px" }} />
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#555", marginBottom: 4 }}>Détail des actions</div>
+              </div>
+            );
+          })()}
           {logsLoading ? (
             <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
           ) : adminLogs.length === 0 ? (
