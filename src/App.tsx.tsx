@@ -121,6 +121,72 @@ const G = {
   brun: "#2C1A0E", brunLight: "#5C3D2A", blanc: "#FFFFFF", gris: "#E8DDD0",
 };
 
+// Affiche une notification locale de façon compatible Android + ordinateur + PWA.
+// IMPORTANT : Android (Chrome) interdit `new Notification(...)` (« Illegal constructor »).
+// Il faut passer par le service worker : registration.showNotification(...).
+// On garde `new Notification` en repli pour les navigateurs desktop sans service worker actif.
+function showMoyoNotification(title: string, body: string) {
+  try {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+    const options: NotificationOptions = { body, icon: "/favicon.png", badge: "/favicon.png" };
+    if ("serviceWorker" in navigator && navigator.serviceWorker) {
+      navigator.serviceWorker.ready
+        .then(reg => reg.showNotification(title, options))
+        .catch(() => { try { new Notification(title, options); } catch {} });
+    } else {
+      try { new Notification(title, options); } catch {}
+    }
+  } catch {}
+}
+
+// Clé publique VAPID — sans danger à exposer côté client (la clé privée reste dans Supabase).
+const VAPID_PUBLIC_KEY = "BLpwfiAkbki0qgQyg1ioTaCfUwCyQyDEBxWOuTe1fbXb1EwWnvIpSwpuLu9KqiRe9d61XIwaDi-H8hNsDVdfF7U";
+
+// Convertit la clé VAPID (base64url) au format binaire attendu par pushManager.subscribe.
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+// Abonne l'appareil au push et enregistre sa "boîte aux lettres" dans Supabase.
+// Invisible pour l'utilisateur : il a juste cliqué "Autoriser". Sans danger si déjà abonné.
+async function subscribeToPush(auth: { token: string; userId: string }) {
+  try {
+    if (typeof window === "undefined") return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+    const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+    await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=endpoint`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${auth.token}`,
+        "Prefer": "resolution=merge-duplicates,return=minimal",
+      },
+      body: JSON.stringify({
+        user_id: auth.userId,
+        endpoint: json.endpoint,
+        p256dh: json.keys?.p256dh,
+        auth_key: json.keys?.auth,
+      }),
+    });
+  } catch {}
+}
+
 type Auth = {
   token: string;
   userId: string;
@@ -14898,17 +14964,20 @@ export default function App() {
     setAuth(a); setPage("app"); setTab("discover");
     try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch {}
     // Demander permission notifications push
-    if ('Notification' in window && Notification.permission === 'default') {
-      setTimeout(() => {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            new Notification('Moyo - Notifications activées !', {
-              body: 'Vous recevrez des alertes pour vos nouveaux messages.',
-              icon: '/favicon.png',
-            });
-          }
-        });
-      }, 3000);
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        // Déjà autorisé : on (ré)enregistre l'abonnement push, au cas où
+        subscribeToPush(a);
+      } else if (Notification.permission === 'default') {
+        setTimeout(() => {
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+              showMoyoNotification('Moyo - Notifications activées !', 'Vous recevrez des alertes pour vos nouveaux messages.');
+              subscribeToPush(a);
+            }
+          });
+        }, 3000);
+      }
     }
   };
   // ── Vérifier les avertissements non lus à chaque connexion ──
@@ -15181,10 +15250,7 @@ export default function App() {
           const msgJustSeen = msgSeen && (Date.now() - new Date(msgSeen).getTime()) < SEEN_THRESHOLD3;
           if (activeTab3 === 'messages' || msgJustSeen) return 0;
           if (count > prev && prev >= 0 && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('Moyo - Nouveau message', {
-              body: 'Vous avez reçu un nouveau message !',
-              icon: '/favicon.png',
-            });
+            showMoyoNotification('Moyo - Nouveau message', 'Vous avez reçu un nouveau message !');
           }
           return count;
         });
