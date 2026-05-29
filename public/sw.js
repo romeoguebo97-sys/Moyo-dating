@@ -1,4 +1,4 @@
-const CACHE_NAME = 'moyo-v5';
+const CACHE_NAME = 'moyo-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -49,5 +49,56 @@ self.addEventListener('fetch', (event) => {
           return caches.match('/');
         });
       })
+  );
+});
+
+// ── Réception d'une notification PUSH (fonctionne même app fermée) ──
+// Le serveur (Edge Function Supabase) envoie un payload JSON : { title, body, url, icon }
+self.addEventListener('push', (event) => {
+  let data = {
+    title: 'Moyo',
+    body: 'Vous avez une nouvelle notification.',
+    url: '/',
+    icon: '/favicon.png',
+  };
+  try {
+    if (event.data) {
+      const payload = event.data.json();
+      data = Object.assign(data, payload);
+    }
+  } catch (e) {
+    // Si le payload n'est pas du JSON, on l'utilise comme simple texte
+    try { if (event.data) data.body = event.data.text(); } catch (_) {}
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon || '/favicon.png',
+      badge: '/favicon.png',
+      data: { url: data.url || '/' },
+      vibrate: [100, 50, 100],
+    })
+  );
+});
+
+// ── Clic sur la notification : réactiver l'app ou l'ouvrir ──
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Si une fenêtre Moyo est déjà ouverte, on la met au premier plan
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.focus();
+          if ('navigate' in client && targetUrl !== '/') {
+            try { client.navigate(targetUrl); } catch (_) {}
+          }
+          return;
+        }
+      }
+      // Sinon on ouvre une nouvelle fenêtre
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
   );
 });
