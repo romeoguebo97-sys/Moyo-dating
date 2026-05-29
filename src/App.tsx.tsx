@@ -165,7 +165,7 @@ async function subscribeToPush(auth: { token: string; userId: string }) {
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
       });
     }
     const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
@@ -14963,23 +14963,32 @@ export default function App() {
     authRef.current = a;
     setAuth(a); setPage("app"); setTab("discover");
     try { localStorage.setItem("moyo_session", JSON.stringify(a)); } catch {}
-    // Demander permission notifications push
-    if ('Notification' in window) {
-      if (Notification.permission === 'granted') {
-        // Déjà autorisé : on (ré)enregistre l'abonnement push, au cas où
-        subscribeToPush(a);
-      } else if (Notification.permission === 'default') {
-        setTimeout(() => {
-          Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-              showMoyoNotification('Moyo - Notifications activées !', 'Vous recevrez des alertes pour vos nouveaux messages.');
-              subscribeToPush(a);
-            }
-          });
-        }, 3000);
-      }
-    }
+    // (La demande de notifications push est gérée par un useEffect dédié,
+    //  pour couvrir aussi les sessions restaurées et pas seulement le login.)
   };
+
+  // ── Notifications push : demander la permission + abonner ──
+  // Se déclenche à chaque fois qu'un utilisateur est connecté (login OU session restaurée).
+  useEffect(() => {
+    if (!auth?.userId) return;
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+      // Déjà autorisé : on (ré)enregistre l'abonnement, au cas où
+      subscribeToPush(auth);
+      return;
+    }
+    if (Notification.permission === "default") {
+      const t = setTimeout(() => {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            showMoyoNotification("Moyo - Notifications activées !", "Vous recevrez des alertes pour vos nouveaux messages.");
+            subscribeToPush(auth);
+          }
+        }).catch(() => {});
+      }, 3000);
+      return () => clearTimeout(t);
+    }
+  }, [auth?.userId]);
   // ── Vérifier les avertissements non lus à chaque connexion ──
   useEffect(() => {
     if (!auth?.userId) return;
