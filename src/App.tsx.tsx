@@ -10289,6 +10289,27 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setCreateLoading(false);
   };
 
+  // Création effective de la proposition (appelée directement ou après confirmation)
+  const doCreateProposal = async () => {
+    if (!proposeSelected1 || !proposeSelected2) return;
+    setProposeLoading(true);
+    try {
+      const expiresAt = new Date(Date.now() + parseInt(proposeDuration) * 3600 * 1000).toISOString();
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ user1_id: proposeSelected1.id, user2_id: proposeSelected2.id, expires_at: expiresAt, created_by: auth.userId })
+      });
+      showToast("✅ Proposition envoyée !", "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Proposition de match envoyée : ${proposeSelected1.name} ↔ ${proposeSelected2.name} (expire dans ${proposeDuration}h)`, proposeSelected1.id);
+      setShowProposeMatch(false);
+      setProposeSelected1(null); setProposeSelected2(null);
+      setProposeSearch1(""); setProposeSearch2("");
+      loadProposals();
+    } catch { showToast("❌ Erreur lors de la proposition", "error"); }
+    setProposeLoading(false);
+  };
+
   const handleProposeMatch = async () => {
     if (!proposeSelected1 || !proposeSelected2) return;
     if (proposeSelected1.id === proposeSelected2.id) { showToast("❌ Impossible de proposer quelqu'un avec lui-même", "error"); return; }
@@ -10310,20 +10331,35 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         setProposeLoading(false);
         return;
       }
-      const expiresAt = new Date(Date.now() + parseInt(proposeDuration) * 3600 * 1000).toISOString();
-      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, {
-        method: "POST",
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-        body: JSON.stringify({ user1_id: proposeSelected1.id, user2_id: proposeSelected2.id, expires_at: expiresAt, created_by: auth.userId })
+      // ── Vérifier l'historique de refus / expirations entre ces deux personnes ──
+      const id1 = proposeSelected1.id, id2 = proposeSelected2.id;
+      const histR = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(and(user1_id.eq.${id1},user2_id.eq.${id2}),and(user1_id.eq.${id2},user2_id.eq.${id1}))&status=in.(refused,expired)&order=created_at.desc&select=status,refused_by,created_at`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
       });
-      showToast("✅ Proposition envoyée !", "success");
-      logAdminAction(auth.token, auth.userId, auth.name, `Proposition de match envoyée : ${proposeSelected1.name} ↔ ${proposeSelected2.name} (expire dans ${proposeDuration}h)`, proposeSelected1.id);
-      setShowProposeMatch(false);
-      setProposeSelected1(null); setProposeSelected2(null);
-      setProposeSearch1(""); setProposeSearch2("");
-      loadProposals();
-    } catch { showToast("❌ Erreur lors de la proposition", "error"); }
-    setProposeLoading(false);
+      const hist = await histR.json().catch(() => []);
+      setProposeLoading(false);
+      if (Array.isArray(hist) && hist.length > 0) {
+        const nameById = (uid: string | null) => uid === id1 ? proposeSelected1!.name : uid === id2 ? proposeSelected2!.name : "quelqu'un";
+        const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }); } catch { return ""; } };
+        const refusedCount = hist.filter((h: any) => h.status === "refused").length;
+        const expiredCount = hist.filter((h: any) => h.status === "expired").length;
+        const parts: string[] = [];
+        if (refusedCount > 0) parts.push(`${refusedCount} refus`);
+        if (expiredCount > 0) parts.push(`${expiredCount} proposition${expiredCount > 1 ? "s" : ""} expirée${expiredCount > 1 ? "s" : ""} sans réponse`);
+        const summary = parts.join(" et ");
+        const lines = hist.slice(0, 6).map((h: any) => h.status === "refused"
+          ? `• Refusée par ${nameById(h.refused_by)} le ${fmtDate(h.created_at)}`
+          : `• Expirée sans réponse le ${fmtDate(h.created_at)}`).join("\n");
+        const more = hist.length > 6 ? `\n…et ${hist.length - 6} autre(s).` : "";
+        setConfirmModal({
+          msg: `⚠️ ${proposeSelected1.name} et ${proposeSelected2.name} ont déjà un historique : ${summary}.\n\n${lines}${more}\n\nVeux-tu quand même proposer ce match ?`,
+          onConfirm: () => { doCreateProposal(); },
+        });
+        return;
+      }
+      // Aucun historique → création directe
+      doCreateProposal();
+    } catch { showToast("❌ Erreur lors de la proposition", "error"); setProposeLoading(false); }
   };
 
   // ── Supprimer une proposition (refusée/expirée/acceptée) ──
@@ -11550,7 +11586,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
-            <p style={{ fontSize: "0.9rem", color: "#111", lineHeight: 1.6, marginBottom: 22, fontWeight: 500 }}>{confirmModal.msg}</p>
+            <p style={{ fontSize: "0.9rem", color: "#111", lineHeight: 1.6, marginBottom: 22, fontWeight: 500, whiteSpace: "pre-line", textAlign: "left" }}>{confirmModal.msg}</p>
             <div style={{ display: "flex", gap: 10 }}>
               <Btn variant="ghost" onClick={() => setConfirmModal(null)} style={{ flex: 1, padding: "11px" }}>Annuler</Btn>
               <Btn variant="danger" onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }} style={{ flex: 1, padding: "11px" }}>Confirmer</Btn>
