@@ -9792,6 +9792,91 @@ function categorizeAction(action: string): string {
   return "Autres";
 }
 
+// Bloc réutilisable de notes internes (admins uniquement).
+// Sert pour une fiche utilisateur (targetType="user") et un signalement (targetType="report").
+function AdminNotes({ auth, targetType, targetId }: { auth: Auth; targetType: "user" | "report"; targetId: string }) {
+  type Note = { id: string; author_id: string; author_name: string; note: string; created_at: string };
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_notes?target_type=eq.${targetType}&target_id=eq.${encodeURIComponent(targetId)}&select=id,author_id,author_name,note,created_at&order=created_at.desc`, { headers: H });
+      const d = await r.json().catch(() => []);
+      if (Array.isArray(d)) setNotes(d);
+    } catch {}
+    setLoading(false);
+  };
+  useEffect(() => { if (targetId) load(); /* eslint-disable-next-line */ }, [targetId, targetType]);
+
+  const addNote = async () => {
+    const v = text.trim();
+    if (!v || saving) return;
+    setSaving(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_notes`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "return=representation" },
+        body: JSON.stringify({ target_type: targetType, target_id: targetId, author_id: auth.userId, author_name: auth.name, note: v }),
+      });
+      const d = await r.json().catch(() => null);
+      const created = Array.isArray(d) ? d[0] : d;
+      if (created && created.id) { setNotes(n => [created, ...n]); setText(""); }
+    } catch {}
+    setSaving(false);
+  };
+
+  const delNote = async (id: string) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/admin_notes?id=eq.${id}`, { method: "DELETE", headers: H });
+      setNotes(n => n.filter(x => x.id !== id));
+    } catch {}
+  };
+
+  const fmt = (d: string) => { try { return new Date(d).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+
+  return (
+    <div style={{ marginTop: 14, background: "rgba(142,68,173,0.04)", border: "1px solid rgba(142,68,173,0.18)", borderRadius: 14, padding: "12px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
+        <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#8e44ad" }}>📝 Notes internes</span>
+        <span style={{ fontSize: "0.6rem", fontWeight: 700, color: "#aaa", background: "rgba(142,68,173,0.08)", borderRadius: 50, padding: "2px 8px" }}>admins uniquement</span>
+      </div>
+      {loading ? (
+        <div style={{ fontSize: "0.78rem", color: "#aaa", textAlign: "center", padding: "8px 0" }}>Chargement…</div>
+      ) : notes.length === 0 ? (
+        <div style={{ fontSize: "0.78rem", color: "#aaa", fontStyle: "italic", textAlign: "center", padding: "8px 0" }}>Aucune note pour l'instant.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
+          {notes.map(n => (
+            <div key={n.id} style={{ background: G.blanc, border: "1px solid rgba(142,68,173,0.18)", borderRadius: 10, padding: "9px 11px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                <span style={{ fontWeight: 700, fontSize: "0.74rem", color: "#1a1a1a" }}>{n.author_name}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: "0.64rem", color: "#aaa" }}>{fmt(n.created_at)}</span>
+                  <button onClick={() => delNote(n.id)} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: "0.66rem", fontWeight: 600 }}>supprimer</button>
+                </span>
+              </div>
+              <div style={{ fontSize: "0.8rem", color: "#444", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{n.note}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ marginTop: 10 }}>
+        <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Ajouter une note pour les autres admins…" style={{ width: "100%", border: "1.5px solid #E8DDD0", borderRadius: 10, padding: "9px 11px", fontSize: "0.82rem", resize: "none", minHeight: 52, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+          <button onClick={addNote} disabled={saving || !text.trim()} style={{ background: saving || !text.trim() ? "#bbb" : "linear-gradient(135deg,#8e44ad,#6d2c87)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: saving || !text.trim() ? "not-allowed" : "pointer" }}>
+            {saving ? "Ajout…" : "Ajouter la note"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount: (n: number) => void }) {
   const [pinVerified, setPinVerified] = useState(false);
   const [pinInput, setPinInput] = useState("");
@@ -12962,6 +13047,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     {adminViewedProfile.hobbies && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px", gridColumn: "1 / -1" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Centres d'intérêt</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.hobbies}</div></div>}
                   </div>
                   {(adminViewedProfile as any).created_at && <div style={{ marginTop: 12, fontSize: "0.72rem", color: "#bbb", textAlign: "center" }}>Inscrit le {formatDate((adminViewedProfile as any).created_at)}</div>}
+                  <AdminNotes auth={auth} targetType="user" targetId={adminViewedProfile.id} />
                 </div>
               </div>
             </div>
@@ -13847,6 +13933,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </>
                       )}
                     </div>}
+                    {r.id && <AdminNotes auth={auth} targetType="report" targetId={r.id} />}
                   </div>
                 );
               })}
