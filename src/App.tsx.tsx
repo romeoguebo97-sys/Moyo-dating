@@ -10680,6 +10680,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
   const [broadcastExpiresAt, setBroadcastExpiresAt] = useState("");
+  const [broadcastResult, setBroadcastResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
     if (!showPremiumList) return;
@@ -11642,21 +11643,85 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <button onClick={() => { setBroadcastModal(false); setBroadcastExpiresAt(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                 <button disabled={broadcastLoading || !broadcastExpiresAt} onClick={async () => {
                   if (!broadcastText.trim() || !broadcastExpiresAt) return;
+                  // Sécurité : refuser une date d'expiration déjà passée
+                  if (new Date(broadcastExpiresAt).getTime() <= Date.now()) {
+                    setBroadcastResult({ ok: false, message: "La date d'expiration est déjà passée. Choisis une date dans le futur, sinon le message ne s'affichera chez personne." });
+                    return;
+                  }
                   setBroadcastLoading(true);
                   try {
-                    await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
+                    const r = await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
                       body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId, expires_at: new Date(broadcastExpiresAt).toISOString() }),
                     });
-                    showToast("Message diffusé à tous les utilisateurs ✓", "success");
+                    // Vérifier le code HTTP : un fetch ne lève PAS d'erreur sur 4xx/5xx
+                    if (!r.ok) {
+                      let detail = `Erreur ${r.status}`;
+                      try { const e = await r.json(); detail = e.message || e.hint || e.details || detail; } catch {}
+                      if (r.status === 401 || r.status === 403) detail = "Accès refusé par la base de données. La table « broadcasts » n'autorise pas l'écriture (règle de sécurité RLS à vérifier).";
+                      setBroadcastLoading(false);
+                      setBroadcastResult({ ok: false, message: detail });
+                      return;
+                    }
+                    // Vérifier qu'une ligne a réellement été créée
+                    const data = await r.json().catch(() => null);
+                    const created = Array.isArray(data) ? data[0] : data;
+                    if (!created || !created.id) {
+                      setBroadcastLoading(false);
+                      setBroadcastResult({ ok: false, message: "Le serveur n'a renvoyé aucune ligne créée. Le message n'a probablement pas été enregistré — vérifie les permissions de la table « broadcasts »." });
+                      return;
+                    }
+                    // Succès confirmé
+                    setBroadcastLoading(false);
                     setBroadcastModal(false); setBroadcastText(""); setBroadcastExpiresAt("");
-                  } catch { showToast("Erreur lors de la diffusion", "error"); }
-                  setBroadcastLoading(false);
+                    setBroadcastResult({ ok: true, message: created.message || broadcastText.trim() });
+                  } catch {
+                    setBroadcastLoading(false);
+                    setBroadcastResult({ ok: false, message: "Impossible de joindre le serveur. Vérifie ta connexion internet et réessaie." });
+                  }
                 }} style={{ flex: 1, background: broadcastLoading || !broadcastExpiresAt ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading || !broadcastExpiresAt ? "not-allowed" : "pointer" }}>
                   {broadcastLoading ? "Envoi…" : "Envoyer à tous"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Modale de résultat de diffusion (vrai succès / vraie erreur) ── */}
+      {broadcastResult && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setBroadcastResult(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.25)", overflow: "hidden" }}>
+            <div style={{ background: broadcastResult.ok ? "linear-gradient(135deg,#e6f4ec,#cdeadb)" : "linear-gradient(135deg,#fdecea,#f9d5d0)", padding: "26px 22px 18px", textAlign: "center" }}>
+              <div style={{ width: 58, height: 58, borderRadius: "50%", background: broadcastResult.ok ? "rgba(26,92,58,0.15)" : "rgba(192,57,43,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                {broadcastResult.ok
+                  ? <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  : <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                }
+              </div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a1a" }}>{broadcastResult.ok ? "Diffusion envoyée ✓" : "Échec de la diffusion"}</div>
+            </div>
+            <div style={{ padding: "20px 22px 24px" }}>
+              {broadcastResult.ok ? (
+                <>
+                  <p style={{ fontSize: "0.86rem", color: "#333", lineHeight: 1.7, marginBottom: 12, textAlign: "center" }}>Le message a bien été enregistré et sera affiché à tous les utilisateurs concernés.</p>
+                  <div style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 18 }}>
+                    <div style={{ fontSize: "0.7rem", fontWeight: 700, color: G.vert, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Message diffusé</div>
+                    <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5 }}>{broadcastResult.message}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: "0.85rem", color: "#333", lineHeight: 1.7, marginBottom: 12, textAlign: "center" }}>Le message <strong>n'a pas été envoyé</strong>. Aucun utilisateur ne le verra.</p>
+                  <div style={{ background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.22)", borderRadius: 10, padding: "10px 14px", marginBottom: 18 }}>
+                    <div style={{ fontSize: "0.7rem", fontWeight: 700, color: G.rouge, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Détail de l'erreur</div>
+                    <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5 }}>{broadcastResult.message}</div>
+                  </div>
+                </>
+              )}
+              <button onClick={() => { if (!broadcastResult.ok) setBroadcastModal(true); setBroadcastResult(null); }} style={{ width: "100%", background: broadcastResult.ok ? `linear-gradient(135deg,${G.vert},#134029)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: G.blanc, border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.03em" }}>
+                {broadcastResult.ok ? "Parfait" : "Réessayer"}
+              </button>
             </div>
           </div>
         </div>
