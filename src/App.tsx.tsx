@@ -2893,6 +2893,8 @@ const BOT_FAQ = [
   { q: ["sombre", "thème", "dark", "nuit"], r: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
   { q: ["annuler", "unmatch", "fin"], r: "Dans Matchs → 3 traits → Annuler le match. La conversation et les messages sont supprimés. L'autre personne n'est pas notifiée." },
   { q: ["répondre", "citer", "reply", "bandeau", "réponse message"], r: "Appuyez longuement sur un message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
+  { q: ["offrir premium", "demander premium", "cadeau premium", "offrir abonnement", "demander abonnement", "cœur rosé", "cadeau doré"], r: "Dans une conversation : si vous êtes Premium et que l'autre ne l'est pas, un bouton cadeau doré 🎁 permet de lui offrir Premium. Si vous n'êtes pas Premium et que l'autre l'est, un bouton cœur rosé ❤️ permet de lui demander de vous l'offrir (une fenêtre de confirmation s'ouvre ; limite de 2 demandes par mois et par conversation). La personne reçoit alors un message avec un bouton pour offrir Premium en un clic." },
+  { q: ["modifier message", "éditer message", "corriger message"], r: "Appuyez longuement sur l'un de vos messages → Modifier (possible pendant 15 minutes après l'envoi). Le message modifié affiche la mention 'modifié'." },
   { q: ["supprimer message", "effacer message", "pour moi", "pour tous"], r: "Appuyez longuement sur un message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté)." },
   { q: ["avertissement", "sanction", "notification officielle", "banni", "suspension"], r: "Un avertissement est une notification officielle MOYO qui apparaît à votre connexion. Vous devez cliquer \"OK, j\'ai compris\" pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
   { q: ["confirmer", "confirmation", "email confirmation", "activer compte", "lien email"], r: "L'inscription est gratuite. Votre compte est actif immédiatement après les 3 étapes d'inscription. Pas besoin de confirmer votre email." },
@@ -3899,7 +3901,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             ]},
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
             { title: "Mise en relation Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Ce service est réservé aux membres Premium. Notre équipe recherche personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : passez Premium → allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → précisez vos critères (genre recherché, ville, tranche d'âge) → ajoutez un message optionnel → envoyez.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
-            { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
+            { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Offrir Premium : si vous êtes Premium et que votre interlocuteur ne l'est pas, un bouton cadeau doré 🎁 vous permet de lui offrir l'abonnement. Demander Premium : si vous n'êtes pas Premium et que votre interlocuteur l'est, un bouton cœur rosé ❤️ vous permet de lui demander de vous l'offrir (2 demandes maximum par mois et par conversation). La personne reçoit un message avec un bouton pour offrir en un clic.", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe."] },
             { title: "Premium - " + PREMIUM_PRICE_FCFA.toLocaleString() + " FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
@@ -3908,7 +3910,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Comment payer : appuyez sur 'Passer Premium' → choisissez MTN Mobile Money → appuyez sur le bouton jaune pour composer automatiquement le code de paiement sur votre téléphone → validez le paiement → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'.",
               "Le numéro de transaction (ID) est reçu par SMS de votre opérateur après validation du paiement (ex: 7753031542 pour Airtel, 7753031542 pour MTN). Entrez-le exactement tel quel dans le champ prévu.",
               "L'activation Premium se fait sous 15 minutes. Vous recevrez une notification dans l'application dès l'activation.",
-              "Après activation, déconnectez-vous et reconnectez-vous pour que les changements prennent effet. Le bouton Premium sur votre page Profil devient doré et affiche le compteur de jours restants.",
+              "Après activation, l'utilisateur doit actualiser l'application pour que les changements prennent effet. Le bouton Premium sur sa page Profil devient doré et affiche le compteur de jours restants.",
               "Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation (bouton cadeau, réservé aux membres Premium).",
             ]},
             { title: "Parrainage - 7 jours offerts", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: [
@@ -3954,7 +3956,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         "Appuyez sur 'Passer Premium' depuis n'importe quel écran.",
         "🇨🇬 Congo - Payez avec MTN MoMo ou Airtel Money : effectuez le paiement sur votre téléphone, entrez le numéro de transaction reçu par SMS, puis appuyez sur 'J'ai payé'. L'activation se fait sous 15 minutes.",
         "🌍 Diaspora - Payez par carte : appuyez sur le bouton vert 'Visa / Mastercard'. Vous êtes redirigé vers une page de paiement sécurisée Stripe. Entrez votre carte bancaire et confirmez. L'activation est automatique et immédiate.",
-        "Une fois Premium activé, déconnectez-vous puis reconnectez-vous pour que le statut soit mis à jour.",
+        "Une fois Premium activé, actualisez l'application pour que le statut soit mis à jour.",
       ]},
       { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo est réservé aux personnes majeures de 18 ans et plus.", "La modération automatique bloque les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement est automatiquement transmis à notre équipe.", "Si votre comportement enfreint les règles, un administrateur peut vous envoyer un avertissement officiel. Une notification apparaît à votre prochaine connexion. Après plusieurs avertissements, le compte peut être banni.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
       { title: "Assistant Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/></svg>, items: ["L'icône verte en forme de robot à côté du bouton Guide ouvre l'Assistant Moyo.", "Il propose deux options : Besoin d'aide (répond instantanément à vos questions sur l'app) et Signaler un problème (comportement abusif, arnaque, harcèlement).", "Les signalements sont traités par notre équipe sous 24h."] },
@@ -6493,6 +6495,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [partnerMenuOpen, setPartnerMenuOpen] = useState(false);
   const [partnerReportOpen, setPartnerReportOpen] = useState(false);
   const [confirmUnmatchPartner, setConfirmUnmatchPartner] = useState(false);
+  const [confirmGiftRequest, setConfirmGiftRequest] = useState(false);
   const [partnerActionLoading, setPartnerActionLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -6618,18 +6621,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     const handleKeyboard = () => {
       const vv = (window as any).visualViewport;
       if (!vv || !container) return;
-      // On considère le clavier "ouvert" seulement si le viewport visible est nettement
-      // plus petit que la fenêtre (> 120px de différence). Les petits changements dus à la
-      // barre d'adresse Safari qui se masque/réapparaît pendant le scroll sont ignorés,
-      // ce qui empêche la barre de saisie de "disparaître" sans raison.
+      // Le clavier est "ouvert" seulement si le viewport perd nettement de la hauteur
+      // (> 120px). Les petits changements de la barre d'adresse Safari sont ignorés.
       const keyboardOpen = (window.innerHeight - vv.height) > 120;
       if (keyboardOpen) {
-        container.style.height = vv.height + 'px';
-        container.style.top = vv.offsetTop + 'px';
-        container.style.bottom = 'auto';
-        // iOS pousse parfois la page vers le haut quand le clavier s'ouvre, ce qui
-        // fait sortir le header de l'écran. On force la fenêtre à rester en haut.
+        // On force d'abord la page tout en haut, puis on cale le conteneur en haut (top:0)
+        // et on réduit seulement sa HAUTEUR à la zone visible. Comme le header est le premier
+        // élément du conteneur (flex column), il reste toujours visible ; seul le footer
+        // remonte au-dessus du clavier. On ne touche jamais à "top", ce qui évite que le
+        // header soit poussé hors de l'écran.
         window.scrollTo(0, 0);
+        container.style.top = '0';
+        container.style.bottom = 'auto';
+        container.style.height = (vv.height + vv.offsetTop) + 'px';
       } else {
         container.style.height = '';
         container.style.top = '0';
@@ -7110,6 +7114,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     history = history.filter(t => typeof t === "number" && now - t < MONTH_MS);
     if (history.length >= 2) {
       setToast({ msg: "Tu as atteint la limite de 2 demandes ce mois-ci pour cette conversation 😊", type: "error" });
+      setConfirmGiftRequest(false);
       return;
     }
     try {
@@ -7117,8 +7122,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       if (res[0]) setMsgs(m => [...m, res[0]]);
       history.push(now);
       try { localStorage.setItem(key, JSON.stringify(history)); } catch {}
-      setToast({ msg: "Demande envoyée 💝", type: "success" });
+      setToast({ msg: `Demande envoyée à ${open.partner?.name}. Elle recevra une notification et pourra choisir librement de t'offrir Premium.`, type: "success" });
     } catch { setToast({ msg: "Impossible d'envoyer la demande.", type: "error" }); }
+    setConfirmGiftRequest(false);
   };
   const unmatchPartnerNow = async () => {
     const partnerId = open?.partner?.id;
@@ -7424,13 +7430,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           {open.partner?.id === SUPPORT_TEAM_ID ? <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>● Répond sous 24h</div> : (() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
-        {/* Bouton "Demander Premium" : visible si JE ne suis pas Premium et que mon interlocuteur l'est */}
+        {/* Bouton "Demander Premium" (cœur rosé) : visible si JE ne suis pas Premium et que mon interlocuteur l'est */}
         {!auth.isPremium && open.partner?.is_premium && open.partner?.id !== SUPPORT_TEAM_ID && (
-          <div onClick={requestGiftNow} title="Demander à recevoir Premium" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
-              <path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
-            </svg>
+          <div onClick={() => setConfirmGiftRequest(true)} title="Demander à recevoir Premium" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(233,30,99,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: "1.05rem" }}>
+            💝
           </div>
         )}
         {/* Bouton cadeau - offrir Premium : visible UNIQUEMENT aux utilisateurs Premium */}
@@ -8126,6 +8129,22 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setConfirmUnmatchPartner(false)} disabled={partnerActionLoading} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, color: "#555", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Retour</button>
               <button onClick={unmatchPartnerNow} disabled={partnerActionLoading} style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: G.rouge, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: partnerActionLoading ? "wait" : "pointer" }}>{partnerActionLoading ? "..." : "Annuler le match"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Confirmation : demander Premium */}
+      {confirmGiftRequest && open.partner && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 520, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setConfirmGiftRequest(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 340, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+            <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(233,30,99,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: "1.7rem" }}>
+              💝
+            </div>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>Demander Premium à {open.partner.name} ?</h3>
+            <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 22 }}>{open.partner.name} recevra un message lui proposant de t'offrir l'abonnement Premium. Tu peux faire 2 demandes par mois.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmGiftRequest(false)} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, color: "#555", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Annuler</button>
+              <button onClick={requestGiftNow} style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: "linear-gradient(135deg,#e91e63,#c2185b)", color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>💝 Envoyer</button>
             </div>
           </div>
         </div>
@@ -9826,7 +9845,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
             <p style={{ fontSize: "0.92rem", color: "#333", lineHeight: 1.7, margin: 0, fontWeight: 500 }}>{warning.reason.replace("🎁 ", "")}</p>
           </div>
           <div style={{ fontSize: "0.78rem", color: "#aaa", marginBottom: 18, lineHeight: 1.6 }}>
-            Déconnectez-vous puis reconnectez-vous pour profiter de toutes les fonctionnalités Premium 🌟
+            Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟
           </div>
           <button onClick={onAcknowledge} style={{ width: "100%", background: "linear-gradient(135deg,#D4A843,#B8922E)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 6px 20px rgba(212,168,67,0.45)", letterSpacing: "0.02em" }}>
             🎉 Merci ! J'en profite
@@ -10146,7 +10165,7 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
   const isWide = window.innerWidth >= 768;
   const msgTemplates = [
     `${user.name}, bienvenue sur Moyo ! Nous vous conseillons de liker les profils qui vous intéressent. Si une personne vous like en retour, le match se débloque automatiquement pour discuter et voir ses stories. Moyo 100% Congolais !!!!`,
-    "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.",
+    "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟",
     "Votre abonnement Premium expire dans [X] jours.",
     "Votre demande de vérification est en cours d'examen. Merci de patienter.",
     "Votre profil a été vérifié avec succès ! ✓",
@@ -10880,7 +10899,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
           const base = parrainData[0].premium_until && new Date(parrainData[0].premium_until) > new Date() ? new Date(parrainData[0].premium_until) : new Date();
           const newUntil = new Date(base.getTime() + REFERRAL_BONUS_DAYS * 24 * 60 * 60 * 1000).toISOString();
           await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: true, premium_until: newUntil }) });
-          await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: parrain, admin_id: auth.userId, reason: `Votre filleul ${filleulName} vient de passer Premium ! Vous gagnez ${REFERRAL_BONUS_DAYS} jours de Premium offerts. Reconnectez-vous pour en profiter.`, warning_number: 0, acknowledged: false }) });
+          await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: parrain, admin_id: auth.userId, reason: `Votre filleul ${filleulName} vient de passer Premium ! Vous gagnez ${REFERRAL_BONUS_DAYS} jours de Premium offerts. Actualisez l'application pour en profiter 🌟`, warning_number: 0, acknowledged: false }) });
         }
       }
     } catch {}
@@ -10894,7 +10913,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         if (Array.isArray(d) && d[0]?.name) giftSenderName = d[0].name;
       } catch {}
     }
-    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `Vous avez reçu 1 mois de Premium en cadeau offert par ${giftSenderName || "un membre Moyo"} ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.` : "Votre abonnement Premium est maintenant actif ! Déconnectez-vous et reconnectez-vous pour que les changements prennent effet.", warning_number: 0, acknowledged: false }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `🎁 Vous avez reçu 1 mois de Premium en cadeau offert par ${giftSenderName || "un membre Moyo"} ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟` : "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟", warning_number: 0, acknowledged: false }) });
     // Si cadeau, notifier aussi l'acheteur
     if (p.gift_for) {
       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: `Votre cadeau Premium pour ${p.gift_for_name || "votre match"} a bien été activé !`, warning_number: 0, acknowledged: false }) });
