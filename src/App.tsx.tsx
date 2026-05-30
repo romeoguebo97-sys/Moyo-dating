@@ -6611,10 +6611,20 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     const handleKeyboard = () => {
       const vv = (window as any).visualViewport;
       if (!vv || !container) return;
-      // Sur iOS, on colle le container exactement sur le viewport visible
-      container.style.height = vv.height + 'px';
-      container.style.top = vv.offsetTop + 'px';
-      container.style.bottom = 'auto';
+      // On considère le clavier "ouvert" seulement si le viewport visible est nettement
+      // plus petit que la fenêtre (> 120px de différence). Les petits changements dus à la
+      // barre d'adresse Safari qui se masque/réapparaît pendant le scroll sont ignorés,
+      // ce qui empêche la barre de saisie de "disparaître" sans raison.
+      const keyboardOpen = (window.innerHeight - vv.height) > 120;
+      if (keyboardOpen) {
+        container.style.height = vv.height + 'px';
+        container.style.top = vv.offsetTop + 'px';
+        container.style.bottom = 'auto';
+      } else {
+        container.style.height = '';
+        container.style.top = '0';
+        container.style.bottom = '0';
+      }
     };
     const resetContainer = () => {
       if (!container) return;
