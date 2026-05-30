@@ -6618,13 +6618,25 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight);
     };
     const container = document.querySelector('[data-chat-container]') as HTMLElement | null;
+    // Détection iOS (iPhone/iPad, y compris PWA Safari). iPadOS récent se fait passer pour Mac,
+    // d'où le test 'MacIntel + écran tactile'.
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
     const handleKeyboard = () => {
       const vv = (window as any).visualViewport;
       if (!vv || !container) return;
-      // Sur iOS, on colle le container exactement sur le viewport visible
-      container.style.height = vv.height + 'px';
-      container.style.top = vv.offsetTop + 'px';
-      container.style.bottom = 'auto';
+      if (isIOS) {
+        // ── iOS : comportement existant qui FONCTIONNE déjà. NE PAS MODIFIER. ──
+        container.style.height = vv.height + 'px';
+        container.style.top = vv.offsetTop + 'px';
+        container.style.bottom = 'auto';
+      } else {
+        // ── Android / Chrome : on garde le conteneur collé en haut (top:0) et on ajuste
+        //    seulement la hauteur au viewport visible, pour que le header reste visible. ──
+        container.style.top = '0';
+        container.style.bottom = 'auto';
+        container.style.height = vv.height + 'px';
+      }
     };
     const resetContainer = () => {
       if (!container) return;
