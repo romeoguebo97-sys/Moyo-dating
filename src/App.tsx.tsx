@@ -610,7 +610,7 @@ const GLOBAL_CSS = `
   html{background-color:#FFFFFF}
   #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;background-color:#FFFFFF}
   /* Fix clavier iOS - la barre reste fixe au-dessus du clavier */
-  [data-chat-container]{height:100%;height:-webkit-fill-available;}
+  [data-chat-container]{height:100%;height:-webkit-fill-available;height:100dvh;}
   @supports(height:100dvh){[data-chat-container]{height:100dvh;}}
   @media(min-width:520px){body{background-color:#EDE5D8;background-image:radial-gradient(circle,rgba(192,57,43,0.06) 1px,transparent 1px),radial-gradient(circle,rgba(212,168,67,0.05) 1px,transparent 1px);background-size:30px 30px,50px 50px}}
   input,select,textarea,button{font-family:inherit;box-sizing:border-box;max-width:100%;-webkit-appearance:none}
@@ -1153,7 +1153,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
             <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
             <div style={{ fontSize: "0.78rem", color: "#777", marginBottom: 10, lineHeight: 1.5 }}>Après validation du paiement Airtel, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
-            <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex de l'ID : 7753031542" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${txRef ? "#e74c3c" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
+            <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex de l'ID : PP260523.2232.A52074" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${txRef ? "#e74c3c" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
           </div>
           {!txSent ? (
             <button disabled={!txRef.trim() || txLoading} onClick={async () => {
@@ -3908,7 +3908,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.",
               "Paiement via MTN Mobile Money ou Airtel Money - les deux opérateurs sont disponibles.",
               "Comment payer : appuyez sur 'Passer Premium' → choisissez MTN Mobile Money → appuyez sur le bouton jaune pour composer automatiquement le code de paiement sur votre téléphone → validez le paiement → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'.",
-              "Le numéro de transaction (ID) est reçu par SMS de votre opérateur après validation du paiement (ex: 7753031542 pour Airtel, 7753031542 pour MTN). Entrez-le exactement tel quel dans le champ prévu.",
+              "Le numéro de transaction (ID) est reçu par SMS de votre opérateur après validation du paiement (ex: PP260523.2232.A52074 pour Airtel, 7753031542 pour MTN). Entrez-le exactement tel quel dans le champ prévu.",
               "L'activation Premium se fait sous 15 minutes. Vous recevrez une notification dans l'application dès l'activation.",
               "Après activation, l'utilisateur doit actualiser l'application pour que les changements prennent effet. Le bouton Premium sur sa page Profil devient doré et affiche le compteur de jours restants.",
               "Vous pouvez aussi offrir le Premium à quelqu'un depuis une conversation (bouton cadeau, réservé aux membres Premium).",
@@ -6621,24 +6621,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     const handleKeyboard = () => {
       const vv = (window as any).visualViewport;
       if (!vv || !container) return;
-      // Le clavier est "ouvert" seulement si le viewport perd nettement de la hauteur
-      // (> 120px). Les petits changements de la barre d'adresse Safari sont ignorés.
+      // La hauteur du conteneur est gérée par le CSS (100dvh), qui suit automatiquement
+      // le viewport visible quand le clavier s'ouvre/se ferme. Ici, on se contente de
+      // remettre la fenêtre tout en haut pour que le header ne soit jamais poussé hors champ.
       const keyboardOpen = (window.innerHeight - vv.height) > 120;
-      if (keyboardOpen) {
-        // On force d'abord la page tout en haut, puis on cale le conteneur en haut (top:0)
-        // et on réduit seulement sa HAUTEUR à la zone visible. Comme le header est le premier
-        // élément du conteneur (flex column), il reste toujours visible ; seul le footer
-        // remonte au-dessus du clavier. On ne touche jamais à "top", ce qui évite que le
-        // header soit poussé hors de l'écran.
-        window.scrollTo(0, 0);
-        container.style.top = '0';
-        container.style.bottom = 'auto';
-        container.style.height = (vv.height + vv.offsetTop) + 'px';
-      } else {
-        container.style.height = '';
-        container.style.top = '0';
-        container.style.bottom = '0';
-      }
+      if (keyboardOpen) window.scrollTo(0, 0);
     };
     const resetContainer = () => {
       if (!container) return;
@@ -7409,7 +7396,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         </div>
       )}
       {/* Chat */}
-      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
+      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: isWideMsg ? 0 : "auto", display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Arrière-plan fixe — ne scroll pas */}
@@ -7432,7 +7419,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
         {/* Bouton "Demander Premium" (cœur rosé) : visible si JE ne suis pas Premium et que mon interlocuteur l'est */}
         {!auth.isPremium && open.partner?.is_premium && open.partner?.id !== SUPPORT_TEAM_ID && (
-          <div onClick={() => setConfirmGiftRequest(true)} title="Demander à recevoir Premium" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(233,30,99,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: "1.05rem" }}>
+          <div onClick={() => setConfirmGiftRequest(true)} title="Demander à recevoir Premium" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: "1.05rem" }}>
             💝
           </div>
         )}
@@ -7600,7 +7587,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
                     <div style={{ fontSize: "0.78rem", color: "#777", marginBottom: 10, lineHeight: 1.5 }}>Après validation du paiement Airtel, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
-                    <input value={giftTxRef} onChange={e => setGiftTxRef(e.target.value)} placeholder="Ex de l'ID : 7753031542" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${giftTxRef ? "#e74c3c" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
+                    <input value={giftTxRef} onChange={e => setGiftTxRef(e.target.value)} placeholder="Ex de l'ID : PP260523.2232.A52074" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${giftTxRef ? "#e74c3c" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
                   </div>
                   {!giftTxSent ? (
                     <button disabled={!giftTxRef.trim() || giftTxLoading} onClick={async () => {
@@ -8137,14 +8124,14 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       {confirmGiftRequest && open.partner && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 520, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setConfirmGiftRequest(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 340, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
-            <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(233,30,99,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: "1.7rem" }}>
+            <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: "1.7rem" }}>
               💝
             </div>
             <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>Demander Premium à {open.partner.name} ?</h3>
             <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 22 }}>{open.partner.name} recevra un message lui proposant de t'offrir l'abonnement Premium. Tu peux faire 2 demandes par mois.</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setConfirmGiftRequest(false)} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, color: "#555", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Annuler</button>
-              <button onClick={requestGiftNow} style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: "linear-gradient(135deg,#e91e63,#c2185b)", color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>💝 Envoyer</button>
+              <button onClick={requestGiftNow} style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>💝 Envoyer</button>
             </div>
           </div>
         </div>
@@ -14500,7 +14487,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             const employees = Object.entries(byEmp).sort((a, b) => b[1].total - a[1].total);
             return (
               <div style={{ marginBottom: 18 }}>
-                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>Activité par employé</div>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>Activité par admin</div>
                 <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                   {([["today", "Aujourd'hui"], ["7d", "7 jours"], ["30d", "30 jours"], ["all", "Tout"]] as [string, string][]).map(([k, label]) => (
                     <button key={k} onClick={() => setLogsPeriod(k as any)} style={{ flex: 1, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${logsPeriod === k ? "#8e44ad" : G.gris}`, background: logsPeriod === k ? "rgba(142,68,173,0.08)" : G.blanc, color: logsPeriod === k ? "#8e44ad" : "#888", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{label}</button>
