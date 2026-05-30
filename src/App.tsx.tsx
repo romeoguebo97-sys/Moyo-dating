@@ -610,7 +610,7 @@ const GLOBAL_CSS = `
   html{background-color:#FFFFFF}
   #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;background-color:#FFFFFF}
   /* Fix clavier iOS - la barre reste fixe au-dessus du clavier */
-  [data-chat-container]{height:100%;height:-webkit-fill-available;height:100dvh;}
+  [data-chat-container]{height:100%;height:-webkit-fill-available;}
   @supports(height:100dvh){[data-chat-container]{height:100dvh;}}
   @media(min-width:520px){body{background-color:#EDE5D8;background-image:radial-gradient(circle,rgba(192,57,43,0.06) 1px,transparent 1px),radial-gradient(circle,rgba(212,168,67,0.05) 1px,transparent 1px);background-size:30px 30px,50px 50px}}
   input,select,textarea,button{font-family:inherit;box-sizing:border-box;max-width:100%;-webkit-appearance:none}
@@ -6621,11 +6621,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     const handleKeyboard = () => {
       const vv = (window as any).visualViewport;
       if (!vv || !container) return;
-      // La hauteur du conteneur est gérée par le CSS (100dvh), qui suit automatiquement
-      // le viewport visible quand le clavier s'ouvre/se ferme. Ici, on se contente de
-      // remettre la fenêtre tout en haut pour que le header ne soit jamais poussé hors champ.
-      const keyboardOpen = (window.innerHeight - vv.height) > 120;
-      if (keyboardOpen) window.scrollTo(0, 0);
+      // Sur iOS, on colle le container exactement sur le viewport visible
+      container.style.height = vv.height + 'px';
+      container.style.top = vv.offsetTop + 'px';
+      container.style.bottom = 'auto';
     };
     const resetContainer = () => {
       if (!container) return;
@@ -7396,7 +7395,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         </div>
       )}
       {/* Chat */}
-      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: isWideMsg ? 0 : "auto", display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
+      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Arrière-plan fixe — ne scroll pas */}
