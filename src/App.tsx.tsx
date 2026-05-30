@@ -6487,6 +6487,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [toast, setToast] = useState<ToastState>(null);
   const [moderationAlert, setModerationAlert] = useState<"insult" | "scam" | "sexual" | null>(null);
   const [showPartnerProfile, setShowPartnerProfile] = useState(false);
+  const [partnerMenuOpen, setPartnerMenuOpen] = useState(false);
+  const [partnerReportOpen, setPartnerReportOpen] = useState(false);
+  const [partnerActionLoading, setPartnerActionLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
@@ -6620,6 +6623,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         container.style.height = vv.height + 'px';
         container.style.top = vv.offsetTop + 'px';
         container.style.bottom = 'auto';
+        // iOS pousse parfois la page vers le haut quand le clavier s'ouvre, ce qui
+        // fait sortir le header de l'écran. On force la fenêtre à rester en haut.
+        window.scrollTo(0, 0);
       } else {
         container.style.height = '';
         container.style.top = '0';
@@ -7065,6 +7071,28 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       await sb.delete(auth.token, "messages", `?match_id=eq.${open.id}`);
     }
     setShowDeleteConv(false); setOpen(null); loadConvs();
+  };
+
+  const blockPartnerNow = async () => {
+    if (!open?.partner?.id) return;
+    setPartnerActionLoading(true);
+    try {
+      await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: open.partner.id });
+      setToast({ msg: `${open.partner.name} a été bloqué(e).`, type: "success" });
+      setPartnerMenuOpen(false); setShowPartnerProfile(false);
+      setOpen(null); loadConvs();
+    } catch { setToast({ msg: "Impossible de bloquer pour le moment.", type: "error" }); }
+    setPartnerActionLoading(false);
+  };
+  const reportPartnerNow = async (reason: string) => {
+    if (!open?.partner?.id) return;
+    setPartnerActionLoading(true);
+    try {
+      await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: open.partner.id, reason, status: "pending" });
+      setToast({ msg: "Signalement envoyé. Merci, notre équipe va vérifier.", type: "success" });
+      setPartnerReportOpen(false); setPartnerMenuOpen(false); setShowPartnerProfile(false);
+    } catch { setToast({ msg: "Impossible d'envoyer le signalement.", type: "error" }); }
+    setPartnerActionLoading(false);
   };
 
   const send = useCallback(async () => {
@@ -7960,6 +7988,21 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               }
               <div onClick={() => setShowPartnerProfile(false)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
+              {open.partner.id !== SUPPORT_TEAM_ID && (
+                <div onClick={() => setPartnerMenuOpen(v => !v)} style={{ position: "absolute", top: 14, right: 58, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc }} title="Options">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+                </div>
+              )}
+              {partnerMenuOpen && (
+                <>
+                  <div onClick={() => setPartnerMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 1 }} />
+                  <div style={{ position: "absolute", top: 54, right: 58, background: G.blanc, borderRadius: 14, overflow: "hidden", boxShadow: "0 8px 28px rgba(0,0,0,0.25)", zIndex: 2, minWidth: 170 }}>
+                    <div onClick={() => setPartnerMenuOpen(false)} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>
+                    <div onClick={blockPartnerNow} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: partnerActionLoading ? "wait" : "pointer", borderBottom: "1px solid #F5F5F5" }}>Bloquer</div>
+                    <div onClick={() => { setPartnerMenuOpen(false); setPartnerReportOpen(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Signaler</div>
+                  </div>
+                </>
+              )}
               <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
                 <div style={{ fontSize: "1.5rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{open.partner.name}, {open.partner.age} ans</div>
                 <div style={{ fontSize: "0.82rem", opacity: 0.9 }}>{open.partner.city}</div>
@@ -7973,6 +8016,20 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               </div>
               {open.partner.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6 }}>{open.partner.bio}</p>}
             </div>
+          </div>
+        </div>
+      )}
+      {/* Sous-menu : raison du signalement */}
+      {partnerReportOpen && open.partner && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 510, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => !partnerActionLoading && setPartnerReportOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "20px 20px 32px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#1a1a1a" }}>Signaler {open.partner.name}</h3>
+              <div onClick={() => !partnerActionLoading && setPartnerReportOpen(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
+            </div>
+            {["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => (
+              <div key={r} onClick={() => !partnerActionLoading && reportPartnerNow(r)} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: partnerActionLoading ? "wait" : "pointer", fontSize: "0.9rem", fontWeight: 500, color: "#1a1a1a" }}>{r}</div>
+            ))}
           </div>
         </div>
       )}
