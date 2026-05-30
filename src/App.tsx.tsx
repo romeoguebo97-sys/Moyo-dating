@@ -112,6 +112,9 @@ const SUPPORT_TEAM_ID = "moyo-support-team";
 const SUPPORT_TEAM_NAME = "Assistance Moyo";
 const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
 const SUPPORT_PREFIX_REPLY = "[SUPPORT_REPLY]";
+// Demande de Premium (un non-Premium demande à son interlocuteur Premium de lui offrir)
+const GIFT_REQUEST_PREFIX = "[GIFTREQ]";
+const GIFT_REQUEST_TEXT = "💝 Et si tu m'offrais Premium ? On pourrait discuter sans aucune limite 🥰";
 const isSupportReason = (reason?: string) => !!reason && (reason.startsWith(SUPPORT_PREFIX_USER) || reason.startsWith(SUPPORT_PREFIX_REPLY));
 const cleanSupportReason = (reason?: string) => (reason || "").replace(SUPPORT_PREFIX_USER, "").replace(SUPPORT_PREFIX_REPLY, "").trim();
 
@@ -6489,6 +6492,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [showPartnerProfile, setShowPartnerProfile] = useState(false);
   const [partnerMenuOpen, setPartnerMenuOpen] = useState(false);
   const [partnerReportOpen, setPartnerReportOpen] = useState(false);
+  const [confirmUnmatchPartner, setConfirmUnmatchPartner] = useState(false);
   const [partnerActionLoading, setPartnerActionLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -7094,6 +7098,53 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     } catch { setToast({ msg: "Impossible d'envoyer le signalement.", type: "error" }); }
     setPartnerActionLoading(false);
   };
+  const requestGiftNow = async () => {
+    if (!open?.id || !open.partner?.id) return;
+    const key = `moyo_giftreq_${open.id}`;
+    const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+    // On garde l'historique des envois (timestamps) sur 30 jours, max 2 demandes
+    let history: number[] = [];
+    try { history = JSON.parse(localStorage.getItem(key) || "[]"); } catch { history = []; }
+    if (!Array.isArray(history)) history = [];
+    const now = Date.now();
+    history = history.filter(t => typeof t === "number" && now - t < MONTH_MS);
+    if (history.length >= 2) {
+      setToast({ msg: "Tu as atteint la limite de 2 demandes ce mois-ci pour cette conversation 😊", type: "error" });
+      return;
+    }
+    try {
+      const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: GIFT_REQUEST_PREFIX + GIFT_REQUEST_TEXT, is_read: false });
+      if (res[0]) setMsgs(m => [...m, res[0]]);
+      history.push(now);
+      try { localStorage.setItem(key, JSON.stringify(history)); } catch {}
+      setToast({ msg: "Demande envoyée 💝", type: "success" });
+    } catch { setToast({ msg: "Impossible d'envoyer la demande.", type: "error" }); }
+  };
+  const unmatchPartnerNow = async () => {
+    const partnerId = open?.partner?.id;
+    if (!partnerId) return;
+    setPartnerActionLoading(true);
+    try {
+      const [fwd, rev] = await Promise.all([
+        sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${partnerId}&select=id`),
+        sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${partnerId}&user2=eq.${auth.userId}&select=id`),
+      ]);
+      const allIds = [
+        ...(Array.isArray(fwd) ? fwd.map(x => x.id) : []),
+        ...(Array.isArray(rev) ? rev.map(x => x.id) : []),
+        open!.id,
+      ].filter((id, i, arr) => id && arr.indexOf(id) === i);
+      for (const id of allIds) await sb.delete(auth.token, "messages", `?match_id=eq.${id}`);
+      await sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${partnerId}`);
+      await sb.delete(auth.token, "matches", `?user1=eq.${partnerId}&user2=eq.${auth.userId}`);
+      await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${partnerId}`);
+      await sb.delete(auth.token, "likes", `?from_user=eq.${partnerId}&to_user=eq.${auth.userId}`);
+      setToast({ msg: "Match annulé.", type: "success" });
+    } catch { setToast({ msg: "Impossible d'annuler le match.", type: "error" }); }
+    setConfirmUnmatchPartner(false); setPartnerMenuOpen(false); setShowPartnerProfile(false);
+    setOpen(null); loadConvs();
+    setPartnerActionLoading(false);
+  };
 
   const send = useCallback(async () => {
     if (!text.trim() || !open) return;
@@ -7373,6 +7424,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           {open.partner?.id === SUPPORT_TEAM_ID ? <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>● Répond sous 24h</div> : (() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
+        {/* Bouton "Demander Premium" : visible si JE ne suis pas Premium et que mon interlocuteur l'est */}
+        {!auth.isPremium && open.partner?.is_premium && open.partner?.id !== SUPPORT_TEAM_ID && (
+          <div onClick={requestGiftNow} title="Demander à recevoir Premium" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
+              <path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+            </svg>
+          </div>
+        )}
         {/* Bouton cadeau - offrir Premium : visible UNIQUEMENT aux utilisateurs Premium */}
         {auth.isPremium && !open.partner?.is_premium && (
           <div onClick={() => setShowGift(true)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Offrir Premium">
@@ -7647,6 +7707,24 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isMine ? "rgba(255,255,255,0.85)" : "#555"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                       </div>
                       {(() => {
+                        // ── Demande de Premium (message spécial) ──
+                        if (m.content.startsWith(GIFT_REQUEST_PREFIX)) {
+                          return (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 200 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: "1.3rem" }}>💝</span>
+                                <span style={{ fontSize: "0.86rem", fontWeight: 600 }}>{GIFT_REQUEST_TEXT.replace("💝 ", "")}</span>
+                              </div>
+                              {/* Le bouton "Offrir Premium" n'apparaît que pour le destinataire Premium */}
+                              {!isMine && auth.isPremium && !open.partner?.is_premium && (
+                                <button onClick={(e) => { e.stopPropagation(); setShowGift(true); }} style={{ background: "linear-gradient(135deg,#D4A843,#B8860B)", color: "#fff", border: "none", borderRadius: 50, padding: "9px 14px", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                                  Lui offrir Premium 🎁
+                                </button>
+                              )}
+                            </div>
+                          );
+                        }
                         const replyMatch = m.content.match(/^\[↩ (.+?) : ([\s\S]+?)\]\n([\s\S]*)$/);
                         if (replyMatch) {
                           const [, who, quoted, body] = replyMatch;
@@ -7996,8 +8074,14 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               {partnerMenuOpen && (
                 <>
                   <div onClick={() => setPartnerMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 1 }} />
-                  <div style={{ position: "absolute", top: 54, right: 58, background: G.blanc, borderRadius: 14, overflow: "hidden", boxShadow: "0 8px 28px rgba(0,0,0,0.25)", zIndex: 2, minWidth: 170 }}>
-                    <div onClick={() => setPartnerMenuOpen(false)} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>
+                  <div style={{ position: "absolute", top: 54, right: 58, background: G.blanc, borderRadius: 14, overflow: "hidden", boxShadow: "0 8px 28px rgba(0,0,0,0.25)", zIndex: 2, minWidth: 185 }}>
+                    {auth.isPremium && !open.partner.is_premium && (
+                      <div onClick={() => { setPartnerMenuOpen(false); setShowPartnerProfile(false); setShowGift(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#B8860B", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 8 }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                        Offrir Premium
+                      </div>
+                    )}
+                    <div onClick={() => { setPartnerMenuOpen(false); setConfirmUnmatchPartner(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Annuler le match</div>
                     <div onClick={blockPartnerNow} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: partnerActionLoading ? "wait" : "pointer", borderBottom: "1px solid #F5F5F5" }}>Bloquer</div>
                     <div onClick={() => { setPartnerMenuOpen(false); setPartnerReportOpen(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Signaler</div>
                   </div>
@@ -8030,6 +8114,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
             {["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => (
               <div key={r} onClick={() => !partnerActionLoading && reportPartnerNow(r)} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: partnerActionLoading ? "wait" : "pointer", fontSize: "0.9rem", fontWeight: 500, color: "#1a1a1a" }}>{r}</div>
             ))}
+          </div>
+        </div>
+      )}
+      {/* Confirmation annulation du match */}
+      {confirmUnmatchPartner && open.partner && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 520, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => !partnerActionLoading && setConfirmUnmatchPartner(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 340, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>Annuler le match avec {open.partner.name} ?</h3>
+            <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 22 }}>La conversation, les messages et les likes mutuels seront supprimés. Cette action est irréversible et la personne n'est pas notifiée.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmUnmatchPartner(false)} disabled={partnerActionLoading} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, color: "#555", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Retour</button>
+              <button onClick={unmatchPartnerNow} disabled={partnerActionLoading} style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: G.rouge, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: partnerActionLoading ? "wait" : "pointer" }}>{partnerActionLoading ? "..." : "Annuler le match"}</button>
+            </div>
           </div>
         </div>
       )}
