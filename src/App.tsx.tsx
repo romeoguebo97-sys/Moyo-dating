@@ -200,7 +200,7 @@ type Auth = {
 };
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
-type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; created_at?: string; reactions?: Record<string, string[]> };
+type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
@@ -6489,6 +6489,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [showPartnerProfile, setShowPartnerProfile] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [footerHeight, setFooterHeight] = useState(65);
   const [headerHeight, setHeaderHeight] = useState(60);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -6923,6 +6924,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       const prefix = `[↩ Statut Moyo : ${st.caption || "Photo"}]\n`;
       await sb.insert<Message>(auth.token, "messages", { match_id: match.id, sender_id: auth.userId, content: prefix + content, is_read: false });
       setStatusReplyText("");
+      setStatusPaused(false);
       setToast({ msg: "Réponse envoyée dans la conversation.", type: "success" });
     } catch {
       setToast({ msg: "Impossible d’envoyer la réponse au statut.", type: "error" });
@@ -7057,6 +7059,17 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
 
   const send = useCallback(async () => {
     if (!text.trim() || !open) return;
+    // ── Mode édition : on met à jour le message existant au lieu d'en créer un nouveau ──
+    if (editingMsg && editingMsg.id) {
+      const msgId = editingMsg.id;
+      // On conserve un éventuel préfixe de citation/réponse présent dans le message d'origine
+      const quotePrefix = (editingMsg.content.match(/^\[↩ .+? : .+?\]\n/) || [""])[0];
+      const newContent = quotePrefix + text.trim();
+      setMsgs(prev => prev.map(m => m.id === msgId ? { ...m, content: newContent, is_edited: true } : m));
+      setText(""); setEditingMsg(null);
+      try { await sb.update(auth.token, "messages", msgId, { content: newContent, is_edited: true }); } catch {}
+      return;
+    }
     if (open.id === "__support__") {
       const msgText = text.trim();
       setText("");
@@ -7096,7 +7109,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${cleanQuoted}]\n` : "";
     const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: prefix + text, is_read: false });
     if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); setReplyTo(null); }
-  }, [auth, open, text, replyTo, msgCount, onShowPremium]);
+  }, [auth, open, text, replyTo, msgCount, onShowPremium, editingMsg]);
 
   const sendImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -7625,6 +7638,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         return <span>{m.content}</span>;
                       })()}
                       <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                        {m.is_edited && <span style={{ fontSize: "0.6rem", fontStyle: "italic", color: isMine ? "rgba(255,255,255,0.6)" : "#bbb", marginRight: 2 }}>modifié</span>}
                         <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
                         {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} white />}
                       </div>
@@ -7705,6 +7719,20 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         {replyTo && (
           <div style={{ padding: "8px 12px 0 12px" }}>
             <ReplyBanner replyTo={replyTo} partnerName={open?.partner?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />
+          </div>
+        )}
+        {editingMsg && (
+          <div style={{ padding: "8px 12px 0 12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(26,92,58,0.08)", borderLeft: `3px solid ${G.vert}`, borderRadius: 8, padding: "8px 12px" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: G.vert }}>Modifier le message</div>
+                <div style={{ fontSize: "0.78rem", color: "#777", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{editingMsg.content.replace(/^\[↩ .+? : .+?\]\n/, "")}</div>
+              </div>
+              <div onClick={() => { setEditingMsg(null); setText(""); }} style={{ cursor: "pointer", color: "#999", flexShrink: 0, padding: 4 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
+            </div>
           </div>
         )}
         {/* Palette emojis */}
@@ -7815,6 +7843,28 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
             </div>
             {/* Actions */}
             <div style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+              {(() => {
+                const m = contextMenu.msg;
+                const isMine = m.sender_id === auth.userId;
+                const isImage = m.content.startsWith("[img]");
+                const ageMs = m.created_at ? Date.now() - new Date(m.created_at).getTime() : Infinity;
+                const within15min = ageMs <= 15 * 60 * 1000;
+                if (!isMine || isImage || !within15min) return null;
+                return (
+                  <div onClick={() => {
+                    const msg = contextMenu!.msg;
+                    setContextMenu(null);
+                    // Pré-remplir le champ avec le texte (sans le préfixe de citation éventuel)
+                    const body = msg.content.replace(/^\[↩ .+? : .+?\]\n/, "");
+                    setReplyTo(null);
+                    setEditingMsg(msg);
+                    setText(body);
+                  }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+                    <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Modifier</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </div>
+                );
+              })()}
               <div onClick={() => { const msg = contextMenu!.msg; setContextMenu(null); setTimeout(() => setReplyTo(msg), 0); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
@@ -8027,7 +8077,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
             <button onClick={() => toggleStatusLike(statusPreview)} disabled={statusActionLoading} aria-label="Aimer ce statut" style={{ height: 48, minWidth: 54, borderRadius: 999, border: "1px solid rgba(255,255,255,0.22)", background: statusLikedByMe[statusPreview.id || ""] ? "rgba(192,57,43,0.92)" : "rgba(255,255,255,0.13)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill={statusLikedByMe[statusPreview.id || ""] ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </button>
-            <input value={statusReplyText} onChange={e => setStatusReplyText(e.target.value)} onKeyDown={e => { if (e.key === "Enter") sendStatusReply(statusPreview); }} placeholder="Envoyer un message…" style={{ flex: 1, minWidth: 0, height: 48, borderRadius: 999, border: "1px solid rgba(255,255,255,0.22)", background: "rgba(255,255,255,0.13)", color: "#fff", padding: "0 16px", outline: "none", fontSize: "0.95rem" }} />
+            <input value={statusReplyText} onFocus={() => setStatusPaused(true)} onBlur={() => { if (!statusReplyText.trim()) setStatusPaused(false); }} onChange={e => setStatusReplyText(e.target.value)} onKeyDown={e => { if (e.key === "Enter") sendStatusReply(statusPreview); }} placeholder="Envoyer un message…" style={{ flex: 1, minWidth: 0, height: 48, borderRadius: 999, border: "1px solid rgba(255,255,255,0.22)", background: "rgba(255,255,255,0.13)", color: "#fff", padding: "0 16px", outline: "none", fontSize: "0.95rem" }} />
             <button onClick={() => sendStatusReply(statusPreview)} disabled={!statusReplyText.trim() || statusActionLoading} aria-label="Envoyer la réponse" style={{ height: 48, width: 50, borderRadius: "50%", border: "none", background: statusReplyText.trim() ? G.rouge : "rgba(255,255,255,0.12)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: statusReplyText.trim() ? "pointer" : "default" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
