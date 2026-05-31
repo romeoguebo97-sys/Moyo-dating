@@ -81,9 +81,11 @@ let PREMIUM_PRICE_EUR = 10;
 let PAY_MTN_ENABLED = true;
 let PAY_AIRTEL_ENABLED = true;
 let PAY_CB_ENABLED = true;
+// Bloquer les likes entre profils de même genre (app hétéro). Piloté depuis Config admin.
+let BLOCK_SAME_GENDER = true;
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -92,6 +94,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["pay_mtn_enabled"] !== undefined) PAY_MTN_ENABLED = map["pay_mtn_enabled"] !== "false";
   if (map["pay_airtel_enabled"] !== undefined) PAY_AIRTEL_ENABLED = map["pay_airtel_enabled"] !== "false";
   if (map["pay_cb_enabled"] !== undefined) PAY_CB_ENABLED = map["pay_cb_enabled"] !== "false";
+  if (map["rule_block_same_gender_like"] !== undefined) BLOCK_SAME_GENDER = map["rule_block_same_gender_like"] !== "false";
   if (map["limit_likes_free"]) FREE_LIMITS.likes = parseInt(map["limit_likes_free"]) || 5;
   if (map["limit_messages_free"]) FREE_LIMITS.messages = parseInt(map["limit_messages_free"]) || 3;
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
@@ -3416,6 +3419,7 @@ function AdminDesktopPage() {
                   if (!auth) return;
                   const v = !rules.blockSameGenderLike;
                   setRules(r => ({ ...r, blockSameGenderLike: v }));
+                  BLOCK_SAME_GENDER = v;
                   await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
                 }} />
               </div>
@@ -3741,7 +3745,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
       <OffCanvasSection title="Règles">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
           <div><div style={{ fontSize: "0.83rem", fontWeight: 600 }}>Bloquer like même genre</div><div style={{ fontSize: "0.72rem", color: "#888" }}>Homme - Homme / Femme - Femme</div></div>
-          <SwitchBtn on={rules.blockSameGenderLike} onToggle={async () => { const v = !rules.blockSameGenderLike; setRules(r => ({ ...r, blockSameGenderLike: v })); await patch("rule_block_same_gender_like", String(v)); }} />
+          <SwitchBtn on={rules.blockSameGenderLike} onToggle={async () => { const v = !rules.blockSameGenderLike; setRules(r => ({ ...r, blockSameGenderLike: v })); BLOCK_SAME_GENDER = v; await patch("rule_block_same_gender_like", String(v)); }} />
         </div>
       </OffCanvasSection>
       <OffCanvasSection title="Textes des modals">
@@ -4562,15 +4566,20 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     });
   };
   useEffect(() => {
-    loadProfiles();
-    // Charger le genre de l'utilisateur connecté
+    // Charger d'abord le genre de l'utilisateur, PUIS les profils (filtre genre opposé fiable)
     sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
-      .then(res => { if (res[0]) setMyGender(res[0].gender); });
+      .then(res => {
+        const g = res[0]?.gender || "";
+        setMyGender(g);
+        loadProfiles(0, false, g);
+      })
+      .catch(() => loadProfiles());
   }, []);
   useEffect(() => { if (profiles.length > 0 && profiles[current]) sb.recordVisit(auth.token, auth.userId, profiles[current].id); }, [current, profiles]);
 
-  const loadProfiles = async (pageNum = 0, append = false) => {
+  const loadProfiles = async (pageNum = 0, append = false, genderOverride?: string) => {
     setLoading(true);
+    const effectiveGender = genderOverride !== undefined ? genderOverride : myGender;
     try {
       // Chargement de TOUS les profils par batches de 1000 - mobile et desktop, quelle que soit la taille de la base
       const BATCH = 1000;
@@ -4588,7 +4597,12 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       while (keepLoading) {
         let params = `?id=neq.${auth.userId}&is_visible=neq.false&is_complete=eq.true&order=is_premium.desc,is_verified.desc,created_at.desc&limit=${BATCH}&offset=${offset}`;
         if (filters.city && !filters.city.startsWith("──")) params += `&city=eq.${encodeURIComponent(filters.city)}`;
-        if (filters.gender) params += `&gender=eq.${filters.gender}`;
+        // Moyo est une app de rencontre hétérosexuelle : on ne montre que le genre opposé.
+        // Le filtre manuel "filters.gender" ne peut donc PAS forcer le même genre que soi.
+        // App hétéro : si la règle est active, ne montrer que le genre opposé.
+        if (BLOCK_SAME_GENDER && effectiveGender === "Homme") params += `&gender=eq.Femme`;
+        else if (BLOCK_SAME_GENDER && effectiveGender === "Femme") params += `&gender=eq.Homme`;
+        else if (filters.gender) params += `&gender=eq.${filters.gender}`;
         if (filters.ageMin) params += `&age=gte.${filters.ageMin}`;
         if (filters.ageMax) params += `&age=lte.${filters.ageMax}`;
         if (filters.religion) params += `&religion=eq.${encodeURIComponent(filters.religion)}`;
@@ -4676,6 +4690,8 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       return;
     }
     if (!auth.isPremium && likesToday >= FREE_LIMITS.likes) { onShowPremium(modalTexts.likesEpuises.replace("{n}", String(FREE_LIMITS.likes))); return; }
+    // Sécurité hétéro : interdire le like d'un profil de même genre (si la règle est active).
+    if (BLOCK_SAME_GENDER && myGender && p.gender && myGender === p.gender) { setShowSameGender(true); return; }
     // Like - mise à jour optimiste immédiate
     setLikedIds(s => new Set([...s, p.id]));
     setLikesToday(l => l + 1);
@@ -4900,12 +4916,12 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     <option value="">Toutes les villes</option>
     {VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}
   </select>
-  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, margin: "2px 0 6px" }}>Genre recherché</div>
+  {!BLOCK_SAME_GENDER && <><div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, margin: "2px 0 6px" }}>Genre recherché</div>
   <select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 10, marginBottom: 8 }}>
     <option value="">Homme et Femme</option>
     <option value="Homme">Homme</option>
     <option value="Femme">Femme</option>
-  </select>
+  </select></>}
   <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
     <input type="number" value={filters.ageMin} onChange={e => setFilters(prev => ({ ...prev, ageMin: e.target.value }))} placeholder="Âge min (18)" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${filters.ageMin && parseInt(filters.ageMin) < 18 ? "#e74c3c" : G.gris}`, fontSize: "0.9rem" }} />
     <input type="number" value={filters.ageMax} onChange={e => setFilters(prev => ({ ...prev, ageMax: e.target.value }))} placeholder="Âge max (99)" min={18} max={99} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1px solid ${filters.ageMax && parseInt(filters.ageMax) > 99 ? "#e74c3c" : G.gris}`, fontSize: "0.9rem" }} />
@@ -5128,6 +5144,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
                 {VILLES.filter(c => !c.startsWith("──")).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            {!BLOCK_SAME_GENDER && (
             <div>
               <div style={{ fontSize: "0.63rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Genre</div>
               <select value={filters.gender} onChange={e => setFilters(prev => ({ ...prev, gender: e.target.value }))} style={{ width: "100%", padding: "7px 10px", borderRadius: 9, border: `1.5px solid ${G.gris}`, background: G.blanc, fontSize: "0.76rem", color: G.brun, fontWeight: 500, outline: "none", cursor: "pointer" }}>
@@ -5136,6 +5153,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
                 <option value="Femme">Femme</option>
               </select>
             </div>
+            )}
             <div>
               <div style={{ fontSize: "0.63rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Âge</div>
               <div style={{ display: "flex", gap: 6 }}>
@@ -5203,6 +5221,8 @@ function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremiu
   }, []);
 
   const handleLikeFromBanner = async (p: Profile) => {
+    // Sécurité hétéro : interdire le like d'un profil de même genre (si la règle est active).
+    if (BLOCK_SAME_GENDER && myGender && p.gender && myGender === p.gender) { setLiking(false); return; }
     setLiking(true);
     try {
       await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
