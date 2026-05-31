@@ -15765,6 +15765,13 @@ export default function App() {
   const [adminBadgeCount, setAdminBadgeCount] = useState(0);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showAdminConfig, setShowAdminConfig] = useState(false);
+  const [isDesktopView, setIsDesktopView] = useState(typeof window !== "undefined" ? window.innerWidth >= 768 : true);
+  useEffect(() => {
+    const onResize = () => setIsDesktopView(window.innerWidth >= 768);
+    window.addEventListener("resize", onResize);
+    onResize();
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     const handler = () => {
@@ -16662,7 +16669,7 @@ export default function App() {
     )}
     {/* ── CONFIG : plein écran sur ordi/tablette, panneau glissant sur téléphone (Super Admin uniquement) ── */}
     {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (() => {
-      const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+      const isDesktop = isDesktopView;
       if (isDesktop) {
         // Grande fenêtre centrée
         return (
