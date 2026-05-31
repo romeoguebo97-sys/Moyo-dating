@@ -10195,15 +10195,15 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
           <button onClick={() => setConfirmDelete(true)} title="Supprimer" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: isPending ? 10 : 0 }}>
+      <div style={{ display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row", gap: 8, marginBottom: isPending ? 10 : 0 }}>
         <div style={{ flex: 1, background: G.creme, borderRadius: 8, padding: "8px 10px" }}>
           <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. client</div>
-          <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#888", letterSpacing: 0.5 }}>{p.tx_ref}</div>
+          <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#888", letterSpacing: 0.5, wordBreak: "break-all" }}>{p.tx_ref}</div>
         </div>
         {!isApproved && !isRejected && (
-          <div style={{ flex: 1, background: verified === "match" ? "rgba(39,174,96,0.07)" : verified === "mismatch" ? "rgba(231,76,60,0.07)" : G.creme, borderRadius: 8, padding: "8px 10px", border: `1.5px solid ${verified === "match" ? "rgba(39,174,96,0.3)" : verified === "mismatch" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
+          <div style={{ flex: 1, background: verified === "match" ? "rgba(39,174,96,0.07)" : verified === "mismatch" ? "rgba(231,76,60,0.07)" : G.creme, borderRadius: 8, padding: "10px 12px", border: `1.5px solid ${verified === "match" ? "rgba(39,174,96,0.3)" : verified === "mismatch" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
             <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. {p.operator} reçue</div>
-            <input value={adminRef} onChange={e => { setAdminRef(e.target.value); setVerified(null); }} placeholder="Entrez ici…" style={{ width: "100%", border: "none", background: "transparent", fontSize: "0.82rem", fontWeight: 700, outline: "none", color: "#1a1a1a", letterSpacing: 0.5, fontFamily: "inherit" }} />
+            <input value={adminRef} onChange={e => { setAdminRef(e.target.value); setVerified(null); }} placeholder="Entrez ici…" style={{ width: "100%", border: "none", background: "transparent", fontSize: "0.95rem", fontWeight: 700, outline: "none", color: "#1a1a1a", letterSpacing: 0.5, fontFamily: "inherit", padding: window.innerWidth < 768 ? "4px 0" : 0 }} />
           </div>
         )}
       </div>
@@ -11131,6 +11131,18 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       showToast("Erreur lors de la suppression des logs.", "error");
     }
   };
+  const deleteOneAdminLog = async (id: string) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/admin_logs?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+      });
+      setAdminLogs(prev => prev.filter(l => l.id !== id));
+      showToast("Action supprimée de l'historique.", "success");
+    } catch {
+      showToast("Erreur lors de la suppression.", "error");
+    }
+  };
   const [viewPaymentProfile, setViewPaymentProfile] = useState<Profile | null>(null);
   const openPaymentProfile = async (userId: string) => {
     try {
@@ -11203,8 +11215,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const deletePayment = async (p: PaymentRequest) => {
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "deleted" }) });
     if (p.status === "approved") {
-      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${p.user_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: false, premium_until: null }) });
-      showToast("Carte supprimée et Premium retiré.", "success");
+      // IMPORTANT : pour un cadeau, le Premium a été donné au bénéficiaire (gift_for), pas à l'acheteur (user_id).
+      const targetId = p.gift_for || p.user_id;
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${targetId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: false, premium_until: null }) });
+      logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau retiré pour ${p.gift_for_name || targetId} (carte supprimée)` : `Premium retiré (carte supprimée) - réf: ${p.tx_ref}`, targetId);
+      showToast(p.gift_for ? `Carte supprimée et Premium retiré à ${p.gift_for_name || "la bénéficiaire"}.` : "Carte supprimée et Premium retiré.", "success");
     } else {
       showToast("Carte supprimée.", "success");
     }
@@ -14923,6 +14938,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3, fontFamily: "monospace" }}>Utilisateur : {log.target_user_id.slice(0, 16)}…</div>
                     )}
                   </div>
+                  {auth.userId === SUPER_ADMIN_ID && (
+                    <button onClick={() => confirm("Supprimer cette action de l'historique ?", () => deleteOneAdminLog(log.id))} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -15484,10 +15504,15 @@ export default function App() {
   const [showAdminConfig, setShowAdminConfig] = useState(false);
 
   useEffect(() => {
-    const handler = () => setShowAdminConfig(true);
+    const handler = () => {
+      // Sécurité : seul le Super Admin peut ouvrir la Configuration
+      const isSuperAdmin = (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID;
+      if (!isSuperAdmin) return;
+      setShowAdminConfig(true);
+    };
     window.addEventListener("moyo-open-admin-config", handler);
     return () => window.removeEventListener("moyo-open-admin-config", handler);
-  }, []);
+  }, [auth]);
 
   // ── Viewport mobile : adapter à la largeur de l'écran, empêcher le zoom intempestif ──
   useEffect(() => {
@@ -16372,7 +16397,8 @@ export default function App() {
         </div>
       </div>
     )}
-    {/* ── OFF-CANVAS CONFIG MOBILE/TABLETTE ── */}
+    {/* ── OFF-CANVAS CONFIG MOBILE/TABLETTE (Super Admin uniquement) ── */}
+    {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && <>
     {showAdminConfig && <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
     <div style={{ position: "fixed", top: 0, right: showAdminConfig ? 0 : "-110vw", width: "min(95vw, 480px)", height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
@@ -16385,6 +16411,7 @@ export default function App() {
         <MobileAdminConfig auth={auth} onClose={() => setShowAdminConfig(false)} />
       </div>
     </div>
+    </>}
     {InstallBanner}
   </div>;
 }
