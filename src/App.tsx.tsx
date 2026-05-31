@@ -3680,6 +3680,8 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
   const [vals, setVals] = React.useState({ mtn: true, airtel: true, cb: true });
   const [loading, setLoading] = React.useState(true);
   const [coords, setCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "" });
+  const [savedCoords, setSavedCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "" });
+  const [editingField, setEditingField] = React.useState<string | null>(null);
   const [savingCoord, setSavingCoord] = React.useState<string | null>(null);
   const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
   React.useEffect(() => {
@@ -3694,6 +3696,12 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
           cb: m["pay_cb_enabled"] !== "false",
         });
         setCoords({
+          mtnNum: m["pay_mtn_number"] || PAY_MTN_NUMBER,
+          mtnResp: m["pay_mtn_responsable"] || PAY_MTN_RESPONSABLE,
+          airtelNum: m["pay_airtel_number"] || PAY_AIRTEL_NUMBER,
+          airtelResp: m["pay_airtel_responsable"] || PAY_AIRTEL_RESPONSABLE,
+        });
+        setSavedCoords({
           mtnNum: m["pay_mtn_number"] || PAY_MTN_NUMBER,
           mtnResp: m["pay_mtn_responsable"] || PAY_MTN_RESPONSABLE,
           airtelNum: m["pay_airtel_number"] || PAY_AIRTEL_NUMBER,
@@ -3714,7 +3722,8 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
     } catch {}
   };
 
-  const saveCoord = async (key: string, value: string) => {
+  const saveCoord = async (key: string, field: keyof typeof coords, value: string, label: string) => {
+    if (!window.confirm(`Confirmer ${label} : ${value} ?`)) return;
     setSavingCoord(key);
     // Mise à jour immédiate des variables globales
     if (key === "pay_mtn_number") PAY_MTN_NUMBER = value;
@@ -3722,10 +3731,15 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
     if (key === "pay_airtel_number") PAY_AIRTEL_NUMBER = value;
     if (key === "pay_airtel_responsable") PAY_AIRTEL_RESPONSABLE = value;
     try {
-      // upsert (insert si absent, sinon update)
       await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value }) });
+      setSavedCoords(s => ({ ...s, [field]: value }));
+      setEditingField(null);
     } catch {}
     setSavingCoord(null);
+  };
+  const cancelEdit = (field: keyof typeof coords) => {
+    setCoords(c => ({ ...c, [field]: savedCoords[field] }));
+    setEditingField(null);
   };
 
   return (
@@ -3749,26 +3763,49 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
             Numéro qui reçoit l'argent et nom du responsable. Modifiable à tout moment — appliqué partout immédiatement.
           </div>
           {([
-            ["pay_mtn_number", "Numéro MTN (reçoit l'argent)", "mtnNum", "tel"],
-            ["pay_mtn_responsable", "Responsable MTN", "mtnResp", "text"],
-            ["pay_airtel_number", "Numéro Airtel (reçoit l'argent)", "airtelNum", "tel"],
-            ["pay_airtel_responsable", "Responsable Airtel", "airtelResp", "text"],
-          ] as [string, string, keyof typeof coords, string][]).map(([key, label, field, type]) => (
-            <div key={key} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <input
-                  type={type}
-                  value={coords[field]}
-                  onChange={e => setCoords(c => ({ ...c, [field]: e.target.value }))}
-                  style={{ flex: 1, padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
-                />
-                <button onClick={() => saveCoord(key, coords[field])} disabled={savingCoord === key} style={{ flexShrink: 0, background: savingCoord === key ? "#bbb" : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", border: "none", borderRadius: 9, padding: "0 14px", fontSize: "0.76rem", fontWeight: 700, cursor: savingCoord === key ? "wait" : "pointer" }}>
-                  {savingCoord === key ? "…" : "OK"}
-                </button>
+            ["pay_mtn_number", "le nouveau numéro MTN", "mtnNum", "tel"],
+            ["pay_mtn_responsable", "le nouveau responsable MTN", "mtnResp", "text"],
+            ["pay_airtel_number", "le nouveau numéro Airtel", "airtelNum", "tel"],
+            ["pay_airtel_responsable", "le nouveau responsable Airtel", "airtelResp", "text"],
+          ] as [string, string, keyof typeof coords, string][]).map(([key, label, field, type]) => {
+            const isEditing = editingField === key;
+            const displayLabel = field === "mtnNum" ? "Numéro MTN (reçoit l'argent)" : field === "mtnResp" ? "Responsable MTN" : field === "airtelNum" ? "Numéro Airtel (reçoit l'argent)" : "Responsable Airtel";
+            return (
+              <div key={key} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{displayLabel}</div>
+                {!isEditing ? (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <div style={{ flex: 1, padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: "#f7f7f7", color: "#555", display: "flex", alignItems: "center", gap: 6, boxSizing: "border-box" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      {coords[field]}
+                    </div>
+                    <button onClick={() => setEditingField(key)} style={{ flexShrink: 0, background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "0 12px", height: 38, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      Modifier
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type={type}
+                      autoFocus
+                      value={coords[field]}
+                      onChange={e => setCoords(c => ({ ...c, [field]: e.target.value }))}
+                      style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `2px solid ${G.vert}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 6 }}
+                    />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => saveCoord(key, field, coords[field], label)} disabled={savingCoord === key || !coords[field].trim()} style={{ flex: 1, background: savingCoord === key ? "#bbb" : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", border: "none", borderRadius: 9, padding: "9px 0", fontSize: "0.78rem", fontWeight: 700, cursor: savingCoord === key ? "wait" : "pointer" }}>
+                        {savingCoord === key ? "…" : "Enregistrer"}
+                      </button>
+                      <button onClick={() => cancelEdit(field)} style={{ flex: 1, background: G.creme, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "9px 0", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </>)}
     </div>
@@ -16623,21 +16660,49 @@ export default function App() {
         </div>
       </div>
     )}
-    {/* ── OFF-CANVAS CONFIG MOBILE/TABLETTE (Super Admin uniquement) ── */}
-    {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && <>
-    {showAdminConfig && <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
-    <div style={{ position: "fixed", top: 0, right: showAdminConfig ? 0 : "-110vw", width: "min(95vw, 480px)", height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Configuration</div>
-        <button onClick={() => setShowAdminConfig(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom, 40px)" }}>
-        <MobileAdminConfig auth={auth} onClose={() => setShowAdminConfig(false)} />
-      </div>
-    </div>
-    </>}
+    {/* ── CONFIG : plein écran sur ordi/tablette, panneau glissant sur téléphone (Super Admin uniquement) ── */}
+    {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (() => {
+      const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+      if (isDesktop) {
+        // Grande fenêtre centrée
+        return (
+          <>
+            {showAdminConfig && (
+              <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+                <div onClick={e => e.stopPropagation()} style={{ width: "min(96vw, 1100px)", height: "min(92vh, 900px)", background: G.blanc, borderRadius: 18, zIndex: 9999, boxShadow: "0 24px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 26px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>⚙️ Configuration</div>
+                    <button onClick={() => setShowAdminConfig(false)} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <div style={{ flex: 1, overflowY: "auto", padding: "8px 26px 26px", columnCount: 2, columnGap: 28 }}>
+                    <MobileAdminConfig auth={auth} onClose={() => setShowAdminConfig(false)} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      }
+      // Mobile : panneau glissant (inchangé)
+      return (
+        <>
+          {showAdminConfig && <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
+          <div style={{ position: "fixed", top: 0, right: showAdminConfig ? 0 : "-110vw", width: "min(95vw, 480px)", height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Configuration</div>
+              <button onClick={() => setShowAdminConfig(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom, 40px)" }}>
+              <MobileAdminConfig auth={auth} onClose={() => setShowAdminConfig(false)} />
+            </div>
+          </div>
+        </>
+      );
+    })()}
     {InstallBanner}
   </div>;
 }
