@@ -8854,6 +8854,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
     return Notification.permission as "default" | "granted" | "denied";
   });
   const [notifLoading, setNotifLoading] = useState(false);
+  const [warningsExpanded, setWarningsExpanded] = useState(false);
+  const [warningsList, setWarningsList] = useState<{ id: string; reason: string; warning_number: number; created_at: string }[]>([]);
+  const [warningsLoading, setWarningsLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<Profile>>({});
   const [loading, setLoading] = useState(true);
@@ -9922,19 +9925,55 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           const iconColor = wc === 0 ? "#bbb" : wc === 1 ? "#F9A825" : wc === 2 ? "#E65100" : "#e74c3c";
           const labelColor = wc === 0 ? "#aaa" : wc === 1 ? "#F57F17" : wc === 2 ? "#E65100" : "#c0392b";
           const countColor = wc === 0 ? "#888" : wc === 1 ? "#F9A825" : wc === 2 ? "#E65100" : "#e74c3c";
+          const canExpand = wc > 0;
+          const toggleWarnings = () => {
+            if (!canExpand) return;
+            const next = !warningsExpanded;
+            setWarningsExpanded(next);
+            if (next && warningsList.length === 0) {
+              setWarningsLoading(true);
+              fetch(`${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${auth.userId}&warning_number=gte.1&select=id,reason,warning_number,created_at&order=created_at.asc`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+                .then(r => r.json()).then((d) => { if (Array.isArray(d)) setWarningsList(d); }).catch(() => {}).finally(() => setWarningsLoading(false));
+            }
+          };
           return (
-            <div style={{ background: bgCard, borderRadius: 16, padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, border: `1px solid ${borderCard}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-              <div style={{ width: 42, height: 42, borderRadius: "50%", background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: labelColor }}>Avertissements</div>
-                  <div style={{ display: "flex", gap: 4 }}>{[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wc ? countColor : "#E0E0E0", transition: "background 0.3s" }} />)}</div>
+            <div style={{ background: bgCard, borderRadius: 16, border: `1px solid ${borderCard}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", overflow: "hidden" }}>
+              <div onClick={toggleWarnings} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: canExpand ? "pointer" : "default" }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: "1rem", color: countColor, marginTop: 2 }}>{wc}/3</div>
-                {wc >= 3 && <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4, lineHeight: 1.5, fontWeight: 500 }}>Votre compte risque une suspension en cas de nouveau signalement.</div>}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: labelColor }}>Avertissements</div>
+                    <div style={{ display: "flex", gap: 4 }}>{[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wc ? countColor : "#E0E0E0", transition: "background 0.3s" }} />)}</div>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "1rem", color: countColor, marginTop: 2 }}>{wc}/3</div>
+                  {wc >= 3 && <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4, lineHeight: 1.5, fontWeight: 500 }}>Votre compte risque une suspension en cas de nouveau signalement.</div>}
+                  {canExpand && !warningsExpanded && <div style={{ fontSize: "0.7rem", color: labelColor, marginTop: 4, opacity: 0.8 }}>Appuyez pour voir le détail</div>}
+                </div>
+                {canExpand && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={labelColor} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, transform: warningsExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><path d="M6 9l6 6 6-6"/></svg>}
               </div>
+              {canExpand && warningsExpanded && (
+                <div style={{ padding: "0 16px 14px" }}>
+                  {warningsLoading ? (
+                    <div style={{ textAlign: "center", padding: "10px 0", color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+                  ) : warningsList.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "10px 0", color: "#aaa", fontSize: "0.8rem", fontStyle: "italic" }}>Aucun détail disponible.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {warningsList.map((w, idx) => (
+                        <div key={w.id} style={{ background: G.blanc, borderRadius: 10, padding: "10px 12px", border: `1px solid ${borderCard}` }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontSize: "0.78rem", fontWeight: 800, color: labelColor }}>Avertissement {idx + 1}</span>
+                            <span style={{ fontSize: "0.68rem", color: "#999" }}>{new Date(w.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
+                          <div style={{ fontSize: "0.82rem", color: "#444", lineHeight: 1.45 }}>{w.reason}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })()}
