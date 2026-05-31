@@ -12173,14 +12173,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
   const sendSupportReply = async () => {
     if (!supportReply || !supportReplyText.trim()) return;
+    if (!supportReply.userId) { showToast("Destinataire introuvable pour cette réponse.", "error"); return; }
     setReportActionLoading(supportReply.report.id || "support-reply");
     try {
+      // IMPORTANT : la conversation support d'un utilisateur est rattachée via reporter_id.
+      // Pour qu'une réponse de l'Assistance apparaisse bien CHEZ L'UTILISATEUR (et pas chez l'admin),
+      // on met l'utilisateur destinataire en reporter_id. Le préfixe [SUPPORT_REPLY] indique que
+      // le message vient de l'Assistance (affiché comme tel côté utilisateur).
       await sb.insert<ReportRow>(auth.token, "reports", {
-        reporter_id: auth.userId,
+        reporter_id: supportReply.userId,
         reported_id: supportReply.userId,
         reason: `${SUPPORT_PREFIX_REPLY} ${supportReplyText.trim()}`,
-        // Une réponse admin est déjà traitée côté back-office : elle doit apparaître chez l’utilisateur,
-        // mais ne doit pas revenir comme un nouveau message en attente dans l’onglet Messagerie admin.
         status: "reviewed",
       });
       if (supportReply.report.id) {
