@@ -3196,7 +3196,7 @@ function SwitchBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 function OffCanvasSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div style={{ breakInside: "avoid", WebkitColumnBreakInside: "avoid", pageBreakInside: "avoid", display: "inline-block", width: "100%" } as React.CSSProperties}>
       <div style={{ padding: "14px 20px 10px", borderTop: "1px solid #eee" }}>
         <div style={{ fontWeight: 700, fontSize: "0.7rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>{title}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{children}</div>
@@ -3412,14 +3412,14 @@ function AdminDesktopPage() {
         </div>
         )}
         {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: "min(96vw, 1100px)", height: "min(92vh, 900px)", background: G.blanc, borderRadius: 18, zIndex: 9999, boxShadow: "0 24px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "min(97vw, 1340px)", height: "min(94vh, 980px)", background: G.blanc, borderRadius: 18, zIndex: 9999, boxShadow: "0 24px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 26px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
             <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>⚙️ Configuration</div>
             <button onClick={() => setRulesMenuOpen(false)} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 20, alignItems: "start" }}>
+          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", columnCount: 2, columnGap: 22, columnFill: "balance" }}>
             <OffCanvasSection title="Règles">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
                 <div>
@@ -16746,14 +16746,14 @@ export default function App() {
           <>
             {showAdminConfig && (
               <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-                <div onClick={e => e.stopPropagation()} style={{ width: "min(96vw, 1100px)", height: "min(92vh, 900px)", background: G.blanc, borderRadius: 18, zIndex: 9999, boxShadow: "0 24px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <div onClick={e => e.stopPropagation()} style={{ width: "min(97vw, 1340px)", height: "min(94vh, 980px)", background: G.blanc, borderRadius: 18, zIndex: 9999, boxShadow: "0 24px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 26px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>⚙️ Configuration</div>
                     <button onClick={() => setShowAdminConfig(false)} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                   </div>
-                  <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 20, alignItems: "start" }}>
+                  <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", columnCount: 2, columnGap: 22, columnFill: "balance" }}>
                     <MobileAdminConfig auth={auth} onClose={() => setShowAdminConfig(false)} />
                   </div>
                 </div>
