@@ -7233,9 +7233,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const deleteConv = async () => {
     if (!open) return;
     if (open.id === "__support__") {
-      // Supprimer uniquement les messages envoyés par l'utilisateur (SUPPORT_USER)
-      // Les réponses admin (SUPPORT_REPLY) sont conservées côté dashboard
+      // Supprimer tous les messages support de cet utilisateur (ses messages ET les réponses
+      // de l'assistance, qui ont toutes reporter_id = utilisateur). RLS autorise car reporter_id = lui.
+      await sb.delete(auth.token, "reports", `?reporter_id=eq.${auth.userId}&reason=like.*%5BSUPPORT%5F%5D*`).catch(() => {});
       await sb.delete(auth.token, "reports", `?reporter_id=eq.${auth.userId}&reason=like.*%5BSUPPORT_USER%5D*`).catch(() => {});
+      await sb.delete(auth.token, "reports", `?reporter_id=eq.${auth.userId}&reason=like.*%5BSUPPORT_REPLY%5D*`).catch(() => {});
       // Masquer côté UI uniquement — vider les msgs localement
       setMsgs([]);
     } else {
@@ -8171,13 +8173,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 const msgId = contextMenu.msg.id;
                 setContextMenu(null);
                 if (!msgId) return;
-                await sb.delete(auth.token, "messages", `?id=eq.${msgId}`);
+                // Conversation support : les messages sont dans la table "reports", pas "messages"
+                if (open?.id === "__support__") {
+                  await sb.delete(auth.token, "reports", `?id=eq.${msgId}`).catch(() => {});
+                } else {
+                  await sb.delete(auth.token, "messages", `?id=eq.${msgId}`);
+                }
                 setMsgs(prev => prev.filter(msg => msg.id !== msgId));
-                setToast({ msg: "Message supprimé pour tout le monde", type: "success" });
-              }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
-                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#e74c3c" }}>Supprimer pour tous</span>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                setToast({ msg: open?.id === "__support__" ? "Message supprimé" : "Message supprimé pour tout le monde", type: "success" });
+              }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: open?.id === "__support__" ? "none" : `1px solid ${G.gris}` }}>
+                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#e74c3c" }}>{open?.id === "__support__" ? "Supprimer le message" : "Supprimer pour tous"}</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
               </div>
+              {open?.id !== "__support__" && (
               <div onClick={async () => {
                 const msgId = contextMenu.msg.id;
                 const currentDeletedFor: string[] = (contextMenu.msg as any).deleted_for || [];
@@ -8195,6 +8203,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#888" }}>Supprimer pour moi</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
+              )}
             </div>
             {/* Annuler */}
             <div onClick={() => setContextMenu(null)} style={{ background: G.blanc, borderRadius: 14, padding: "15px 20px", textAlign: "center", marginTop: 10, cursor: "pointer", fontWeight: 700, fontSize: "0.92rem", color: G.rouge, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
@@ -11649,7 +11658,27 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [reportProfilePreview, setReportProfilePreview] = useState<AdminProfile | null>(null);
   const [reportProfileLoading, setReportProfileLoading] = useState<string | null>(null);
   const [reportProfilesCache, setReportProfilesCache] = useState<Record<string, AdminProfile>>({});
-  const [supportReply, setSupportReply] = useState<{ report: ReportRow; userId: string } | null>(null);
+  const [supportReply, setSupportReply] = useState<{ report: ReportRow; userId: string; allMessageIds?: string[] } | null>(null);
+  const [archivingConv, setArchivingConv] = useState<string | null>(null);
+  const [expandedConvs, setExpandedConvs] = useState<Set<string>>(new Set());
+  const toggleConv = (uid: string) => setExpandedConvs(prev => { const n = new Set(prev); n.has(uid) ? n.delete(uid) : n.add(uid); return n; });
+  // Archiver toute une conversation support (clôture). Les messages passent en "archived".
+  const archiveConversation = async (userId: string, messageIds: string[]) => {
+    setArchivingConv(userId);
+    try {
+      await Promise.all(messageIds.filter(Boolean).map(id =>
+        fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ status: "archived" }),
+        })
+      ));
+      setReports(prev => prev.map(r => messageIds.includes(r.id || "") ? { ...r, status: "archived" } : r));
+      showToast("Conversation archivée.", "success");
+      loadStats();
+    } catch { showToast("Erreur lors de l'archivage.", "error"); }
+    setArchivingConv(null);
+  };
   const [supportReplyText, setSupportReplyText] = useState("");
 
   // ── Users ──
@@ -12186,11 +12215,20 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         reason: `${SUPPORT_PREFIX_REPLY} ${supportReplyText.trim()}`,
         status: "reviewed",
       });
-      if (supportReply.report.id) {
-        await updateReportStatus(supportReply.report.id, "reviewed", "Réponse envoyée à l’utilisateur dans sa messagerie.");
-      } else {
-        showToast("Réponse envoyée à l’utilisateur dans sa messagerie.", "success");
-      }
+      // On n'archive PLUS automatiquement la conversation : elle reste visible dans Messagerie.
+      // Les messages "pending" de l'utilisateur sont juste marqués comme lus (reviewed) pour
+      // retirer la pastille "non lu", sans sortir la conversation de la liste active.
+      try {
+        const pendingIds = (supportReply.allMessageIds || []).filter(Boolean);
+        await Promise.all(pendingIds.map(id =>
+          fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${id}&status=eq.pending`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+            body: JSON.stringify({ status: "reviewed" }),
+          })
+        ));
+      } catch {}
+      showToast("Réponse envoyée à l'utilisateur dans sa messagerie.", "success");
       setSupportReply(null);
       setSupportReplyText("");
       loadStats();
@@ -12281,7 +12319,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
     return { label: "Signalement profil", color: G.rouge };
   };
 
-  const ARCHIVED_STATUSES = ["reviewed", "rejected", "banned"];
+  const ARCHIVED_STATUSES = ["reviewed", "rejected", "banned", "archived"];
   const isPending = (r: ReportRow) => !ARCHIVED_STATUSES.includes(r.status);
   const isSupportReport = (r: ReportRow) => isSupportReason(r.reason);
   // Messagerie = messages envoyés par l'utilisateur (SUPPORT_USER) OU réponses utilisateur à nos messages (SUPPORT_USER après un SUPPORT_REPLY)
@@ -12293,11 +12331,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
   const filteredReports = reports.filter(r => {
     if (reportFilter === "archived") return ARCHIVED_STATUSES.includes(r.status);
-    // Vues actives : exclure les archivés
+    // Messagerie : on montre tous les échanges support NON archivés (statut ≠ "archived"),
+    // y compris les messages "reviewed" (réponses admin ou messages déjà lus), pour garder
+    // le fil de conversation visible jusqu'à ce que l'admin archive explicitement.
+    if (reportFilter === "messaging") return isSupportInbox(r) && r.status !== "archived";
+    // Autres vues actives : exclure les archivés
     if (!isPending(r)) return false;
     if (reportFilter === "user") return isProfileReport(r);
     if (reportFilter === "system") return isSystemReport(r);
-    if (reportFilter === "messaging") return isSupportInbox(r);
     return true; // "all" = tous les éléments en attente, toutes catégories confondues
   });
 
@@ -14269,20 +14310,22 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 });
                 return convList.map((conv, ci) => {
                   const userProfile = reportProfilesCache[conv.userId];
-                  const lastMsg = conv.messages[0];
-                  const unread = conv.messages.filter(r => isPending(r) && r.reason?.startsWith(SUPPORT_PREFIX_USER)).length;
-                  const isExpanded = (reportActionLoading === conv.userId + "_expanded") || false;
+                  // messages triés du plus ancien au plus récent pour l'affichage conversation
+                  const ordered = [...conv.messages].sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
+                  const lastMsg = ordered[ordered.length - 1];
+                  const unread = conv.messages.filter(r => r.status === "pending" && r.reason?.startsWith(SUPPORT_PREFIX_USER)).length;
+                  const isOpen = expandedConvs.has(conv.userId);
+                  const allIds = conv.messages.map(m => m.id || "").filter(Boolean);
                   return (
-                    <div key={conv.userId} style={{ padding: "12px 0", borderBottom: ci < convList.length - 1 ? `1px solid ${G.gris}` : "none" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        {/* Avatar */}
+                    <div key={conv.userId} style={{ borderBottom: ci < convList.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                      {/* Ligne repliée : avatar + nom + dernier msg + Archiver + chevron */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0", cursor: "pointer" }} onClick={() => toggleConv(conv.userId)}>
                         <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#dbeafe", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           {userProfile?.photo_url
                             ? <img src={userProfile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                           }
                         </div>
-                        {/* Infos */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>
@@ -14293,30 +14336,35 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <div style={{ fontSize: "0.75rem", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {lastMsg?.reason?.startsWith(SUPPORT_PREFIX_REPLY) ? "✉️ Vous : " : "👤 "}{cleanSupportReason(lastMsg?.reason || "")}
                           </div>
-                          {lastMsg?.created_at && <div style={{ fontSize: "0.67rem", color: "#bbb", marginTop: 2 }}>{formatDateTime(lastMsg.created_at)}</div>}
                         </div>
-                        {/* Bouton Répondre */}
-                        <button
-                          onClick={() => { setSupportReply({ report: lastMsg, userId: conv.userId }); setSupportReplyText(""); }}
-                          style={{ flexShrink: 0, background: "rgba(26,92,58,0.1)", color: G.vert, border: `1px solid rgba(26,92,58,0.2)`, borderRadius: 8, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          Répondre
+                        {/* Bouton Archiver */}
+                        <button onClick={(e) => { e.stopPropagation(); confirm(`Archiver la conversation avec ${userProfile?.name || "cet utilisateur"} ? Elle quittera la Messagerie. Si l'utilisateur réécrit, une nouvelle conversation sera créée.`, () => archiveConversation(conv.userId, allIds)); }} disabled={archivingConv === conv.userId} style={{ flexShrink: 0, background: "rgba(230,126,34,0.1)", color: "#e67e22", border: "1px solid rgba(230,126,34,0.25)", borderRadius: 8, padding: "6px 11px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                          {archivingConv === conv.userId ? "…" : "Archiver"}
                         </button>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><path d="M6 9l6 6 6-6"/></svg>
                       </div>
-                      {/* Historique des messages */}
-                      <div style={{ marginTop: 10, paddingLeft: 52, display: "flex", flexDirection: "column", gap: 6 }}>
-                        {conv.messages.slice(0, 5).map((r, mi) => {
-                          const isAdminMsg = r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
-                          return (
-                            <div key={r.id || mi} style={{ display: "flex", justifyContent: isAdminMsg ? "flex-end" : "flex-start" }}>
-                              <div style={{ maxWidth: "80%", background: isAdminMsg ? G.rouge : "#f0f0f0", color: isAdminMsg ? "#fff" : "#1a1a1a", borderRadius: isAdminMsg ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "7px 12px", fontSize: "0.78rem", lineHeight: 1.5 }}>
-                                {cleanSupportReason(r.reason || "")}
-                                <div style={{ fontSize: "0.62rem", opacity: 0.65, marginTop: 3, textAlign: isAdminMsg ? "right" : "left" }}>{formatDateTime(r.created_at || "")}</div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      {/* Déplié : conversation + bouton Répondre */}
+                      {isOpen && (
+                        <div style={{ padding: "4px 0 14px", paddingLeft: 52 }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+                            {ordered.map((r, mi) => {
+                              const isAdminMsg = r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
+                              return (
+                                <div key={r.id || mi} style={{ display: "flex", justifyContent: isAdminMsg ? "flex-end" : "flex-start" }}>
+                                  <div style={{ maxWidth: "80%", background: isAdminMsg ? G.rouge : "#f0f0f0", color: isAdminMsg ? "#fff" : "#1a1a1a", borderRadius: isAdminMsg ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "7px 12px", fontSize: "0.78rem", lineHeight: 1.5 }}>
+                                    {cleanSupportReason(r.reason || "")}
+                                    <div style={{ fontSize: "0.62rem", opacity: 0.65, marginTop: 3, textAlign: isAdminMsg ? "right" : "left" }}>{formatDateTime(r.created_at || "")}</div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <button onClick={() => { setSupportReply({ report: lastMsg, userId: conv.userId, allMessageIds: allIds }); setSupportReplyText(""); }} style={{ background: "rgba(26,92,58,0.1)", color: G.vert, border: "1px solid rgba(26,92,58,0.2)", borderRadius: 8, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                            Répondre
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 });
