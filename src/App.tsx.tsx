@@ -117,6 +117,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
 
 const SUPPORT_TEAM_ID = "moyo-support-team";
 const SUPPORT_TEAM_NAME = "Assistance Moyo";
+// Photo de l'équipe Assistance Moyo (uploadée dans Supabase Storage). Vide = icône par défaut.
+const SUPPORT_TEAM_PHOTO = "https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/assistant/Image%2031%20mai%202026,%2004_26_29.png";
 const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
 const SUPPORT_PREFIX_REPLY = "[SUPPORT_REPLY]";
 // Demande de Premium (un non-Premium demande à son interlocuteur Premium de lui offrir)
@@ -226,7 +228,7 @@ type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; warning_count?: number };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
@@ -3596,7 +3598,7 @@ function AdminDesktopPage() {
 // Attribution des notifications push aux admins (Signalements / Matchs / Paiements)
 function AdminNotifPrefs({ auth }: { auth: Auth }) {
   type Admin = { id: string; name: string };
-  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean };
+  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean };
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [prefs, setPrefs] = React.useState<Record<string, Prefs>>({});
   const [loading, setLoading] = React.useState(true);
@@ -3608,11 +3610,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       try {
         const [ar, pr] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/profiles?is_admin=eq.true&select=id,name&order=name.asc`, { headers: H }).then(r => r.json()).catch(() => []),
-          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs`, { headers: H }).then(r => r.json()).catch(() => []),
+          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation`, { headers: H }).then(r => r.json()).catch(() => []),
         ]);
         if (Array.isArray(ar)) setAdmins(ar.filter((a: any) => a.id !== SUPPORT_TEAM_ID));
         const map: Record<string, Prefs> = {};
-        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs }; });
+        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation }; });
         setPrefs(map);
       } catch {}
       setLoading(false);
@@ -3620,7 +3622,7 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
   }, [auth.token]);
 
   const toggle = async (adminId: string, key: keyof Prefs) => {
-    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false };
+    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false };
     const updated = { ...current, [key]: !current[key] };
     setPrefs(p => ({ ...p, [adminId]: updated }));
     try {
@@ -3643,11 +3645,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       ) : admins.length === 0 ? (
         <div style={{ textAlign: "center", padding: 20, color: "#aaa", fontSize: "0.8rem", fontStyle: "italic" }}>Aucun admin trouvé.</div>
       ) : admins.map(a => {
-        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false };
+        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false };
         return (
           <div key={a.id} style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
             <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>{a.name}{a.id === auth.userId ? " (vous)" : ""}</div>
-            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["paiements", "💳 Paiements"]] as [keyof Prefs, string][]).map(([k, label]) => (
+            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["paiements", "💳 Paiements"]] as [keyof Prefs, string][]).map(([k, label]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0" }}>
                 <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#444" }}>{label}</div>
                 <SwitchBtn on={p[k]} onToggle={() => toggle(a.id, k)} />
@@ -6693,7 +6695,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const statusInputRef = useRef<HTMLInputElement>(null);
   const openRef = useRef<Match | null>(null);
-  const supportProfile: Profile = { id: SUPPORT_TEAM_ID, name: SUPPORT_TEAM_NAME, age: 0, city: "MOYO", gender: "", bio: "Assistance officielle Moyo", photo_url: null, is_premium: true, is_admin: true, is_verified: true };
+  const supportProfile: Profile = { id: SUPPORT_TEAM_ID, name: SUPPORT_TEAM_NAME, age: 0, city: "Brazzaville · Congo", gender: "", bio: "Assistance officielle Moyo", photo_url: SUPPORT_TEAM_PHOTO || null, is_premium: true, is_admin: true, is_verified: true };
   const supportMatch: Match = { id: "__support__", user1: auth.userId, user2: SUPPORT_TEAM_ID, partner: supportProfile };
 
   useEffect(() => { openRef.current = open; }, [open]);
@@ -7524,7 +7526,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
                         <div style={{ fontWeight: (nouveau || (c.unreadCount || 0) > 0) ? 700 : 600, fontSize: "0.9rem", color: (nouveau || (c.unreadCount || 0) > 0) ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.partner?.name}</div>
-                        {(() => { const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
+                        {(() => { if (c.partner?.hide_online_status) return null; const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
                       </div>
                       <div style={{ fontSize: "0.72rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#aaa", fontWeight: (c.unreadCount || 0) > 0 ? 700 : 400, flexShrink: 0, marginLeft: 8 }}>
                         {formatConvTime(c.lastMsg?.created_at || c.created_at)}
@@ -7588,7 +7590,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>{open.partner?.name}</div>
-          {open.partner?.id === SUPPORT_TEAM_ID ? <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>● Répond sous 24h</div> : (() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
+          {open.partner?.id === SUPPORT_TEAM_ID ? <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>● Répond sous 24h</div> : open.partner?.hide_online_status ? null : (() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
         {/* Bouton "Demander Premium" (💝, rouge Moyo) : visible si JE ne suis pas Premium et que mon interlocuteur l'est */}
@@ -8255,13 +8257,13 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 </>
               )}
               <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{open.partner.name}, {open.partner.age} ans</div>
-                <div style={{ fontSize: "0.82rem", opacity: 0.9 }}>{open.partner.city}</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{open.partner.name}{open.partner.id === SUPPORT_TEAM_ID ? "" : `, ${open.partner.age} ans`}</div>
+                <div style={{ fontSize: "0.82rem", opacity: 0.9 }}>{open.partner.id === SUPPORT_TEAM_ID ? "Équipe officielle" : open.partner.city}</div>
               </div>
             </div>
             <div style={{ padding: "18px 20px 32px" }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-                <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>{open.partner.gender}</span>
+                {open.partner.gender && <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>{open.partner.gender}</span>}
                 {open.partner.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{open.partner.religion}</span>}
                 {open.partner.is_premium && <span style={{ background: "rgba(212,168,67,0.12)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>Premium</span>}
               </div>
@@ -8773,7 +8775,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                     Renseignez vos critères. Notre équipe recherchera la personne qui vous correspond le mieux.
                   </div>
                   <div style={{ marginBottom: 14 }}>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Genre recherché</label>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Genre recherché <span style={{ color: G.rouge }}>*</span></label>
                     <div style={{ display: "flex", gap: 8 }}>
                       {["Homme", "Femme"].map(g => (
                         <button key={g} onClick={async () => {
@@ -8797,14 +8799,14 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                     </div>
                   </div>
                   <div style={{ marginBottom: 14 }}>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Ville souhaitée</label>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Ville souhaitée <span style={{ color: G.rouge }}>*</span></label>
                     <select value={form.target_city} onChange={e => setForm(f => ({ ...f, target_city: e.target.value }))} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", background: G.blanc }}>
-                      <option value="">Peu importe</option>
+                      <option value="">Choisir une ville…</option>
                       {["Brazzaville","Pointe-Noire","Dolisie","Nkayi","Owando","Ouesso","Impfondo","Sibiti","Djambala","Kinkala","Diaspora Europe","Diaspora Amérique","Diaspora Asie / Océanie","Diaspora Afrique (autre pays)"].map(v => <option key={v} value={v}>{v}</option>)}
                     </select>
                   </div>
                   <div style={{ marginBottom: 14 }}>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Tranche d'âge souhaitée</label>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Tranche d'âge souhaitée <span style={{ color: G.rouge }}>*</span></label>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                       <input type="number" placeholder="Âge min" value={form.target_age_min} onChange={e => setForm(f => ({ ...f, target_age_min: e.target.value }))} min={18} max={99} style={{ padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
                       <input type="number" placeholder="Âge max" value={form.target_age_max} onChange={e => setForm(f => ({ ...f, target_age_max: e.target.value }))} min={18} max={99} style={{ padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
@@ -8815,12 +8817,19 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                     <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value.slice(0, 300) }))} placeholder="Décrivez ce que vous recherchez..." rows={3} maxLength={300} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
                   </div>
                   <button onClick={async () => {
+                    // Validation : tous les champs obligatoires sauf le message
+                    if (!form.target_gender) { setErrorModal("Veuillez choisir le genre recherché."); return; }
+                    if (!form.target_city) { setErrorModal("Veuillez choisir la ville souhaitée."); return; }
+                    if (!form.target_age_min || !form.target_age_max) { setErrorModal("Veuillez indiquer la tranche d'âge souhaitée (âge min et âge max)."); return; }
+                    const aMin = parseInt(form.target_age_min), aMax = parseInt(form.target_age_max);
+                    if (isNaN(aMin) || isNaN(aMax) || aMin < 18 || aMax < 18) { setErrorModal("L'âge doit être d'au moins 18 ans."); return; }
+                    if (aMin > aMax) { setErrorModal("L'âge minimum ne peut pas être supérieur à l'âge maximum."); return; }
                     setLoading(true);
                     try {
                       await fetch(`${SUPABASE_URL}/rest/v1/match_requests`, {
                         method: "POST",
                         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-                        body: JSON.stringify({ user_id: auth.userId, target_gender: form.target_gender || null, target_city: form.target_city || null, target_age_min: form.target_age_min ? parseInt(form.target_age_min) : null, target_age_max: form.target_age_max ? parseInt(form.target_age_max) : null, message: form.message || null })
+                        body: JSON.stringify({ user_id: auth.userId, target_gender: form.target_gender, target_city: form.target_city, target_age_min: aMin, target_age_max: aMax, message: form.message || null })
                       });
                       setSent(true);
                     } catch {}
@@ -9729,6 +9738,32 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           </div>
         </div>}
 
+        {/* Statut en ligne (confidentialité) */}
+        {(!isWideProfile || ["visibility","main"].includes(activeSection)) && profile && (() => {
+          const hidden = !!profile.hide_online_status;
+          return (
+            <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: !hidden ? "rgba(39,174,96,0.1)" : "rgba(150,150,150,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={!hidden ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill={!hidden ? "#27ae60" : "#999"}/></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Statut en ligne</div>
+                  <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{!hidden ? "Visible par les autres" : "Masqué — personne ne le voit"}</div>
+                </div>
+              </div>
+              <div onClick={async () => {
+                const newHidden = !hidden;
+                await sb.update(auth.token, "profiles", auth.userId, { hide_online_status: newHidden });
+                setProfile(p => p ? { ...p, hide_online_status: newHidden } : null);
+                setToast({ msg: newHidden ? "Statut en ligne masqué 🔒" : "Statut en ligne visible ✅" });
+              }} style={{ width: 52, height: 28, borderRadius: 50, background: !hidden ? "#27ae60" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+                <div style={{ position: "absolute", top: 3, left: !hidden ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
+              </div>
+            </div>
+          );
+        })()}
+
 
         {/* Mode sombre */}
         {(!isWideProfile || ["darkmode","main"].includes(activeSection)) && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
@@ -9751,6 +9786,34 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           </div>
         </div>}
 
+
+        {/* Notifications iPhone hors PWA : encart explicatif */}
+        {(!isWideProfile || activeSection === "main") && notifStatus === "unsupported" && (() => {
+          const ua = navigator.userAgent || "";
+          const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
+          const isStandalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || (navigator as any).standalone === true;
+          if (!isIOS || isStandalone) return null;
+          return (
+            <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #E8E8E8" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Activer les notifications</div>
+                  <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>Sur iPhone, une étape est nécessaire</div>
+                </div>
+              </div>
+              <div style={{ background: "rgba(212,168,67,0.08)", border: "1px solid rgba(212,168,67,0.25)", borderRadius: 12, padding: "12px 14px", fontSize: "0.8rem", color: "#555", lineHeight: 1.7 }}>
+                Pour recevoir les notifications sur iPhone :<br />
+                1. Ouvrez Moyo dans <b>Safari</b> (pas Chrome)<br />
+                2. Touchez l'icône <b>Partager</b> <span style={{ fontSize: "0.9rem" }}>⬆️</span> en bas de l'écran<br />
+                3. Choisissez <b>« Sur l'écran d'accueil »</b><br />
+                4. Ouvrez Moyo depuis la nouvelle icône → le bouton Notifications apparaîtra.
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Notifications */}
         {(!isWideProfile || activeSection === "main") && notifStatus !== "unsupported" && (() => {
@@ -9781,8 +9844,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           );
         })()}
 
-
-        {/* ── Notation ── */}
         {(!isWideProfile || ["rating","main"].includes(activeSection)) && <div
           onClick={() => setShowRating(v => !v)}
           style={{ background: G.blanc, borderRadius: showRating ? "16px 16px 0 0" : 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid ${showRating ? G.or : "#E8E8E8"}`, cursor: "pointer", transition: "border-color 0.2s, border-radius 0.2s" }}
@@ -11015,15 +11076,19 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const deselectAll = () => setSelectedUsers(new Set());
   const bulkDelete = async () => {
     if (selectedUsers.size === 0) return;
+    const iAmSuperAdmin = (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID;
     setBulkDeleting(true);
-    let count = 0;
+    let count = 0, skipped = 0;
     for (const id of Array.from(selectedUsers)) {
       const u = users.find(x => x.id === id);
-      if (u) { try { await deleteAccount(u); count++; } catch {} }
+      if (!u) continue;
+      // Un admin simple ne peut pas supprimer un Super Admin
+      if ((u as any).admin_level === "superadmin" && !iAmSuperAdmin) { skipped++; continue; }
+      try { await deleteAccount(u); count++; } catch {}
     }
     setSelectedUsers(new Set());
     setBulkDeleting(false);
-    showToast(`${count} profil(s) supprimé(s).`, "success");
+    showToast(`${count} profil(s) supprimé(s).${skipped > 0 ? ` ${skipped} Super Admin(s) ignoré(s).` : ""}`, "success");
     loadUsers(userSearch, userPage, usersSort);
   };
 
@@ -11240,6 +11305,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [mailHistoryLoading, setMailHistoryLoading] = useState(false);
   const [mailCustomSubject, setMailCustomSubject] = useState("");
   const [mailCustomBody, setMailCustomBody] = useState("");
+  const [mailTab, setMailTab] = useState<"modeles" | "historique">("modeles");
   const [msgHistory, setMsgHistory] = useState<{ id: string; reason: string; created_at: string }[]>([]);
   const [msgHistoryLoading, setMsgHistoryLoading] = useState(false);
   const [msgTab, setMsgTab] = useState<"modeles" | "historique">("modeles");
@@ -11293,23 +11359,53 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   const [mailSending, setMailSending] = useState<string | null>(null);
-  const sendMailFunction = async (fnName: string, label: string, user: AdminProfile) => {
+  // Envoi d'un modèle à contenu fixe via la fonction fiable send-custom-email
+  const sendMailTemplate = async (key: string, label: string, subject: string, message: string, user: AdminProfile) => {
     if (mailSending) return;
-    setMailSending(fnName);
+    if (!user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
+    setMailSending(key);
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/send-custom-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
-        body: JSON.stringify({ email: user.email, name: user.name }),
+        body: JSON.stringify({ email: user.email, name: user.name, subject, message }),
       });
+      if (!r.ok) { const t = await r.text().catch(() => ""); throw new Error(`Erreur ${r.status}${t ? " : " + t.slice(0, 120) : ""}`); }
       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
         body: JSON.stringify({ user_id: user.id, admin_id: auth.userId, reason: `[EMAIL] ${label}`, warning_number: 99, acknowledged: true }),
       });
       showToast(`✅ Email "${label}" envoyé à ${user.name} !`, "success");
+      setMailTab("historique");
       loadMailHistory(user.id);
-    } catch { showToast("❌ Erreur lors de l'envoi", "error"); }
+    } catch (e: any) { showToast(`❌ ${e?.message || "Erreur lors de l'envoi"}`, "error"); }
+    setMailSending(null);
+  };
+  const sendMailFunction = async (fnName: string, label: string, user: AdminProfile) => {
+    if (mailSending) return;
+    if (!user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
+    setMailSending(fnName);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
+        body: JSON.stringify({ email: user.email, name: user.name }),
+      });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        throw new Error(`Erreur ${r.status}${txt ? " : " + txt.slice(0, 120) : ""}`);
+      }
+      // Enregistrer dans l'historique seulement si l'envoi a réussi
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+        body: JSON.stringify({ user_id: user.id, admin_id: auth.userId, reason: `[EMAIL] ${label}`, warning_number: 99, acknowledged: true }),
+      });
+      showToast(`✅ Email "${label}" envoyé à ${user.name} !`, "success");
+      setMailTab("historique");
+      loadMailHistory(user.id);
+    } catch (e: any) { showToast(`❌ ${e?.message || "Erreur lors de l'envoi"}`, "error"); }
     setMailSending(null);
   };
   const [showPremiumList, setShowPremiumList] = useState(false);
@@ -12423,46 +12519,55 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un email à envoyer</div>
                   </div>
                 </div>
-              </div>
-
-              {/* Historique */}
-              <div style={{ padding: "10px 16px 6px", flexShrink: 0, borderBottom: `1px solid ${G.gris}` }}>
-                <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 6 }}>
-                  Historique ({mailHistory.length} email{mailHistory.length > 1 ? "s" : ""} envoyé{mailHistory.length > 1 ? "s" : ""})
+                {/* Onglets */}
+                <div style={{ display: "flex", marginTop: 12 }}>
+                  {(["modeles", "historique"] as const).map(tab => (
+                    <button key={tab} onClick={() => setMailTab(tab)} style={{ flex: 1, background: "transparent", border: "none", borderBottom: `3px solid ${mailTab === tab ? "#8e44ad" : "transparent"}`, padding: "8px 0", fontSize: "0.82rem", fontWeight: mailTab === tab ? 700 : 500, color: mailTab === tab ? "#8e44ad" : "#888", cursor: "pointer", transition: "all 0.15s", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      {tab === "modeles" ? "Modèles d'emails" : `Historique (${mailHistory.length})`}
+                    </button>
+                  ))}
                 </div>
-                {mailHistoryLoading ? (
-                  <div style={{ textAlign: "center", padding: "8px 0", color: "#aaa", fontSize: "0.75rem" }}>Chargement…</div>
-                ) : mailHistory.length === 0 ? (
-                  <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun email envoyé pour le moment</div>
-                ) : (
-                  <div style={{ maxHeight: 140, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-                    {mailHistory.map(m => (
-                      <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#faf5ff", borderRadius: 8, padding: "7px 10px", border: "1px solid #e8d5f5" }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: "0.68rem", color: "#8e44ad", fontWeight: 600, marginBottom: 2 }}>
-                            {new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                          </div>
-                          <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.reason}</div>
-                        </div>
-                        <button onClick={() => deleteMailHistory(m.id)} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
-              {/* Liste emails */}
+              {/* Onglet Historique */}
+              {mailTab === "historique" && (
+                <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px 6px" }}>
+                  {mailHistoryLoading ? (
+                    <div style={{ textAlign: "center", padding: "8px 0", color: "#aaa", fontSize: "0.75rem" }}>Chargement…</div>
+                  ) : mailHistory.length === 0 ? (
+                    <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun email envoyé pour le moment</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {mailHistory.map(m => (
+                        <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#faf5ff", borderRadius: 8, padding: "7px 10px", border: "1px solid #e8d5f5" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: "0.68rem", color: "#8e44ad", fontWeight: 600, marginBottom: 2 }}>
+                              {new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                            <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4 }}>{m.reason}</div>
+                          </div>
+                          <button onClick={() => deleteMailHistory(m.id)} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Onglet Modèles */}
+              {mailTab === "modeles" && (
               <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 4 }}>Emails disponibles</div>
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A5C3A", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Bienvenue</div>
-                <div onClick={() => {
-                  if (!mailModal.user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
-                  sendMailFunction("send-bienvenue", "Email de bienvenue", mailModal.user);
-                }} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === "send-bienvenue" ? "not-allowed" : "pointer", background: mailSending === "send-bienvenue" ? "#e8f5e9" : "#f0fff4", border: `1.5px solid ${mailSending === "send-bienvenue" ? "#a5d6a7" : "#c3e6cb"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: mailSending && mailSending !== "send-bienvenue" ? 0.5 : 1 }}>
+                <div onClick={() => sendMailFunction("send-bienvenue", "Email de bienvenue", mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === "send-bienvenue" ? "not-allowed" : "pointer", background: mailSending === "send-bienvenue" ? "#e8f5e9" : "#f0fff4", border: `1.5px solid ${mailSending === "send-bienvenue" ? "#a5d6a7" : "#c3e6cb"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: mailSending && mailSending !== "send-bienvenue" ? 0.5 : 1 }}>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#1A5C3A", flexShrink: 0 }} />
                   {mailSending === "send-bienvenue" ? "Envoi en cours..." : "Email de bienvenue"}
+                </div>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#C0392B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Inscription incomplète</div>
+                <div onClick={() => sendMailTemplate("send-inscription-incomplete", "Finalisez votre inscription", "Finalisez votre inscription Moyo", `Bonjour,\n\nVotre inscription sur Moyo n'a pas abouti car votre profil n'avait pas été complété à 100 %.\n\nVous pouvez vous réinscrire avec les mêmes identifiants (e-mail et mot de passe) sur : 👉 https://moyo-congo.com\n\nPensez à compléter votre profil jusqu'au bout pour apparaître dans les résultats.\n\nÀ bientôt sur Moyo !\n\nMoyo Brazzaville - République du Congo\ncontact@moyo-congo.com | WhatsApp : +242 06 513 20 12`, mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === "send-inscription-incomplete" ? "not-allowed" : "pointer", background: mailSending === "send-inscription-incomplete" ? "#fdeaea" : "#fff5f5", border: `1.5px solid ${mailSending === "send-inscription-incomplete" ? "#f0b4b4" : "#f5d5d5"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: mailSending && mailSending !== "send-inscription-incomplete" ? 0.5 : 1 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#C0392B", flexShrink: 0 }} />
+                  {mailSending === "send-inscription-incomplete" ? "Envoi en cours..." : "Finalisez votre inscription"}
                 </div>
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#8e44ad", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Relance inactivité</div>
                 {[
@@ -12470,15 +12575,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   { fn: "send-relance-15j", label: "Inactivité 15 jours - Des profils t'attendent" },
                   { fn: "send-relance-30j", label: "Inactivité 30 jours - Compte bientôt supprimé" },
                 ].map(item => (
-                  <div key={item.fn} onClick={() => {
-                    if (!mailModal.user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
-                    sendMailFunction(item.fn, item.label, mailModal.user);
-                  }} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === item.fn ? "not-allowed" : "pointer", background: mailSending === item.fn ? "#f3e8ff" : "#faf5ff", border: `1.5px solid ${mailSending === item.fn ? "#d8b4fe" : "#e8d5f5"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", display: "flex", alignItems: "center", gap: 10, opacity: mailSending && mailSending !== item.fn ? 0.5 : 1 }}>
+                  <div key={item.fn} onClick={() => sendMailFunction(item.fn, item.label, mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === item.fn ? "not-allowed" : "pointer", background: mailSending === item.fn ? "#f3e8ff" : "#faf5ff", border: `1.5px solid ${mailSending === item.fn ? "#d8b4fe" : "#e8d5f5"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", display: "flex", alignItems: "center", gap: 10, opacity: mailSending && mailSending !== item.fn ? 0.5 : 1 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#8e44ad", flexShrink: 0 }} />
                     {mailSending === item.fn ? "Envoi en cours..." : item.label}
                   </div>
                 ))}
               </div>
+              )}
             </div>
 
             {/* ── COLONNE DROITE : saisie libre ── */}
@@ -12523,18 +12626,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
                         body: JSON.stringify({ email: mailModal.user.email, name: mailModal.user.name, subject: mailCustomSubject.trim(), message: mailCustomBody.trim() }),
                       });
-                      // Enregistrer dans l'historique
+                      if (!r.ok) { const t = await r.text().catch(() => ""); throw new Error(`Erreur ${r.status}${t ? " : " + t.slice(0, 120) : ""}`); }
+                      // Enregistrer dans l'historique (seulement si succès)
                       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
                         body: JSON.stringify({ user_id: mailModal.user.id, admin_id: auth.userId, reason: `[EMAIL] ${mailCustomSubject.trim()}`, warning_number: 99, acknowledged: true }),
                       });
-                      // Toujours vider les champs et recharger l'historique
                       setMailCustomSubject("");
                       setMailCustomBody("");
+                      setMailTab("historique");
                       loadMailHistory(mailModal.user.id);
                       showToast(`✅ Email envoyé à ${mailModal.user.name} !`, "success");
-                    } catch (e: any) { showToast(`Erreur : ${e?.message || "inconnue"}`, "error"); }
+                    } catch (e: any) { showToast(`❌ ${e?.message || "Erreur lors de l'envoi"}`, "error"); }
                     if (btn) { btn.disabled = false; btn.textContent = "Envoyer"; }
                   }}
                   style={{ flex: 2, background: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "#ddd" : "linear-gradient(135deg,#8e44ad,#6c3483)", color: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "#aaa" : G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "not-allowed" : "pointer" }}>
@@ -13141,18 +13245,41 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
-                    ["Accès", "Le bouton burger ☰ se trouve à droite du bouton 'Fermer' dans la barre du haut. Il ouvre un panneau de configuration complet divisé en 4 sections."],
+                    ["Accès", "Le bouton burger ☰ se trouve à droite du bouton 'Aide' dans la barre du haut. ⚠️ Il est désormais réservé au Super Admin : les admins simples ne le voient pas."],
                     ["Règles - Switch même genre", "Vert = bloqué (Homme→Homme et Femme→Femme interdits). Rouge = ouvert (tous peuvent liker tous). Sauvegarde instantanée."],
                     ["Textes des modals", "6 modals personnalisables : message même genre Homme/Femme, titre et sous-titre du match, message Premium, message likes épuisés. Cliquer sur un modal pour éditer."],
                     ["Limites & Quotas", "Likes gratuits/jour, messages gratuits/match, taille max des photos, message de bienvenue après match. Modifier sans redéployer."],
                     ["Prix & Abonnement", "Prix Premium en FCFA et durée en jours. ⚠️ Le prix modifie les boutons de paiement. La durée s'applique aux nouveaux abonnements uniquement."],
                     ["Fonctionnalités on/off", "Activer/désactiver les Statuts, le Cadeau Premium, l'Assistant IA. Switch vert = actif, rouge = désactivé."],
+                    ["🔔 Notifications admin", "Pour chaque admin, choisir les notifications push qu'il reçoit : Signalements, Matchs, Paiements. Ex : activer 'Paiements' pour la personne qui gère les paiements → elle est prévenue à chaque nouveau paiement, même app fermée."],
+                    ["💳 Moyens de paiement", "Couper rapidement un moyen de paiement en cas de problème (MTN, Airtel, Visa/Mastercard). Une fois coupé, il apparaît grisé et 'Temporairement indisponible' partout (achat, cadeau, diaspora)."],
                     ["🔴 Mode maintenance", "Active un écran de maintenance pour tous les utilisateurs. Seuls les admins (via ?admin=1 ou session admin active) peuvent toujours accéder au site. Personnaliser le message depuis le burger."],
                     ["Gestion des admins", "Section visible uniquement par le Super Admin. Permet de nommer Admin (accès sans Paiements), Super Admin (accès total) ou retirer les droits. Entrez l'email de l'utilisateur dans le modal de confirmation."],
-                    ["Niveaux d'accès", "Super Admin : accès total y compris l'onglet Paiements. Admin : accès à tout sauf Paiements. Les admins voient 'Accès restreint' sur l'onglet Paiements."],
+                    ["Niveaux d'accès", "Super Admin : accès total, y compris l'onglet Paiements ET le bouton Configuration ☰. Admin simple : accès à tout sauf Paiements et Configuration."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section - Nouveautés */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>✨ Nouveautés récentes</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["📝 Notes internes", "Sur chaque fiche utilisateur et chaque signalement, un bloc de notes visibles uniquement par les admins. Cliquez sur '📝 Notes internes' pour le déplier. Idéal pour se coordonner (ex : 'je m'en occupe, ne pas traiter en double'). N'importe quel admin peut supprimer une note."],
+                    ["🗂 Archives repliées", "Dans Signalements → Archivés, chaque carte est repliée en une ligne compacte. Cliquez dessus pour voir le détail, puis 'Replier' pour refermer. Évite l'encombrement."],
+                    ["🔔 Notifications utilisateur", "Les utilisateurs peuvent activer/réactiver leurs notifications depuis leur Profil (switch Notifications), même s'ils avaient refusé au départ."],
+                    ["🎁💝 Offrir / Demander Premium", "Dans une conversation : un membre Premium peut OFFRIR Premium à l'autre (bouton 🎁 doré). Un non-Premium peut DEMANDER à recevoir Premium (bouton 💝 rouge, max 2 fois/mois). La personne reçoit un message avec un bouton pour offrir en un clic."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
                       <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
                     </div>
                   ))}
@@ -13205,12 +13332,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Aide
           </button>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-admin-config"))}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", flexShrink: 0 }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
+          {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-admin-config"))}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", flexShrink: 0 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+          )}
         </div>
         {/* Onglets - scroll horizontal sur mobile */}
         <div className="admin-tabs" style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}`, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}>
@@ -13661,6 +13790,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   {displayedUsers.map((u, rowIdx) => {
                     const isLoading = actionLoading === u.id;
                     const isSelf = u.id === auth.userId;
+                    const iAmSuperAdmin = (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID;
+                    const targetIsSuperAdmin = (u as any).admin_level === "superadmin";
+                    const cannotModerate = isSelf || (targetIsSuperAdmin && !iAmSuperAdmin);
                     const isSelected = selectedUsers.has(u.id);
                     const onlineStatus = (() => {
                       if (!u.last_seen) return null;
@@ -13722,14 +13854,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             : <ActionBtn label="- Vérifier" color="#555" disabled={isLoading} onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
                           }
                           {/* Modération */}
-                          <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || isSelf} onClick={() => { if (isSelf) return; setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} />
+                          <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} />
                           {!u.is_banned
-                            ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || isSelf} onClick={() => { if (isSelf) return; confirm(`Bannir ${u.name} ?`, () => adminAction(u.id, { is_banned: true, is_visible: false }, `${u.name} a été banni(e).`)); }} />
-                            : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading} onClick={() => confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true }, `${u.name} a été débanni(e).`))} />
+                            ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Bannir ${u.name} ?`, () => adminAction(u.id, { is_banned: true, is_visible: false }, `${u.name} a été banni(e).`)); }} />
+                            : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true }, `${u.name} a été débanni(e).`)); }} />
                           }
-                          <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || isSelf} onClick={() => { if (isSelf) return; confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
-                          <ActionBtn label="Message" color="#2980b9" disabled={isLoading || isSelf} onClick={() => { setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
-                          <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || isSelf} onClick={() => { setMailModal({ user: u }); setMailHistory([]); loadMailHistory(u.id); }} />
+                          <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
+                          <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
+                          <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
                         </div>
                       </div>
                     );
@@ -13741,6 +13873,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {displayedUsers.map(u => {
                 const isLoading = actionLoading === u.id;
                 const isSelf = u.id === auth.userId;
+                // Un admin simple ne peut PAS modérer un Super Admin. Seul le Super Admin principal le peut.
+                const iAmSuperAdmin = (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID;
+                const targetIsSuperAdmin = (u as any).admin_level === "superadmin";
+                const cannotModerate = isSelf || (targetIsSuperAdmin && !iAmSuperAdmin);
                 return (
                   <div key={u.id} style={{ background: selectedUsers.has(u.id) ? "rgba(231,76,60,0.04)" : G.blanc, borderRadius: 16, padding: "14px", marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", border: `1.5px solid ${selectedUsers.has(u.id) ? "#e74c3c" : "transparent"}` }}>
                     {/* En-tête utilisateur */}
@@ -13863,27 +13999,29 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       {/* Actions modération */}
                       <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Modération</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || isSelf}
-                          onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} />
+                        <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate}
+                          onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} />
                         {!u.is_banned ? (
-                          <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || isSelf}
+                          <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate}
                             onClick={() => {
                               if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }
+                              if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
                               confirm(`Bannir ${u.name} ? Il/elle ne pourra plus accéder à l'application.`, () => adminAction(u.id, { is_banned: true, is_visible: false }, `${u.name} a été banni(e).`));
                             }} />
                         ) : (
-                          <ActionBtn label="Débannir" color={G.vert} disabled={isLoading}
-                            onClick={() => confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true }, `${u.name} a été débanni(e).`))} />
+                          <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate}
+                            onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true }, `${u.name} a été débanni(e).`)); }} />
                         )}
-                        <ActionBtn label="Supprimer" color="#c0392b" disabled={isLoading || isSelf}
+                        <ActionBtn label="Supprimer" color="#c0392b" disabled={isLoading || cannotModerate}
                           onClick={() => {
                             if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
+                            if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
                             confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
                           }} />
-                        <ActionBtn label="Message" color="#2980b9" disabled={isLoading || isSelf}
-                          onClick={() => { setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
-                        <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || isSelf}
-                          onClick={() => { setMailModal({ user: u }); setMailHistory([]); loadMailHistory(u.id); }} />
+                        <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate}
+                          onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
+                        <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate}
+                          onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
                       </div>
                     </div>
                   </div>
