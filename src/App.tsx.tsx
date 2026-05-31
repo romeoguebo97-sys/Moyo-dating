@@ -3533,6 +3533,11 @@ function AdminDesktopPage() {
               <PaymentMethodsConfig auth={auth!} />
             </OffCanvasSection>
             {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+              <OffCanvasSection title="Mon code d'accès (PIN)">
+                <AdminPinConfig auth={auth!} />
+              </OffCanvasSection>
+            )}
+            {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
               <>
               <OffCanvasSection title="Intervalles de polling (ms)">
                 <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Valeurs en millisecondes. Ex: 8000 = 8s. Min: 3000ms.</div>
@@ -3815,6 +3820,63 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
   );
 }
 
+function AdminPinConfig({ auth }: { auth: Auth }) {
+  const [editing, setEditing] = React.useState(false);
+  const [pin, setPin] = React.useState("");
+  const [confirmPin, setConfirmPin] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [msg, setMsg] = React.useState<{ text: string; ok: boolean } | null>(null);
+
+  const save = async () => {
+    setMsg(null);
+    if (pin.length !== 4) { setMsg({ text: "Le PIN doit faire exactement 4 chiffres.", ok: false }); return; }
+    if (pin !== confirmPin) { setMsg({ text: "Les deux PIN ne correspondent pas.", ok: false }); return; }
+    if (!window.confirm(`Confirmer votre nouveau PIN d'accès : ${pin} ?`)) return;
+    setSaving(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ admin_pin: pin }),
+      });
+      if (!r.ok) throw new Error();
+      setMsg({ text: "✅ PIN modifié. Il sera demandé à la prochaine ouverture du tableau de bord.", ok: true });
+      setEditing(false); setPin(""); setConfirmPin("");
+    } catch { setMsg({ text: "Erreur lors de la modification.", ok: false }); }
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      <div style={{ background: "#f9f0ff", borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: "0.78rem", color: "#5b2c6f", border: "1px solid rgba(142,68,173,0.2)", lineHeight: 1.5 }}>
+        🔒 Ce code à 4 chiffres vous est demandé à chaque ouverture du tableau de bord. Ne le communiquez à personne.
+      </div>
+      {!editing ? (
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ flex: 1, padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.95rem", background: "#f7f7f7", color: "#555", display: "flex", alignItems: "center", gap: 6, letterSpacing: 4 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            • • • •
+          </div>
+          <button onClick={() => { setEditing(true); setMsg(null); }} style={{ flexShrink: 0, background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "0 12px", height: 38, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Modifier
+          </button>
+        </div>
+      ) : (
+        <div>
+          <input type="password" inputMode="numeric" maxLength={4} autoFocus value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="Nouveau PIN (4 chiffres)" style={{ width: "100%", padding: "10px 11px", borderRadius: 9, border: `2px solid ${G.vert}`, fontSize: "1rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 6, textAlign: "center", letterSpacing: 6 }} />
+          <input type="password" inputMode="numeric" maxLength={4} value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="Confirmer le PIN" style={{ width: "100%", padding: "10px 11px", borderRadius: 9, border: `2px solid ${G.gris}`, fontSize: "1rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 6, textAlign: "center", letterSpacing: 6 }} />
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={save} disabled={saving} style={{ flex: 1, background: saving ? "#bbb" : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", border: "none", borderRadius: 9, padding: "10px 0", fontSize: "0.82rem", fontWeight: 700, cursor: saving ? "wait" : "pointer" }}>{saving ? "…" : "Enregistrer"}</button>
+            <button onClick={() => { setEditing(false); setPin(""); setConfirmPin(""); setMsg(null); }} style={{ flex: 1, background: G.creme, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "10px 0", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+          </div>
+        </div>
+      )}
+      {msg && <div style={{ marginTop: 8, fontSize: "0.78rem", color: msg.ok ? G.vert : G.rouge, fontWeight: 600 }}>{msg.text}</div>}
+    </div>
+  );
+}
+
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
@@ -3881,6 +3943,11 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
       <OffCanvasSection title="Moyens de paiement">
         <PaymentMethodsConfig auth={auth} />
       </OffCanvasSection>
+      {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+        <OffCanvasSection title="Mon code d'accès (PIN)">
+          <AdminPinConfig auth={auth} />
+        </OffCanvasSection>
+      )}
       {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
         <>
         <OffCanvasSection title="Intervalles de polling (ms)">
