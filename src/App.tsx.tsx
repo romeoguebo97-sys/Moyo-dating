@@ -83,9 +83,14 @@ let PAY_AIRTEL_ENABLED = true;
 let PAY_CB_ENABLED = true;
 // Bloquer les likes entre profils de même genre (app hétéro). Piloté depuis Config admin.
 let BLOCK_SAME_GENDER = true;
+// Coordonnées de paiement (modifiables depuis Config admin)
+let PAY_MTN_NUMBER = "065132012";
+let PAY_MTN_RESPONSABLE = "Juste-Emmanuelle AKOUMOU ISSOMBO";
+let PAY_AIRTEL_NUMBER = "056230067";
+let PAY_AIRTEL_RESPONSABLE = "THEOPHILE BEAUGARD LIBALI";
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -95,6 +100,10 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["pay_airtel_enabled"] !== undefined) PAY_AIRTEL_ENABLED = map["pay_airtel_enabled"] !== "false";
   if (map["pay_cb_enabled"] !== undefined) PAY_CB_ENABLED = map["pay_cb_enabled"] !== "false";
   if (map["rule_block_same_gender_like"] !== undefined) BLOCK_SAME_GENDER = map["rule_block_same_gender_like"] !== "false";
+  if (map["pay_mtn_number"]) PAY_MTN_NUMBER = map["pay_mtn_number"];
+  if (map["pay_mtn_responsable"]) PAY_MTN_RESPONSABLE = map["pay_mtn_responsable"];
+  if (map["pay_airtel_number"]) PAY_AIRTEL_NUMBER = map["pay_airtel_number"];
+  if (map["pay_airtel_responsable"]) PAY_AIRTEL_RESPONSABLE = map["pay_airtel_responsable"];
   if (map["limit_likes_free"]) FREE_LIMITS.likes = parseInt(map["limit_likes_free"]) || 5;
   if (map["limit_messages_free"]) FREE_LIMITS.messages = parseInt(map["limit_messages_free"]) || 3;
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
@@ -1117,12 +1126,12 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
         <div style={{ padding: "20px 20px 32px" }}>
           {/* Étape 1 */}
           <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : Juste-Emmanuelle AKOUMOU ISSOMBO</div>
-            <a href={`tel:*105*2*1*065132012*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
+            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : {PAY_MTN_RESPONSABLE}</div>
+            <a href={`tel:*105*2*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
             </a>
-            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*065132012*${PREMIUM_PRICE_FCFA}#`}</div>
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}#`}</div>
           </div>
           {/* Étape 2 */}
           <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
@@ -1182,12 +1191,12 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
         </div>
         <div style={{ padding: "20px 20px 32px" }}>
           <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : THEOPHILE BEAUGARD LIBALI</div>
-            <a href={`tel:*128*2*1*1*056230067*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
+            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : {PAY_AIRTEL_RESPONSABLE}</div>
+            <a href={`tel:*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
             </a>
-            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*056230067*${PREMIUM_PRICE_FCFA}#`}</div>
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}#`}</div>
           </div>
           <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
             <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -1727,7 +1736,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           {/* ── Texte gauche ── */}
           <div className="landing-hero-text fu1" style={{ paddingBottom: 52 }} id="hero-text-block">
             <div style={{ display: "inline-block", background: G.blanc, border: `2px solid #111`, padding: "7px 20px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 22, color: "#111", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
-              Site de rencontres Congolais
+              Premier site de rencontres Congolais
             </div>
             <h1 className="fu2" style={{ fontSize: "clamp(2.4rem,5.5vw,3.8rem)", lineHeight: 1.08, fontWeight: 700, marginBottom: 20, color: "#111" }}>
               Trouve ton{" "}
@@ -3670,9 +3679,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
 function PaymentMethodsConfig({ auth }: { auth: Auth }) {
   const [vals, setVals] = React.useState({ mtn: true, airtel: true, cb: true });
   const [loading, setLoading] = React.useState(true);
+  const [coords, setCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "" });
+  const [savingCoord, setSavingCoord] = React.useState<string | null>(null);
   const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
   React.useEffect(() => {
-    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled)&select=key,value`, { headers: H })
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable)&select=key,value`, { headers: H })
       .then(r => r.json()).then((data: { key: string; value: string }[]) => {
         if (!Array.isArray(data)) return;
         const m: Record<string, string> = {};
@@ -3681,6 +3692,12 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
           mtn: m["pay_mtn_enabled"] !== "false",
           airtel: m["pay_airtel_enabled"] !== "false",
           cb: m["pay_cb_enabled"] !== "false",
+        });
+        setCoords({
+          mtnNum: m["pay_mtn_number"] || PAY_MTN_NUMBER,
+          mtnResp: m["pay_mtn_responsable"] || PAY_MTN_RESPONSABLE,
+          airtelNum: m["pay_airtel_number"] || PAY_AIRTEL_NUMBER,
+          airtelResp: m["pay_airtel_responsable"] || PAY_AIRTEL_RESPONSABLE,
         });
       }).catch(() => {}).finally(() => setLoading(false));
   }, [auth.token]);
@@ -3697,6 +3714,20 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
     } catch {}
   };
 
+  const saveCoord = async (key: string, value: string) => {
+    setSavingCoord(key);
+    // Mise à jour immédiate des variables globales
+    if (key === "pay_mtn_number") PAY_MTN_NUMBER = value;
+    if (key === "pay_mtn_responsable") PAY_MTN_RESPONSABLE = value;
+    if (key === "pay_airtel_number") PAY_AIRTEL_NUMBER = value;
+    if (key === "pay_airtel_responsable") PAY_AIRTEL_RESPONSABLE = value;
+    try {
+      // upsert (insert si absent, sinon update)
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value }) });
+    } catch {}
+    setSavingCoord(null);
+  };
+
   return (
     <div>
       <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
@@ -3704,12 +3735,42 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
       </div>
       {loading ? (
         <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
-      ) : ([["mtn", "MTN MoMo"], ["airtel", "Airtel Money"], ["cb", "Visa / Mastercard (CB)"]] as ["mtn" | "airtel" | "cb", string][]).map(([k, label]) => (
-        <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
-          <div style={{ fontSize: "0.83rem", fontWeight: 600, color: vals[k] ? "#1a1a1a" : G.rouge }}>{label}{!vals[k] && <span style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginLeft: 6 }}>(coupé)</span>}</div>
-          <SwitchBtn on={vals[k]} onToggle={() => toggle(k)} />
+      ) : (<>
+        {([["mtn", "MTN MoMo"], ["airtel", "Airtel Money"], ["cb", "Visa / Mastercard (CB)"]] as ["mtn" | "airtel" | "cb", string][]).map(([k, label]) => (
+          <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: vals[k] ? "#1a1a1a" : G.rouge }}>{label}{!vals[k] && <span style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginLeft: 6 }}>(coupé)</span>}</div>
+            <SwitchBtn on={vals[k]} onToggle={() => toggle(k)} />
+          </div>
+        ))}
+
+        {/* Coordonnées des comptes de réception */}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${G.gris}` }}>
+          <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+            Numéro qui reçoit l'argent et nom du responsable. Modifiable à tout moment — appliqué partout immédiatement.
+          </div>
+          {([
+            ["pay_mtn_number", "Numéro MTN (reçoit l'argent)", "mtnNum", "tel"],
+            ["pay_mtn_responsable", "Responsable MTN", "mtnResp", "text"],
+            ["pay_airtel_number", "Numéro Airtel (reçoit l'argent)", "airtelNum", "tel"],
+            ["pay_airtel_responsable", "Responsable Airtel", "airtelResp", "text"],
+          ] as [string, string, keyof typeof coords, string][]).map(([key, label, field, type]) => (
+            <div key={key} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  type={type}
+                  value={coords[field]}
+                  onChange={e => setCoords(c => ({ ...c, [field]: e.target.value }))}
+                  style={{ flex: 1, padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+                />
+                <button onClick={() => saveCoord(key, coords[field])} disabled={savingCoord === key} style={{ flexShrink: 0, background: savingCoord === key ? "#bbb" : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", border: "none", borderRadius: 9, padding: "0 14px", fontSize: "0.76rem", fontWeight: 700, cursor: savingCoord === key ? "wait" : "pointer" }}>
+                  {savingCoord === key ? "…" : "OK"}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      </>)}
     </div>
   );
 }
@@ -7727,12 +7788,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 </div>
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : Juste-Emmanuelle AKOUMOU ISSOMBO</div>
-                    <a href={`tel:*105*2*1*065132012*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : {PAY_MTN_RESPONSABLE}</div>
+                    <a href={`tel:*105*2*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
                     </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*065132012*${PREMIUM_PRICE_FCFA}#`}</div>
+                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}#`}</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -7778,12 +7839,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 </div>
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : THEOPHILE BEAUGARD LIBALI</div>
-                    <a href={`tel:*128*2*1*1*056230067*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : {PAY_AIRTEL_RESPONSABLE}</div>
+                    <a href={`tel:*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
                     </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*056230067*${PREMIUM_PRICE_FCFA}#`}</div>
+                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}#`}</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
