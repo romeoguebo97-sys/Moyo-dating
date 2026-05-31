@@ -3419,7 +3419,7 @@ function AdminDesktopPage() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "8px 26px 26px", columnCount: 2, columnGap: 28 }}>
+          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 20, alignItems: "start" }}>
             <OffCanvasSection title="Règles">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
                 <div>
@@ -14481,7 +14481,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 }
               </div>
             ) : (
-              <div data-admlist="">
+              <div data-admlist="" style={{ maxWidth: 720, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
               {reportFilter === "messaging" ? (() => {
                 // ── Vue Messagerie : grouper les échanges par utilisateur ──
                 const convMap: Record<string, { userId: string; messages: ReportRow[] }> = {};
@@ -14540,7 +14540,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               const isAdminMsg = r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
                               return (
                                 <div key={r.id || mi} style={{ display: "flex", justifyContent: isAdminMsg ? "flex-end" : "flex-start" }}>
-                                  <div style={{ maxWidth: "80%", background: isAdminMsg ? G.rouge : "#f0f0f0", color: isAdminMsg ? "#fff" : "#1a1a1a", borderRadius: isAdminMsg ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "7px 12px", fontSize: "0.78rem", lineHeight: 1.5 }}>
+                                  <div style={{ maxWidth: "min(80%, 460px)", background: isAdminMsg ? G.rouge : "#f0f0f0", color: isAdminMsg ? "#fff" : "#1a1a1a", borderRadius: isAdminMsg ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "7px 12px", fontSize: "0.78rem", lineHeight: 1.5, wordBreak: "break-word", overflowWrap: "anywhere" }}>
                                     {cleanSupportReason(r.reason || "")}
                                     <div style={{ fontSize: "0.62rem", opacity: 0.65, marginTop: 3, textAlign: isAdminMsg ? "right" : "left" }}>{formatDateTime(r.created_at || "")}</div>
                                   </div>
@@ -16753,7 +16753,7 @@ export default function App() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                   </div>
-                  <div style={{ flex: 1, overflowY: "auto", padding: "8px 26px 26px", columnCount: 2, columnGap: 28 }}>
+                  <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 20, alignItems: "start" }}>
                     <MobileAdminConfig auth={auth} onClose={() => setShowAdminConfig(false)} />
                   </div>
                 </div>
