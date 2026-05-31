@@ -11341,14 +11341,42 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Avertissements ──
   type WarnModal = { user: AdminProfile } | null;
   const WARN_REASONS = [
-    "Comportement inapproprié",
-    "Propos insultants",
+    "Utilisation de mots/propos interdits",
+    "Propos insultants ou irrespectueux",
+    "Harcèlement envers un autre membre",
+    "Partage de coordonnées (téléphone, email, réseaux)",
+    "Photo de profil inappropriée",
     "Suspicion de faux profil",
     "Suspicion d'arnaque",
-    "Non-respect des règles",
+    "Contenu à caractère sexuel",
+    "Comportement inapproprié",
+    "Non-respect des règles de la communauté",
     "Autre motif",
   ];
   const [warnModal, setWarnModal] = useState<WarnModal>(null);
+  const [existingWarnings, setExistingWarnings] = useState<{ id: string; reason: string; created_at: string }[]>([]);
+  const [existingWarningsLoading, setExistingWarningsLoading] = useState(false);
+  const loadExistingWarnings = async (userId: string) => {
+    setExistingWarningsLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${userId}&warning_number=gte.1&select=id,reason,created_at&order=created_at.asc`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json();
+      if (Array.isArray(d)) setExistingWarnings(d);
+    } catch {}
+    setExistingWarningsLoading(false);
+  };
+  const deleteOneWarning = async (warnId: string, user: AdminProfile) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${warnId}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" } });
+      const newCount = Math.max(0, (user.warning_count || 0) - 1);
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ warning_count: newCount }) });
+      setExistingWarnings(prev => prev.filter(w => w.id !== warnId));
+      setWarnModal(m => m ? { ...m, user: { ...m.user, warning_count: newCount } } : m);
+      logAdminAction(auth.token, auth.userId, auth.name, `Avertissement supprimé pour ${user.name} (reste ${newCount}/3)`, user.id);
+      showToast(`Avertissement supprimé. Il reste ${newCount}/3.`, "success");
+      loadUsers(userSearch, userPage, usersSort);
+    } catch { showToast("Erreur lors de la suppression.", "error"); }
+  };
   const [pinModal, setPinModal] = useState<{ user: AdminProfile; mode: "set" | "reset" } | null>(null);
   const [pinModalInput, setPinModalInput] = useState("");
   const [warnReason, setWarnReason] = useState(WARN_REASONS[0]);
@@ -12786,7 +12814,34 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             </div>
             {/* Body */}
             <div style={{ padding: "18px 20px 20px" }}>
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Motif</div>
+              {/* Avertissements existants (supprimables) */}
+              {(existingWarningsLoading || existingWarnings.length > 0) && (
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Avertissements actuels</div>
+                  {existingWarningsLoading ? (
+                    <div style={{ fontSize: "0.78rem", color: "#aaa", textAlign: "center", padding: "8px 0" }}>Chargement…</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {existingWarnings.map((w, idx) => (
+                        <div key={w.id} style={{ background: "#FFFDF5", border: "1px solid #FFE9B8", borderRadius: 10, padding: "9px 11px", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                              <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#b7770d" }}>Avertissement {idx + 1}</span>
+                              <span style={{ fontSize: "0.64rem", color: "#aaa" }}>{new Date(w.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                            </div>
+                            <div style={{ fontSize: "0.8rem", color: "#444", lineHeight: 1.4 }}>{w.reason}</div>
+                          </div>
+                          <button onClick={() => confirm(`Supprimer cet avertissement de ${warnModal.user.name} ?`, () => deleteOneWarning(w.id, warnModal.user))} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 7, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ height: 1, background: G.gris, margin: "16px 0 0" }} />
+                </div>
+              )}
+              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Nouveau motif</div>
               {WARN_REASONS.map(r => (
                 <div key={r} onClick={() => setWarnReason(r)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, marginBottom: 6, cursor: "pointer", background: warnReason === r ? "rgba(243,156,18,0.1)" : G.creme, border: `1.5px solid ${warnReason === r ? "#f39c12" : "transparent"}`, transition: "all 0.15s" }}>
                   <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${warnReason === r ? "#f39c12" : "#ccc"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -13908,7 +13963,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             : <ActionBtn label="- Vérifier" color="#555" disabled={isLoading} onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
                           }
                           {/* Modération */}
-                          <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} />
+                          <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
                           {!u.is_banned
                             ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Bannir ${u.name} ?`, () => adminAction(u.id, { is_banned: true, is_visible: false }, `${u.name} a été banni(e).`)); }} />
                             : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true }, `${u.name} a été débanni(e).`)); }} />
@@ -14054,7 +14109,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Modération</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate}
-                          onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} />
+                          onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
                         {!u.is_banned ? (
                           <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate}
                             onClick={() => {
