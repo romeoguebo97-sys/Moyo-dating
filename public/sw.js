@@ -1,4 +1,4 @@
-const CACHE_NAME = 'moyo-v6';
+const CACHE_NAME = 'moyo-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
