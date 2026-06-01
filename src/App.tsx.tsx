@@ -3266,6 +3266,7 @@ function AdminDesktopPage() {
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
+  const [configTab, setConfigTab] = React.useState<"general" | "contenus" | "tarifs" | "equipe" | "securite">("general");
   const [adminActionModal, setAdminActionModal] = React.useState<{ level: string | null; label: string; color: string } | null>(null);
   const [adminActionEmail, setAdminActionEmail] = React.useState("");
 
@@ -3413,14 +3414,43 @@ function AdminDesktopPage() {
         )}
         {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div onClick={e => e.stopPropagation()} style={{ width: "min(97vw, 1340px)", height: "min(94vh, 980px)", background: G.blanc, borderRadius: 18, zIndex: 9999, boxShadow: "0 24px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 26px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
             <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>⚙️ Configuration</div>
             <button onClick={() => setRulesMenuOpen(false)} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0 22px", alignItems: "start", alignContent: "start" }}>
-            <OffCanvasSection title="Règles">
+          <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+            {/* ── Menu latéral ── */}
+            <div style={{ width: 240, flexShrink: 0, borderRight: `1px solid ${G.gris}`, background: "#FAFAFB", padding: "14px 10px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
+              {([
+                ["general", "Général & Règles", "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"],
+                ["contenus", "Contenus & Modals", "M4 7V4h16v3 M9 20h6 M12 4v16"],
+                ["tarifs", "Tarifs & Paiements", "M1 4h22v16H1z M1 10h22"],
+                ["equipe", "Équipe & Alertes", "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"],
+                ["securite", "Sécurité & Système", "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"],
+              ] as [typeof configTab, string, string][]).map(([key, label, icon]) => {
+                const active = configTab === key;
+                return (
+                  <button key={key} onClick={() => setConfigTab(key)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 13px", borderRadius: 10, border: "none", background: active ? "rgba(192,57,43,0.1)" : "transparent", cursor: "pointer", textAlign: "left", width: "100%", transition: "background 0.15s" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#777"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d={icon}/></svg>
+                    <span style={{ fontSize: "0.84rem", fontWeight: active ? 700 : 500, color: active ? G.rouge : "#444" }}>{label}</span>
+                  </button>
+                );
+              })}
+              <div style={{ flex: 1 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderTop: `1px solid ${G.gris}`, marginTop: 8 }}>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: G.rouge, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.85rem", flexShrink: 0 }}>{(auth?.name || "A").charAt(0)}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{auth?.name || "Admin"}</div>
+                  <div style={{ fontSize: "0.66rem", color: "#999" }}>Super Admin</div>
+                </div>
+              </div>
+            </div>
+            {/* ── Zone contenu ── */}
+            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "10px 26px 30px", minWidth: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0 22px", alignItems: "start", alignContent: "start" }}>
+            {configTab === "general" && <OffCanvasSection title="Règles">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
                 <div>
                   <div style={{ fontSize: "0.83rem", fontWeight: 600 }}>Bloquer like même genre</div>
@@ -3434,8 +3464,8 @@ function AdminDesktopPage() {
                   await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
                 }} />
               </div>
-            </OffCanvasSection>
-            <OffCanvasSection title="Textes des modals">
+            </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Textes des modals">
               {([
                 ["modal_same_gender_homme", "Même genre (Homme)", modalTexts.sameGenderHomme],
                 ["modal_same_gender_femme", "Même genre (Femme)", modalTexts.sameGenderFemme],
@@ -3457,8 +3487,8 @@ function AdminDesktopPage() {
                     setEditingModal(null);
                   }} />
               ))}
-            </OffCanvasSection>
-            <OffCanvasSection title="Limites & Quotas">
+            </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Limites & Quotas">
               {([
                 ["limit_likes_free", "limitLikes" as keyof typeof appConfig, "Likes gratuits/jour", appConfig.limitLikes, "number"],
                 ["limit_messages_free", "limitMessages" as keyof typeof appConfig, "Messages gratuits/match", appConfig.limitMessages, "number"],
@@ -3475,8 +3505,8 @@ function AdminDesktopPage() {
                     setEditingConfig(null);
                   }} />
               ))}
-            </OffCanvasSection>
-            <OffCanvasSection title="Prix & Abonnement">
+            </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Prix & Abonnement">
               {([
                 ["premium_price_fcfa", "premiumPriceFcfa" as keyof typeof appConfig, "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
                 ["premium_price_eur", "premiumPriceEur" as keyof typeof appConfig, "Prix Premium Diaspora (€)", appConfig.premiumPriceEur],
@@ -3496,16 +3526,15 @@ function AdminDesktopPage() {
                     setEditingConfig(null);
                   }} />
               ))}
-            </OffCanvasSection>
-            <OffCanvasSection title="Fonctionnalités">
+            </OffCanvasSection>}
+            {configTab === "general" && <OffCanvasSection title="Fonctionnalités">
               {([
                 ["feature_statuses", "featureStatuses" as keyof typeof appConfig, "Statuts (Stories)"],
                 ["feature_gift_premium", "featureGiftPremium" as keyof typeof appConfig, "Cadeau Premium"],
                 ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
-                ["maintenance_mode", "maintenanceMode" as keyof typeof appConfig, "Mode maintenance"],
               ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
-                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
+                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
                   <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => {
                     if (!auth) return;
                     const v = appConfig[ck] !== "true" ? "true" : "false";
@@ -3514,6 +3543,37 @@ function AdminDesktopPage() {
                   }} />
                 </div>
               ))}
+            </OffCanvasSection>}
+            {configTab === "equipe" && <OffCanvasSection title="Notifications admin">
+              <AdminNotifPrefs auth={auth!} />
+            </OffCanvasSection>}
+            {configTab === "equipe" && <OffCanvasSection title="Relance notifications">
+              <EditableRow label="Notif likes après (heures)" value={appConfig.likesNotifDelayHours} type="number" open={editingConfig === "likes_notification_delay_hours"}
+                onOpen={() => { setEditingConfig(editingConfig === "likes_notification_delay_hours" ? null : "likes_notification_delay_hours"); setEditingConfigValue(appConfig.likesNotifDelayHours); }}
+                editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                onSave={async () => {
+                  if (!auth) return;
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.likes_notification_delay_hours`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                  setAppConfig(c => ({ ...c, likesNotifDelayHours: editingConfigValue }));
+                  setEditingConfig(null);
+                }} />
+            </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Moyens de paiement">
+              <PaymentMethodsConfig auth={auth!} />
+            </OffCanvasSection>}
+            {configTab === "securite" && <OffCanvasSection title="Mode maintenance">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "rgba(231,76,60,0.07)", borderRadius: 12, border: "1px solid rgba(231,76,60,0.25)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span style={{ fontSize: "0.83rem", fontWeight: 700, color: G.rouge }}>Mode maintenance</span>
+                </div>
+                <SwitchBtn on={appConfig.maintenanceMode === "true"} onToggle={async () => {
+                  if (!auth) return;
+                  const v = appConfig.maintenanceMode !== "true" ? "true" : "false";
+                  setAppConfig(c => ({ ...c, maintenanceMode: v }));
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_mode`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+                }} />
+              </div>
               {appConfig.maintenanceMode === "true" && (
                 <EditableRow label="Message de maintenance" value={appConfig.maintenanceMessage} open={editingConfig === "maintenance_message"}
                   onOpen={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }}
@@ -3525,19 +3585,19 @@ function AdminDesktopPage() {
                     setEditingConfig(null);
                   }} />
               )}
-            </OffCanvasSection>
-            <OffCanvasSection title="Notifications admin">
+            </OffCanvasSection>}
+            {false && <OffCanvasSection title="_old_notif">
               <AdminNotifPrefs auth={auth!} />
-            </OffCanvasSection>
-            <OffCanvasSection title="Moyens de paiement">
+            </OffCanvasSection>}
+            {false && <OffCanvasSection title="_old_pay">
               <PaymentMethodsConfig auth={auth!} />
-            </OffCanvasSection>
-            {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+            </OffCanvasSection>}
+            {configTab === "securite" && ((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
               <OffCanvasSection title="Mon code d'accès (PIN)">
                 <AdminPinConfig auth={auth!} />
               </OffCanvasSection>
             )}
-            {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+            {configTab === "securite" && ((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
               <>
               <OffCanvasSection title="Intervalles de polling (ms)">
                 <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Valeurs en millisecondes. Ex: 8000 = 8s. Min: 3000ms.</div>
@@ -3567,6 +3627,8 @@ function AdminDesktopPage() {
               </OffCanvasSection>
               </>
             )}
+            </div>
+          </div>
           </div>
           </div>
         </div>}
