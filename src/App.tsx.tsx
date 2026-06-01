@@ -87,6 +87,10 @@ const LIFETIME_PREMIUM_UNTIL = "2099-12-31T23:59:59.000Z";
 let PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000; // valeur par défaut, écrasée par app_settings
 let PREMIUM_PRICE_FCFA = 3500;
 let PREMIUM_PRICE_EUR = 10;
+// Devises : Mobile Money = FCFA (XAF), Carte/Stripe = EUR. Helpers de classification et d'affichage.
+const isCardOperator = (op: string) => op === "Stripe" || op === "Carte";
+const paymentCurrency = (r: { currency?: string; operator: string }) => (r.currency || (isCardOperator(r.operator) ? "EUR" : "XAF"));
+const formatMoney = (amount: number, currency: string) => currency === "EUR" ? `${(amount || 0).toLocaleString("fr-FR")} €` : `${(amount || 0).toLocaleString()} FCFA`;
 // Moyens de paiement activés (pilotés depuis Configuration admin). true = disponible.
 let PAY_MTN_ENABLED = true;
 let PAY_AIRTEL_ENABLED = true;
@@ -10929,7 +10933,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; profile?: { name: string; photo_url?: string | null; gender?: string } };
+type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
 function getPremiumCountdown(approvedAt?: string): { label: string; color: string; expired: boolean } {
   if (!approvedAt) return { label: "", color: "#888", expired: false };
   const expiry = new Date(new Date(approvedAt).getTime() + PREMIUM_30_DAYS_MS);
@@ -10962,7 +10966,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
               {p.operator}
               {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Cadeau pour {p.gift_for_name || "un match"}</span>}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {p.amount.toLocaleString()} FCFA</div>
+            <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {formatMoney(p.amount, paymentCurrency(p))}</div>
             <div style={{ fontSize: "0.62rem", color: "#bbb", fontFamily: "monospace", marginTop: 2 }}>{p.user_id}</div>
           </div>
         </div>
@@ -11877,6 +11881,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [financeExcluded, setFinanceExcluded] = useState<Set<string>>(new Set());
   const [financeOpenMonth, setFinanceOpenMonth] = useState("");
   const [financeCounts, setFinanceCounts] = useState<{ pending: number; approved: number; rejected: number }>({ pending: 0, approved: 0, rejected: 0 });
+  const [financeCurrency, setFinanceCurrency] = useState<"XAF" | "EUR">("XAF");
   const [financeNames, setFinanceNames] = useState<Record<string, string>>({});
   const [archiveSelectMode, setArchiveSelectMode] = useState(false);
   const [selectedArchiveIds, setSelectedArchiveIds] = useState<Set<string>>(new Set());
@@ -11961,7 +11966,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const loadPayments = async () => {
     setPaymentsLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name,archived&status=neq.deleted&archived=eq.false&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name,archived,currency&status=neq.deleted&archived=eq.false&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) {
         setPayments(data);
@@ -12027,7 +12032,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const loadArchived = async () => {
     setArchivedLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at&or=(status.eq.deleted,archived.eq.true)&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,currency&or=(status.eq.deleted,archived.eq.true)&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) setArchivedPayments(data);
     } catch {}
@@ -12096,7 +12101,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       if (Array.isArray(sd)) sd.forEach((row: any) => { if (row?.key) smap[row.key] = row.value; });
       setFinanceResetAt(smap["finance_reset_at"] || "");
       try { const ex = smap["finance_excluded_ids"] ? JSON.parse(smap["finance_excluded_ids"]) : []; setFinanceExcluded(new Set(Array.isArray(ex) ? ex : [])); } catch { setFinanceExcluded(new Set()); }
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,tx_ref,amount,approved_at,created_at,operator,gift_for,gift_for_name&status=eq.approved&order=approved_at.desc&limit=1000`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,tx_ref,amount,approved_at,created_at,operator,gift_for,gift_for_name,currency&status=eq.approved&order=approved_at.desc&limit=1000`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) {
         setFinanceRows(data);
@@ -12145,12 +12150,13 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const reset = financeResetAt ? new Date(financeResetAt).getTime() : 0;
     const rows = financeRows.filter(r => new Date(r.approved_at || r.created_at).getTime() >= reset);
     const esc = (v: any) => { const str = String(v ?? ""); return /[",;\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str; };
-    const header = ["Date", "Utilisateur", "Type", "Operateur", "Reference", "Montant_FCFA", "Exclu_du_CA"];
+    const header = ["Date", "Utilisateur", "Type", "Operateur", "Devise", "Reference", "Montant", "Exclu_du_CA"];
     const lines = rows.map(r => [
       new Date(r.approved_at || r.created_at).toLocaleDateString("fr-FR"),
       financeNames[r.user_id] || r.user_id,
       r.gift_for ? "Cadeau" : "Premium",
       r.operator,
+      paymentCurrency(r) === "EUR" ? "EUR" : "FCFA",
       r.tx_ref,
       r.amount || 0,
       financeExcluded.has(r.id) ? "oui" : "non",
@@ -15885,10 +15891,20 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ) : (() => {
               const reset = financeResetAt ? new Date(financeResetAt).getTime() : 0;
               const periodRows = financeRows.filter(r => new Date(r.approved_at || r.created_at).getTime() >= reset);
-              const rows = periodRows.filter(r => !financeExcluded.has(r.id));
+              const counted = periodRows.filter(r => !financeExcluded.has(r.id));
+              // Deux totaux distincts par devise (jamais additionnés entre eux)
+              const totalXAF = counted.filter(r => paymentCurrency(r) !== "EUR").reduce((s, r) => s + (r.amount || 0), 0);
+              const totalEUR = counted.filter(r => paymentCurrency(r) === "EUR").reduce((s, r) => s + (r.amount || 0), 0);
+              const countXAF = counted.filter(r => paymentCurrency(r) !== "EUR").length;
+              const countEUR = counted.filter(r => paymentCurrency(r) === "EUR").length;
+              // Toutes les analyses détaillées portent sur la devise sélectionnée
+              const cur = financeCurrency === "EUR" ? "EUR" : "XAF";
+              const inCur = (r: PaymentRequest) => paymentCurrency(r) === cur;
+              const periodCur = periodRows.filter(inCur);
+              const rows = counted.filter(inCur);
               const total = rows.reduce((sum, r) => sum + (r.amount || 0), 0);
               const byMonth: Record<string, { count: number; sum: number; items: PaymentRequest[] }> = {};
-              periodRows.forEach(r => {
+              periodCur.forEach(r => {
                 const d = new Date(r.approved_at || r.created_at);
                 const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
                 if (!byMonth[k]) byMonth[k] = { count: 0, sum: 0, items: [] };
@@ -15896,30 +15912,49 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (!financeExcluded.has(r.id)) { byMonth[k].count++; byMonth[k].sum += (r.amount || 0); }
               });
               const months = Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0]));
-              const excludedCount = periodRows.filter(r => financeExcluded.has(r.id)).length;
+              const excludedCount = periodCur.filter(r => financeExcluded.has(r.id)).length;
               const fmtMonth = (k: string) => { const [y, m] = k.split("-"); return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); };
-              // Répartition Premium vs Cadeaux (sur les paiements comptés)
+              // Répartition Premium vs Cadeaux (sur les paiements comptés, devise sélectionnée)
               const giftSum = rows.filter(r => r.gift_for).reduce((s, r) => s + (r.amount || 0), 0);
               const premiumSum = total - giftSum;
               const giftCount = rows.filter(r => r.gift_for).length;
               const premiumCount = rows.length - giftCount;
-              // Dernier paiement
+              // Dernier paiement (devise sélectionnée)
               const last = rows.length > 0 ? [...rows].sort((a, b) => new Date(b.approved_at || b.created_at).getTime() - new Date(a.approved_at || a.created_at).getTime())[0] : null;
-              // Classement par utilisateur
+              // Classement par utilisateur (devise sélectionnée)
               const byUser: Record<string, { count: number; sum: number }> = {};
               rows.forEach(r => { if (!byUser[r.user_id]) byUser[r.user_id] = { count: 0, sum: 0 }; byUser[r.user_id].count++; byUser[r.user_id].sum += (r.amount || 0); });
               const topUsers = Object.entries(byUser).sort((a, b) => b[1].sum - a[1].sum).slice(0, 5);
-              // Conversion
+              // Conversion (toutes devises confondues, ce sont des comptes)
               const totalRequests = financeCounts.pending + financeCounts.approved + financeCounts.rejected;
               const convRate = totalRequests > 0 ? Math.round((financeCounts.approved / totalRequests) * 100) : 0;
               // Max mensuel pour mettre le graphique à l'échelle
               const maxMonth = months.reduce((mx, [, v]) => Math.max(mx, v.sum), 0) || 1;
               return (
                 <div>
-                  <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", borderRadius: 16, padding: "18px 20px", color: "#fff", marginBottom: 12 }}>
-                    <div style={{ fontSize: "0.72rem", opacity: 0.85, fontWeight: 600 }}>Chiffre d'affaires{financeResetAt ? " (depuis réinitialisation)" : " total"}</div>
-                    <div style={{ fontSize: "1.8rem", fontWeight: 900, marginTop: 4 }}>{total.toLocaleString()} FCFA</div>
-                    <div style={{ fontSize: "0.7rem", opacity: 0.85, marginTop: 2 }}>{rows.length} paiement{rows.length > 1 ? "s" : ""} approuvé{rows.length > 1 ? "s" : ""}{excludedCount > 0 ? ` · ${excludedCount} exclu${excludedCount > 1 ? "s" : ""} du CA` : ""}{financeResetAt ? ` · depuis le ${new Date(financeResetAt).toLocaleDateString("fr-FR")}` : ""}</div>
+                  {/* Deux totaux séparés par devise */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                    <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", borderRadius: 16, padding: "14px 16px", color: "#fff" }}>
+                      <div style={{ fontSize: "0.66rem", opacity: 0.85, fontWeight: 600 }}>CA Mobile Money</div>
+                      <div style={{ fontSize: "1.35rem", fontWeight: 900, marginTop: 3 }}>{totalXAF.toLocaleString()} FCFA</div>
+                      <div style={{ fontSize: "0.64rem", opacity: 0.85, marginTop: 2 }}>{countXAF} paiement{countXAF > 1 ? "s" : ""}</div>
+                    </div>
+                    <div style={{ background: "linear-gradient(135deg,#1A5C3A,#0D2E1C)", borderRadius: 16, padding: "14px 16px", color: "#fff" }}>
+                      <div style={{ fontSize: "0.66rem", opacity: 0.85, fontWeight: 600 }}>CA Carte (diaspora)</div>
+                      <div style={{ fontSize: "1.35rem", fontWeight: 900, marginTop: 3 }}>{totalEUR.toLocaleString("fr-FR")} €</div>
+                      <div style={{ fontSize: "0.64rem", opacity: 0.85, marginTop: 2 }}>{countEUR} paiement{countEUR > 1 ? "s" : ""}</div>
+                    </div>
+                  </div>
+                  {financeResetAt && <div style={{ fontSize: "0.66rem", color: "#aaa", textAlign: "center", marginBottom: 10 }}>Depuis la réinitialisation du {new Date(financeResetAt).toLocaleDateString("fr-FR")}{excludedCount > 0 ? ` · ${excludedCount} exclu${excludedCount > 1 ? "s" : ""} du CA` : ""}</div>}
+
+                  {/* Sélecteur de devise pour les analyses détaillées */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <span style={{ fontSize: "0.72rem", color: "#888", fontWeight: 600 }}>Analyses en :</span>
+                    <div style={{ display: "flex", gap: 4, background: G.creme, borderRadius: 50, padding: 3 }}>
+                      {([["XAF", "FCFA"], ["EUR", "€"]] as [string, string][]).map(([k, lbl]) => (
+                        <button key={k} onClick={() => setFinanceCurrency(k as any)} style={{ padding: "5px 14px", borderRadius: 50, border: "none", background: financeCurrency === k ? (k === "EUR" ? "#1A5C3A" : "#8e44ad") : "transparent", color: financeCurrency === k ? "#fff" : "#888", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+                      ))}
+                    </div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 16 }}>
                     <button onClick={exportFinanceCSV} style={{ background: "rgba(39,174,96,0.1)", color: "#1a8c4a", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 50, padding: "7px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
@@ -15953,7 +15988,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[last.user_id] || "Utilisateur"}{last.gift_for ? ` → cadeau pour ${last.gift_for_name || "un membre"}` : ""}</div>
                         <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{new Date(last.approved_at || last.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>
                       </div>
-                      <div style={{ fontWeight: 800, fontSize: "1rem", color: "#8e44ad", flexShrink: 0 }}>{(last.amount || 0).toLocaleString()} FCFA</div>
+                      <div style={{ fontWeight: 800, fontSize: "1rem", color: "#8e44ad", flexShrink: 0 }}>{formatMoney(last.amount || 0, paymentCurrency(last))}</div>
                     </div>
                   )}
 
@@ -16020,11 +16055,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "#8e44ad", display: "inline-block" }} /><span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#555" }}>Premium ({premiumCount})</span></div>
-                                  <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#8e44ad" }}>{premiumSum.toLocaleString()} FCFA · {pPct}%</span>
+                                  <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#8e44ad" }}>{formatMoney(premiumSum, cur)} · {pPct}%</span>
                                 </div>
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: G.or, display: "inline-block" }} /><span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#555" }}>Cadeaux ({giftCount})</span></div>
-                                  <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#B8860B" }}>{giftSum.toLocaleString()} FCFA · {gPct}%</span>
+                                  <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#B8860B" }}>{formatMoney(giftSum, cur)} · {gPct}%</span>
                                 </div>
                               </div>
                             </>
@@ -16045,7 +16080,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[uid] || "Utilisateur"}</div>
                             <div style={{ fontSize: "0.68rem", color: "#999" }}>{v.count} achat{v.count > 1 ? "s" : ""}</div>
                           </div>
-                          <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "#8e44ad", flexShrink: 0 }}>{v.sum.toLocaleString()} FCFA</div>
+                          <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "#8e44ad", flexShrink: 0 }}>{formatMoney(v.sum, cur)}</div>
                         </div>
                       ))}
                     </div>
@@ -16065,7 +16100,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               <div style={{ fontSize: "0.7rem", color: "#999" }}>{v.count} paiement{v.count > 1 ? "s" : ""}{v.items.length > v.count ? ` · ${v.items.length - v.count} exclu${v.items.length - v.count > 1 ? "s" : ""}` : ""}</div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#8e44ad" }}>{v.sum.toLocaleString()} FCFA</div>
+                              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#8e44ad" }}>{formatMoney(v.sum, cur)}</div>
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: financeOpenMonth === k ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
                             </div>
                           </div>
@@ -16076,7 +16111,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                                 return (
                                   <div key={it.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "7px 10px", borderRadius: 8, background: excluded ? "rgba(231,76,60,0.05)" : G.creme }}>
                                     <div style={{ minWidth: 0, flex: 1 }}>
-                                      <div style={{ fontSize: "0.76rem", fontWeight: 700, color: excluded ? "#bbb" : "#555", textDecoration: excluded ? "line-through" : "none" }}>{it.operator} · {(it.amount || 0).toLocaleString()} FCFA</div>
+                                      <div style={{ fontSize: "0.76rem", fontWeight: 700, color: excluded ? "#bbb" : "#555", textDecoration: excluded ? "line-through" : "none" }}>{it.operator} · {formatMoney(it.amount || 0, paymentCurrency(it))}</div>
                                       <div style={{ fontSize: "0.65rem", color: "#aaa", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.tx_ref} · {new Date(it.approved_at || it.created_at).toLocaleDateString("fr-FR")}</div>
                                     </div>
                                     <button onClick={(e) => { e.stopPropagation(); toggleFinanceExclude(it.id, it.tx_ref); }} style={{ flexShrink: 0, background: excluded ? "rgba(39,174,96,0.1)" : "rgba(231,76,60,0.08)", color: excluded ? "#27ae60" : "#e74c3c", border: `1.5px solid ${excluded ? "rgba(39,174,96,0.3)" : "rgba(231,76,60,0.25)"}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.68rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
@@ -16137,7 +16172,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           </div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555" }}>{a.operator} · {a.amount.toLocaleString()} FCFA</div>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555" }}>{a.operator} · {formatMoney(a.amount, paymentCurrency(a))}</div>
                           <div style={{ fontSize: "0.68rem", color: "#aaa", fontFamily: "monospace", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.tx_ref}</div>
                           <div style={{ fontSize: "0.65rem", color: "#ccc", marginTop: 1 }}>{new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
                         </div>
