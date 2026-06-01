@@ -3196,7 +3196,7 @@ function SwitchBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 function OffCanvasSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ breakInside: "avoid", WebkitColumnBreakInside: "avoid", pageBreakInside: "avoid", display: "inline-block", width: "100%" } as React.CSSProperties}>
+    <div style={{ breakInside: "avoid" } as React.CSSProperties}>
       <div style={{ padding: "14px 20px 10px", borderTop: "1px solid #eee" }}>
         <div style={{ fontWeight: 700, fontSize: "0.7rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>{title}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{children}</div>
@@ -3419,7 +3419,7 @@ function AdminDesktopPage() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", columnCount: 2, columnGap: 22, columnFill: "balance" }}>
+          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0 22px", alignItems: "start", alignContent: "start" }}>
             <OffCanvasSection title="Règles">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
                 <div>
@@ -14448,7 +14448,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             })}
           </div>
 
-          <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+          <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", maxWidth: reportFilter === "messaging" ? 760 : undefined, margin: reportFilter === "messaging" ? "0 auto" : undefined, width: reportFilter === "messaging" ? "100%" : undefined, boxSizing: "border-box" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
                 {reportFilter === "archived"
@@ -14481,7 +14481,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 }
               </div>
             ) : (
-              <div data-admlist="" style={{ maxWidth: 720, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+              <div data-admlist={reportFilter === "messaging" ? undefined : ""} style={{ maxWidth: 720, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
               {reportFilter === "messaging" ? (() => {
                 // ── Vue Messagerie : grouper les échanges par utilisateur ──
                 const convMap: Record<string, { userId: string; messages: ReportRow[] }> = {};
@@ -16753,7 +16753,7 @@ export default function App() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                   </div>
-                  <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", columnCount: 2, columnGap: 22, columnFill: "balance" }}>
+                  <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 26px 26px", display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0 22px", alignItems: "start", alignContent: "start" }}>
                     <MobileAdminConfig auth={auth} onClose={() => setShowAdminConfig(false)} />
                   </div>
                 </div>
