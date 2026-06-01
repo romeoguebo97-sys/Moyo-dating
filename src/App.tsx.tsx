@@ -45,10 +45,20 @@ const MODERATION_RULES: { pattern: RegExp; type: "insult" | "scam" | "sexual" }[
   { pattern: /\b(baise|baiser|nique\b|sexe\b)\b/i, type: "sexual" },
 ];
 
+// Mots interdits personnalisés (ajoutés par l'admin depuis Configuration → Sécurité)
+let CUSTOM_BANNED_REGEX: RegExp | null = null;
+const buildCustomBannedRegex = (raw: string) => {
+  const words = (raw || "").split(/[\n,;]+/).map(w => w.trim()).filter(Boolean);
+  if (words.length === 0) { CUSTOM_BANNED_REGEX = null; return; }
+  const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  try { CUSTOM_BANNED_REGEX = new RegExp(`(${escaped.join("|")})`, "i"); } catch { CUSTOM_BANNED_REGEX = null; }
+};
+
 const moderateMessage = (text: string): { blocked: boolean; type?: "insult" | "scam" | "sexual" } => {
   for (const rule of MODERATION_RULES) {
     if (rule.pattern.test(text)) return { blocked: true, type: rule.type };
   }
+  if (CUSTOM_BANNED_REGEX && CUSTOM_BANNED_REGEX.test(text)) return { blocked: true, type: "insult" };
   return { blocked: false };
 };
 
@@ -119,7 +129,7 @@ function formatWhatsApp(num: string): string {
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -132,6 +142,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_assistant"] !== undefined) FEATURE_ASSISTANT = map["feature_assistant"] !== "false";
+  if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
   if (map["pay_mtn_number"]) PAY_MTN_NUMBER = map["pay_mtn_number"];
   if (map["pay_mtn_responsable"]) PAY_MTN_RESPONSABLE = map["pay_mtn_responsable"];
   if (map["pay_airtel_number"]) PAY_AIRTEL_NUMBER = map["pay_airtel_number"];
@@ -3518,6 +3529,7 @@ function AdminDesktopPage() {
     featureAssistant: "true",
     maintenanceMode: "false",
     maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧",
+    customBannedWords: "",
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
@@ -3534,6 +3546,7 @@ function AdminDesktopPage() {
       "premium_price_fcfa","premium_duration_days",
       "feature_statuses","feature_gift_premium","feature_assistant",
       "maintenance_mode","maintenance_message",
+      "custom_banned_words",
     ];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
@@ -3566,6 +3579,7 @@ function AdminDesktopPage() {
         featureAssistant: map["feature_assistant"] || c.featureAssistant,
         maintenanceMode: map["maintenance_mode"] || c.maintenanceMode,
         maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage,
+        customBannedWords: map["custom_banned_words"] || c.customBannedWords,
       }));
     }).catch(() => {});
   }, [auth]);
@@ -3849,6 +3863,22 @@ function AdminDesktopPage() {
                     setEditingConfig(null);
                   }} />
               )}
+            </OffCanvasSection>}
+            {configTab === "securite" && <OffCanvasSection title="Mots interdits (modération)">
+              <div style={{ fontSize: "0.74rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+                Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
+              </div>
+              <EditableRow label="Liste des mots interdits" value={appConfig.customBannedWords || "(aucun)"} open={editingConfig === "custom_banned_words"}
+                onOpen={() => { setEditingConfig(editingConfig === "custom_banned_words" ? null : "custom_banned_words"); setEditingConfigValue(appConfig.customBannedWords); }}
+                editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                hint="Ex : mot1, expression deux, mot3"
+                onSave={async () => {
+                  if (!auth) return;
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.custom_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                  setAppConfig(c => ({ ...c, customBannedWords: editingConfigValue }));
+                  buildCustomBannedRegex(editingConfigValue);
+                  setEditingConfig(null);
+                }} />
             </OffCanvasSection>}
             {false && <OffCanvasSection title="_old_notif">
               <AdminNotifPrefs auth={auth!} />
@@ -11844,6 +11874,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [financeRows, setFinanceRows] = useState<PaymentRequest[]>([]);
   const [financeLoading, setFinanceLoading] = useState(false);
   const [financeResetAt, setFinanceResetAt] = useState("");
+  const [financeExcluded, setFinanceExcluded] = useState<Set<string>>(new Set());
+  const [financeOpenMonth, setFinanceOpenMonth] = useState("");
+  const [financeCounts, setFinanceCounts] = useState<{ pending: number; approved: number; rejected: number }>({ pending: 0, approved: 0, rejected: 0 });
+  const [financeNames, setFinanceNames] = useState<Record<string, string>>({});
+  const [archiveSelectMode, setArchiveSelectMode] = useState(false);
+  const [selectedArchiveIds, setSelectedArchiveIds] = useState<Set<string>>(new Set());
   type AdminLog = { id: string; admin_id: string; admin_name: string; action: string; target_user_id?: string; target_user_name?: string; created_at: string };
   const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -11998,24 +12034,94 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setArchivedLoading(false);
   };
   const deleteArchivedOne = async (p: PaymentRequest) => {
-    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-    setArchivedPayments(prev => prev.filter(a => a.id !== p.id));
-    showToast("Entrée supprimée définitivement.", "success");
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" } });
+      const deleted = await r.json().catch(() => []);
+      if (!r.ok || !Array.isArray(deleted) || deleted.length === 0) {
+        showToast("Suppression impossible (droits insuffisants). Vérifiez l'autorisation DELETE sur payment_requests dans Supabase.", "error");
+        return;
+      }
+      setArchivedPayments(prev => prev.filter(a => a.id !== p.id));
+      showToast("Entrée supprimée définitivement.", "success");
+    } catch {
+      showToast("Erreur réseau lors de la suppression.", "error");
+    }
   };
   const deleteArchivedAll = async () => {
-    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?or=(status.eq.deleted,archived.eq.true)`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-    setArchivedPayments([]);
-    showToast("Tous les archivés supprimés définitivement.", "success");
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?or=(status.eq.deleted,archived.eq.true)`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" } });
+      const deleted = await r.json().catch(() => []);
+      if (!r.ok || !Array.isArray(deleted)) { showToast("Suppression impossible.", "error"); return; }
+      if (deleted.length === 0) { showToast("Aucune entrée supprimée (droits insuffisants côté Supabase).", "error"); await loadArchived(); return; }
+      setArchivedPayments([]);
+      setArchiveSelectMode(false); setSelectedArchiveIds(new Set());
+      showToast(`${deleted.length} entrée${deleted.length > 1 ? "s" : ""} supprimée${deleted.length > 1 ? "s" : ""} définitivement.`, "success");
+    } catch {
+      showToast("Erreur réseau lors de la suppression.", "error");
+    }
+  };
+  const toggleArchiveSelect = (id: string) => setSelectedArchiveIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelectAllArchive = () => setSelectedArchiveIds(prev => prev.size === archivedPayments.length ? new Set() : new Set(archivedPayments.map(a => a.id)));
+  const deleteSelectedArchived = async () => {
+    const ids = Array.from(selectedArchiveIds);
+    if (ids.length === 0) return;
+    try {
+      let totalDeleted = 0;
+      const CHUNK = 50;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const batch = ids.slice(i, i + CHUNK).join(",");
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=in.(${batch})`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" } });
+        const del = await r.json().catch(() => []);
+        if (Array.isArray(del)) totalDeleted += del.length;
+      }
+      if (totalDeleted === 0) {
+        showToast("Aucune entrée supprimée (droits DELETE manquants sur Supabase).", "error");
+        await loadArchived();
+        return;
+      }
+      setArchivedPayments(prev => prev.filter(a => !selectedArchiveIds.has(a.id)));
+      setSelectedArchiveIds(new Set());
+      setArchiveSelectMode(false);
+      showToast(`${totalDeleted} entrée${totalDeleted > 1 ? "s" : ""} supprimée${totalDeleted > 1 ? "s" : ""} définitivement.`, "success");
+    } catch {
+      showToast("Erreur réseau lors de la suppression groupée.", "error");
+    }
   };
   const loadFinance = async () => {
     setFinanceLoading(true);
     try {
-      const rs = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.finance_reset_at&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const rs = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(finance_reset_at,finance_excluded_ids)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const sd = await rs.json().catch(() => []);
-      setFinanceResetAt(Array.isArray(sd) && sd[0]?.value ? sd[0].value : "");
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=amount,approved_at,created_at,operator&status=eq.approved&order=approved_at.desc&limit=1000`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const smap: Record<string, string> = {};
+      if (Array.isArray(sd)) sd.forEach((row: any) => { if (row?.key) smap[row.key] = row.value; });
+      setFinanceResetAt(smap["finance_reset_at"] || "");
+      try { const ex = smap["finance_excluded_ids"] ? JSON.parse(smap["finance_excluded_ids"]) : []; setFinanceExcluded(new Set(Array.isArray(ex) ? ex : [])); } catch { setFinanceExcluded(new Set()); }
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,tx_ref,amount,approved_at,created_at,operator,gift_for,gift_for_name&status=eq.approved&order=approved_at.desc&limit=1000`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
-      if (Array.isArray(data)) setFinanceRows(data);
+      if (Array.isArray(data)) {
+        setFinanceRows(data);
+        // Noms des payeurs (pour le bloc récent + le classement), via une requête groupée par IDs
+        const ids = Array.from(new Set(data.map((d: any) => d.user_id).filter(Boolean)));
+        if (ids.length > 0) {
+          try {
+            const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+            const pd = await pr.json().catch(() => []);
+            const nm: Record<string, string> = {};
+            if (Array.isArray(pd)) pd.forEach((u: any) => { if (u?.id) nm[u.id] = u.name || ""; });
+            setFinanceNames(nm);
+          } catch {}
+        }
+      }
+      // Indicateurs de conversion : comptage de tous les statuts (requête légère, head only)
+      try {
+        const counts: any = { pending: 0, approved: 0, rejected: 0 };
+        for (const st of ["pending", "approved", "rejected"]) {
+          const cr = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id&status=eq.${st}`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range-Unit": "items", "Range": "0-0" } });
+          const cr_range = cr.headers.get("content-range");
+          counts[st] = cr_range && cr_range.includes("/") ? parseInt(cr_range.split("/")[1]) || 0 : 0;
+        }
+        setFinanceCounts(counts);
+      } catch {}
     } catch {}
     setFinanceLoading(false);
   };
@@ -12025,6 +12131,38 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setFinanceResetAt(now);
     logAdminAction(auth.token, auth.userId, auth.name, "Statistiques financières réinitialisées", auth.userId);
     showToast("Données financières réinitialisées à partir d'aujourd'hui.", "success");
+  };
+  const toggleFinanceExclude = async (pid: string, txRef: string) => {
+    const next = new Set(financeExcluded);
+    const willExclude = !next.has(pid);
+    if (willExclude) next.add(pid); else next.delete(pid);
+    setFinanceExcluded(next);
+    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "finance_excluded_ids", value: JSON.stringify(Array.from(next)) }) });
+    logAdminAction(auth.token, auth.userId, auth.name, willExclude ? `Paiement exclu du CA (test) - réf: ${txRef}` : `Paiement réintégré au CA - réf: ${txRef}`, auth.userId);
+    showToast(willExclude ? "Paiement exclu du chiffre d'affaires." : "Paiement réintégré au chiffre d'affaires.", "success");
+  };
+  const exportFinanceCSV = () => {
+    const reset = financeResetAt ? new Date(financeResetAt).getTime() : 0;
+    const rows = financeRows.filter(r => new Date(r.approved_at || r.created_at).getTime() >= reset);
+    const esc = (v: any) => { const str = String(v ?? ""); return /[",;\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str; };
+    const header = ["Date", "Utilisateur", "Type", "Operateur", "Reference", "Montant_FCFA", "Exclu_du_CA"];
+    const lines = rows.map(r => [
+      new Date(r.approved_at || r.created_at).toLocaleDateString("fr-FR"),
+      financeNames[r.user_id] || r.user_id,
+      r.gift_for ? "Cadeau" : "Premium",
+      r.operator,
+      r.tx_ref,
+      r.amount || 0,
+      financeExcluded.has(r.id) ? "oui" : "non",
+    ].map(esc).join(";"));
+    const csv = "\uFEFF" + [header.join(";"), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `moyo-finances-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`${rows.length} paiement${rows.length > 1 ? "s" : ""} exporté${rows.length > 1 ? "s" : ""}.`, "success");
   };
   const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
   const [hiddenReviews, setHiddenReviews] = useState<Set<string>>(new Set());
@@ -14004,6 +14142,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Sous-onglet Demandes", "Les paiements pas encore traités. Vérifiez la référence puis Activez ou Rejetez. Une fois traité, le paiement bascule automatiquement dans Traitées."],
                     ["Sous-onglet Traitées", "Les demandes approuvées ✓ et refusées ✕. La corbeille y archive le paiement (il part dans Archivage)."],
                     ["Sous-onglet Données financières", "Chiffre d'affaires total et détail par mois (paiements approuvés). Le bouton ↺ Réinitialiser fait repartir le compteur de zéro à partir d'aujourd'hui, SANS rien supprimer. Un paiement approuvé puis archivé reste compté dans le CA."],
+                    ["🧪 Exclure du CA (tests)", "Dans Données financières, dépliez un mois pour voir chaque paiement. Le bouton '🧪 Exclure du CA' retire un paiement de test du chiffre d'affaires sans le supprimer ni perdre sa trace. Réversible à tout moment via '↩ Réintégrer'."],
+                    ["📊 Tableau de bord financier", "Données financières affiche : indicateurs de conversion (demandes reçues, approuvés, refusés, taux), dernier paiement reçu, graphique d'évolution du CA par mois, répartition Premium / Cadeaux, et classement des meilleurs contributeurs."],
+                    ["⬇ Exporter", "Le bouton 'Exporter' télécharge un fichier CSV (ouvrable dans Excel) de tous les paiements de la période : date, utilisateur, type, opérateur, référence, montant, et s'il est exclu du CA."],
                     ["Sous-onglet Archivage", "Les paiements rangés. Ici la corbeille et 'Tout supprimer' effacent DÉFINITIVEMENT (action irréversible)."],
                     ["Silhouette cliquable", "Cliquez sur la silhouette à gauche de chaque carte pour voir le profil complet de l'utilisateur (photo, nom, âge, ville, bio, badges). L'ID est affiché grisé en bas de la carte et dans la modale."],
                     ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN ou Airtel (ex: 7753031542)."],
@@ -15743,38 +15884,209 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
             ) : (() => {
               const reset = financeResetAt ? new Date(financeResetAt).getTime() : 0;
-              const rows = financeRows.filter(r => new Date(r.approved_at || r.created_at).getTime() >= reset);
+              const periodRows = financeRows.filter(r => new Date(r.approved_at || r.created_at).getTime() >= reset);
+              const rows = periodRows.filter(r => !financeExcluded.has(r.id));
               const total = rows.reduce((sum, r) => sum + (r.amount || 0), 0);
-              const byMonth: Record<string, { count: number; sum: number }> = {};
-              rows.forEach(r => {
+              const byMonth: Record<string, { count: number; sum: number; items: PaymentRequest[] }> = {};
+              periodRows.forEach(r => {
                 const d = new Date(r.approved_at || r.created_at);
                 const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-                if (!byMonth[k]) byMonth[k] = { count: 0, sum: 0 };
-                byMonth[k].count++; byMonth[k].sum += (r.amount || 0);
+                if (!byMonth[k]) byMonth[k] = { count: 0, sum: 0, items: [] };
+                byMonth[k].items.push(r);
+                if (!financeExcluded.has(r.id)) { byMonth[k].count++; byMonth[k].sum += (r.amount || 0); }
               });
               const months = Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0]));
+              const excludedCount = periodRows.filter(r => financeExcluded.has(r.id)).length;
               const fmtMonth = (k: string) => { const [y, m] = k.split("-"); return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); };
+              // Répartition Premium vs Cadeaux (sur les paiements comptés)
+              const giftSum = rows.filter(r => r.gift_for).reduce((s, r) => s + (r.amount || 0), 0);
+              const premiumSum = total - giftSum;
+              const giftCount = rows.filter(r => r.gift_for).length;
+              const premiumCount = rows.length - giftCount;
+              // Dernier paiement
+              const last = rows.length > 0 ? [...rows].sort((a, b) => new Date(b.approved_at || b.created_at).getTime() - new Date(a.approved_at || a.created_at).getTime())[0] : null;
+              // Classement par utilisateur
+              const byUser: Record<string, { count: number; sum: number }> = {};
+              rows.forEach(r => { if (!byUser[r.user_id]) byUser[r.user_id] = { count: 0, sum: 0 }; byUser[r.user_id].count++; byUser[r.user_id].sum += (r.amount || 0); });
+              const topUsers = Object.entries(byUser).sort((a, b) => b[1].sum - a[1].sum).slice(0, 5);
+              // Conversion
+              const totalRequests = financeCounts.pending + financeCounts.approved + financeCounts.rejected;
+              const convRate = totalRequests > 0 ? Math.round((financeCounts.approved / totalRequests) * 100) : 0;
+              // Max mensuel pour mettre le graphique à l'échelle
+              const maxMonth = months.reduce((mx, [, v]) => Math.max(mx, v.sum), 0) || 1;
               return (
                 <div>
                   <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", borderRadius: 16, padding: "18px 20px", color: "#fff", marginBottom: 12 }}>
                     <div style={{ fontSize: "0.72rem", opacity: 0.85, fontWeight: 600 }}>Chiffre d'affaires{financeResetAt ? " (depuis réinitialisation)" : " total"}</div>
                     <div style={{ fontSize: "1.8rem", fontWeight: 900, marginTop: 4 }}>{total.toLocaleString()} FCFA</div>
-                    <div style={{ fontSize: "0.7rem", opacity: 0.85, marginTop: 2 }}>{rows.length} paiement{rows.length > 1 ? "s" : ""} approuvé{rows.length > 1 ? "s" : ""}{financeResetAt ? ` · depuis le ${new Date(financeResetAt).toLocaleDateString("fr-FR")}` : ""}</div>
+                    <div style={{ fontSize: "0.7rem", opacity: 0.85, marginTop: 2 }}>{rows.length} paiement{rows.length > 1 ? "s" : ""} approuvé{rows.length > 1 ? "s" : ""}{excludedCount > 0 ? ` · ${excludedCount} exclu${excludedCount > 1 ? "s" : ""} du CA` : ""}{financeResetAt ? ` · depuis le ${new Date(financeResetAt).toLocaleDateString("fr-FR")}` : ""}</div>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
-                    <button onClick={() => confirm("Réinitialiser les statistiques financières ? Le compteur repartira de zéro à partir d'aujourd'hui. Aucun paiement n'est supprimé.", resetFinance)} style={{ background: "rgba(142,68,173,0.08)", color: "#8e44ad", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "7px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>↺ Réinitialiser</button>
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                    <button onClick={exportFinanceCSV} style={{ background: "rgba(39,174,96,0.1)", color: "#1a8c4a", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 50, padding: "7px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      Exporter
+                    </button>
+                    <button onClick={() => confirm("Réinitialiser les statistiques financières ? Le compteur repartira de zéro à partir d'aujourd'hui. Aucun paiement n'est supprimé.", resetFinance)} title="Réinitialiser le compteur (sans rien supprimer)" style={{ background: "transparent", color: "#aaa", border: `1px solid ${G.gris}`, borderRadius: 50, padding: "7px 14px", fontSize: "0.74rem", fontWeight: 600, cursor: "pointer" }}>↺ Réinitialiser</button>
                   </div>
+
+                  {/* ── Indicateurs de conversion ── */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 16 }}>
+                    {([
+                      ["Demandes reçues", totalRequests, "#555", G.creme],
+                      ["Approuvés", financeCounts.approved, "#27ae60", "rgba(39,174,96,0.08)"],
+                      ["Refusés", financeCounts.rejected, "#e74c3c", "rgba(231,76,60,0.06)"],
+                      ["Taux de conversion", `${convRate}%`, "#8e44ad", "rgba(142,68,173,0.07)"],
+                    ] as [string, any, string, string][]).map(([label, val, color, bg]) => (
+                      <div key={label} style={{ background: bg, borderRadius: 12, padding: "12px 14px", border: `1px solid ${color}22` }}>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 900, color }}>{val}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 600, marginTop: 2 }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ── Dernier paiement reçu ── */}
+                  {last && (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: "14px 16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0", display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: last.gift_for ? "rgba(212,168,67,0.15)" : "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.1rem" }}>{last.gift_for ? "🎁" : "⭐"}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Dernier paiement</div>
+                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[last.user_id] || "Utilisateur"}{last.gift_for ? ` → cadeau pour ${last.gift_for_name || "un membre"}` : ""}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{new Date(last.approved_at || last.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: "1rem", color: "#8e44ad", flexShrink: 0 }}>{(last.amount || 0).toLocaleString()} FCFA</div>
+                    </div>
+                  )}
+
+                  {/* ── Évolution du chiffre d'affaires ── */}
+                  {months.length > 0 && (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: "16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, marginBottom: 14 }}>📈 Évolution du chiffre d'affaires</div>
+                      {(() => {
+                        const data = [...months].reverse();
+                        const slot = 52, padL = 8, padR = 8, padTop = 18, chartH = 96, baseY = padTop + chartH, labelH = 26;
+                        const w = padL + padR + data.length * slot;
+                        const h = baseY + labelH;
+                        const barW = 26;
+                        return (
+                          <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+                            <svg width={Math.max(w, 240)} height={h} viewBox={`0 0 ${Math.max(w, 240)} ${h}`} style={{ display: "block" }}>
+                              <defs>
+                                <linearGradient id="caBar" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#a569bd" />
+                                  <stop offset="100%" stopColor="#8e44ad" />
+                                </linearGradient>
+                              </defs>
+                              <line x1={padL} y1={baseY + 0.5} x2={w - padR} y2={baseY + 0.5} stroke={G.gris} strokeWidth="1" />
+                              {data.map(([k, v], i) => {
+                                const barH = Math.max(3, (v.sum / maxMonth) * chartH);
+                                const cx = padL + i * slot + slot / 2;
+                                const x = cx - barW / 2;
+                                const y = baseY - barH;
+                                return (
+                                  <g key={k}>
+                                    <rect x={x} y={y} width={barW} height={barH} rx="5" fill="url(#caBar)" />
+                                    <text x={cx} y={y - 5} textAnchor="middle" fontSize="9" fontWeight="700" fill="#8e44ad">{v.sum >= 1000 ? `${Math.round(v.sum / 1000)}k` : v.sum}</text>
+                                    <text x={cx} y={baseY + 16} textAnchor="middle" fontSize="9" fill="#999">{fmtMonth(k).slice(0, 3)}. {k.slice(2, 4)}</text>
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* ── Répartition des revenus ── */}
+                  {total > 0 && (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: "16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, marginBottom: 14 }}>🍩 Répartition des revenus</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+                        {(() => {
+                          const pPct = Math.round((premiumSum / total) * 100);
+                          const gPct = 100 - pPct;
+                          const R = 40, C = 2 * Math.PI * R, sw = 16;
+                          const pLen = (premiumSum / total) * C;
+                          return (
+                            <>
+                              <svg width="96" height="96" viewBox="0 0 96 96" style={{ flexShrink: 0 }}>
+                                <g transform="rotate(-90 48 48)">
+                                  <circle cx="48" cy="48" r={R} fill="none" stroke={G.or} strokeWidth={sw} />
+                                  <circle cx="48" cy="48" r={R} fill="none" stroke="#8e44ad" strokeWidth={sw} strokeDasharray={`${pLen} ${C - pLen}`} strokeDashoffset="0" />
+                                </g>
+                                <text x="48" y="45" textAnchor="middle" fontSize="11" fontWeight="800" fill="#555">{rows.length}</text>
+                                <text x="48" y="57" textAnchor="middle" fontSize="8" fill="#999">paie.</text>
+                              </svg>
+                              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "#8e44ad", display: "inline-block" }} /><span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#555" }}>Premium ({premiumCount})</span></div>
+                                  <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#8e44ad" }}>{premiumSum.toLocaleString()} FCFA · {pPct}%</span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: G.or, display: "inline-block" }} /><span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#555" }}>Cadeaux ({giftCount})</span></div>
+                                  <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#B8860B" }}>{giftSum.toLocaleString()} FCFA · {gPct}%</span>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Classement des meilleurs contributeurs ── */}
+                  {topUsers.length > 0 && (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: "16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, marginBottom: 12 }}>🏆 Meilleurs contributeurs</div>
+                      {topUsers.map(([uid, v], i) => (
+                        <div key={uid} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < topUsers.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                          <div style={{ width: 26, height: 26, borderRadius: "50%", background: i === 0 ? "#FFD700" : i === 1 ? "#C0C0C0" : i === 2 ? "#CD7F32" : G.creme, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.72rem", color: i < 3 ? "#333" : "#888", flexShrink: 0 }}>{i + 1}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[uid] || "Utilisateur"}</div>
+                            <div style={{ fontSize: "0.68rem", color: "#999" }}>{v.count} achat{v.count > 1 ? "s" : ""}</div>
+                          </div>
+                          <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "#8e44ad", flexShrink: 0 }}>{v.sum.toLocaleString()} FCFA</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* ── Détail par mois (dépliable, avec exclusion) ── */}
+                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, marginBottom: 10 }}>📅 Détail par mois</div>
                   {months.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "30px 20px", color: "#aaa", fontSize: "0.85rem" }}>Aucun revenu sur la période</div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {months.map(([k, v]) => (
-                        <div key={k} style={{ background: G.blanc, borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a", textTransform: "capitalize" }}>{fmtMonth(k)}</div>
-                            <div style={{ fontSize: "0.7rem", color: "#999" }}>{v.count} paiement{v.count > 1 ? "s" : ""}</div>
+                        <div key={k} style={{ background: G.blanc, borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                          <div onClick={() => setFinanceOpenMonth(financeOpenMonth === k ? "" : k)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a", textTransform: "capitalize" }}>{fmtMonth(k)}</div>
+                              <div style={{ fontSize: "0.7rem", color: "#999" }}>{v.count} paiement{v.count > 1 ? "s" : ""}{v.items.length > v.count ? ` · ${v.items.length - v.count} exclu${v.items.length - v.count > 1 ? "s" : ""}` : ""}</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#8e44ad" }}>{v.sum.toLocaleString()} FCFA</div>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: financeOpenMonth === k ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                            </div>
                           </div>
-                          <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#8e44ad" }}>{v.sum.toLocaleString()} FCFA</div>
+                          {financeOpenMonth === k && (
+                            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", gap: 6 }}>
+                              {v.items.map(it => {
+                                const excluded = financeExcluded.has(it.id);
+                                return (
+                                  <div key={it.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "7px 10px", borderRadius: 8, background: excluded ? "rgba(231,76,60,0.05)" : G.creme }}>
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                      <div style={{ fontSize: "0.76rem", fontWeight: 700, color: excluded ? "#bbb" : "#555", textDecoration: excluded ? "line-through" : "none" }}>{it.operator} · {(it.amount || 0).toLocaleString()} FCFA</div>
+                                      <div style={{ fontSize: "0.65rem", color: "#aaa", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.tx_ref} · {new Date(it.approved_at || it.created_at).toLocaleDateString("fr-FR")}</div>
+                                    </div>
+                                    <button onClick={(e) => { e.stopPropagation(); toggleFinanceExclude(it.id, it.tx_ref); }} style={{ flexShrink: 0, background: excluded ? "rgba(39,174,96,0.1)" : "rgba(231,76,60,0.08)", color: excluded ? "#27ae60" : "#e74c3c", border: `1.5px solid ${excluded ? "rgba(39,174,96,0.3)" : "rgba(231,76,60,0.25)"}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.68rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                      {excluded ? "↩ Réintégrer" : "🧪 Exclure du CA"}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -15787,11 +16099,27 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           {/* ══ ARCHIVAGE (suppression définitive) ══ */}
           {paymentSubTab === "archive" && (
             <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8, flexWrap: "wrap" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#e67e22" }}>📦 Archivés ({archivedPayments.length})</div>
-                {archivedPayments.length > 0 && (
-                  <button onClick={() => { if (window.confirm(`Supprimer DÉFINITIVEMENT les ${archivedPayments.length} entrées archivées ? Cette action est irréversible.`)) deleteArchivedAll(); }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>🗑 Tout supprimer</button>
-                )}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  {!archiveSelectMode && archivedPayments.length > 0 && (
+                    <button onClick={() => { setSelectedArchiveIds(new Set()); setArchiveSelectMode(true); }} style={{ background: "rgba(230,126,34,0.1)", color: "#e67e22", border: "1.5px solid rgba(230,126,34,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Sélectionner</button>
+                  )}
+                  {!archiveSelectMode && archivedPayments.length > 0 && (
+                    <button onClick={() => confirm(`Supprimer DÉFINITIVEMENT les ${archivedPayments.length} entrées archivées ? Cette action est irréversible.`, deleteArchivedAll)} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>🗑 Tout supprimer</button>
+                  )}
+                  {archiveSelectMode && (
+                    <>
+                      <button onClick={toggleSelectAllArchive} style={{ background: G.blanc, color: "#e67e22", border: "1.5px solid rgba(230,126,34,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>
+                        {selectedArchiveIds.size === archivedPayments.length && archivedPayments.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
+                      </button>
+                      <button disabled={selectedArchiveIds.size === 0} onClick={() => confirm(`Supprimer DÉFINITIVEMENT ${selectedArchiveIds.size} entrée${selectedArchiveIds.size > 1 ? "s" : ""} ? Cette action est irréversible.`, deleteSelectedArchived)} style={{ background: selectedArchiveIds.size === 0 ? "rgba(231,76,60,0.04)" : "rgba(231,76,60,0.12)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: selectedArchiveIds.size === 0 ? "not-allowed" : "pointer", opacity: selectedArchiveIds.size === 0 ? 0.5 : 1 }}>
+                        Supprimer ({selectedArchiveIds.size})
+                      </button>
+                      <button onClick={() => { setArchiveSelectMode(false); setSelectedArchiveIds(new Set()); }} style={{ background: G.blanc, color: "#666", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                    </>
+                  )}
+                </div>
               </div>
               {archivedLoading ? (
                 <div style={{ textAlign: "center", padding: 20 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
@@ -15799,18 +16127,28 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ textAlign: "center", padding: "30px 0", fontSize: "0.85rem", color: "#bbb" }}>Aucun élément archivé</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {archivedPayments.map(a => (
-                    <div key={a.id} style={{ background: G.blanc, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: "1px solid rgba(230,126,34,0.15)" }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555" }}>{a.operator} · {a.amount.toLocaleString()} FCFA</div>
-                        <div style={{ fontSize: "0.68rem", color: "#aaa", fontFamily: "monospace", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.tx_ref}</div>
-                        <div style={{ fontSize: "0.65rem", color: "#ccc", marginTop: 1 }}>{new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
+                  {archivedPayments.map(a => {
+                    const sel = selectedArchiveIds.has(a.id);
+                    return (
+                      <div key={a.id} onClick={archiveSelectMode ? () => toggleArchiveSelect(a.id) : undefined} style={{ background: archiveSelectMode && sel ? "rgba(230,126,34,0.08)" : G.blanc, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: `1px solid ${archiveSelectMode && sel ? "rgba(230,126,34,0.5)" : "rgba(230,126,34,0.15)"}`, cursor: archiveSelectMode ? "pointer" : "default", userSelect: "none" as any }}>
+                        {archiveSelectMode && (
+                          <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${sel ? "#e67e22" : G.gris}`, background: sel ? "#e67e22" : G.blanc, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            {sel && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555" }}>{a.operator} · {a.amount.toLocaleString()} FCFA</div>
+                          <div style={{ fontSize: "0.68rem", color: "#aaa", fontFamily: "monospace", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.tx_ref}</div>
+                          <div style={{ fontSize: "0.65rem", color: "#ccc", marginTop: 1 }}>{new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
+                        </div>
+                        {!archiveSelectMode && (
+                          <button onClick={() => confirm(`Supprimer DÉFINITIVEMENT cette entrée (${a.tx_ref}) ? Action irréversible.`, () => deleteArchivedOne(a))} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                          </button>
+                        )}
                       </div>
-                      <button onClick={() => { if (window.confirm(`Supprimer DÉFINITIVEMENT cette entrée (${a.tx_ref}) ? Action irréversible.`)) deleteArchivedOne(a); }} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
