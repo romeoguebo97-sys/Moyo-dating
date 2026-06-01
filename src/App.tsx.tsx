@@ -83,6 +83,11 @@ let PAY_AIRTEL_ENABLED = true;
 let PAY_CB_ENABLED = true;
 // Bloquer les likes entre profils de même genre (app hétéro). Piloté depuis Config admin.
 let BLOCK_SAME_GENDER = true;
+
+// Interrupteurs globaux de fonctionnalités (pilotés depuis Config > Général & Règles > Fonctionnalités)
+let FEATURE_STATUSES = true;
+let FEATURE_GIFT_PREMIUM = true;
+let FEATURE_ASSISTANT = true;
 // Coordonnées de paiement (modifiables depuis Config admin)
 let PAY_MTN_NUMBER = "065132012";
 let PAY_MTN_RESPONSABLE = "Juste-Emmanuelle AKOUMOU ISSOMBO";
@@ -114,7 +119,7 @@ function formatWhatsApp(num: string): string {
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -124,6 +129,9 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["pay_airtel_enabled"] !== undefined) PAY_AIRTEL_ENABLED = map["pay_airtel_enabled"] !== "false";
   if (map["pay_cb_enabled"] !== undefined) PAY_CB_ENABLED = map["pay_cb_enabled"] !== "false";
   if (map["rule_block_same_gender_like"] !== undefined) BLOCK_SAME_GENDER = map["rule_block_same_gender_like"] !== "false";
+  if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
+  if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
+  if (map["feature_assistant"] !== undefined) FEATURE_ASSISTANT = map["feature_assistant"] !== "false";
   if (map["pay_mtn_number"]) PAY_MTN_NUMBER = map["pay_mtn_number"];
   if (map["pay_mtn_responsable"]) PAY_MTN_RESPONSABLE = map["pay_mtn_responsable"];
   if (map["pay_airtel_number"]) PAY_AIRTEL_NUMBER = map["pay_airtel_number"];
@@ -4671,12 +4679,12 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     )}
 
     {/* Bot Widget — fenêtre */}
-    {showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
+    {FEATURE_ASSISTANT && showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
 
     {/* Bot flottant — masqué quand une conversation est ouverte pour ne pas surcharger
         l'écran de chat (la flèche "descendre" prend sa place). L'Assistant reste accessible
         depuis le bouton dédié dans le header/menu Découvrir. */}
-    {!isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
+    {FEATURE_ASSISTANT && !isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
     {showGuide && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
       <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
         {/* Header */}
@@ -5825,7 +5833,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Guide
           </div>
-          <div onClick={() => { const evt = new CustomEvent("moyo-show-bot"); window.dispatchEvent(evt); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.vert}`, background: G.vert, color: G.blanc, cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
+          <div onClick={() => { const evt = new CustomEvent("moyo-show-bot"); window.dispatchEvent(evt); }} style={{ flex: 1, display: FEATURE_ASSISTANT ? "flex" : "none", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.vert}`, background: G.vert, color: G.blanc, cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
             Assistant
           </div>
@@ -8104,7 +8112,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
 
   // ── Liste des conversations (commun mobile + desktop) ──
   const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-    <div style={{ padding: isWideMsg ? "16px 16px 8px" : "12px 16px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+    <div style={{ padding: isWideMsg ? "16px 16px 8px" : "12px 16px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0, display: FEATURE_STATUSES ? undefined : "none" }}>
 
       <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
       <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 8px", WebkitOverflowScrolling: "touch" }}>
@@ -8278,13 +8286,13 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
         {/* Bouton "Demander Premium" (💝, rouge Moyo) : visible si JE ne suis pas Premium et que mon interlocuteur l'est */}
-        {!auth.isPremium && open.partner?.is_premium && open.partner?.id !== SUPPORT_TEAM_ID && (
+        {FEATURE_GIFT_PREMIUM && !auth.isPremium && open.partner?.is_premium && open.partner?.id !== SUPPORT_TEAM_ID && (
           <div onClick={() => setConfirmGiftRequest(true)} title="Demander à recevoir Premium" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: "1.05rem" }}>
             💝
           </div>
         )}
         {/* Bouton cadeau - offrir Premium : visible UNIQUEMENT aux utilisateurs Premium */}
-        {auth.isPremium && !open.partner?.is_premium && (
+        {FEATURE_GIFT_PREMIUM && auth.isPremium && !open.partner?.is_premium && (
           <div onClick={() => setShowGift(true)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Offrir Premium">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
@@ -10891,7 +10899,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
+type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; profile?: { name: string; photo_url?: string | null; gender?: string } };
 function getPremiumCountdown(approvedAt?: string): { label: string; color: string; expired: boolean } {
   if (!approvedAt) return { label: "", color: "#888", expired: false };
   const expiry = new Date(new Date(approvedAt).getTime() + PREMIUM_30_DAYS_MS);
@@ -10931,7 +10939,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {isApproved && countdown.label && <div style={{ background: isExpired ? "rgba(231,76,60,0.1)" : "rgba(39,174,96,0.08)", color: countdown.color, borderRadius: 50, padding: "3px 8px", fontSize: "0.68rem", fontWeight: 700, border: `1px solid ${isExpired ? "rgba(231,76,60,0.2)" : "rgba(39,174,96,0.2)"}` }}>{isExpired ? "⏰ Expiré" : `⏱ ${countdown.label}`}</div>}
           <div style={{ background: isPending ? "rgba(39,174,96,0.1)" : isExpired ? "rgba(231,76,60,0.08)" : isApproved ? "rgba(39,174,96,0.08)" : "rgba(231,76,60,0.08)", color: isPending ? "#27ae60" : isExpired ? "#e74c3c" : isApproved ? "#27ae60" : "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{isPending ? "En attente" : isExpired ? "Expiré" : isApproved ? "Approuvé ✓" : "Rejeté ✕"}</div>
-          <button onClick={() => setConfirmDelete(true)} title="Supprimer" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button onClick={() => setConfirmDelete(true)} title="Archiver" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row", gap: 8, marginBottom: isPending ? 10 : 0 }}>
@@ -10963,25 +10971,17 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(231,76,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
-              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#c0392b" }}>Confirmer la suppression</div>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#c0392b" }}>Archiver ce paiement</div>
             </div>
             <div style={{ padding: "16px 20px 20px" }}>
               <div style={{ background: "rgba(231,76,60,0.06)", border: "1px solid rgba(231,76,60,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
-                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#c0392b", marginBottom: 6 }}>⚠️ Risques de cette action :</div>
-                {isApproved ? (
-                  <ul style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.7, paddingLeft: 16, margin: 0 }}>
-                    <li>Le statut Premium de l'utilisateur sera <strong>retiré immédiatement</strong></li>
-                    <li>L'utilisateur perdra l'accès à toutes les fonctionnalités Premium</li>
-                    <li>Si ce retrait n'est pas justifié (ex: faux remboursement), cela peut générer un litige avec le client</li>
-                    <li>La preuve de paiement sera définitivement archivée</li>
-                  </ul>
-                ) : (
-                  <ul style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.7, paddingLeft: 16, margin: 0 }}>
-                    <li>La demande de paiement sera archivée et masquée</li>
-                    <li>L'utilisateur ne recevra aucune notification</li>
-                    <li>Cette action est irréversible depuis l'interface</li>
-                  </ul>
-                )}
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#c0392b", marginBottom: 6 }}>Ce qui va se passer :</div>
+                <ul style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.7, paddingLeft: 16, margin: 0 }}>
+                  <li>Ce paiement sera déplacé dans l'onglet <strong>Archivage</strong></li>
+                  <li>Le Premium de l'utilisateur n'est <strong>pas</strong> modifié</li>
+                  <li>Le chiffre d'affaires reste inchangé</li>
+                  <li>Vous pourrez le supprimer définitivement depuis Archivage</li>
+                </ul>
               </div>
               <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 14, textAlign: "center" }}>
                 Réf: <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{p.tx_ref}</span>
@@ -10989,7 +10989,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                 <button onClick={() => { setConfirmDelete(false); onDelete(p); }} style={{ flex: 1, background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>
-                  {isApproved ? "Supprimer & retirer Premium" : "Confirmer la suppression"}
+                  Archiver
                 </button>
               </div>
             </div>
@@ -11840,11 +11840,16 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [archivedPayments, setArchivedPayments] = useState<PaymentRequest[]>([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  const [paymentSubTab, setPaymentSubTab] = useState<"pending" | "treated" | "finance" | "archive">("pending");
+  const [financeRows, setFinanceRows] = useState<PaymentRequest[]>([]);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeResetAt, setFinanceResetAt] = useState("");
   type AdminLog = { id: string; admin_id: string; admin_name: string; action: string; target_user_id?: string; target_user_name?: string; created_at: string };
   const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsPeriod, setLogsPeriod] = useState<"today" | "7d" | "30d" | "all">("7d");
+  const [logSelectMode, setLogSelectMode] = useState(false);
+  const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set());
   const loadAdminLogs = async () => {
     setLogsLoading(true);
     try {
@@ -11882,6 +11887,30 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       showToast("Erreur lors de la suppression.", "error");
     }
   };
+  const toggleLogSelect = (id: string) => setSelectedLogIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelectAllLogs = () => setSelectedLogIds(prev => prev.size === adminLogs.length ? new Set() : new Set(adminLogs.map(l => l.id)));
+  const deleteSelectedAdminLogs = async () => {
+    const ids = Array.from(selectedLogIds);
+    if (ids.length === 0) return;
+    try {
+      // Suppression par lots (1 requête pour 50 ids) au lieu d'un appel par ligne
+      const CHUNK = 50;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const batch = ids.slice(i, i + CHUNK).join(",");
+        await fetch(`${SUPABASE_URL}/rest/v1/admin_logs?id=in.(${batch})`, {
+          method: "DELETE",
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+        });
+      }
+      setAdminLogs(prev => prev.filter(l => !selectedLogIds.has(l.id)));
+      const n = ids.length;
+      setSelectedLogIds(new Set());
+      setLogSelectMode(false);
+      showToast(`${n} action${n > 1 ? "s" : ""} supprimée${n > 1 ? "s" : ""}.`, "success");
+    } catch {
+      showToast("Erreur lors de la suppression groupée.", "error");
+    }
+  };
   const [viewPaymentProfile, setViewPaymentProfile] = useState<Profile | null>(null);
   const openPaymentProfile = async (userId: string) => {
     try {
@@ -11896,7 +11925,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const loadPayments = async () => {
     setPaymentsLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name&status=neq.deleted&order=created_at.desc&limit=50`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name,archived&status=neq.deleted&archived=eq.false&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) {
         setPayments(data);
@@ -11951,23 +11980,18 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre preuve de paiement n'a pas pu être vérifiée. Le numéro de transaction ne correspond pas. Veuillez vérifier vos informations de paiement.", warning_number: 0, acknowledged: false }) });
     loadPayments();
   };
-  const deletePayment = async (p: PaymentRequest) => {
-    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "deleted" }) });
-    if (p.status === "approved") {
-      // IMPORTANT : pour un cadeau, le Premium a été donné au bénéficiaire (gift_for), pas à l'acheteur (user_id).
-      const targetId = p.gift_for || p.user_id;
-      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${targetId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: false, premium_until: null }) });
-      logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau retiré pour ${p.gift_for_name || targetId} (carte supprimée)` : `Premium retiré (carte supprimée) - réf: ${p.tx_ref}`, targetId);
-      showToast(p.gift_for ? `Carte supprimée et Premium retiré à ${p.gift_for_name || "la bénéficiaire"}.` : "Carte supprimée et Premium retiré.", "success");
-    } else {
-      showToast("Carte supprimée.", "success");
-    }
+  // Archiver = ranger dans l'onglet Archivage. Le statut (approved/rejected) et le Premium restent INCHANGÉS,
+  // pour que le chiffre d'affaires reste exact. Le retrait de Premium se fait depuis l'onglet Utilisateurs.
+  const archivePayment = async (p: PaymentRequest) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ archived: true }) });
+    logAdminAction(auth.token, auth.userId, auth.name, `Paiement archivé - réf: ${p.tx_ref}`, p.user_id);
+    showToast("Paiement archivé.", "success");
     loadPayments();
   };
   const loadArchived = async () => {
     setArchivedLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at&status=eq.deleted&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at&or=(status.eq.deleted,archived.eq.true)&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) setArchivedPayments(data);
     } catch {}
@@ -11979,9 +12003,28 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     showToast("Entrée supprimée définitivement.", "success");
   };
   const deleteArchivedAll = async () => {
-    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?status=eq.deleted`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?or=(status.eq.deleted,archived.eq.true)`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
     setArchivedPayments([]);
     showToast("Tous les archivés supprimés définitivement.", "success");
+  };
+  const loadFinance = async () => {
+    setFinanceLoading(true);
+    try {
+      const rs = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.finance_reset_at&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const sd = await rs.json().catch(() => []);
+      setFinanceResetAt(Array.isArray(sd) && sd[0]?.value ? sd[0].value : "");
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=amount,approved_at,created_at,operator&status=eq.approved&order=approved_at.desc&limit=1000`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data)) setFinanceRows(data);
+    } catch {}
+    setFinanceLoading(false);
+  };
+  const resetFinance = async () => {
+    const now = new Date().toISOString();
+    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "finance_reset_at", value: now }) });
+    setFinanceResetAt(now);
+    logAdminAction(auth.token, auth.userId, auth.name, "Statistiques financières réinitialisées", auth.userId);
+    showToast("Données financières réinitialisées à partir d'aujourd'hui.", "success");
   };
   const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
   const [hiddenReviews, setHiddenReviews] = useState<Set<string>>(new Set());
@@ -13956,21 +13999,48 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
-                    ["Badge vert", "Le badge vert sur l'onglet Paiements indique le nombre de demandes en attente de validation."],
+                    ["Badge vert", "Le badge vert sur l'onglet Paiements (et sur le sous-onglet Demandes) indique le nombre de demandes en attente de validation."],
+                    ["📂 4 sous-onglets", "L'onglet Paiements est organisé en 4 sous-onglets : Demandes (en attente), Traitées (approuvées/refusées), Données financières et Archivage."],
+                    ["Sous-onglet Demandes", "Les paiements pas encore traités. Vérifiez la référence puis Activez ou Rejetez. Une fois traité, le paiement bascule automatiquement dans Traitées."],
+                    ["Sous-onglet Traitées", "Les demandes approuvées ✓ et refusées ✕. La corbeille y archive le paiement (il part dans Archivage)."],
+                    ["Sous-onglet Données financières", "Chiffre d'affaires total et détail par mois (paiements approuvés). Le bouton ↺ Réinitialiser fait repartir le compteur de zéro à partir d'aujourd'hui, SANS rien supprimer. Un paiement approuvé puis archivé reste compté dans le CA."],
+                    ["Sous-onglet Archivage", "Les paiements rangés. Ici la corbeille et 'Tout supprimer' effacent DÉFINITIVEMENT (action irréversible)."],
                     ["Silhouette cliquable", "Cliquez sur la silhouette à gauche de chaque carte pour voir le profil complet de l'utilisateur (photo, nom, âge, ville, bio, badges). L'ID est affiché grisé en bas de la carte et dans la modale."],
                     ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN ou Airtel (ex: 7753031542)."],
                     ["Réf. MTN reçue", "Numéro que vous entrez après avoir vérifié votre SMS ou application MTN. Doit correspondre à la réf. client."],
                     ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert 'Activer Premium'. Si elles ne correspondent pas → bouton rouge 'Rejeter & notifier'."],
-                    ["Activer Premium", "Active l'abonnement Premium pour 31 jours ET envoie automatiquement un message 'Votre Premium est actif, reconnectez-vous'. Le compteur démarre immédiatement."],
+                    ["Activer Premium", "Active l'abonnement Premium pour la durée configurée (31 jours par défaut) ET envoie automatiquement un message 'Votre Premium est actif, reconnectez-vous'. Le compteur démarre immédiatement."],
                     ["Compteur ⏱", "Affiché en vert sur la carte après activation : '28j 14h restants'. Passe en orange sous 3 jours. Affiche '⏰ Expiré' en rouge à l'échéance."],
                     ["Expiration automatique", "À l'échéance des 31 jours, le statut Premium de l'utilisateur repasse automatiquement à gratuit dès sa prochaine connexion. Le compteur affiche 'Expiré'."],
                     ["Rejeter & notifier", "Marque la demande comme rejetée ET envoie un modal à l'utilisateur l'informant que sa preuve de paiement n'a pas pu être vérifiée."],
                     ["Bouton ↩", "Réinitialise la vérification pour recommencer la saisie si vous avez fait une erreur de frappe."],
-                    ["Bouton ✕ supprimer", "Supprime la carte de paiement de la liste. Si la demande était approuvée (Premium actif), cette action retire aussi automatiquement le statut Premium de l'utilisateur et remet son abonnement à gratuit. Utile en cas de remboursement."],
-                    ["Statuts des demandes", "En attente = à traiter. Approuvé ✓ = Premium activé (31j). Rejeté ✕ = demande refusée. Expiré = 31 jours écoulés."],
+                    ["Bouton archiver 🗑", "Sur une demande traitée, la corbeille range le paiement dans le sous-onglet Archivage. Le Premium de l'utilisateur N'EST PAS modifié et le chiffre d'affaires reste inchangé. Pour retirer un Premium accordé par erreur, utilisez '- Premium' dans l'onglet Utilisateurs. La suppression définitive se fait depuis Archivage."],
+                    ["Statuts des demandes", "En attente (Demandes) = à traiter. Approuvé ✓ / Rejeté ✕ (Traitées) = déjà traité. Archivé (Archivage) = rangé. Expiré = durée écoulée."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section - Historique */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Historique</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Activité par admin", "Récapitulatif du nombre d'actions par admin, filtrable par période (Aujourd'hui, 7 jours, 30 jours, Tout)."],
+                    ["Détail des actions", "La liste chronologique de toutes les actions admin (la plus récente en haut)."],
+                    ["Sélectionner (multi)", "Réservé au Super Admin. Le bouton 'Sélectionner' affiche des cases à cocher : cochez plusieurs entrées (ou 'Tout sélectionner'), puis 'Supprimer (N)' les efface en une seule fois. Idéal quand il y a beaucoup d'entrées. 'Annuler' quitte le mode."],
+                    ["Corbeille (une par une)", "Hors mode sélection, chaque ligne garde sa corbeille pour supprimer une seule action."],
+                    ["Tout effacer", "Vide tout l'historique d'un coup. Action définitive et irréversible."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
                       <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
                     </div>
                   ))}
@@ -14094,7 +14164,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Textes des modals", "6 modals personnalisables : message même genre Homme/Femme, titre et sous-titre du match, message Premium, message likes épuisés. Cliquer sur un modal pour éditer."],
                     ["Limites & Quotas", "Likes gratuits/jour, messages gratuits/match, taille max des photos, message de bienvenue après match. Modifier sans redéployer."],
                     ["Prix & Abonnement", "Prix Premium en FCFA et durée en jours. ⚠️ Le prix modifie les boutons de paiement. La durée s'applique aux nouveaux abonnements uniquement."],
-                    ["Fonctionnalités on/off", "Activer/désactiver les Statuts, le Cadeau Premium, l'Assistant IA. Switch vert = actif, rouge = désactivé."],
+                    ["Fonctionnalités on/off", "Activer/désactiver réellement les Statuts, le Cadeau Premium et l'Assistant IA dans toute l'app. Switch vert = actif, rouge = désactivé. La modification prend effet au prochain chargement de l'app."],
                     ["🔔 Notifications admin", "Pour chaque admin, choisir les notifications push qu'il reçoit : Signalements, Matchs, Paiements. Ex : activer 'Paiements' pour la personne qui gère les paiements → elle est prévenue à chaque nouveau paiement, même app fermée."],
                     ["💳 Moyens de paiement", "Couper rapidement un moyen de paiement en cas de problème (MTN, Airtel, Visa/Mastercard). Une fois coupé, il apparaît grisé et 'Temporairement indisponible' partout (achat, cadeau, diaspora)."],
                     ["🔴 Mode maintenance", "Active un écran de maintenance pour tous les utilisateurs. Seuls les admins (via ?admin=1 ou session admin active) peuvent toujours accéder au site. Personnaliser le message depuis le burger."],
@@ -14121,6 +14191,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["🗂 Archives repliées", "Dans Signalements → Archivés, chaque carte est repliée en une ligne compacte. Cliquez dessus pour voir le détail, puis 'Replier' pour refermer. Évite l'encombrement."],
                     ["🔔 Notifications utilisateur", "Les utilisateurs peuvent activer/réactiver leurs notifications depuis leur Profil (switch Notifications), même s'ils avaient refusé au départ."],
                     ["🎁💝 Offrir / Demander Premium", "Dans une conversation : un membre Premium peut OFFRIR Premium à l'autre (bouton 🎁 doré). Un non-Premium peut DEMANDER à recevoir Premium (bouton 💝 rouge, max 2 fois/mois). La personne reçoit un message avec un bouton pour offrir en un clic."],
+                    ["💳 Paiements réorganisés", "L'onglet Paiements est maintenant en 4 sous-onglets : Demandes, Traitées, Données financières (CA par mois, réinitialisable sans rien effacer) et Archivage (suppression définitive). Archiver un paiement ne retire plus le Premium."],
+                    ["🗂 Historique : suppression multiple", "Dans Historique, le bouton 'Sélectionner' permet de cocher plusieurs actions et de les supprimer en une seule fois (Super Admin), au lieu d'une par une."],
+                    ["🎚 Interrupteurs de fonctionnalités", "Dans Configuration ⚙️ → Fonctionnalités, les switches Statuts, Cadeau Premium et Assistant IA activent/désactivent vraiment ces fonctions (effet au prochain chargement de l'app)."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
@@ -15619,46 +15692,121 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         ) : (
         <div style={{ padding: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>💳 Demandes de paiement</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Btn variant="ghost" onClick={() => { setShowArchived(!showArchived); if (!showArchived) loadArchived(); }} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6, color: showArchived ? G.rouge : "#888" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-                Archivés
-              </Btn>
-              <Btn variant="ghost" onClick={loadPayments} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
-            </div>
+          {/* En-tête */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>💳 Paiements</div>
+            <Btn variant="ghost" onClick={() => { loadPayments(); if (paymentSubTab === "archive") loadArchived(); if (paymentSubTab === "finance") loadFinance(); }} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
           </div>
 
-          {/* Section Archivés */}
-          {showArchived && (
-            <div style={{ background: "#fff8f0", borderRadius: 14, padding: "14px", marginBottom: 16, border: "1.5px solid rgba(230,126,34,0.2)" }}>
+          {/* Sous-onglets Paiements */}
+          <div className="match-subtabs" style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", flexWrap: "nowrap" }}>
+            {([
+              ["pending", "Demandes", "#27ae60"],
+              ["treated", "Traitées", "#2980b9"],
+              ["finance", "Données financières", "#8e44ad"],
+              ["archive", "Archivage", "#e67e22"],
+            ] as [string, string, string][]).map(([key, label, color]) => (
+              <button key={key} onClick={() => { setPaymentSubTab(key as any); if (key === "archive") loadArchived(); if (key === "finance") loadFinance(); }} style={{ flexShrink: 0, padding: "7px 14px", borderRadius: 50, border: `2px solid ${paymentSubTab === key ? color : G.gris}`, background: paymentSubTab === key ? color : G.blanc, color: paymentSubTab === key ? "#fff" : "#666", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                {label}
+                {key === "pending" && pendingPaymentsCount > 0 && <span style={{ background: paymentSubTab === key ? "#fff" : "#27ae60", color: paymentSubTab === key ? "#27ae60" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px" }}>{pendingPaymentsCount}</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* ══ DEMANDES (en attente) ══ */}
+          {paymentSubTab === "pending" && (
+            paymentsLoading ? (
+              <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+            ) : (() => {
+              const list = payments.filter(p => p.status === "pending");
+              return list.length === 0
+                ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune demande en attente 🎉</div>
+                : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{list.map(p => <PaymentCard key={p.id} p={p} isPending={true} isApproved={false} isRejected={false} onActivate={activatePayment} onReject={rejectPayment} onDelete={archivePayment} onViewProfile={openPaymentProfile} />)}</div>;
+            })()
+          )}
+
+          {/* ══ TRAITÉES (approuvées / refusées) ══ */}
+          {paymentSubTab === "treated" && (
+            paymentsLoading ? (
+              <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+            ) : (() => {
+              const list = payments.filter(p => p.status === "approved" || p.status === "rejected");
+              return list.length === 0
+                ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune demande traitée</div>
+                : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{list.map(p => <PaymentCard key={p.id} p={p} isPending={false} isApproved={p.status === "approved"} isRejected={p.status === "rejected"} onActivate={activatePayment} onReject={rejectPayment} onDelete={archivePayment} onViewProfile={openPaymentProfile} />)}</div>;
+            })()
+          )}
+
+          {/* ══ DONNÉES FINANCIÈRES ══ */}
+          {paymentSubTab === "finance" && (
+            financeLoading ? (
+              <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+            ) : (() => {
+              const reset = financeResetAt ? new Date(financeResetAt).getTime() : 0;
+              const rows = financeRows.filter(r => new Date(r.approved_at || r.created_at).getTime() >= reset);
+              const total = rows.reduce((sum, r) => sum + (r.amount || 0), 0);
+              const byMonth: Record<string, { count: number; sum: number }> = {};
+              rows.forEach(r => {
+                const d = new Date(r.approved_at || r.created_at);
+                const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                if (!byMonth[k]) byMonth[k] = { count: 0, sum: 0 };
+                byMonth[k].count++; byMonth[k].sum += (r.amount || 0);
+              });
+              const months = Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0]));
+              const fmtMonth = (k: string) => { const [y, m] = k.split("-"); return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); };
+              return (
+                <div>
+                  <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", borderRadius: 16, padding: "18px 20px", color: "#fff", marginBottom: 12 }}>
+                    <div style={{ fontSize: "0.72rem", opacity: 0.85, fontWeight: 600 }}>Chiffre d'affaires{financeResetAt ? " (depuis réinitialisation)" : " total"}</div>
+                    <div style={{ fontSize: "1.8rem", fontWeight: 900, marginTop: 4 }}>{total.toLocaleString()} FCFA</div>
+                    <div style={{ fontSize: "0.7rem", opacity: 0.85, marginTop: 2 }}>{rows.length} paiement{rows.length > 1 ? "s" : ""} approuvé{rows.length > 1 ? "s" : ""}{financeResetAt ? ` · depuis le ${new Date(financeResetAt).toLocaleDateString("fr-FR")}` : ""}</div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+                    <button onClick={() => confirm("Réinitialiser les statistiques financières ? Le compteur repartira de zéro à partir d'aujourd'hui. Aucun paiement n'est supprimé.", resetFinance)} style={{ background: "rgba(142,68,173,0.08)", color: "#8e44ad", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "7px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>↺ Réinitialiser</button>
+                  </div>
+                  {months.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "30px 20px", color: "#aaa", fontSize: "0.85rem" }}>Aucun revenu sur la période</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {months.map(([k, v]) => (
+                        <div key={k} style={{ background: G.blanc, borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a", textTransform: "capitalize" }}>{fmtMonth(k)}</div>
+                            <div style={{ fontSize: "0.7rem", color: "#999" }}>{v.count} paiement{v.count > 1 ? "s" : ""}</div>
+                          </div>
+                          <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#8e44ad" }}>{v.sum.toLocaleString()} FCFA</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()
+          )}
+
+          {/* ══ ARCHIVAGE (suppression définitive) ══ */}
+          {paymentSubTab === "archive" && (
+            <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#e67e22" }}>📦 Archivés ({archivedPayments.length})</div>
                 {archivedPayments.length > 0 && (
-                  <button onClick={() => {
-                    if (window.confirm(`Supprimer définitivement les ${archivedPayments.length} entrées archivées ? Cette action est irréversible.`)) deleteArchivedAll();
-                  }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>
-                    🗑 Tout supprimer
-                  </button>
+                  <button onClick={() => { if (window.confirm(`Supprimer DÉFINITIVEMENT les ${archivedPayments.length} entrées archivées ? Cette action est irréversible.`)) deleteArchivedAll(); }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>🗑 Tout supprimer</button>
                 )}
               </div>
               {archivedLoading ? (
                 <div style={{ textAlign: "center", padding: 20 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
               ) : archivedPayments.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "16px 0", fontSize: "0.82rem", color: "#bbb" }}>Aucun archivé</div>
+                <div style={{ textAlign: "center", padding: "30px 0", fontSize: "0.85rem", color: "#bbb" }}>Aucun élément archivé</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {archivedPayments.map(a => (
-                    <div key={a.id} style={{ background: G.blanc, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: "1px solid rgba(230,126,34,0.1)" }}>
+                    <div key={a.id} style={{ background: G.blanc, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: "1px solid rgba(230,126,34,0.15)" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555" }}>{a.operator} · {a.amount.toLocaleString()} FCFA</div>
                         <div style={{ fontSize: "0.68rem", color: "#aaa", fontFamily: "monospace", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.tx_ref}</div>
                         <div style={{ fontSize: "0.65rem", color: "#ccc", marginTop: 1 }}>{new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
                       </div>
-                      <button onClick={() => {
-                        if (window.confirm(`Supprimer définitivement cette entrée (${a.tx_ref}) ? Action irréversible.`)) deleteArchivedOne(a);
-                      }} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                      <button onClick={() => { if (window.confirm(`Supprimer DÉFINITIVEMENT cette entrée (${a.tx_ref}) ? Action irréversible.`)) deleteArchivedOne(a); }} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                       </button>
                     </div>
@@ -15668,23 +15816,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             </div>
           )}
 
-          {paymentsLoading ? (
-            <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
-          ) : payments.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#DDD" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 12px", display: "block" }}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-              <div style={{ fontSize: "0.88rem" }}>Aucune demande de paiement</div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {payments.map(p => {
-                const isPending = p.status === "pending";
-                const isApproved = p.status === "approved";
-                const isRejected = p.status === "rejected";
-                return <PaymentCard key={p.id} p={p} isPending={isPending} isApproved={isApproved} isRejected={isRejected} onActivate={activatePayment} onReject={rejectPayment} onDelete={deletePayment} onViewProfile={openPaymentProfile} />;
-              })}
-            </div>
-          )}
         </div>
         )
       )}
@@ -15694,12 +15825,30 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Historique des actions</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Btn variant="ghost" onClick={loadAdminLogs} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
-              {auth.userId === SUPER_ADMIN_ID && adminLogs.length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              {!logSelectMode && <Btn variant="ghost" onClick={loadAdminLogs} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>}
+              {auth.userId === SUPER_ADMIN_ID && adminLogs.length > 0 && !logSelectMode && (
+                <button onClick={() => { setSelectedLogIds(new Set()); setLogSelectMode(true); }} style={{ background: "rgba(142,68,173,0.08)", color: "#8e44ad", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                  Sélectionner
+                </button>
+              )}
+              {auth.userId === SUPER_ADMIN_ID && adminLogs.length > 0 && !logSelectMode && (
                 <button onClick={() => confirm("Supprimer définitivement tout l'historique ? Cette action est irréversible.", clearAdminLogs)} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
                   Tout effacer
                 </button>
+              )}
+              {logSelectMode && (
+                <>
+                  <button onClick={toggleSelectAllLogs} style={{ background: G.blanc, color: "#8e44ad", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                    {selectedLogIds.size === adminLogs.length && adminLogs.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
+                  </button>
+                  <button disabled={selectedLogIds.size === 0} onClick={() => confirm(`Supprimer définitivement ${selectedLogIds.size} action${selectedLogIds.size > 1 ? "s" : ""} sélectionnée${selectedLogIds.size > 1 ? "s" : ""} ? Cette action est irréversible.`, deleteSelectedAdminLogs)} style={{ background: selectedLogIds.size === 0 ? "rgba(231,76,60,0.04)" : "rgba(231,76,60,0.12)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: selectedLogIds.size === 0 ? "not-allowed" : "pointer", opacity: selectedLogIds.size === 0 ? 0.5 : 1 }}>
+                    Supprimer ({selectedLogIds.size})
+                  </button>
+                  <button onClick={() => { setLogSelectMode(false); setSelectedLogIds(new Set()); }} style={{ background: G.blanc, color: "#666", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                    Annuler
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -15760,7 +15909,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {adminLogs.map(log => (
-                <div key={log.id} style={{ background: G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div key={log.id} onClick={logSelectMode ? () => toggleLogSelect(log.id) : undefined} style={{ background: logSelectMode && selectedLogIds.has(log.id) ? "rgba(142,68,173,0.07)" : G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: logSelectMode && selectedLogIds.has(log.id) ? "1px solid rgba(142,68,173,0.5)" : "1px solid #F0F0F0", display: "flex", alignItems: "flex-start", gap: 12, cursor: logSelectMode ? "pointer" : "default", userSelect: "none" as any }}>
+                  {logSelectMode && (
+                    <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${selectedLogIds.has(log.id) ? "#8e44ad" : G.gris}`, background: selectedLogIds.has(log.id) ? "#8e44ad" : G.blanc, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 7 }}>
+                      {selectedLogIds.has(log.id) && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </div>
+                  )}
                   <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
                   </div>
@@ -15774,7 +15928,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3, fontFamily: "monospace" }}>Utilisateur : {log.target_user_id.slice(0, 16)}…</div>
                     )}
                   </div>
-                  {auth.userId === SUPER_ADMIN_ID && (
+                  {auth.userId === SUPER_ADMIN_ID && !logSelectMode && (
                     <button onClick={() => confirm("Supprimer cette action de l'historique ?", () => deleteOneAdminLog(log.id))} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                     </button>
