@@ -88,9 +88,33 @@ let PAY_MTN_NUMBER = "065132012";
 let PAY_MTN_RESPONSABLE = "Juste-Emmanuelle AKOUMOU ISSOMBO";
 let PAY_AIRTEL_NUMBER = "056230067";
 let PAY_AIRTEL_RESPONSABLE = "THEOPHILE BEAUGARD LIBALI";
+// Contacts (modifiables depuis Config admin)
+let CONTACT_EMAIL = "contact@moyo-congo.com";
+let CONTACT_WHATSAPP = "242065132012";
+let CONTACT_ADDRESS = "6 rue Paul Valéry, 77000 Melun, France";
+// Réseaux sociaux (vide = masqué)
+let SOCIAL_FACEBOOK = "https://facebook.com/MoyoCongoOfficiel";
+let SOCIAL_INSTAGRAM = "https://www.instagram.com/moyo_congo";
+let SOCIAL_TIKTOK = "https://www.tiktok.com/@moyo_congo";
+let SOCIAL_YOUTUBE = "https://www.youtube.com/@Moyo-congo";
+// Page d'accueil (landing)
+let LANDING_MEMBERS = "12 000+ membres";
+let LANDING_TITLE_START = "Trouve ton";
+let LANDING_TITLE_HIGHLIGHT = "âme sœur";
+let LANDING_TITLE_END = "Congolais.e";
+let LANDING_SLOGAN = "Moyo connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.";
+// Formate le numéro WhatsApp pour l'affichage : "242065132012" -> "+242 06 513 20 12"
+function formatWhatsApp(num: string): string {
+  const d = (num || "").replace(/\D/g, "");
+  if (d.startsWith("242") && d.length === 12) {
+    const r = d.slice(3); // 065132012
+    return `+242 ${r.slice(0,2)} ${r.slice(2,5)} ${r.slice(5,7)} ${r.slice(7,9)}`;
+  }
+  return num ? `+${d}` : "";
+}
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -104,6 +128,18 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["pay_mtn_responsable"]) PAY_MTN_RESPONSABLE = map["pay_mtn_responsable"];
   if (map["pay_airtel_number"]) PAY_AIRTEL_NUMBER = map["pay_airtel_number"];
   if (map["pay_airtel_responsable"]) PAY_AIRTEL_RESPONSABLE = map["pay_airtel_responsable"];
+  if (map["contact_email"]) CONTACT_EMAIL = map["contact_email"];
+  if (map["contact_whatsapp"]) CONTACT_WHATSAPP = map["contact_whatsapp"];
+  if (map["contact_address"]) CONTACT_ADDRESS = map["contact_address"];
+  if (map["social_facebook"] !== undefined) SOCIAL_FACEBOOK = map["social_facebook"];
+  if (map["social_instagram"] !== undefined) SOCIAL_INSTAGRAM = map["social_instagram"];
+  if (map["social_tiktok"] !== undefined) SOCIAL_TIKTOK = map["social_tiktok"];
+  if (map["social_youtube"] !== undefined) SOCIAL_YOUTUBE = map["social_youtube"];
+  if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
+  if (map["landing_title_start"]) LANDING_TITLE_START = map["landing_title_start"];
+  if (map["landing_title_highlight"]) LANDING_TITLE_HIGHLIGHT = map["landing_title_highlight"];
+  if (map["landing_title_end"]) LANDING_TITLE_END = map["landing_title_end"];
+  if (map["landing_slogan"]) LANDING_SLOGAN = map["landing_slogan"];
   if (map["limit_likes_free"]) FREE_LIMITS.likes = parseInt(map["limit_likes_free"]) || 5;
   if (map["limit_messages_free"]) FREE_LIMITS.messages = parseInt(map["limit_messages_free"]) || 3;
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
@@ -1344,6 +1380,25 @@ function useWindowWidth() {
 function Landing({ onNav }: { onNav: (p: string) => void }) {
   const [featuredAvis, setFeaturedAvis] = React.useState<{ id: string; name: string; city: string; comment: string; rating: number }[]>([]);
   const [showMobileLanding, setShowMobileLanding] = React.useState(true);
+  const [installModal, setInstallModal] = React.useState<null | "ios" | "done" | "unavailable">(null);
+
+  const tryInstall = async () => {
+    const isInStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (isInStandalone) { setInstallModal("done"); return; }
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIos) { setInstallModal("ios"); return; }
+    const prompt = (window as any).__moyoInstallPrompt;
+    if (prompt) {
+      prompt.prompt();
+      try {
+        const { outcome } = await prompt.userChoice;
+        if (outcome === "accepted") { (window as any).__moyoInstallPrompt = null; }
+      } catch {}
+    } else {
+      // Android/Chrome mais prompt pas encore prêt, ou navigateur non compatible
+      setInstallModal("unavailable");
+    }
+  };
 
   React.useEffect(() => {
     fetch(`${SUPABASE_URL}/rest/v1/app_ratings?is_featured=eq.true&select=id,rating,comment,user_id&order=created_at.desc&limit=10`, {
@@ -1445,19 +1500,19 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "adult", titre: "Majorité requise", desc: "Moyo est strictement réservé aux personnes de 18 ans et plus." },
     ]},
     { id: "confidentialite", title: "Confidentialité & CGU", emoji: "📋", items: [
-      { icon: "shield", titre: "Responsable du traitement", desc: "Romeo GUEBO - contact : contact@moyo-congo.com" },
+      { icon: "shield", titre: "Responsable du traitement", desc: `Romeo GUEBO - contact : ${CONTACT_EMAIL}` },
       { icon: "lock2", titre: "Données collectées", desc: "Nom, e-mail, photos, messages, données de connexion et abonnement. Utilisées uniquement pour le fonctionnement de Moyo." },
       { icon: "lock2", titre: "Conservation & sécurité", desc: "Données conservées le temps nécessaire au service. Aucune revente. Prestataires techniques liés à l'hébergement uniquement." },
-      { icon: "verified", titre: "Vos droits (RGPD)", desc: "Accès, modification et suppression de vos données sur demande à contact@moyo-congo.com" },
+      { icon: "verified", titre: "Vos droits (RGPD)", desc: `Accès, modification et suppression de vos données sur demande à ${CONTACT_EMAIL}` },
       { icon: "chat", titre: "CGU - Utilisation", desc: "Moyo est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
       { icon: "alert", titre: "Contenus interdits", desc: "Faux profils, harcèlement, contenus illégaux, tentatives d'arnaque ou usurpation d'identité sont strictement interdits." },
       { icon: "star2", titre: "Premium & paiement", desc: "Certaines fonctionnalités sont accessibles via abonnement. Paiements via prestataires sécurisés (MTN MoMo, Airtel Money) pour le Congo, et Stripe (carte Visa/Mastercard) pour la diaspora." },
     ]},
     { id: "mentions", title: "Mentions légales", emoji: "⚖️", items: [
-      { icon: "user", titre: "Éditeur du site", desc: "Romeo GUEBO - contact@moyo-congo.com" },
+      { icon: "user", titre: "Éditeur du site", desc: `Romeo GUEBO - ${CONTACT_EMAIL}` },
       { icon: "shield", titre: "Propriété intellectuelle", desc: "Tous les contenus, visuels et logos de Moyo sont protégés. Toute reproduction sans autorisation est interdite." },
       { icon: "verified", titre: "Droit applicable", desc: "Les présentes conditions sont régies par le droit français. Tout litige relève des tribunaux compétents." },
-      { icon: "chat", titre: "Contact", desc: "Pour toute question légale : contact@moyo-congo.com" },
+      { icon: "chat", titre: "Contact", desc: `Pour toute question légale : ${CONTACT_EMAIL}` },
     ]},
     { id: "notation", title: "Noter Moyo", emoji: "⭐", items: [] },
   ];
@@ -1739,13 +1794,12 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               Premier site de rencontres Congolais
             </div>
             <h1 className="fu2" style={{ fontSize: "clamp(2.4rem,5.5vw,3.8rem)", lineHeight: 1.08, fontWeight: 700, marginBottom: 20, color: "#111" }}>
-              Trouve ton{" "}
-              <span className="heart" style={{ color: G.rouge, fontStyle: "italic" }}>âme sœur</span>
-              <br />Congolais.e
+              {LANDING_TITLE_START}{" "}
+              <span className="heart" style={{ color: G.rouge, fontStyle: "italic" }}>{LANDING_TITLE_HIGHLIGHT}</span>
+              <br />{LANDING_TITLE_END}
             </h1>
             <p className="fu3" style={{ fontSize: "1rem", lineHeight: 1.8, color: "#555", marginBottom: 36, maxWidth: 440, width: "100%" }}>
-              Moyo connecte les Congolais à la recherche d'une relation sincère et durable.
-              Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.
+              {LANDING_SLOGAN}
             </p>
             <div className="fu4 landing-hero-btns" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 4 }}>
               <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>
@@ -1973,7 +2027,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             <div style={{ position: "absolute", top: 30, left: -20, background: G.blanc, borderRadius: 18, padding: "10px 14px", boxShadow: "0 10px 30px rgba(44,26,14,0.12)", display: "flex", alignItems: "center", gap: 8, zIndex: 4 }}>
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: `linear-gradient(135deg,${G.vert},#0D4020)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", flexShrink: 0 }}>🇨🇬</div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: "0.8rem", color: "#111" }}>12 000+ membres</div>
+                <div style={{ fontWeight: 800, fontSize: "0.8rem", color: "#111" }}>{LANDING_MEMBERS}</div>
                 <div style={{ fontSize: "0.62rem", color: "#555" }}>Congo & diaspora</div>
               </div>
             </div>
@@ -2235,13 +2289,13 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               Se connecter
             </button>
           </div>
-          <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.6)", marginBottom: 16, fontWeight: 600 }}>Bientôt disponible sur</p>
+          <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.6)", marginBottom: 16, fontWeight: 600 }}>Installe l'application en un clic</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <div className="store" style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
+            <div className="store" onClick={tryInstall} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
               <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Disponible sur</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>Google Play</div></div>
             </div>
-            <div className="store" style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
+            <div className="store" onClick={tryInstall} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
               <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Télécharger dans</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>App Store</div></div>
             </div>
@@ -2253,10 +2307,10 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <footer style={{ background: G.vert, padding: "28px 24px" }}>
         <div className="landing-sections" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-            <a href={NEW_FB} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Facebook">{svgFb}</a>
-            <a href="https://www.instagram.com/moyo_congo" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Instagram">{svgIg}</a>
-            <a href="https://www.tiktok.com/@moyo_congo" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="TikTok">{svgTk}</a>
-            <a href="https://wa.me/242065132012" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="WhatsApp +242 06 513 20 12">{svgWa}</a>
+            {SOCIAL_FACEBOOK && <a href={SOCIAL_FACEBOOK} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Facebook">{svgFb}</a>}
+            {SOCIAL_INSTAGRAM && <a href={SOCIAL_INSTAGRAM} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Instagram">{svgIg}</a>}
+            {SOCIAL_TIKTOK && <a href={SOCIAL_TIKTOK} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="TikTok">{svgTk}</a>}
+            {CONTACT_WHATSAPP && <a href={`https://wa.me/${CONTACT_WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="WhatsApp">{svgWa}</a>}
           </div>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
             {[
@@ -2271,10 +2325,50 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               >{l.label}</span>
             ))}
           </div>
-          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.72rem" }}>6 rue Paul Valéry, 77000 Melun, France</p>
+          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.72rem" }}>{CONTACT_ADDRESS}</p>
           <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>© 2026 Moyo Congo · Tous droits réservés</p>
         </div>
       </footer>
+      {installModal && (
+        <div onClick={() => setInstallModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 360, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", textAlign: "center" }}>
+            {installModal === "ios" ? (
+              <>
+                <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
+                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Installer Moyo sur iPhone</div>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Pour installer Moyo comme une application :</p>
+                <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>1</div>
+                    <div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur le bouton <b>Partager</b> <span style={{ display: "inline-block", verticalAlign: "middle" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span> en bas de Safari</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>2</div>
+                    <div style={{ fontSize: "0.84rem", color: "#333" }}>Choisis <b>« Sur l'écran d'accueil »</b></div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>3</div>
+                    <div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>« Ajouter »</b> — c'est fait ! 🎉</div>
+                  </div>
+                </div>
+              </>
+            ) : installModal === "done" ? (
+              <>
+                <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>✅</div>
+                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Déjà installée !</div>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Moyo est déjà installée sur ton appareil. Tu peux la lancer depuis ton écran d'accueil.</p>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
+                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Installer Moyo</div>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Pour installer Moyo, ouvre ce site dans <b>Chrome</b> (Android) ou <b>Safari</b> (iPhone), puis utilise le menu du navigateur → « Ajouter à l'écran d'accueil ».</p>
+              </>
+            )}
+            <button onClick={() => setInstallModal(null)} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>J'ai compris</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2322,7 +2416,7 @@ function About({ onBack }: { onBack: () => void }) {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           </div>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 16 }}>Restons connectés</h2>
-          <a href="https://facebook.com/MoyoCongoOfficiel" target="_blank" rel="noopener noreferrer"
+          {SOCIAL_FACEBOOK && <a href={SOCIAL_FACEBOOK} target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#1877F2", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
             <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
@@ -2332,8 +2426,8 @@ function About({ onBack }: { onBack: () => void }) {
               <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>Facebook - Page Moyo Congo</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-          <a href="https://www.tiktok.com/@moyo_congo" target="_blank" rel="noopener noreferrer"
+          </a>}
+          {SOCIAL_TIKTOK && <a href={SOCIAL_TIKTOK} target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#111111", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
             <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.16 8.16 0 0 0 4.77 1.52V6.75a4.85 4.85 0 0 1-1-.06z"/></svg>
@@ -2343,8 +2437,8 @@ function About({ onBack }: { onBack: () => void }) {
               <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>TikTok - MOYO Congo</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-          <a href="https://www.instagram.com/moyo_congo" target="_blank" rel="noopener noreferrer"
+          </a>}
+          {SOCIAL_INSTAGRAM && <a href={SOCIAL_INSTAGRAM} target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
             <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
@@ -2354,26 +2448,37 @@ function About({ onBack }: { onBack: () => void }) {
               <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>Instagram - MOYO Congo</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-          <a href="https://wa.me/242065132012" target="_blank" rel="noopener noreferrer"
+          </a>}
+          {SOCIAL_YOUTUBE && <a href={SOCIAL_YOUTUBE} target="_blank" rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#FF0000", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </div>
+            <div>
+              <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.72rem", fontWeight: 500 }}>Abonne-toi sur</div>
+              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>YouTube - MOYO Congo</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>}
+          {CONTACT_WHATSAPP && <a href={`https://wa.me/${CONTACT_WHATSAPP}`} target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#25D366", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
             <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
             </div>
             <div>
               <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem", fontWeight: 500 }}>WhatsApp / Téléphone</div>
-              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>+242 06 513 20 12</div>
+              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>{formatWhatsApp(CONTACT_WHATSAPP)}</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-          <a href="mailto:contact@moyo-congo.com"
+          </a>}
+          <a href={`mailto:${CONTACT_EMAIL}`}
             style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 14, textDecoration: "none" }}>
             <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             </div>
             <div>
               <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem", fontWeight: 500 }}>Email</div>
-              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>contact@moyo-congo.com</div>
+              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>{CONTACT_EMAIL}</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -2447,7 +2552,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
       }
       if ((profiles[0] as any).is_banned) {
         await sb.signOut(res.access_token);
-        setErrorMsg("Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à contact@moyo-congo.com");
+        setErrorMsg(`Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à ${CONTACT_EMAIL}`);
         setLoading(false); return;
       }
 
@@ -2954,7 +3059,7 @@ function getBotResponse(input: string): string {
   for (const entry of BOT_FAQ) {
     if (entry.q.some(k => lower.includes(k))) return entry.r;
   }
-  return "Je n'ai pas trouvé de réponse précise à ta question. Tu peux contacter notre équipe sur WhatsApp au +242 06 513 20 12 ou via notre page Facebook.";
+  return `Je n'ai pas trouvé de réponse précise à ta question. Tu peux contacter notre équipe sur WhatsApp au ${formatWhatsApp(CONTACT_WHATSAPP)} ou via notre page Facebook.`;
 }
 
 function BotFloat({ onOpen, G }: { onOpen: () => void; G: any }) {
@@ -3187,6 +3292,20 @@ const openAdminPanel = (fallback: () => void) => {
 
 // ─── Admin Desktop page (mounted when ?admin=1) ───────────────────────────────
 // ── Composants helpers pour le off-canvas ──
+// Modale de confirmation au style Moyo (réutilisable, autonome)
+function ConfirmModal({ msg, onConfirm, onCancel, confirmLabel = "Confirmer", danger = false }: { msg: string; onConfirm: () => void; onCancel: () => void; confirmLabel?: string; danger?: boolean }) {
+  return (
+    <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, padding: "26px 24px", width: "100%", maxWidth: 380, boxShadow: "0 24px 70px rgba(0,0,0,0.3)" }}>
+        <p style={{ fontSize: "0.92rem", color: "#111", lineHeight: 1.6, marginBottom: 22, fontWeight: 500, whiteSpace: "pre-line", textAlign: "center" }}>{msg}</p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `1.5px solid ${G.gris}`, background: G.creme, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>Annuler</button>
+          <button onClick={() => { onConfirm(); }} style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: danger ? G.rouge : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function SwitchBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button onClick={onToggle} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: on ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
@@ -3488,6 +3607,15 @@ function AdminDesktopPage() {
                   }} />
               ))}
             </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Contacts">
+              <SiteInfoConfig auth={auth!} group="contacts" />
+            </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Réseaux sociaux">
+              <SiteInfoConfig auth={auth!} group="socials" />
+            </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Page d'accueil">
+              <SiteInfoConfig auth={auth!} group="landing" />
+            </OffCanvasSection>}
             {configTab === "tarifs" && <OffCanvasSection title="Limites & Quotas">
               {([
                 ["limit_likes_free", "limitLikes" as keyof typeof appConfig, "Likes gratuits/jour", appConfig.limitLikes, "number"],
@@ -3685,6 +3813,7 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [prefs, setPrefs] = React.useState<Record<string, Prefs>>({});
   const [loading, setLoading] = React.useState(true);
+  const [notifError, setNotifError] = React.useState<string | null>(null);
   const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
 
   React.useEffect(() => {
@@ -3710,12 +3839,18 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
     setPrefs(p => ({ ...p, [adminId]: updated }));
     try {
       // upsert (insert ou update) sur la clé admin_id
-      await fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?on_conflict=admin_id`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?on_conflict=admin_id`, {
         method: "POST",
         headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
         body: JSON.stringify({ admin_id: adminId, ...updated, updated_at: new Date().toISOString() }),
       });
-    } catch {}
+      if (!r.ok) throw new Error("save failed");
+      setNotifError(null);
+    } catch {
+      // La sauvegarde a échoué : on remet l'état précédent pour ne pas tromper l'admin
+      setPrefs(p => ({ ...p, [adminId]: current }));
+      setNotifError("Impossible d'enregistrer. Vérifiez la configuration de la base (colonne « mises_relation »).");
+    }
   };
 
   return (
@@ -3723,6 +3858,7 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
         Active les notifications push qu'un admin doit recevoir. Ex : active « Paiements » pour la personne qui gère les paiements → elle sera prévenue à chaque nouveau paiement.
       </div>
+      {notifError && <div style={{ background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.25)", color: G.rouge, borderRadius: 10, padding: "9px 12px", fontSize: "0.76rem", fontWeight: 600, marginBottom: 10 }}>{notifError}</div>}
       {loading ? (
         <div style={{ textAlign: "center", padding: 20, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
       ) : admins.length === 0 ? (
@@ -3753,6 +3889,7 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
   const [savedCoords, setSavedCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "" });
   const [editingField, setEditingField] = React.useState<string | null>(null);
   const [savingCoord, setSavingCoord] = React.useState<string | null>(null);
+  const [confirmData, setConfirmData] = React.useState<{ key: string; field: keyof typeof coords; value: string; label: string } | null>(null);
   const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
   React.useEffect(() => {
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable)&select=key,value`, { headers: H })
@@ -3792,8 +3929,11 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
     } catch {}
   };
 
-  const saveCoord = async (key: string, field: keyof typeof coords, value: string, label: string) => {
-    if (!window.confirm(`Confirmer ${label} : ${value} ?`)) return;
+  const saveCoord = (key: string, field: keyof typeof coords, value: string, label: string) => {
+    setConfirmData({ key, field, value, label });
+  };
+  const doSaveCoord = async (key: string, field: keyof typeof coords, value: string) => {
+    setConfirmData(null);
     setSavingCoord(key);
     // Mise à jour immédiate des variables globales
     if (key === "pay_mtn_number") PAY_MTN_NUMBER = value;
@@ -3878,6 +4018,14 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
           })}
         </div>
       </>)}
+      {confirmData && (
+        <ConfirmModal
+          msg={`Confirmer ${confirmData.label} :\n${confirmData.value} ?`}
+          confirmLabel="Enregistrer"
+          onConfirm={() => doSaveCoord(confirmData.key, confirmData.field, confirmData.value)}
+          onCancel={() => setConfirmData(null)}
+        />
+      )}
     </div>
   );
 }
@@ -3888,12 +4036,16 @@ function AdminPinConfig({ auth }: { auth: Auth }) {
   const [confirmPin, setConfirmPin] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [msg, setMsg] = React.useState<{ text: string; ok: boolean } | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
 
-  const save = async () => {
+  const save = () => {
     setMsg(null);
     if (pin.length !== 4) { setMsg({ text: "Le PIN doit faire exactement 4 chiffres.", ok: false }); return; }
     if (pin !== confirmPin) { setMsg({ text: "Les deux PIN ne correspondent pas.", ok: false }); return; }
-    if (!window.confirm(`Confirmer votre nouveau PIN d'accès : ${pin} ?`)) return;
+    setConfirmOpen(true);
+  };
+  const doSave = async () => {
+    setConfirmOpen(false);
     setSaving(true);
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, {
@@ -3935,6 +4087,128 @@ function AdminPinConfig({ auth }: { auth: Auth }) {
         </div>
       )}
       {msg && <div style={{ marginTop: 8, fontSize: "0.78rem", color: msg.ok ? G.vert : G.rouge, fontWeight: 600 }}>{msg.text}</div>}
+      {confirmOpen && (
+        <ConfirmModal
+          msg={`Confirmer votre nouveau PIN d'accès :\n${pin}`}
+          confirmLabel="Enregistrer"
+          onConfirm={doSave}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "socials" | "landing" }) {
+  const fields: Record<string, [string, string][]> = {
+    contacts: [
+      ["contact_email", "Email de contact"],
+      ["contact_whatsapp", "Numéro WhatsApp (chiffres only, ex: 242065132012)"],
+      ["contact_address", "Adresse postale"],
+    ],
+    socials: [
+      ["social_facebook", "Lien Facebook (vide = masqué)"],
+      ["social_instagram", "Lien Instagram (vide = masqué)"],
+      ["social_tiktok", "Lien TikTok (vide = masqué)"],
+      ["social_youtube", "Lien YouTube (vide = masqué)"],
+    ],
+    landing: [
+      ["landing_members_count", "Compteur de membres (ex: 12 000+ membres)"],
+      ["landing_title_start", "Titre — début (ex: Trouve ton)"],
+      ["landing_title_highlight", "Titre — mot coloré (ex: âme sœur)"],
+      ["landing_title_end", "Titre — fin (ex: Congolais.e)"],
+      ["landing_slogan", "Slogan sous le titre"],
+    ],
+  };
+  const defaults: Record<string, string> = {
+    contact_email: CONTACT_EMAIL, contact_whatsapp: CONTACT_WHATSAPP, contact_address: CONTACT_ADDRESS,
+    social_facebook: SOCIAL_FACEBOOK, social_instagram: SOCIAL_INSTAGRAM, social_tiktok: SOCIAL_TIKTOK, social_youtube: SOCIAL_YOUTUBE,
+    landing_members_count: LANDING_MEMBERS, landing_title_start: LANDING_TITLE_START, landing_title_highlight: LANDING_TITLE_HIGHLIGHT, landing_title_end: LANDING_TITLE_END, landing_slogan: LANDING_SLOGAN,
+  };
+  const list = fields[group];
+  const [vals, setVals] = React.useState<Record<string, string>>(() => { const o: Record<string, string> = {}; list.forEach(([k]) => { o[k] = defaults[k]; }); return o; });
+  const [saved, setSaved] = React.useState<Record<string, string>>(() => ({ ...vals }));
+  const [editing, setEditing] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState<string | null>(null);
+  const [confirmKey, setConfirmKey] = React.useState<string | null>(null);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    const keys = list.map(([k]) => k).join(",");
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys})&select=key,value`, { headers: H })
+      .then(r => r.json()).then((data: { key: string; value: string }[]) => {
+        if (!Array.isArray(data)) return;
+        const o: Record<string, string> = { ...vals };
+        data.forEach(d => { o[d.key] = d.value; });
+        setVals(o); setSaved(o);
+      }).catch(() => {});
+  }, [auth.token]);
+
+  const applyGlobal = (key: string, value: string) => {
+    if (key === "contact_email") CONTACT_EMAIL = value;
+    if (key === "contact_whatsapp") CONTACT_WHATSAPP = value;
+    if (key === "contact_address") CONTACT_ADDRESS = value;
+    if (key === "social_facebook") SOCIAL_FACEBOOK = value;
+    if (key === "social_instagram") SOCIAL_INSTAGRAM = value;
+    if (key === "social_tiktok") SOCIAL_TIKTOK = value;
+    if (key === "social_youtube") SOCIAL_YOUTUBE = value;
+    if (key === "landing_members_count") LANDING_MEMBERS = value;
+    if (key === "landing_title_start") LANDING_TITLE_START = value;
+    if (key === "landing_title_highlight") LANDING_TITLE_HIGHLIGHT = value;
+    if (key === "landing_title_end") LANDING_TITLE_END = value;
+    if (key === "landing_slogan") LANDING_SLOGAN = value;
+  };
+  const doSave = async (key: string) => {
+    setConfirmKey(null);
+    setSaving(key);
+    const value = vals[key];
+    applyGlobal(key, value);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value }) });
+      setSaved(s => ({ ...s, [key]: value }));
+      setEditing(null);
+    } catch {}
+    setSaving(null);
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        {group === "contacts" ? "Coordonnées affichées dans l'app (À propos, mentions légales). Modifiable à tout moment." : group === "socials" ? "Liens vers tes réseaux. Laisse vide pour masquer un réseau de la page d'accueil." : "Textes de la page d'accueil. Le mot coloré reste en rouge."}
+      </div>
+      {list.map(([key, label]) => {
+        const isEditing = editing === key;
+        return (
+          <div key={key} style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
+            {!isEditing ? (
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div style={{ flex: 1, padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", background: "#f7f7f7", color: "#555", display: "flex", alignItems: "center", gap: 6, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  {vals[key] || <span style={{ fontStyle: "italic", color: "#bbb" }}>(vide)</span>}
+                </div>
+                <button onClick={() => setEditing(key)} style={{ flexShrink: 0, background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "0 12px", height: 38, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>
+              </div>
+            ) : (
+              <div>
+                <input value={vals[key]} autoFocus onChange={e => setVals(v => ({ ...v, [key]: e.target.value }))} style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `2px solid ${G.vert}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 6 }} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => setConfirmKey(key)} disabled={saving === key} style={{ flex: 1, background: saving === key ? "#bbb" : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", border: "none", borderRadius: 9, padding: "9px 0", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{saving === key ? "…" : "Enregistrer"}</button>
+                  <button onClick={() => { setVals(v => ({ ...v, [key]: saved[key] })); setEditing(null); }} style={{ flex: 1, background: G.creme, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "9px 0", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {confirmKey && (
+        <ConfirmModal
+          msg={`Confirmer la modification :\n${vals[confirmKey] || "(vide)"}`}
+          confirmLabel="Enregistrer"
+          onConfirm={() => doSave(confirmKey)}
+          onCancel={() => setConfirmKey(null)}
+        />
+      )}
     </div>
   );
 }
@@ -3977,6 +4251,15 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         {([["modal_same_gender_homme","Même genre (Homme)",modalTexts.sameGenderHomme],["modal_same_gender_femme","Même genre (Femme)",modalTexts.sameGenderFemme],["modal_same_gender_sub","Même genre - sous-texte",modalTexts.sameGenderSub],["modal_signup_success","Inscription - Message succès",modalTexts.signupSuccess],["modal_match_title","Match - Titre",modalTexts.matchTitle],["modal_match_subtitle","Match - Sous-titre",modalTexts.matchSubtitle],["modal_premium_default","Premium - Message",modalTexts.premiumDefault],["modal_likes_epuises","Likes épuisés",modalTexts.likesEpuises]] as [string,string,string][]).map(([key,label,value]) => (
           <EditableRow key={key} label={label} value={value} open={editingModal === key} onOpen={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} editValue={editingValue} onEdit={setEditingValue} hint={key.includes("subtitle") ? "Utilise {name} pour le prénom" : key.includes("likes") ? "Utilise {n} pour le nombre" : undefined} onSave={async () => { await patch(key, editingValue); const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_signup_success: "signupSuccess", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" }; setModalTexts(t => ({ ...t, [km[key]]: editingValue })); setEditingModal(null); }} />
         ))}
+      </OffCanvasSection>
+      <OffCanvasSection title="Contacts">
+        <SiteInfoConfig auth={auth} group="contacts" />
+      </OffCanvasSection>
+      <OffCanvasSection title="Réseaux sociaux">
+        <SiteInfoConfig auth={auth} group="socials" />
+      </OffCanvasSection>
+      <OffCanvasSection title="Page d'accueil">
+        <SiteInfoConfig auth={auth} group="landing" />
       </OffCanvasSection>
       <OffCanvasSection title="Limites & Quotas">
         {([["limit_likes_free","limitLikes" as keyof typeof appConfig,"Likes gratuits/jour",appConfig.limitLikes,"number"],["limit_messages_free","limitMessages" as keyof typeof appConfig,"Messages gratuits/match",appConfig.limitMessages,"number"],["limit_photo_size_mb","limitPhotoSizeMb" as keyof typeof appConfig,"Taille max photo (Mo)",appConfig.limitPhotoSizeMb,"number"],["match_welcome_message","matchWelcomeMessage" as keyof typeof appConfig,"Message bienvenue match",appConfig.matchWelcomeMessage,"text"]] as [string, keyof typeof appConfig, string, string, string][]).map(([key,ck,label,value,type]) => (
@@ -6937,6 +7220,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [statusActionLoading, setStatusActionLoading] = useState(false);
   const [statusPaused, setStatusPaused] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deletedSupportIds = useRef<Set<string>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
@@ -7109,7 +7393,27 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   useEffect(() => {
     if (!open) return;
     if (open.id === "__support__") {
-      const supportInterval = setInterval(() => loadMsgs(open), POLL_SUPPORT_MS);
+      const refreshSupport = async () => {
+        try {
+          const rows = await sb.query<ReportRowLike>(auth.token, "reports", `?select=id,reason,reporter_id,reported_id,status,created_at&or=(reporter_id.eq.${auth.userId},reported_id.eq.${auth.userId})&order=created_at.asc&limit=200`).catch(() => [] as ReportRowLike[]);
+          const fresh: Message[] = rows.filter(r => isSupportReason(r.reason) && !deletedSupportIds.current.has(String(r.id))).map(r => ({
+            id: r.id,
+            match_id: "__support__",
+            sender_id: r.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId,
+            content: cleanSupportReason(r.reason),
+            is_read: true,
+            created_at: r.created_at,
+          }));
+          // Ne mettre à jour que si la liste a réellement changé (évite le scintillement)
+          setMsgs(prev => {
+            if (prev.length === fresh.length && prev.every((m, i) => m.id === fresh[i].id && m.content === fresh[i].content)) {
+              return prev; // aucun changement → pas de re-render
+            }
+            return fresh;
+          });
+        } catch {}
+      };
+      const supportInterval = setInterval(refreshSupport, Math.max(8000, POLL_SUPPORT_MS));
       return () => clearInterval(supportInterval);
     }
     const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, async () => {
@@ -7122,9 +7426,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   // Polling dédié toutes les 2s pour détecter les changements de is_read
   useEffect(() => {
     if (!open) return;
+    if (open.id === "__support__") return; // le support a son propre polling optimisé (voir plus bas)
     const readInterval = setInterval(async () => {
       try {
-        if (open.id === "__support__") { await loadMsgs(open); return; }
         const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
         const filtered = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId));
         setMsgs(prev => {
@@ -7453,7 +7757,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const loadMsgs = async (conv: Match) => {
     if (conv.id === "__support__") {
       const rows = await sb.query<ReportRowLike>(auth.token, "reports", `?select=id,reason,reporter_id,reported_id,status,created_at&or=(reporter_id.eq.${auth.userId},reported_id.eq.${auth.userId})&order=created_at.asc&limit=200`).catch(() => [] as ReportRowLike[]);
-      const supportMsgs: Message[] = rows.filter(r => isSupportReason(r.reason)).map(r => ({
+      const supportMsgs: Message[] = rows.filter(r => isSupportReason(r.reason) && !deletedSupportIds.current.has(String(r.id))).map(r => ({
         id: r.id,
         match_id: "__support__",
         sender_id: r.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId,
@@ -8425,6 +8729,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 if (!msgId) return;
                 // Conversation support : les messages sont dans la table "reports", pas "messages"
                 if (open?.id === "__support__") {
+                  deletedSupportIds.current.add(String(msgId));
                   await sb.delete(auth.token, "reports", `?id=eq.${msgId}`).catch(() => {});
                 } else {
                   await sb.delete(auth.token, "messages", `?id=eq.${msgId}`);
@@ -9339,7 +9644,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
       onLogout();
     } catch (e: any) {
       console.error("[Moyo][Delete] Erreur suppression compte :", e);
-      setDeleteError("Une erreur est survenue lors de la suppression. Réessaie ou contacte le support à contact@moyo-congo.com");
+      setDeleteError(`Une erreur est survenue lors de la suppression. Réessaie ou contacte le support à ${CONTACT_EMAIL}`);
       setDeleteLoading(false);
     }
   };
@@ -9951,7 +10256,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
         {/* Demande de vérification */}
         {(!isWideProfile || ["verification","main"].includes(activeSection)) && (!profile?.is_verified ? (
-          <a href={`https://wa.me/242065132012?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo.\n\n👤 Nom : ${profile?.name || auth.name}\n🎂 Âge : ${profile?.age} ans\n⚥ Genre : ${profile?.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+          <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo.\n\n👤 Nom : ${profile?.name || auth.name}\n🎂 Âge : ${profile?.age} ans\n⚥ Genre : ${profile?.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
             <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
               <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(29,155,240,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <VerifiedBadge size={22} />
@@ -16037,6 +16342,7 @@ export default function App() {
     const handler = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      (window as any).__moyoInstallPrompt = e;
       setShowInstall(true);
     };
     window.addEventListener("beforeinstallprompt", handler);
