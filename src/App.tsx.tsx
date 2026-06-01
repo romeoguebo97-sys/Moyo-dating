@@ -1380,24 +1380,36 @@ function useWindowWidth() {
 function Landing({ onNav }: { onNav: (p: string) => void }) {
   const [featuredAvis, setFeaturedAvis] = React.useState<{ id: string; name: string; city: string; comment: string; rating: number }[]>([]);
   const [showMobileLanding, setShowMobileLanding] = React.useState(true);
-  const [installModal, setInstallModal] = React.useState<null | "ios" | "done" | "unavailable">(null);
+  const [installModal, setInstallModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
 
-  const tryInstall = async () => {
-    const isInStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
-    if (isInStandalone) { setInstallModal("done"); return; }
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    if (isIos) { setInstallModal("ios"); return; }
+  // Lance l'installation native Android (la vraie pop-up Chrome)
+  const launchAndroidPrompt = async () => {
     const prompt = (window as any).__moyoInstallPrompt;
     if (prompt) {
       prompt.prompt();
       try {
         const { outcome } = await prompt.userChoice;
-        if (outcome === "accepted") { (window as any).__moyoInstallPrompt = null; }
+        if (outcome === "accepted") { (window as any).__moyoInstallPrompt = null; setInstallModal(null); }
       } catch {}
     } else {
-      // Android/Chrome mais prompt pas encore prêt, ou navigateur non compatible
       setInstallModal("unavailable");
     }
+  };
+
+  // Bouton "Google Play" → modale "Installe l'app Moyo !" puis installation Android
+  const installGooglePlay = () => {
+    const isInStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (isInStandalone) { setInstallModal("done"); return; }
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIos) { setInstallModal("ios"); return; } // sur iPhone, Google Play n'a pas de sens → instructions iOS
+    setInstallModal("android");
+  };
+
+  // Bouton "App Store" → instructions iPhone (Safari)
+  const installAppStore = () => {
+    const isInStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (isInStandalone) { setInstallModal("done"); return; }
+    setInstallModal("ios");
   };
 
   React.useEffect(() => {
@@ -1548,7 +1560,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             <div style={{ position: "absolute", inset: 0, backgroundImage: `url("https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/Photo_de_couple_moyo.png/Photo%20de%20couple%20moyo.jpg")`, backgroundSize: "cover", backgroundPosition: "center 10%", mixBlendMode: "multiply", opacity: 0.9 }} />
 
             {/* Contenu */}
-            <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", marginTop: "-10vh" }}>
               {/* Slogan */}
               <div style={{ textAlign: "center", marginBottom: 18, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
                 <div style={{ textAlign: "center", lineHeight: 1.2, WebkitTextStroke: "0.5px white" }}>
@@ -1578,13 +1590,24 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           </div>
 
           {/* Congo & Diaspora + Voir notre site */}
-          <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", animation: "mfadeIn 1s 1s ease both", zIndex: 4 }}
-            onClick={() => setShowMobileLanding(false)}>
-            <div style={{ color: "#ffffff", fontSize: "0.82rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>Congo &amp; Diaspora</div>
-            <div style={{ color: "#ffffff", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
+          <div style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, animation: "mfadeIn 1s 1s ease both", zIndex: 4, width: "100%" }}>
+            <div onClick={() => setShowMobileLanding(false)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer" }}>
+              <div style={{ color: "#ffffff", fontSize: "0.82rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>Congo &amp; Diaspora</div>
+              <div style={{ color: "#ffffff", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+            <div style={{ display: "flex", gap: 7, marginTop: 8 }}>
+              <div onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
+                <div style={{ textAlign: "left", lineHeight: 1 }}><div style={{ fontSize: "0.42rem", opacity: 0.8 }}>Disponible sur</div><div style={{ fontSize: "0.62rem", fontWeight: 700 }}>Google Play</div></div>
+              </div>
+              <div onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                <div style={{ textAlign: "left", lineHeight: 1 }}><div style={{ fontSize: "0.42rem", opacity: 0.8 }}>Télécharger dans</div><div style={{ fontSize: "0.62rem", fontWeight: 700 }}>App Store</div></div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -2291,11 +2314,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           </div>
           <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.6)", marginBottom: 16, fontWeight: 600 }}>Installe l'application en un clic</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <div className="store" onClick={tryInstall} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
+            <div className="store" onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
               <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Disponible sur</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>Google Play</div></div>
             </div>
-            <div className="store" onClick={tryInstall} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
+            <div className="store" onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
               <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Télécharger dans</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>App Store</div></div>
             </div>
@@ -2331,6 +2354,22 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       </footer>
       {installModal && (
         <div onClick={() => setInstallModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          {installModal === "android" ? (
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 340, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", overflow: "hidden" }}>
+              <div style={{ background: `linear-gradient(150deg,${G.rouge},${G.rougeDark})`, padding: "26px 22px 30px", textAlign: "center" }}>
+                <div style={{ fontWeight: 800, fontSize: "1.6rem", color: "#fff", letterSpacing: "0.02em" }}>Mo<span style={{ color: G.or }}>yo</span></div>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "12px auto 0" }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+                </div>
+              </div>
+              <div style={{ padding: "22px", textAlign: "center" }}>
+                <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo !</div>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
+                <button onClick={launchAndroidPrompt} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>Installer l'app</button>
+                <button onClick={() => setInstallModal(null)} style={{ width: "100%", background: "#fff", color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
+              </div>
+            </div>
+          ) : (
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 360, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", textAlign: "center" }}>
             {installModal === "ios" ? (
               <>
@@ -2367,6 +2406,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             )}
             <button onClick={() => setInstallModal(null)} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>J'ai compris</button>
           </div>
+          )}
         </div>
       )}
     </div>
@@ -3194,8 +3234,8 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
             </svg>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.blanc }}>Assistant Moyo</div>
-            <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.75)" }}>Répond instantanément</div>
+            <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.blanc }}>{mode === "report" ? "Assistance Moyo" : "Assistant Moyo"}</div>
+            <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.75)" }}>{mode === "chat" ? "Répond instantanément" : mode === "report" ? "Répond sous 24h" : "Équipe officielle"}</div>
           </div>
           <div onClick={onClose} style={{ cursor: "pointer", opacity: 0.7 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -3304,6 +3344,94 @@ function ConfirmModal({ msg, onConfirm, onCancel, confirmLabel = "Confirmer", da
         </div>
       </div>
     </div>
+  );
+}
+// Boutons d'installation PWA réutilisables (Google Play / App Store) + modales distinctes
+function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
+  const [modal, setModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
+  const isDark = variant === "dark";
+
+  const launchAndroidPrompt = async () => {
+    const prompt = (window as any).__moyoInstallPrompt;
+    if (prompt) {
+      prompt.prompt();
+      try { const { outcome } = await prompt.userChoice; if (outcome === "accepted") { (window as any).__moyoInstallPrompt = null; setModal(null); } } catch {}
+    } else { setModal("unavailable"); }
+  };
+  const onGoogle = () => {
+    const standalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (standalone) { setModal("done"); return; }
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent)) { setModal("ios"); return; }
+    setModal("android");
+  };
+  const onApple = () => {
+    const standalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (standalone) { setModal("done"); return; }
+    setModal("ios");
+  };
+
+  const btnBg = isDark ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.1)";
+  const btnBorder = isDark ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.2)";
+  return (
+    <>
+      <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+        <div onClick={onGoogle} style={{ display: "flex", alignItems: "center", gap: 9, background: btnBg, border: `1px solid ${btnBorder}`, color: "#fff", borderRadius: 12, padding: "9px 16px", cursor: "pointer" }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
+          <div style={{ textAlign: "left", lineHeight: 1.1 }}><div style={{ fontSize: "0.58rem", opacity: 0.8 }}>Disponible sur</div><div style={{ fontSize: "0.82rem", fontWeight: 700 }}>Google Play</div></div>
+        </div>
+        <div onClick={onApple} style={{ display: "flex", alignItems: "center", gap: 9, background: btnBg, border: `1px solid ${btnBorder}`, color: "#fff", borderRadius: 12, padding: "9px 16px", cursor: "pointer" }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div style={{ textAlign: "left", lineHeight: 1.1 }}><div style={{ fontSize: "0.58rem", opacity: 0.8 }}>Télécharger dans</div><div style={{ fontSize: "0.82rem", fontWeight: 700 }}>App Store</div></div>
+        </div>
+      </div>
+      {modal && (
+        <div onClick={() => setModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          {modal === "android" ? (
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 340, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", overflow: "hidden" }}>
+              <div style={{ background: `linear-gradient(150deg,${G.rouge},${G.rougeDark})`, padding: "26px 22px 30px", textAlign: "center" }}>
+                <div style={{ fontWeight: 800, fontSize: "1.6rem", color: "#fff" }}>Mo<span style={{ color: G.or }}>yo</span></div>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "12px auto 0" }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/></svg>
+                </div>
+              </div>
+              <div style={{ padding: "22px", textAlign: "center" }}>
+                <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo !</div>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
+                <button onClick={launchAndroidPrompt} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>Installer l'app</button>
+                <button onClick={() => setModal(null)} style={{ width: "100%", background: "#fff", color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
+              </div>
+            </div>
+          ) : (
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 360, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", textAlign: "center" }}>
+              {modal === "ios" ? (
+                <>
+                  <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Installer Moyo sur iPhone</div>
+                  <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 12, margin: "14px 0 20px" }}>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>1</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>Partager</b> en bas de Safari</div></div>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>2</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Choisis <b>« Sur l'écran d'accueil »</b></div></div>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>3</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>« Ajouter »</b> — c'est fait ! 🎉</div></div>
+                  </div>
+                </>
+              ) : modal === "done" ? (
+                <>
+                  <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>✅</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Déjà installée !</div>
+                  <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Moyo est déjà sur ton appareil. Lance-la depuis ton écran d'accueil.</p>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Installer Moyo</div>
+                  <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ouvre ce site dans <b>Chrome</b> (Android) ou <b>Safari</b> (iPhone), puis « Ajouter à l'écran d'accueil ».</p>
+                </>
+              )}
+              <button onClick={() => setModal(null)} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>J'ai compris</button>
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 function SwitchBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
@@ -10572,6 +10700,14 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
             <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#e74c3c", textAlign: "center", lineHeight: 1.25 }}>Supprimer<br/>mon compte</div>
           </div>}
         </div>}
+
+        {/* ── Boutons d'installation de l'app ── */}
+        {(!isWideProfile || ["logout","delete","main"].includes(activeSection)) && (
+          <div style={{ marginTop: 14, background: `linear-gradient(135deg,${G.vert},#0D2E1C)`, borderRadius: 16, padding: "16px 14px", textAlign: "center" }}>
+            <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.78rem", fontWeight: 600, marginBottom: 10 }}>Installe l'application Moyo</div>
+            <InstallButtons variant="dark" />
+          </div>
+        )}
 
         {/* Liste noire intégrée (section blocklist) */}
         {isWideProfile && activeSection === "blocklist" && (
