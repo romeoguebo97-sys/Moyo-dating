@@ -4392,14 +4392,14 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -4407,7 +4407,8 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords }));
+        if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
       }).catch(() => {});
   }, [auth.token]);
 
@@ -4457,6 +4458,21 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         {appConfig.maintenanceMode === "true" && (
           <EditableRow label="Message de maintenance" value={appConfig.maintenanceMessage} open={editingConfig === "maintenance_message"} onOpen={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch("maintenance_message", editingConfigValue); setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue })); setEditingConfig(null); }} />
         )}
+      </OffCanvasSection>
+      <OffCanvasSection title="Mots interdits (modération)">
+        <div style={{ fontSize: "0.74rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+          Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
+        </div>
+        <EditableRow label="Liste des mots interdits" value={appConfig.customBannedWords || "(aucun)"} open={editingConfig === "custom_banned_words"}
+          onOpen={() => { setEditingConfig(editingConfig === "custom_banned_words" ? null : "custom_banned_words"); setEditingConfigValue(appConfig.customBannedWords); }}
+          editValue={editingConfigValue} onEdit={setEditingConfigValue}
+          hint="Ex : mot1, expression deux, mot3"
+          onSave={async () => {
+            await patch("custom_banned_words", editingConfigValue);
+            setAppConfig(c => ({ ...c, customBannedWords: editingConfigValue }));
+            buildCustomBannedRegex(editingConfigValue);
+            setEditingConfig(null);
+          }} />
       </OffCanvasSection>
       <OffCanvasSection title="Notifications admin">
         <AdminNotifPrefs auth={auth} />
@@ -11607,8 +11623,35 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [proposeResults2, setProposeResults2] = useState<AdminProfile[]>([]);
   const [proposeSelected1, setProposeSelected1] = useState<AdminProfile | null>(null);
   const [proposeSelected2, setProposeSelected2] = useState<AdminProfile | null>(null);
+  const [proposeP1Locked, setProposeP1Locked] = useState(false);
   const [proposeDuration, setProposeDuration] = useState("48");
   const [proposeLoading, setProposeLoading] = useState(false);
+
+  // Charge jusqu'à 200 profils du genre opposé (pour le raccourci "Proposer" depuis une carte)
+  const loadOppositeGenderProfiles = async (gender: string, excludeId: string): Promise<AdminProfile[]> => {
+    try {
+      const opposite = gender === "Homme" ? "Femme" : gender === "Femme" ? "Homme" : null;
+      const genderFilter = opposite ? `&gender=eq.${encodeURIComponent(opposite)}` : "";
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,name,age,city,photo_url,gender&id=neq.${excludeId}${genderFilter}&is_complete=eq.true&order=last_seen.desc.nullslast&limit=200`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
+  };
+
+  // Raccourci : ouvre la modale de proposition avec Personne 1 pré-remplie (depuis une carte utilisateur)
+  const openProposeFromCard = async (u: AdminProfile) => {
+    setProposeSelected1(u);
+    setProposeSelected2(null);
+    setProposeSearch1("");
+    setProposeSearch2("");
+    setProposeResults1([]);
+    setProposeP1Locked(true);
+    setShowProposeMatch(true);
+    const list = await loadOppositeGenderProfiles(u.gender, u.id);
+    setProposeResults2(list);
+  };
 
   const searchProfilesForMatch = async (query: string): Promise<AdminProfile[]> => {
     if (!query.trim()) return [];
@@ -11617,6 +11660,38 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     });
     const data = await r.json().catch(() => []);
     return Array.isArray(data) ? data : [];
+  };
+
+  // Annuler (dissoudre) un match côté admin — supprime match, messages, likes mutuels et vues
+  const adminCancelMatch = async (m: { id: string; user1?: string; user2?: string }) => {
+    const u1 = m.user1, u2 = m.user2;
+    try {
+      // Supprimer les messages de ce match
+      await fetch(`${SUPABASE_URL}/rest/v1/messages?match_id=eq.${m.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      // Supprimer le match (dans les deux sens par sécurité), puis likes et vues mutuels
+      const reqs: Promise<any>[] = [
+        fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${m.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" } }),
+      ];
+      if (u1 && u2) {
+        reqs.push(
+          fetch(`${SUPABASE_URL}/rest/v1/likes?from_user=eq.${u1}&to_user=eq.${u2}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+          fetch(`${SUPABASE_URL}/rest/v1/likes?from_user=eq.${u2}&to_user=eq.${u1}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+          fetch(`${SUPABASE_URL}/rest/v1/profile_views?viewer_id=eq.${u1}&viewed_id=eq.${u2}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+          fetch(`${SUPABASE_URL}/rest/v1/profile_views?viewer_id=eq.${u2}&viewed_id=eq.${u1}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+        );
+      }
+      const [matchDel] = await Promise.all(reqs);
+      const deleted = await matchDel.json().catch(() => []);
+      if (!matchDel.ok || !Array.isArray(deleted) || deleted.length === 0) {
+        showToast("Annulation impossible (droits insuffisants côté Supabase).", "error");
+        return;
+      }
+      setMatchList(prev => prev.filter(x => x.id !== m.id));
+      logAdminAction(auth.token, auth.userId, auth.name, `Match annulé : ${m.user1 || "?"} ↔ ${m.user2 || "?"}`, m.user1);
+      showToast("Match annulé. Les deux personnes ne sont plus en relation.", "success");
+    } catch {
+      showToast("Erreur réseau lors de l'annulation.", "error");
+    }
   };
 
   const loadMatchListData = async () => {
@@ -11637,7 +11712,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const pdata = await pr.json().catch(() => []);
         if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
       }
-      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, profile1: profiles[m.user1], profile2: profiles[m.user2] })));
+      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, user1: m.user1, user2: m.user2, profile1: profiles[m.user1], profile2: profiles[m.user2] })));
     } catch {}
     setMatchListLoading(false);
   };
@@ -12391,7 +12466,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Liste des matchs ──
   const [showMatchList, setShowMatchList] = useState(false);
-  const [matchList, setMatchList] = useState<{ id: string; created_at: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
+  const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
   const [matchListLoading, setMatchListLoading] = useState(false);
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
@@ -12427,7 +12502,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const pdata = await r.json().catch(() => []);
         if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
       }
-      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, profile1: profiles[m.user1], profile2: profiles[m.user2] })));
+      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, user1: m.user1, user2: m.user2, profile1: profiles[m.user1], profile2: profiles[m.user2] })));
       setMatchListLoading(false);
     }).catch(() => setMatchListLoading(false));
   }, [showMatchList]);
@@ -14926,6 +15001,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             : <ActionBtn label="- Vérifier" color="#555" disabled={isLoading} onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
                           }
                           {/* Modération */}
+                          <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
                           <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
                           {!u.is_banned
                             ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Bannir ${u.name} ?`, () => adminAction(u.id, { is_banned: true, is_visible: false }, `${u.name} a été banni(e).`)); }} />
@@ -15071,6 +15147,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       {/* Actions modération */}
                       <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Modération</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
                         <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate}
                           onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
                         {!u.is_banned ? (
@@ -16415,7 +16492,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           {matchSubTab === "propose" && (
             <div>
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12, gap: 8 }}>
-                <button onClick={() => setShowProposeMatch(true)} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Nouvelle proposition</button>
+                <button onClick={() => { setProposeP1Locked(false); setProposeResults2([]); setShowProposeMatch(true); }} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Nouvelle proposition</button>
                 <button onClick={loadProposals} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
               </div>
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
@@ -16507,6 +16584,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{m.profile2?.photo_url && <img src={m.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                         <div style={{ minWidth: 0, textAlign: "right" }}><div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.profile2?.name || "?"}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile2?.age ? `${m.profile2.age} ans` : ""}{m.profile2?.city ? ` · ${m.profile2.city}` : ""}</div></div>
                       </div>
+                      <button onClick={() => confirm(`Annuler le match entre ${m.profile1?.name || "?"} et ${m.profile2?.name || "?"} ? Leur conversation sera supprimée et ils ne seront plus en relation.`, () => adminCancelMatch(m))} title="Annuler le match" style={{ flexShrink: 0, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        Annuler
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -16772,7 +16853,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1rem", color: "#fff" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>{" "}Proposer un match</div>
                 <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Les deux personnes choisissent d'accepter ou refuser</div>
               </div>
-              <button onClick={() => { setShowProposeMatch(false); setProposeSelected1(null); setProposeSelected2(null); setProposeSearch1(""); setProposeSearch2(""); setProposeResults1([]); setProposeResults2([]); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={() => { setShowProposeMatch(false); setProposeSelected1(null); setProposeSelected2(null); setProposeSearch1(""); setProposeSearch2(""); setProposeResults1([]); setProposeResults2([]); setProposeP1Locked(false); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -16790,7 +16871,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{proposeSelected1.name}</div>
                         <div style={{ fontSize: "0.68rem", color: "#888" }}>{proposeSelected1.age} ans · {proposeSelected1.city}</div>
                       </div>
-                      <button onClick={() => { setProposeSelected1(null); setProposeSearch1(""); setProposeResults1([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0 }}>✕</button>
+                      <button onClick={() => { setProposeSelected1(null); setProposeSearch1(""); setProposeResults1([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0, visibility: proposeP1Locked ? "hidden" : "visible" }}>✕</button>
                     </div>
                   ) : (
                     <div>
@@ -16830,19 +16911,25 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   ) : (
                     <div>
-                      <input value={proposeSearch2} onChange={async e => { setProposeSearch2(e.target.value); setProposeResults2(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
-                      {proposeResults2.length > 0 && (
-                        <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
-                          {proposeResults2.map(p => (
-                            <div key={p.id} onClick={() => { setProposeSelected2(p); setProposeSearch2(""); setProposeResults2([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
-                              <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
-                                {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      <input value={proposeSearch2} onChange={e => setProposeSearch2(e.target.value)} placeholder="Rechercher un nom..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {(() => {
+                        const q = proposeSearch2.trim().toLowerCase();
+                        const list = q ? proposeResults2.filter(p => (p.name || "").toLowerCase().includes(q)) : proposeResults2;
+                        if (list.length === 0) return proposeP1Locked ? <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 8, textAlign: "center" }}>Aucun profil compatible</div> : null;
+                        return (
+                          <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflowY: "auto", maxHeight: 260, marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                            {proposeP1Locked && <div style={{ fontSize: "0.62rem", color: "#999", padding: "6px 12px", background: G.creme, position: "sticky", top: 0 }}>{list.length} profil{list.length > 1 ? "s" : ""} compatible{list.length > 1 ? "s" : ""} (genre opposé)</div>}
+                            {list.map(p => (
+                              <div key={p.id} onClick={() => { setProposeSelected2(p); setProposeSearch2(""); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                                <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                  {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                                </div>
+                                <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
                               </div>
-                              <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
