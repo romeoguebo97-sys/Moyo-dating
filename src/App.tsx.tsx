@@ -11627,6 +11627,30 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [proposeDuration, setProposeDuration] = useState("48");
   const [proposeLoading, setProposeLoading] = useState(false);
 
+  // Charge la liste générale des profils (pour Personne 1, dès l'ouverture de la modale)
+  const loadAllProfilesForMatch = async (): Promise<AdminProfile[]> => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,name,age,city,photo_url,gender&is_complete=eq.true&order=last_seen.desc.nullslast&limit=300`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
+  };
+
+  // Ouvre la modale en mode "Nouvelle proposition" : Personne 1 = liste complète, Personne 2 = vide tant que P1 non choisie
+  const openProposeNew = async () => {
+    setProposeSelected1(null);
+    setProposeSelected2(null);
+    setProposeSearch1("");
+    setProposeSearch2("");
+    setProposeResults2([]);
+    setProposeP1Locked(false);
+    setShowProposeMatch(true);
+    const list = await loadAllProfilesForMatch();
+    setProposeResults1(list);
+  };
+
   // Charge jusqu'à 200 profils du genre opposé (pour le raccourci "Proposer" depuis une carte)
   const loadOppositeGenderProfiles = async (gender: string, excludeId: string): Promise<AdminProfile[]> => {
     try {
@@ -16492,7 +16516,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           {matchSubTab === "propose" && (
             <div>
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12, gap: 8 }}>
-                <button onClick={() => { setProposeP1Locked(false); setProposeResults2([]); setShowProposeMatch(true); }} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Nouvelle proposition</button>
+                <button onClick={() => openProposeNew()} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Nouvelle proposition</button>
                 <button onClick={loadProposals} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
               </div>
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
@@ -16871,23 +16895,29 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{proposeSelected1.name}</div>
                         <div style={{ fontSize: "0.68rem", color: "#888" }}>{proposeSelected1.age} ans · {proposeSelected1.city}</div>
                       </div>
-                      <button onClick={() => { setProposeSelected1(null); setProposeSearch1(""); setProposeResults1([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0, visibility: proposeP1Locked ? "hidden" : "visible" }}>✕</button>
+                      <button onClick={() => { setProposeSelected1(null); setProposeSearch1(""); setProposeSelected2(null); setProposeSearch2(""); setProposeResults2([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0, visibility: proposeP1Locked ? "hidden" : "visible" }}>✕</button>
                     </div>
                   ) : (
                     <div>
-                      <input value={proposeSearch1} onChange={async e => { setProposeSearch1(e.target.value); setProposeResults1(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
-                      {proposeResults1.length > 0 && (
-                        <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
-                          {proposeResults1.map(p => (
-                            <div key={p.id} onClick={() => { setProposeSelected1(p); setProposeSearch1(""); setProposeResults1([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
-                              <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
-                                {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      <input value={proposeSearch1} onChange={e => setProposeSearch1(e.target.value)} placeholder="Rechercher un nom..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {(() => {
+                        const q = proposeSearch1.trim().toLowerCase();
+                        const list = q ? proposeResults1.filter(p => (p.name || "").toLowerCase().includes(q)) : proposeResults1;
+                        if (list.length === 0) return null;
+                        return (
+                          <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflowY: "auto", maxHeight: 260, marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                            <div style={{ fontSize: "0.62rem", color: "#999", padding: "6px 12px", background: G.creme, position: "sticky", top: 0 }}>{list.length} profil{list.length > 1 ? "s" : ""} — choisis la personne 1</div>
+                            {list.map(p => (
+                              <div key={p.id} onClick={async () => { setProposeSelected1(p); setProposeSearch1(""); setProposeSelected2(null); setProposeSearch2(""); const opp = await loadOppositeGenderProfiles(p.gender, p.id); setProposeResults2(opp); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                                <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                  {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                                </div>
+                                <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}{p.gender ? ` · ${p.gender}` : ""}</div></div>
                               </div>
-                              <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -16911,14 +16941,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   ) : (
                     <div>
-                      <input value={proposeSearch2} onChange={e => setProposeSearch2(e.target.value)} placeholder="Rechercher un nom..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      <input value={proposeSearch2} onChange={e => setProposeSearch2(e.target.value)} disabled={!proposeSelected1} placeholder={proposeSelected1 ? "Rechercher un nom..." : "Choisis d'abord la personne 1"} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box", background: proposeSelected1 ? G.blanc : G.creme, color: proposeSelected1 ? undefined : "#aaa" }} />
                       {(() => {
+                        if (!proposeSelected1) return <div style={{ fontSize: "0.72rem", color: "#bbb", marginTop: 8, textAlign: "center" }}>Sélectionne la personne 1 pour voir les profils compatibles</div>;
                         const q = proposeSearch2.trim().toLowerCase();
                         const list = q ? proposeResults2.filter(p => (p.name || "").toLowerCase().includes(q)) : proposeResults2;
-                        if (list.length === 0) return proposeP1Locked ? <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 8, textAlign: "center" }}>Aucun profil compatible</div> : null;
+                        if (list.length === 0) return <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 8, textAlign: "center" }}>Aucun profil compatible</div>;
                         return (
                           <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflowY: "auto", maxHeight: 260, marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
-                            {proposeP1Locked && <div style={{ fontSize: "0.62rem", color: "#999", padding: "6px 12px", background: G.creme, position: "sticky", top: 0 }}>{list.length} profil{list.length > 1 ? "s" : ""} compatible{list.length > 1 ? "s" : ""} (genre opposé)</div>}
+                            <div style={{ fontSize: "0.62rem", color: "#999", padding: "6px 12px", background: G.creme, position: "sticky", top: 0 }}>{list.length} profil{list.length > 1 ? "s" : ""} compatible{list.length > 1 ? "s" : ""} (genre opposé)</div>
                             {list.map(p => (
                               <div key={p.id} onClick={() => { setProposeSelected2(p); setProposeSearch2(""); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
                                 <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
