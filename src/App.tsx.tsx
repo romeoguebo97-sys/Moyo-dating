@@ -15913,7 +15913,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               const countMTN = mtnRows.length;
               const countAirtel = airtelRows.length;
               // CA total converti en FCFA : MTN + Airtel + (Carte € × taux)
-              const rate = parseFloat(appConfig.eurToFcfaRate) || 655.957;
+              const rate = EUR_TO_FCFA || 655.957;
               const grandTotalFcfa = totalMTN + totalAirtel + totalEUR * rate;
               // Toutes les analyses détaillées portent sur la devise sélectionnée
               const cur = financeCurrency === "EUR" ? "EUR" : "XAF";
@@ -17073,6 +17073,7 @@ export default function App() {
         window.history.replaceState({}, "", clean);
       }
     } catch {}
+    const type = params.get("type");
     const accessToken = params.get("access_token");
     if (type === "recovery") {
       setPage("reset-password");
