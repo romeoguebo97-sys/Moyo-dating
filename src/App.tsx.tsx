@@ -87,6 +87,7 @@ const LIFETIME_PREMIUM_UNTIL = "2099-12-31T23:59:59.000Z";
 let PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000; // valeur par défaut, écrasée par app_settings
 let PREMIUM_PRICE_FCFA = 3500;
 let PREMIUM_PRICE_EUR = 10;
+let EUR_TO_FCFA = 655.957; // taux de conversion EUR→FCFA (configurable dans Tarifs & Paiements)
 // Devises : Mobile Money = FCFA (XAF), Carte/Stripe = EUR. Helpers de classification et d'affichage.
 const isCardOperator = (op: string) => op === "Stripe" || op === "Carte";
 const paymentCurrency = (r: { currency?: string; operator: string }) => (r.currency || (isCardOperator(r.operator) ? "EUR" : "XAF"));
@@ -133,7 +134,7 @@ function formatWhatsApp(num: string): string {
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -168,6 +169,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
   if (map["premium_price_fcfa"]) PREMIUM_PRICE_FCFA = parseInt(map["premium_price_fcfa"]) || 3500;
   if (map["premium_price_eur"]) PREMIUM_PRICE_EUR = parseFloat(map["premium_price_eur"]) || 10;
+  if (map["eur_to_fcfa_rate"]) EUR_TO_FCFA = parseFloat(map["eur_to_fcfa_rate"]) || 655.957;
   if (map["poll_badges_ms"]) POLL_BADGES_MS = parseInt(map["poll_badges_ms"]) || 8000;
   if (map["poll_admin_badge_ms"]) POLL_ADMIN_BADGE_MS = parseInt(map["poll_admin_badge_ms"]) || 5000;
   if (map["poll_stats_ms"]) POLL_STATS_MS = parseInt(map["poll_stats_ms"]) || 60000;
@@ -3526,6 +3528,7 @@ function AdminDesktopPage() {
     matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋",
     premiumPriceFcfa: "3500",
     premiumPriceEur: "10",
+    eurToFcfaRate: "655.957",
     likesNotifDelayHours: "24",
     premiumDurationDays: "31",
     featureStatuses: "true",
@@ -3576,6 +3579,7 @@ function AdminDesktopPage() {
         matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage,
         premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa,
         premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur,
+        eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate,
         premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays,
         likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours,
         featureStatuses: map["feature_statuses"] || c.featureStatuses,
@@ -3792,6 +3796,7 @@ function AdminDesktopPage() {
               {([
                 ["premium_price_fcfa", "premiumPriceFcfa" as keyof typeof appConfig, "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
                 ["premium_price_eur", "premiumPriceEur" as keyof typeof appConfig, "Prix Premium Diaspora (€)", appConfig.premiumPriceEur],
+                ["eur_to_fcfa_rate", "eurToFcfaRate" as keyof typeof appConfig, "Taux 1 € en FCFA", appConfig.eurToFcfaRate],
                 ["premium_duration_days", "premiumDurationDays" as keyof typeof appConfig, "Durée abonnement (jours)", appConfig.premiumDurationDays],
                 ["likes_notification_delay_hours", "likesNotifDelayHours" as keyof typeof appConfig, "Notif likes après (heures)", appConfig.likesNotifDelayHours],
               ] as [string, keyof typeof appConfig, string, string][]).map(([key, ck, label, value]) => (
@@ -3804,6 +3809,7 @@ function AdminDesktopPage() {
                     setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
                     if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500;
                     if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10;
+                    if (key === "eur_to_fcfa_rate") EUR_TO_FCFA = parseFloat(editingConfigValue) || 655.957;
                     if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000;
                     setEditingConfig(null);
                   }} />
@@ -4386,7 +4392,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -4401,7 +4407,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage }));
       }).catch(() => {});
   }, [auth.token]);
 
@@ -4437,8 +4443,8 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Prix & Abonnement">
-        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix Premium (FCFA)",appConfig.premiumPriceFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée abonnement (jours)",appConfig.premiumDurationDays],["likes_notification_delay_hours","likesNotifDelayHours" as keyof typeof appConfig,"Notif likes après (heures)",appConfig.likesNotifDelayHours]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
-          <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; setEditingConfig(null); }} />
+        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix Premium (FCFA)",appConfig.premiumPriceFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["eur_to_fcfa_rate","eurToFcfaRate" as keyof typeof appConfig,"Taux 1 € en FCFA",appConfig.eurToFcfaRate],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée abonnement (jours)",appConfig.premiumDurationDays],["likes_notification_delay_hours","likesNotifDelayHours" as keyof typeof appConfig,"Notif likes après (heures)",appConfig.likesNotifDelayHours]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
+          <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10; if (key === "eur_to_fcfa_rate") EUR_TO_FCFA = parseFloat(editingConfigValue) || 655.957; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; setEditingConfig(null); }} />
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
@@ -10961,9 +10967,11 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
             <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
               {p.operator === "MTN"
                 ? <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
+                : (p.operator === "Carte" || p.operator === "Stripe")
+                ? <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1A56DB" rx="8"/><rect x="10" y="22" width="100" height="9" fill="#fff" opacity="0.95"/><rect x="18" y="40" width="34" height="7" rx="2" fill="#fff" opacity="0.85"/><text x="92" y="18" textAnchor="end" fontFamily="Arial, sans-serif" fontWeight="800" fontSize="13" fill="#fff">CB</text></svg>
                 : <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#e30613" rx="4"/><text x="60" y="42" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="26" fill="white">AIRTEL</text></svg>
               }
-              {p.operator}
+              {p.operator === "Carte" || p.operator === "Stripe" ? "Carte bancaire" : p.operator}
               {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Cadeau pour {p.gift_for_name || "un match"}</span>}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {formatMoney(p.amount, paymentCurrency(p))}</div>
@@ -10983,7 +10991,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
         </div>
         {!isApproved && !isRejected && (
           <div style={{ flex: 1, background: verified === "match" ? "rgba(39,174,96,0.07)" : verified === "mismatch" ? "rgba(231,76,60,0.07)" : G.creme, borderRadius: 8, padding: "10px 12px", border: `1.5px solid ${verified === "match" ? "rgba(39,174,96,0.3)" : verified === "mismatch" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
-            <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. {p.operator} reçue</div>
+            <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>{p.operator === "Carte" || p.operator === "Stripe" ? "Réf. transaction Stripe" : `Réf. ${p.operator} reçue`}</div>
             <input value={adminRef} onChange={e => { setAdminRef(e.target.value); setVerified(null); }} placeholder="Entrez ici…" style={{ width: "100%", border: "none", background: "transparent", fontSize: "0.95rem", fontWeight: 700, outline: "none", color: "#1a1a1a", letterSpacing: 0.5, fontFamily: "inherit", padding: window.innerWidth < 768 ? "4px 0" : 0 }} />
           </div>
         )}
@@ -15897,6 +15905,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               const totalEUR = counted.filter(r => paymentCurrency(r) === "EUR").reduce((s, r) => s + (r.amount || 0), 0);
               const countXAF = counted.filter(r => paymentCurrency(r) !== "EUR").length;
               const countEUR = counted.filter(r => paymentCurrency(r) === "EUR").length;
+              // Détail Mobile Money par opérateur (FCFA)
+              const mtnRows = counted.filter(r => r.operator === "MTN");
+              const airtelRows = counted.filter(r => r.operator === "Airtel");
+              const totalMTN = mtnRows.reduce((s, r) => s + (r.amount || 0), 0);
+              const totalAirtel = airtelRows.reduce((s, r) => s + (r.amount || 0), 0);
+              const countMTN = mtnRows.length;
+              const countAirtel = airtelRows.length;
+              // CA total converti en FCFA : MTN + Airtel + (Carte € × taux)
+              const rate = parseFloat(appConfig.eurToFcfaRate) || 655.957;
+              const grandTotalFcfa = totalMTN + totalAirtel + totalEUR * rate;
               // Toutes les analyses détaillées portent sur la devise sélectionnée
               const cur = financeCurrency === "EUR" ? "EUR" : "XAF";
               const inCur = (r: PaymentRequest) => paymentCurrency(r) === cur;
@@ -15932,17 +15950,29 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               const maxMonth = months.reduce((mx, [, v]) => Math.max(mx, v.sum), 0) || 1;
               return (
                 <div>
-                  {/* Deux totaux séparés par devise */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-                    <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", borderRadius: 16, padding: "14px 16px", color: "#fff" }}>
-                      <div style={{ fontSize: "0.66rem", opacity: 0.85, fontWeight: 600 }}>CA Mobile Money</div>
-                      <div style={{ fontSize: "1.35rem", fontWeight: 900, marginTop: 3 }}>{totalXAF.toLocaleString()} FCFA</div>
-                      <div style={{ fontSize: "0.64rem", opacity: 0.85, marginTop: 2 }}>{countXAF} paiement{countXAF > 1 ? "s" : ""}</div>
+                  {/* Grande carte : Chiffre d'affaires total (converti en FCFA) */}
+                  <div style={{ background: "linear-gradient(135deg,#8e44ad,#5b2c6f)", borderRadius: 20, padding: "22px 22px 18px", color: "#fff", marginBottom: 12, boxShadow: "0 8px 24px rgba(142,68,173,0.3)" }}>
+                    <div style={{ fontSize: "0.78rem", opacity: 0.9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Chiffre d'affaires total</div>
+                    <div style={{ fontSize: "2.1rem", fontWeight: 900, marginTop: 6, lineHeight: 1.1 }}>{Math.round(grandTotalFcfa).toLocaleString()} FCFA</div>
+                    <div style={{ fontSize: "0.66rem", opacity: 0.8, marginTop: 8 }}>Taux utilisé : 1 € = {rate.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 3 })} FCFA</div>
+                  </div>
+
+                  {/* Détail par moyen de paiement (devises réelles) */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
+                    <div style={{ background: "linear-gradient(135deg,#FFCC00,#E0A800)", borderRadius: 14, padding: "12px 13px", color: "#1a1a1a" }}>
+                      <div style={{ fontSize: "0.64rem", opacity: 0.8, fontWeight: 700 }}>CA MTN</div>
+                      <div style={{ fontSize: "1.05rem", fontWeight: 900, marginTop: 3 }}>{totalMTN.toLocaleString()} FCFA</div>
+                      <div style={{ fontSize: "0.6rem", opacity: 0.75, marginTop: 2 }}>{countMTN} paiement{countMTN > 1 ? "s" : ""}</div>
                     </div>
-                    <div style={{ background: "linear-gradient(135deg,#1A5C3A,#0D2E1C)", borderRadius: 16, padding: "14px 16px", color: "#fff" }}>
-                      <div style={{ fontSize: "0.66rem", opacity: 0.85, fontWeight: 600 }}>CA Carte (diaspora)</div>
-                      <div style={{ fontSize: "1.35rem", fontWeight: 900, marginTop: 3 }}>{totalEUR.toLocaleString("fr-FR")} €</div>
-                      <div style={{ fontSize: "0.64rem", opacity: 0.85, marginTop: 2 }}>{countEUR} paiement{countEUR > 1 ? "s" : ""}</div>
+                    <div style={{ background: "linear-gradient(135deg,#e74c3c,#c0392b)", borderRadius: 14, padding: "12px 13px", color: "#fff" }}>
+                      <div style={{ fontSize: "0.64rem", opacity: 0.85, fontWeight: 700 }}>CA Airtel</div>
+                      <div style={{ fontSize: "1.05rem", fontWeight: 900, marginTop: 3 }}>{totalAirtel.toLocaleString()} FCFA</div>
+                      <div style={{ fontSize: "0.6rem", opacity: 0.85, marginTop: 2 }}>{countAirtel} paiement{countAirtel > 1 ? "s" : ""}</div>
+                    </div>
+                    <div style={{ background: "linear-gradient(135deg,#1A56DB,#123e9c)", borderRadius: 14, padding: "12px 13px", color: "#fff" }}>
+                      <div style={{ fontSize: "0.64rem", opacity: 0.85, fontWeight: 700 }}>CA Carte 💳</div>
+                      <div style={{ fontSize: "1.05rem", fontWeight: 900, marginTop: 3 }}>{totalEUR.toLocaleString("fr-FR")} €</div>
+                      <div style={{ fontSize: "0.6rem", opacity: 0.85, marginTop: 2 }}>{countEUR} paiement{countEUR > 1 ? "s" : ""}</div>
                     </div>
                   </div>
                   {financeResetAt && <div style={{ fontSize: "0.66rem", color: "#aaa", textAlign: "center", marginBottom: 10 }}>Depuis la réinitialisation du {new Date(financeResetAt).toLocaleDateString("fr-FR")}{excludedCount > 0 ? ` · ${excludedCount} exclu${excludedCount > 1 ? "s" : ""} du CA` : ""}</div>}
@@ -16854,6 +16884,7 @@ export default function App() {
   const [likesReceived, setLikesReceived] = useState(0);
   const [viewsReceived, setViewsReceived] = useState(0);
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
+  const [premiumSuccess, setPremiumSuccess] = useState(false);
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2" } | null>(null);
@@ -17031,7 +17062,17 @@ export default function App() {
     // Vérifier si c'est un lien de reset password ou confirmation email
     const hash = window.location.hash;
     const params = new URLSearchParams(hash.replace("#", "?"));
-    const type = params.get("type");
+    // Retour d'un paiement carte réussi (success_url Stripe = ...?paiement=reussi)
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get("paiement") === "reussi") {
+        setPremiumSuccess(true);
+        setTab("discover");
+        // Nettoie l'URL pour ne pas réafficher la modale au rechargement
+        const clean = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, "", clean);
+      }
+    } catch {}
     const accessToken = params.get("access_token");
     if (type === "recovery") {
       setPage("reset-password");
@@ -17664,6 +17705,23 @@ export default function App() {
       {tab === "admin" && <AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} />}
+    {premiumSuccess && (
+      <div onClick={() => setPremiumSuccess(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100000, padding: 20, backdropFilter: "blur(3px)" }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "30px 24px 24px", maxWidth: 360, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 90, background: "linear-gradient(135deg,#D4A843,#B8860B)" }} />
+          <div style={{ position: "relative", width: 72, height: 72, margin: "0 auto 16px", borderRadius: "50%", background: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 18px rgba(0,0,0,0.15)" }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D4A843" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg>
+          </div>
+          <div style={{ fontWeight: 900, fontSize: "1.25rem", color: "#1a1a1a", marginBottom: 8 }}>Paiement réussi 🎉</div>
+          <div style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.55, marginBottom: 22 }}>
+            Ton abonnement <strong style={{ color: "#B8860B" }}>Premium</strong> est désormais actif ! Tu peux profiter des likes et messages illimités, voir qui t'a liké, et bien plus encore.
+          </div>
+          <button onClick={() => setPremiumSuccess(false)} style={{ width: "100%", background: "linear-gradient(135deg,#D4A843,#B8860B)", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px rgba(184,134,11,0.35)" }}>
+            Découvrir Moyo Premium
+          </button>
+        </div>
+      </div>
+    )}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
     {/* ── MODAL PROPOSITION DE MATCH ── */}
