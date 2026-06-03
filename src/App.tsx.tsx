@@ -2617,7 +2617,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
       }
       if ((profiles[0] as any).is_banned) {
         await sb.signOut(res.access_token);
-        setErrorMsg(`Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à ${CONTACT_EMAIL}`);
+        setErrorMsg(`Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à ${CONTACT_EMAIL} ou sur WhatsApp au ${formatWhatsApp(CONTACT_WHATSAPP)}`);
         setLoading(false); return;
       }
 
@@ -4658,10 +4658,10 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           {tabs.map(t => {
             const active = tab === t.id;
             const getBadge = () => {
-              if (t.id === "messages" && unreadCount > 0) return <span className="moyo-nav-badge moyo-nav-badge-red">{unreadCount > 9 ? "9+" : unreadCount}</span>;
-              if (t.id === "likes" && likesReceived > 0) return <span className="moyo-nav-badge moyo-nav-badge-red">{likesReceived > 9 ? "9+" : likesReceived}</span>;
-              if (t.id === "visitors" && viewsReceived > 0) return <span className="moyo-nav-badge moyo-nav-badge-gold">{viewsReceived > 9 ? "9+" : viewsReceived}</span>;
-              if (t.id === "matches" && notifCount > 0) return <span className="moyo-nav-badge moyo-nav-badge-red">{notifCount > 9 ? "9+" : notifCount}</span>;
+              if (t.id === "messages" && unreadCount > 0) return <span className="moyo-nav-badge moyo-nav-badge-red">{unreadCount > 99 ? "99+" : unreadCount}</span>;
+              if (t.id === "likes" && likesReceived > 0) return <span className="moyo-nav-badge moyo-nav-badge-red">{likesReceived > 99 ? "99+" : likesReceived}</span>;
+              if (t.id === "visitors" && viewsReceived > 0) return <span className="moyo-nav-badge moyo-nav-badge-gold">{viewsReceived > 99 ? "99+" : viewsReceived}</span>;
+              if (t.id === "matches" && notifCount > 0) return <span className="moyo-nav-badge moyo-nav-badge-red">{notifCount > 99 ? "99+" : notifCount}</span>;
               return null;
             };
             return (
@@ -4719,11 +4719,11 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "5px 8px", borderRadius: 12, background: active ? "rgba(192,57,43,0.1)" : "transparent", transition: "background 0.2s", minWidth: 48 }}>
                   <div style={{ position: "relative" }}>
                     {t.icon(active)}
-                    {t.id === "messages" && unreadCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{unreadCount > 9 ? "9+" : unreadCount}</div>}
-                    {t.id === "likes" && likesReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{likesReceived > 9 ? "9+" : likesReceived}</div>}
-                    {t.id === "visitors" && viewsReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: "#111", borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{viewsReceived > 9 ? "9+" : viewsReceived}</div>}
-                    {t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{notifCount > 9 ? "9+" : notifCount}</div>}
-                    {t.id === "profile" && auth.isAdmin && adminBadgeCount && adminBadgeCount > 0 ? <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</div> : null}
+                    {t.id === "messages" && unreadCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{unreadCount > 99 ? "99+" : unreadCount}</div>}
+                    {t.id === "likes" && likesReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{likesReceived > 99 ? "99+" : likesReceived}</div>}
+                    {t.id === "visitors" && viewsReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: "#111", borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{viewsReceived > 99 ? "99+" : viewsReceived}</div>}
+                    {t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{notifCount > 99 ? "99+" : notifCount}</div>}
+                    {t.id === "profile" && auth.isAdmin && adminBadgeCount && adminBadgeCount > 0 ? <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</div> : null}
                   </div>
                   <div style={{ fontSize: "0.56rem", fontWeight: 700, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>{t.label}</div>
                 </div>
@@ -6444,7 +6444,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       ══════════════════════════════ */}
       {mode === "likes" && (
         <>
-          {/* 1. Bandeau compteur */}
+          {/* 1. Bandeau compteur — toujours visible (affiche 0 si aucun like en attente) */}
           <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
             borderRadius: 14, padding: "13px 16px", marginBottom: 14,
             color: isPremiumReal ? "#111" : G.blanc,
@@ -6459,16 +6459,18 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                {count > 0 ? `${count} personne${count > 1?"s ont":" a"} liké ton profil` : "Aucun like reçu pour l'instant"}
+                {myGender === "Femme"
+                  ? receivedCount > 1 ? `${receivedCount} hommes ont liké ton profil` : `${receivedCount} homme a liké ton profil`
+                  : receivedCount > 1 ? `${receivedCount} femmes ont liké ton profil` : `${receivedCount} femme a liké ton profil`}
               </div>
               <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>
                 {isPremiumReal ? "Historique complet activé" : "Passe Premium pour découvrir leur identité"}
               </div>
             </div>
-            {!isPremiumReal && count > 0 && (
+            {!isPremiumReal && receivedCount > 0 && (
               <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32,
                 display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>
-                {count > 9 ? "9+" : count}
+                {receivedCount > 9 ? "9+" : receivedCount}
               </div>
             )}
           </div>
@@ -8829,7 +8831,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       {/* Modal aperçu image */}
       {previewImg && (
         <div onClick={() => setPreviewImg(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={() => setPreviewImg(null)} style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff" }}>✕</div>
+          <div onClick={() => setPreviewImg(null)} style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}>✕</div>
           <img src={previewImg} alt="aperçu" onClick={e => e.stopPropagation()} style={{ maxWidth: "95%", maxHeight: "90vh", borderRadius: 12, objectFit: "contain" }} />
         </div>
       )}
