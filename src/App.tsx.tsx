@@ -133,6 +133,19 @@ function formatWhatsApp(num: string): string {
   return num ? `+${d}` : "";
 }
 
+// Déduplique une liste de matchs par couple (paire non ordonnée), en gardant le plus récent (created_at).
+function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; created_at: string }>(list: T[]): T[] {
+  const seen = new Set<string>();
+  return [...list]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .filter(m => {
+      const key = [m.user1 || "", m.user2 || ""].sort().join("|");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 // Charger les settings dynamiques depuis Supabase au démarrage
 fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
@@ -301,7 +314,7 @@ type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]> };
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
@@ -830,7 +843,7 @@ function Btn({ children, variant = "primary", onClick, style = {}, disabled = fa
 }
 
 function Input({ label, type = "text", value, onChange, placeholder, icon, error, hint }: {
-  label?: string; type?: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  label?: React.ReactNode; type?: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string; icon?: string; error?: string; hint?: string;
 }) {
   const svgIcon = icon === "email" ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -2674,7 +2687,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [step, setStep] = useState(isResume && resumeToken && resumeUid ? 2 : 1);
   const [tempToken, setTempToken] = useState<string | null>(isResume ? resumeToken : sessionStorage.getItem("moyo_signup_token"));
   const [tempUserId, setTempUserId] = useState<string | null>(isResume ? resumeUid : sessionStorage.getItem("moyo_signup_uid"));
-  const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "", profession: "", hobbies: "" });
+  const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "", profession: "", hobbies: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
@@ -2899,6 +2912,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           religion: form.religion,
           profession: form.profession.trim() || null,
           hobbies: form.hobbies.trim() || null,
+          phone: form.phone.trim() || null,
           photo_url: photoUrl,
           is_complete: true,
           ...((() => { const ref = new URLSearchParams(window.location.search).get("ref"); return ref ? { referred_by: ref } : {}; })()),
@@ -3023,9 +3037,9 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             </div>
           </div>
         )}
-        <Input label="Prénom" value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="user" />
+        <Input label={<>Prénom <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="user" />
         <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Je suis</label>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Choisis ton genre <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></label>
           <div style={{ display: "flex", gap: 10 }}>
             {["Homme", "Femme"].map(g => (
               <div key={g} onClick={() => upd("gender", g)} style={{ flex: 1, padding: "12px", borderRadius: 12, textAlign: "center", cursor: "pointer", border: `2px solid ${form.gender === g ? G.rouge : G.gris}`, background: form.gender === g ? "rgba(192,57,43,0.06)" : G.blanc, fontWeight: 600, fontSize: "0.88rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -3046,29 +3060,40 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             ))}
           </div>
         </div>
-        <Input label="Âge" type="number" value={form.age} onChange={e => { const v = e.target.value.slice(0,2); upd("age", v); }} placeholder="Ex: 25" icon="cake" hint="Entre 18 et 99 ans" error={form.age && parseInt(form.age) < 18 ? "Vous devez avoir au moins 18 ans." : undefined} />
+        <Input label={<>Âge <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} type="number" value={form.age} onChange={e => { const v = e.target.value.slice(0,2); upd("age", v); }} placeholder="Ex: 25" icon="cake" hint="Entre 18 et 99 ans" error={form.age && parseInt(form.age) < 18 ? "Vous devez avoir au moins 18 ans." : undefined} />
         <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Ville</label>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Ville <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></label>
           <select value={form.city} onChange={e => upd("city", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: "#111", outline: "none" }}>
             <option value="">Sélectionne ta ville</option>
             {VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Religion <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 400 }}>(optionnel)</span></label>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Religion <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
           <select value={form.religion} onChange={e => upd("religion", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: "#111", outline: "none" }}>
             <option value="">Sélectionne ta religion</option>
             {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
         <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Profession <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 400 }}>(optionnel)</span></label>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Profession <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
           <input value={form.profession} onChange={e => upd("profession", e.target.value.slice(0, 60))} placeholder="Ex : Infirmière, Ingénieur, Étudiant…" style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: "#111", outline: "none", marginBottom: 18 }} />
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Centres d'intérêt / Hobbies <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 400 }}>(optionnel)</span></label>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Centres d'intérêt / Hobbies <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
           <input value={form.hobbies} onChange={e => upd("hobbies", e.target.value.slice(0, 80))} placeholder="Ex : Lecture, Musique, Voyages, Sport…" style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: "#111", outline: "none", marginBottom: 18 }} />
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Bio (optionnel)</label>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Bio <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
           <textarea value={form.bio} onChange={e => upd("bio", e.target.value.slice(0, 160))} placeholder="Parle un peu de toi..." rows={3} maxLength={160} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: "#111", outline: "none", resize: "none" }} />
           <div style={{ textAlign: "right", fontSize: "0.75rem", color: form.bio.length >= 150 ? G.rouge : "#aaa", marginTop: 4 }}>{form.bio.length}/160</div>
+        </div>
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Numéro WhatsApp <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
+          <div style={{ position: "relative" }}>
+            <span style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg></span>
+            <input value={form.phone} onChange={e => upd("phone", e.target.value.slice(0, 25))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px 13px 40px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: "#111", outline: "none" }} />
+          </div>
+          <div style={{ fontSize: "0.76rem", color: "#7a7a7a", lineHeight: 1.5, marginTop: 6, display: "flex", gap: 6, alignItems: "flex-start" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a7a7a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Ton numéro reste strictement privé, non visible par les autres membres. Il sert uniquement à la récupération de ton compte et aux notifications WhatsApp importantes.</span>
+          </div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(2)} style={{ flex: 1 }}>← Retour</Btn>
@@ -9631,7 +9656,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   };
   const saveProfile = async () => {
     if (form.age && (form.age < 18 || form.age > 99)) { setErrorMsg("Vous devez avoir entre 18 et 99 ans. Modification refusée."); return; }
-    await sb.update(auth.token, "profiles", auth.userId, { name: form.name, age: form.age, city: form.city, bio: form.bio, religion: form.religion, profession: (form.profession || "").trim() || null, hobbies: (form.hobbies || "").trim() || null });
+    await sb.update(auth.token, "profiles", auth.userId, { name: form.name, age: form.age, city: form.city, bio: form.bio, religion: form.religion, profession: (form.profession || "").trim() || null, hobbies: (form.hobbies || "").trim() || null, phone: (form.phone || "").trim() || null });
     setProfile(p => p ? { ...p, ...(form as Profile) } : null);
     setEditing(false);
     setToast({ msg: "Profil mis à jour !" });
@@ -9747,6 +9772,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
         <label style={{ display: "block", fontWeight: 600, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Bio</label>
         <textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value.slice(0, 160) }))} rows={3} maxLength={160} style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 4, fontSize: "0.93rem", resize: "none", fontFamily: "inherit" }} />
         <div style={{ textAlign: "right", fontSize: "0.75rem", color: (form.bio || "").length >= 150 ? G.rouge : "#aaa", marginBottom: 16 }}>{(form.bio || "").length}/160</div>
+        <label style={{ display: "block", fontWeight: 600, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Numéro WhatsApp <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 400 }}>(privé)</span></label>
+        <input value={form.phone || ""} onChange={e => setForm(f => ({ ...f, phone: e.target.value.slice(0, 25) }))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 6, fontSize: "0.93rem", fontFamily: "inherit" }} />
+        <div style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 16 }}>Jamais visible par les autres membres. Sert à la récupération de ton compte et aux notifications WhatsApp.</div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Annuler</Btn>
           <Btn variant="primary" onClick={saveProfile} style={{ flex: 2 }}>Sauvegarder ✓</Btn>
@@ -10313,6 +10341,26 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
 
 
+
+        {/* Numéro WhatsApp (privé) */}
+        {(!isWideProfile || activeSection === "main") && (
+          <div onClick={() => { if (!profile?.phone) setEditing(true); }} style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px dashed rgba(192,57,43,0.35)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden", cursor: profile?.phone ? "default" : "pointer" }}>
+            <div style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: profile?.phone ? "rgba(37,211,102,0.12)" : "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill={profile?.phone ? "#25D366" : G.rouge}><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Mon numéro WhatsApp</div>
+                {profile?.phone
+                  ? <div style={{ fontSize: "0.87rem", color: "#333", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.phone} <span style={{ fontSize: "0.7rem", color: "#aaa", fontWeight: 500 }}>· privé</span></div>
+                  : <div style={{ fontSize: "0.87rem", color: G.rouge, fontWeight: 700 }}>Ajouter mon numéro</div>}
+              </div>
+              {profile?.phone
+                ? <div onClick={(e) => { e.stopPropagation(); setEditing(true); }} style={{ cursor: "pointer", color: "#bbb", flexShrink: 0, padding: 4 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>}
+            </div>
+          </div>
+        )}
 
         {/* Demande de vérification */}
         {(!isWideProfile || ["verification","main"].includes(activeSection)) && (!profile?.is_verified ? (
@@ -14563,7 +14611,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     {(() => {
                       const max = Math.max(...stats.likesPerDay.map(d => d.count), 1);
                       return stats.likesPerDay.map((d, i) => (
-                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                        <div key={i} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                           <div style={{ width: "100%", background: G.rouge, borderRadius: "4px 4px 0 0", height: `${Math.round((d.count / max) * 64)}px`, minHeight: 3, opacity: 0.8 }} />
                           <div style={{ fontSize: "0.52rem", color: "#aaa", transform: "rotate(-30deg)", whiteSpace: "nowrap" }}>{d.date.slice(5)}</div>
                         </div>
@@ -16462,7 +16510,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun match trouvé</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {matchList.map((m, i) => (
+                  {dedupeMatchesByCouple(matchList).map((m, i) => (
                     <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: G.blanc, borderRadius: 14, boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{m.profile1?.photo_url && <img src={m.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
