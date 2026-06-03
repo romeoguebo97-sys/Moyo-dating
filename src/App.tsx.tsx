@@ -5196,6 +5196,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
   const [blockedIds, setBlockedIds] = useState(new Set<string>());
   const [current, setCurrent] = useState(0);
   const [matchPop, setMatchPop] = useState<Profile | null>(null);
+  const [confirmUnlike, setConfirmUnlike] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [likesToday, setLikesToday] = useState(0);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
@@ -5365,33 +5366,8 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       } catch { setShowSameGender(true); return; }
     }
     if (likedIds.has(p.id)) {
-      // Unlike - mise à jour optimiste immédiate
-      setLikedIds(s => { const n = new Set(s); n.delete(p.id); return n; });
-      setLikesToday(l => Math.max(0, l - 1));
-      // Suppression en cascade : like + match + messages + vues
-      try {
-        const [fwd, rev] = await Promise.all([
-          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}&select=id`),
-          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}&select=id`),
-        ]);
-        const matchIds = [
-          ...(Array.isArray(fwd) ? fwd.map(x => x.id) : []),
-          ...(Array.isArray(rev) ? rev.map(x => x.id) : []),
-        ];
-        // Supprimer messages de tous les matchs
-        for (const id of matchIds) {
-          await sb.delete(auth.token, "messages", `?match_id=eq.${id}`);
-        }
-        await Promise.all([
-          sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}`),
-          sb.delete(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}`),
-          sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${p.id}`),
-          // Supprimer aussi mon profil de ses likes (retrait symétrique)
-          sb.delete(auth.token, "likes", `?from_user=eq.${p.id}&to_user=eq.${auth.userId}`),
-          // Supprimer les vues mutuelles
-          sb.delete(auth.token, "profile_views", `?viewer_id=eq.${auth.userId}&viewed_id=eq.${p.id}`),
-        ]);
-      } catch {}
+      // Demander confirmation avant le delike (suppression en cascade : like + match + messages + vues)
+      setConfirmUnlike(p);
       return;
     }
     if (!auth.isPremium && likesToday >= FREE_LIMITS.likes) { onShowPremium(modalTexts.likesEpuises.replace("{n}", String(FREE_LIMITS.likes))); return; }
@@ -5419,6 +5395,38 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       }
     }
   }, [auth, likedIds, likesToday, myGender, onShowPremium]);
+
+  // ── Retrait effectif du like (cascade : like + match + messages + vues), après confirmation ──
+  const doUnlike = useCallback(async (p: Profile) => {
+    // Mise à jour optimiste immédiate
+    setLikedIds(s => { const n = new Set(s); n.delete(p.id); return n; });
+    setLikesToday(l => Math.max(0, l - 1));
+    setConfirmUnlike(null);
+    // Suppression en cascade : like + match + messages + vues
+    try {
+      const [fwd, rev] = await Promise.all([
+        sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}&select=id`),
+        sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}&select=id`),
+      ]);
+      const matchIds = [
+        ...(Array.isArray(fwd) ? fwd.map(x => x.id) : []),
+        ...(Array.isArray(rev) ? rev.map(x => x.id) : []),
+      ];
+      // Supprimer messages de tous les matchs
+      for (const id of matchIds) {
+        await sb.delete(auth.token, "messages", `?match_id=eq.${id}`);
+      }
+      await Promise.all([
+        sb.delete(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}`),
+        sb.delete(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}`),
+        sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${p.id}`),
+        // Supprimer aussi mon profil de ses likes (retrait symétrique)
+        sb.delete(auth.token, "likes", `?from_user=eq.${p.id}&to_user=eq.${auth.userId}`),
+        // Supprimer les vues mutuelles
+        sb.delete(auth.token, "profile_views", `?viewer_id=eq.${auth.userId}&viewed_id=eq.${p.id}`),
+      ]);
+    } catch {}
+  }, [auth]);
 
   // ── État toast local pour Discover ──
   const [discoverToast, setDiscoverToast] = useState<ToastState>(null);
@@ -5815,6 +5823,24 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     </div>
   </div>
 </div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ marginBottom: 16 }}><svg width="64" height="64" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>{modalTexts.matchTitle}</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>{modalTexts.matchSubtitle.replace("{name}", matchPop.name)}</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
+    {/* ── Modal confirmation delike (vue Découvrir) ── */}
+    {confirmUnlike && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+          </div>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111", marginBottom: 8 }}>Retirer ton like à {confirmUnlike.name} ?</h3>
+          <p style={{ fontSize: "0.83rem", color: "#666", marginBottom: 22, lineHeight: 1.6 }}>
+            Ton like sera retiré des deux côtés. Si vous aviez un match, la conversation et tous les messages seront définitivement supprimés.
+          </p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setConfirmUnlike(null)} style={{ flex: 1 }}>Annuler</Btn>
+            <Btn variant="danger" onClick={() => doUnlike(confirmUnlike)} style={{ flex: 1 }}>Retirer le like</Btn>
+          </div>
+        </div>
+      </div>
+    )}
     </div>{/* fin contenu principal */}
 
     {/* ── PANNEAU DROIT (desktop/tablette uniquement) ── */}
@@ -5910,180 +5936,6 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       </div>
     )}
   </div>;
-}
-
-function LikesReceivedBanner({ auth, onShowPremium }: { auth: Auth; onShowPremium: (r: string) => void }) {
-  const [count, setCount] = useState(0);
-  const [likers, setLikers] = useState<Profile[]>([]);
-  const [visitors, setVisitors] = useState<Profile[]>([]);
-  const [activeTab, setActiveTab] = useState<"likes" | "visitors">("likes");
-  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
-  const [liking, setLiking] = useState(false);
-  const [myGender, setMyGender] = useState("");
-  useEffect(() => {
-    sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
-      .then(res => { if (res[0]) setMyGender(res[0].gender); });
-  }, []);
-
-  const handleLikeFromBanner = async (p: Profile) => {
-    // Sécurité hétéro : interdire le like d'un profil de même genre (si la règle est active).
-    if (BLOCK_SAME_GENDER && myGender && p.gender && myGender === p.gender) { setLiking(false); return; }
-    setLiking(true);
-    try {
-      await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
-      // Vérifier si match mutuel
-      const mutual = await sb.query<object>(auth.token, "likes", `?from_user=eq.${p.id}&to_user=eq.${auth.userId}`);
-      if (Array.isArray(mutual) && mutual.length > 0) {
-        // ── Anti-doublon : vérifier qu'aucun match n'existe déjà ──
-        const [existFwd, existRev] = await Promise.all([
-          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}&select=id&limit=1`),
-          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}&select=id&limit=1`),
-        ]);
-        if (!existFwd?.[0]?.id && !existRev?.[0]?.id) {
-          const matchRes = await sb.insert<{id: string}>(auth.token, "matches", { user1: auth.userId, user2: p.id });
-          const matchId = matchRes?.[0]?.id;
-          if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, auth.name, p.name);
-        }
-      }
-    } catch {}
-    setLiking(false);
-    setSelectedProfile(null);
-  };
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        // Likes reçus
-        const res = await sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`);
-        setCount(Array.isArray(res) ? res.length : 0);
-        if (auth.isPremium && Array.isArray(res) && res.length > 0) {
-          const ids = res.map(r => r.from_user).join(",");
-          const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids})&select=*`);
-          setLikers(Array.isArray(profiles) ? profiles : []);
-        }
-        // Visiteurs du profil (Premium uniquement)
-        if (auth.isPremium) {
-          const views = await sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&select=viewer_id&order=created_at.desc&limit=20`);
-          if (Array.isArray(views) && views.length > 0) {
-            const vIds = [...new Set(views.map(v => v.viewer_id))].join(",");
-            const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=*`);
-            setVisitors(Array.isArray(vProfiles) ? vProfiles : []);
-          }
-        }
-      } catch {}
-      setLoading(false);
-    };
-    load();
-  }, []);
-
-  return (
-    <div style={{ marginBottom: 16 }}>
-      {/* Bandeau */}
-      <div onClick={() => !auth.isPremium && onShowPremium("Découvre qui a liké ton profil en passant Premium ! 👀")}
-        style={{ background: auth.isPremium ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "14px 18px", marginBottom: auth.isPremium && likers.length > 0 ? 12 : 0, color: auth.isPremium ? G.brun : G.blanc, cursor: auth.isPremium ? "default" : "pointer", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          {auth.isPremium
-            ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          }
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>
-            {auth.isPremium
-              ? count > 0 ? `${count} personne${count > 1 ? "s ont" : " a"} liké ton profil` : "Personne n'a encore liké ton profil"
-              : count > 0
-                ? myGender === "Femme"
-                  ? count === 1 ? "Félicitations ! 1 homme a liké ton profil" : `Félicitations ! ${count} hommes ont liké ton profil`
-                  : count === 1 ? "Félicitations ! 1 femme a liké ton profil" : `Félicitations ! ${count} femmes ont liké ton profil`
-                : "Des personnes ont liké ton profil"}
-          </div>
-          <div style={{ fontSize: "0.78rem", opacity: 0.85 }}>
-            {auth.isPremium ? "Accès Premium activé ✓" : "Passe Premium pour voir qui s'est intéressé(e) à toi"}
-          </div>
-        </div>
-        {!auth.isPremium && count > 0 && (
-          <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1rem" }}>
-            {count > 9 ? "9+" : count}
-          </div>
-        )}
-      </div>
-
-      {/* Onglets likes / visiteurs - Premium uniquement */}
-      {auth.isPremium && (likers.length > 0 || visitors.length > 0) && (
-        <div style={{ display: "flex", background: G.gris, borderRadius: 50, padding: 3, gap: 2, marginBottom: 10 }}>
-          {[{ id: "likes", label: <span style={{display: "flex",alignItems: "center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{`Likes (${likers.length})`}</span> }, { id: "visitors", label: <span style={{display: "flex",alignItems: "center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{`Vues (${visitors.length})`}</span> }].map(t => (
-            <div key={t.id} onClick={() => setActiveTab(t.id as "likes" | "visitors")} style={{ flex: 1, padding: "6px 10px", borderRadius: 50, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", textAlign: "center", background: activeTab === t.id ? G.blanc : "transparent", color: activeTab === t.id ? G.rouge : "#888", boxShadow: activeTab === t.id ? "0 2px 6px rgba(0,0,0,0.1)" : "none", transition: "all 0.2s" }}>
-              {t.label}
-            </div>
-          ))}
-        </div>
-      )}
-      {auth.isPremium && (likers.length > 0 || visitors.length > 0) && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
-          {(activeTab === "likes" ? likers : visitors).map(p => (
-            <div key={p.id} onClick={() => setSelectedProfile(p)} style={{ background: G.blanc, borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.07)", cursor: "pointer" }}>
-              <div style={{ height: 120, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
-                {p.photo_url
-                  ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    </div>
-                }
-                <div style={{ position: "absolute", top: 6, right: 6, background: activeTab === "likes" ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(0,0,0,0.5)", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {activeTab === "likes"
-                    ? <svg width="12" height="12" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                    : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  }
-                </div>
-              </div>
-              <div style={{ padding: "8px 10px" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#111" }}>{p.name}, {p.age} ans</div>
-                <div style={{ fontSize: "0.72rem", color: "#555", marginTop: 2 }}>{p.city}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Modal profil cliquable */}
-      {selectedProfile && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 600, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedProfile(null)}>
-          <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
-              {selectedProfile.photo_url
-                ? <img src={selectedProfile.photo_url ?? undefined} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-              }
-              <div onClick={() => setSelectedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-              <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{selectedProfile.name}, {selectedProfile.age} ans {selectedProfile.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>}{selectedProfile.is_verified && <VerifiedBadge size={14} />}</div>
-                <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{selectedProfile.city}</div>
-              </div>
-            </div>
-            <div style={{ padding: "18px 20px 32px" }}>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-                <span style={{ background: selectedProfile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: selectedProfile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>{selectedProfile.gender}</span>
-                {selectedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{selectedProfile.religion}</span>}
-              </div>
-              {selectedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{selectedProfile.bio}</p>}
-              <Btn variant="primary" onClick={() => handleLikeFromBanner(selectedProfile)} loading={liking} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
-                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                  Liker {selectedProfile.name}
-                </span>
-              </Btn>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {auth.isPremium && loading && (
-        <div style={{ textAlign: "center", padding: "20px", color: "#555", fontSize: "0.85rem" }}>Chargement...</div>
-      )}
-    </div>
-  );
 }
 
 function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClose: () => void; onMessage: () => void }) {
@@ -6254,7 +6106,7 @@ const EmptyState = memo(function EmptyState({ icon, title, subtitle }: { icon: R
   );
 });
 
-function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void }) {
+function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMessages }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void; onGoMessages?: (partnerId?: string) => void }) {
   // ── Sub-tab state ──
   const [likesSubTab, setLikesSubTab] = useState<"received" | "sent">("received");
   const [visitorsSubTab, setVisitorsSubTab] = useState<"visitors" | "visited">("visitors");
@@ -6568,6 +6420,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
     </div>
   );
 
+  // ── Listes filtrées : les profils déjà en match n'apparaissent ni dans Reçus ni dans Envoyés (ils sont dans l'onglet Matchs) ──
+  const receivedLikers = likers.filter(p => !likerMeta[p.id]?.isMatch);
+  const visibleSentLikes = sentLikes.filter(p => sentLikesMeta[p.id]?.status !== "match");
+  const receivedCount = isPremiumReal ? receivedLikers.length : count;
+
   return (
     <div style={{ padding: "12px 16px 24px" }}>
       {/* ── En-tête ── */}
@@ -6621,7 +6478,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             value={likesSubTab}
             onChange={v => setLikesSubTab(v as "received"|"sent")}
             options={[
-              { id: "received", label: `Reçus${count > 0 ? ` (${count})` : ""}`,
+              { id: "received", label: `Reçus${receivedCount > 0 ? ` (${receivedCount})` : ""}`,
                 icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
               { id: "sent", label: "Envoyés",
                 icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> },
@@ -6634,7 +6491,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             <>
               {isPremiumReal ? (
                 loading ? <Spinner /> :
-                likers.length === 0 ? (
+                receivedLikers.length === 0 ? (
                   <EmptyState
                     icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
                     title="Aucun like reçu pour l'instant"
@@ -6642,7 +6499,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                   />
                 ) : viewMode === "card" ? (
                   <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
-                    {likers.map(p => (
+                    {receivedLikers.map(p => (
                       <ProfileCard key={p.id}
                         p={p}
                         meta={likerMeta[p.id]}
@@ -6659,7 +6516,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                   </div>
                 ) : (
                   <div>
-                    {likers.map(p => (
+                    {receivedLikers.map(p => (
                       <ProfileRow key={p.id}
                         p={p}
                         meta={likerMeta[p.id]}
@@ -6692,7 +6549,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
             <>
               {isPremiumReal ? (
                 loading ? <Spinner /> :
-                sentLikes.length === 0 ? (
+                visibleSentLikes.length === 0 ? (
                   <EmptyState
                     icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>}
                     title="Tu n'as encore liké personne"
@@ -6700,7 +6557,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                   />
                 ) : viewMode === "card" ? (
                   <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
-                    {sentLikes.map(p => {
+                    {visibleSentLikes.map(p => {
                       const meta = sentLikesMeta[p.id];
                       return (
                         <ProfileCard key={p.id}
@@ -6713,7 +6570,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                   </div>
                 ) : (
                   <div>
-                    {sentLikes.map(p => {
+                    {visibleSentLikes.map(p => {
                       const meta = sentLikesMeta[p.id];
                       return (
                         <ProfileRow key={p.id}
@@ -6946,9 +6803,15 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate }: { aut
                 {selectedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{selectedProfile.religion}</span>}
               </div>
               {selectedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{selectedProfile.bio}</p>}
-              <Btn variant="primary" onClick={() => handleLike(selectedProfile)} loading={liking} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
-                Liker {selectedProfile.name}
-              </Btn>
+              {(likerMeta[selectedProfile.id]?.isMatch || sentLikesMeta[selectedProfile.id]?.status === "match") ? (
+                <Btn variant="primary" onClick={() => { const pid = selectedProfile.id; setSelectedProfile(null); if (onGoMessages) onGoMessages(pid); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
+                  Envoyer un message
+                </Btn>
+              ) : (
+                <Btn variant="primary" onClick={() => handleLike(selectedProfile)} loading={liking} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
+                  Liker {selectedProfile.name}
+                </Btn>
+              )}
             </div>
           </div>
         </div>
@@ -8775,7 +8638,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
             <div onClick={() => setShowEmojiPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
             <div style={{ padding: "10px 12px 4px 12px", borderBottom: `1px solid ${G.gris}`, position: "relative", zIndex: 11 }}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 160, overflowY: "auto" }}>
-                {["😊","😍","🥰","😘","😁","😂","🤣","😅","😆","😉","😋","😎","🤩","😏","🥳","😔","😢","😭","😤","😡","🤔","🫠","😶","🫡","🥺","🙏","👏","💪","🤝","👍","❤️","🧡","💛","💚","💙","💜","🖤","💔","💕","💞","💓","💗","💖","💝","🌹","🌸","🌺","🌷","✨","🎉","🎊","🥂","🍀","🌍","🔥","💫","⭐","🌟","🌈","🎶","🎵","💃","🕺","😴","🤗","🫶","🙌","👀","💯","🫀","🥹","🤭","😇","🤠","🥸","😼","🫣","🤫","🫦"].map(em => (
+                {["😊","😍","🥰","😘","😁","😂","🤣","😅","😆","😉","😋","😎","🤩","😏","🥳","😔","😢","😭","😤","😡","🤔","🫠","😶","🫡","🥺","🙏","👏","💪","🤝","👍","❤️","🧡","💛","💚","💙","💜","🖤","💔","💕","💞","💓","💗","💖","💝","🌹","🌸","🌺","🌷","✨","🎉","🎊","🥂","🍀","🌍","🔥","💫","⭐","🌟","🌈","🎶","🎵","💃","🕺","😴","🤗","🫶","🙌","👀","💯","🫀","🥹","🤭","😇","🤠","🥸","😼","🫣","🤫","🫦",
+                // ── Drapeaux : Congo + Afrique + diaspora ──
+                "🇨🇬","🇨🇩","🇩🇿","🇦🇴","🇧🇯","🇧🇼","🇧🇫","🇧🇮","🇨🇲","🇨🇻","🇨🇫","🇹🇩","🇰🇲","🇨🇮","🇩🇯","🇪🇬","🇬🇶","🇪🇷","🇸🇿","🇪🇹","🇬🇦","🇬🇲","🇬🇭","🇬🇳","🇬🇼","🇰🇪","🇱🇸","🇱🇷","🇱🇾","🇲🇬","🇲🇼","🇲🇱","🇲🇷","🇲🇺","🇲🇦","🇲🇿","🇳🇦","🇳🇪","🇳🇬","🇷🇼","🇸🇹","🇸🇳","🇸🇨","🇸🇱","🇸🇴","🇿🇦","🇸🇸","🇸🇩","🇹🇿","🇹🇬","🇹🇳","🇺🇬","🇿🇲","🇿🇼",
+                "🇫🇷","🇧🇪","🇨🇦","🇺🇸","🇬🇧","🇨🇭","🇩🇪","🇮🇹","🇵🇹","🇪🇸","🇳🇱","🇨🇳","🇦🇪","🇹🇷","🇧🇷","🇦🇺"].map(em => (
                   <span key={em} onClick={() => { setText(prev => prev + em); }} style={{ fontSize: "1.45rem", cursor: "pointer", lineHeight: 1, padding: "3px 2px", borderRadius: 6, transition: "transform 0.1s", userSelect: "none", WebkitUserSelect: "none" }}
                     onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.25)")}
                     onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
@@ -8848,8 +8714,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         <div onClick={() => setContextMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div onClick={e => e.stopPropagation()} style={{ width: "88%", maxWidth: 340, userSelect: "none", WebkitUserSelect: "none" }}>
             {/* Barre emojis réactions */}
-            <div style={{ background: G.blanc, borderRadius: 50, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-around", marginBottom: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-              {["👍","❤️","😂","😮","😢","🙏"].map(emoji => {
+            <div style={{ background: G.blanc, borderRadius: 50, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", marginBottom: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+              {["👍","❤️","😂","😮","😢","🙏","🥳","😱","😍","😘","🫣","🫢","💔"].map(emoji => {
                 const hasReacted = (contextMenu.msg.reactions?.[emoji] || []).includes(auth.userId);
                 return (
                   <div key={emoji} onClick={async () => {
@@ -8868,7 +8734,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     await sb.update(auth.token, "messages", msgId, { reactions: newReactions });
                     setMsgs(prev => prev.map(msg => msg.id === msgId ? { ...msg, reactions: newReactions } : msg));
                     setContextMenu(null);
-                  }} style={{ fontSize: hasReacted ? "1.8rem" : "1.5rem", cursor: "pointer", transition: "font-size 0.15s", filter: hasReacted ? "drop-shadow(0 0 4px rgba(192,57,43,0.5))" : "none", padding: "2px" }}>
+                  }} style={{ fontSize: hasReacted ? "1.8rem" : "1.5rem", cursor: "pointer", transition: "font-size 0.15s", filter: hasReacted ? "drop-shadow(0 0 4px rgba(192,57,43,0.5))" : "none", padding: "2px", flexShrink: 0 }}>
                     {emoji}
                   </div>
                 );
@@ -17816,7 +17682,7 @@ export default function App() {
       if (t === "visitors") { setViewsReceived(0); try { localStorage.setItem(`moyo_visitors_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} />}
-      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
+      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} />}
