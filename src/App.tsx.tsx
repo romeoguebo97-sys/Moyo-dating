@@ -11580,7 +11580,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Onglet actif ──
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie">("stats");
 
   // ── Match Proposals ──
   type MatchProposal = {
@@ -13497,16 +13497,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const isSystemReport = (r: ReportRow) => !isSupportReport(r) && (r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id);
   const isProfileReport = (r: ReportRow) => !isSupportReport(r) && !isSystemReport(r) && !!r.reported_id;
 
+  // Onglet "Messagerie" (top-level) = même vue que le sous-filtre "messaging", mais depuis son propre onglet
+  const effectiveFilter = activeTab === "messagerie" ? "messaging" : reportFilter;
+
   const filteredReports = reports.filter(r => {
-    if (reportFilter === "archived") return ARCHIVED_STATUSES.includes(r.status);
+    if (effectiveFilter === "archived") return ARCHIVED_STATUSES.includes(r.status);
     // Messagerie : on montre tous les échanges support NON archivés (statut ≠ "archived"),
     // y compris les messages "reviewed" (réponses admin ou messages déjà lus), pour garder
     // le fil de conversation visible jusqu'à ce que l'admin archive explicitement.
-    if (reportFilter === "messaging") return isSupportInbox(r) && r.status !== "archived";
+    if (effectiveFilter === "messaging") return isSupportInbox(r) && r.status !== "archived";
     // Autres vues actives : exclure les archivés
     if (!isPending(r)) return false;
-    if (reportFilter === "user") return isProfileReport(r);
-    if (reportFilter === "system") return isSystemReport(r);
+    if (effectiveFilter === "user") return isProfileReport(r);
+    if (effectiveFilter === "system") return isSystemReport(r);
     return true; // "all" = tous les éléments en attente, toutes catégories confondues
   });
 
@@ -14702,6 +14705,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["users", "Utilisateurs", IcoUsers],
             ["reports", "Signalements", IcoAlert],
             ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
+            ["messagerie", "Messagerie", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "messagerie" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
             ["reviews", "Avis", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["payments", "Paiements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
@@ -14714,6 +14718,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "reviews") loadReviews();
                 if (key === "payments") loadPayments();
                 if (key === "logs") loadAdminLogs();
+                if (key === "messagerie") loadStats();
                 if (key === "matches") {
                   loadProposals();
                   setProposalsBadgeCount(0);
@@ -14735,6 +14740,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {key === "reports" && pendingCount > 0 && (
                   <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(192,57,43,0.2)", border: `1px solid rgba(192,57,43,0.15)` }}>
                     {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
+                {key === "messagerie" && messagingPendingCount > 0 && (
+                  <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(192,57,43,0.2)", border: `1px solid rgba(192,57,43,0.15)` }}>
+                    {messagingPendingCount > 99 ? "99+" : messagingPendingCount}
                   </span>
                 )}
                 {key === "reviews" && unreadReviewsCount > 0 && (
@@ -15418,11 +15428,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
 
       {/* ═══════════════════════════════════════════ ONGLET SIGNALEMENTS */}
-      {activeTab === "reports" && (
+      {(activeTab === "reports" || activeTab === "messagerie") && (
         <div style={{ padding: "16px" }}>
-          {/* Filtres */}
+          {/* Sous-onglets — affichés uniquement sur Signalements (pas sur l'onglet Messagerie) */}
+          {activeTab === "reports" && (
           <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
-            {(["all", "user", "system", "messaging", "archived"] as const).map(f => {
+            {(["all", "user", "system", "archived"] as const).map(f => {
               const isActive = reportFilter === f;
               const isArchived = f === "archived";
               const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : f === "messaging" ? "Messagerie" : "Archivés";
@@ -15462,32 +15473,38 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               );
             })}
           </div>
+          )}
 
-          <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", maxWidth: reportFilter === "messaging" ? 760 : undefined, margin: reportFilter === "messaging" ? "0 auto" : undefined, width: reportFilter === "messaging" ? "100%" : undefined, boxSizing: "border-box" }}>
+          <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", maxWidth: effectiveFilter === "messaging" ? 760 : undefined, margin: effectiveFilter === "messaging" ? "0 auto" : undefined, width: effectiveFilter === "messaging" ? "100%" : undefined, boxSizing: "border-box" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
-                {reportFilter === "archived"
+                {effectiveFilter === "archived"
                   ? `Archivés (${archivedCount})`
-                  : reportFilter === "user"
+                  : effectiveFilter === "user"
                     ? `Profils (${filteredReports.length})`
-                    : reportFilter === "system"
+                    : effectiveFilter === "system"
                       ? `Système (${filteredReports.length})`
-                      : reportFilter === "messaging"
+                      : effectiveFilter === "messaging"
                         ? `Messagerie (${filteredReports.length})`
                         : `En attente (${filteredReports.length})`
                 }
               </h3>
-              {reportFilter === "archived" && archivedCount > 0 && (
+              {effectiveFilter === "archived" && archivedCount > 0 && (
                 <span style={{ fontSize: "0.7rem", color: "#aaa" }}>Supprimables</span>
               )}
             </div>
 
             {filteredReports.length === 0 ? (
               <div style={{ textAlign: "center", padding: "28px 0" }}>
-                {reportFilter === "archived"
+                {effectiveFilter === "archived"
                   ? <>
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
                       <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucun signalement archivé</p>
+                    </>
+                  : effectiveFilter === "messaging"
+                  ? <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucune conversation pour le moment</p>
                     </>
                   : <>
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -15496,8 +15513,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 }
               </div>
             ) : (
-              <div data-admlist={reportFilter === "messaging" ? undefined : ""} style={{ maxWidth: 720, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-              {reportFilter === "messaging" ? (() => {
+              <div data-admlist={effectiveFilter === "messaging" ? undefined : ""} style={{ maxWidth: 720, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+              {effectiveFilter === "messaging" ? (() => {
                 // ── Vue Messagerie : grouper les échanges par utilisateur ──
                 const convMap: Record<string, { userId: string; messages: ReportRow[] }> = {};
                 filteredReports.forEach(r => {
@@ -15909,8 +15926,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             )}
           </div>
 
-          {/* Info policy SQL - visible seulement hors archive */}
-          {reportFilter !== "archived" && (
+          {/* Info policy SQL - visible seulement hors archive, et seulement sur Signalements */}
+          {activeTab === "reports" && reportFilter !== "archived" && (
             <div style={{ background: "rgba(52,152,219,0.06)", border: "1px solid rgba(52,152,219,0.2)", borderRadius: 12, padding: "12px 14px", marginTop: 12, fontSize: "0.74rem", color: "#2980b9", lineHeight: 1.6 }}>
               <strong>Si "Traiter" / "Rejeter" retourne une erreur 403</strong>, exécute ce SQL dans Supabase → SQL Editor :<br />
               <code style={{ display: "block", marginTop: 6, background: "rgba(52,152,219,0.1)", padding: "8px 10px", borderRadius: 8, fontSize: "0.7rem", color: "#1a6a9a", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{`CREATE POLICY "Admin can update reports" ON public.reports FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`}</code>
@@ -15918,7 +15935,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           )}
 
           {/* Note archive + SQL policy DELETE */}
-          {reportFilter === "archived" && archivedCount > 0 && (
+          {activeTab === "reports" && reportFilter === "archived" && archivedCount > 0 && (
             <>
               <div style={{ background: "rgba(108,117,125,0.06)", border: "1px solid rgba(108,117,125,0.15)", borderRadius: 12, padding: "10px 14px", marginTop: 12, fontSize: "0.74rem", color: "#6c757d", display: "flex", alignItems: "center", gap: 8 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
@@ -15936,7 +15953,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </Btn>
 
           {/* Bouton Tout supprimer - visible uniquement dans la vue Archivés */}
-          {reportFilter === "archived" && (
+          {activeTab === "reports" && reportFilter === "archived" && (
             <button
               disabled={archivedCount === 0 || reportActionLoading === "bulk"}
               onClick={() => {
