@@ -19,11 +19,19 @@ const RELIGIONS = [
 const CONTACT_PATTERNS = [
   /(\+?[\d][\s\-.]?){8,}/,
   /[\w.-]+@[\w.-]+\.\w+/,
-  /(whatsapp|telegram|watsap|snapchat)/i,
-  /(facebook|instagram|tiktok|twitter)/i,
-  /(mon num|mon numero|mon numéro|appelle.?moi|contacte.?moi)/i,
+  /(whatsapp|whatsap|whatsab|watsap|watsapp|wtsapp|wassap|telegram|telega|snapchat|\bsnap\b|viber|wechat|we.?chat|skype|discord|messenger|\bimo\b|zangi|botim|\bkakao\b)/i,
+  /(facebook|\bfb\b|instagram|\binsta\b|instagrame|tiktok|tik.?tok|twitter)/i,
+  /(mon num|mon numero|mon numéro|appelle.?moi|contacte.?moi|écris.?moi.?sur|ecris.?moi.?sur|rejoins.?moi.?sur|mon contact\b|mon tel\b)/i,
 ];
-const hasContactInfo = (text: string): boolean => CONTACT_PATTERNS.some(p => p.test(text));
+// Mots interdits "contacts" (gratuit uniquement) — ajoutés par l'admin depuis Configuration → Sécurité
+let CONTACT_BANNED_REGEX: RegExp | null = null;
+const buildContactBannedRegex = (raw: string) => {
+  const words = (raw || "").split(/[\n,;]+/).map(w => w.trim()).filter(Boolean);
+  if (words.length === 0) { CONTACT_BANNED_REGEX = null; return; }
+  const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  try { CONTACT_BANNED_REGEX = new RegExp(`(${escaped.join("|")})`, "i"); } catch { CONTACT_BANNED_REGEX = null; }
+};
+const hasContactInfo = (text: string): boolean => CONTACT_PATTERNS.some(p => p.test(text)) || (CONTACT_BANNED_REGEX !== null && CONTACT_BANNED_REGEX.test(text));
 
 // ── MODÉRATION : insultes, arnaques, contenu interdit ──
 const MODERATION_RULES: { pattern: RegExp; type: "insult" | "scam" | "sexual" }[] = [
@@ -147,7 +155,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -161,6 +169,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_assistant"] !== undefined) FEATURE_ASSISTANT = map["feature_assistant"] !== "false";
   if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
+  if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
   if (map["pay_mtn_number"]) PAY_MTN_NUMBER = map["pay_mtn_number"];
   if (map["pay_mtn_responsable"]) PAY_MTN_RESPONSABLE = map["pay_mtn_responsable"];
   if (map["pay_airtel_number"]) PAY_AIRTEL_NUMBER = map["pay_airtel_number"];
@@ -3562,6 +3571,7 @@ function AdminDesktopPage() {
     maintenanceMode: "false",
     maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧",
     customBannedWords: "",
+    contactBannedWords: "",
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
@@ -3579,6 +3589,7 @@ function AdminDesktopPage() {
       "feature_statuses","feature_gift_premium","feature_assistant",
       "maintenance_mode","maintenance_message",
       "custom_banned_words",
+      "contact_banned_words",
     ];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
@@ -3613,6 +3624,7 @@ function AdminDesktopPage() {
         maintenanceMode: map["maintenance_mode"] || c.maintenanceMode,
         maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage,
         customBannedWords: map["custom_banned_words"] || c.customBannedWords,
+        contactBannedWords: map["contact_banned_words"] || c.contactBannedWords,
       }));
     }).catch(() => {});
   }, [auth]);
@@ -3912,6 +3924,20 @@ function AdminDesktopPage() {
                   await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.custom_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
                   setAppConfig(c => ({ ...c, customBannedWords: editingConfigValue }));
                   buildCustomBannedRegex(editingConfigValue);
+                  setEditingConfig(null);
+                }} />
+              <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
+                <b>Mots « contacts » — membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
+              </div>
+              <EditableRow label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords || "(aucun)"} open={editingConfig === "contact_banned_words"}
+                onOpen={() => { setEditingConfig(editingConfig === "contact_banned_words" ? null : "contact_banned_words"); setEditingConfigValue(appConfig.contactBannedWords); }}
+                editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                hint="Ex : messenger, signal, mon réseau"
+                onSave={async () => {
+                  if (!auth) return;
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.contact_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                  setAppConfig(c => ({ ...c, contactBannedWords: editingConfigValue }));
+                  buildContactBannedRegex(editingConfigValue);
                   setEditingConfig(null);
                 }} />
             </OffCanvasSection>}
@@ -4417,14 +4443,14 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -4432,8 +4458,9 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
+        if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
   }, [auth.token]);
 
@@ -4496,6 +4523,19 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
             await patch("custom_banned_words", editingConfigValue);
             setAppConfig(c => ({ ...c, customBannedWords: editingConfigValue }));
             buildCustomBannedRegex(editingConfigValue);
+            setEditingConfig(null);
+          }} />
+        <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
+          <b>Mots « contacts » — membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
+        </div>
+        <EditableRow label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords || "(aucun)"} open={editingConfig === "contact_banned_words"}
+          onOpen={() => { setEditingConfig(editingConfig === "contact_banned_words" ? null : "contact_banned_words"); setEditingConfigValue(appConfig.contactBannedWords); }}
+          editValue={editingConfigValue} onEdit={setEditingConfigValue}
+          hint="Ex : messenger, signal, mon réseau"
+          onSave={async () => {
+            await patch("contact_banned_words", editingConfigValue);
+            setAppConfig(c => ({ ...c, contactBannedWords: editingConfigValue }));
+            buildContactBannedRegex(editingConfigValue);
             setEditingConfig(null);
           }} />
       </OffCanvasSection>
@@ -7205,7 +7245,7 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
   const accent = isMine ? G.vert : G.rouge;
   const isImg = replyTo.content.startsWith("[img]");
   const raw = replyTo.content.replace(/^\[↩.*?\]\n/, "");
-  const preview = !isImg && raw.length > 80 ? raw.slice(0, 80) + "…" : raw;
+  const preview = replyTo.content === "[burned]" ? "🔥 Photo détruite" : replyTo.content.startsWith("[img1]") ? "👁️ Photo vue unique" : (!isImg && raw.length > 80 ? raw.slice(0, 80) + "…" : raw);
   return (
     // ── ReplyBanner v2 : visible, robuste iOS, sans overflow caché ──
     <div style={{
@@ -7269,7 +7309,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [showDeleteConv, setShowDeleteConv] = useState(false);
   const [imgLoading, setImgLoading] = useState(false);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
-  const [viewOnce, setViewOnce] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [pendingViewOnce, setPendingViewOnce] = useState(false);
+  const [showDestroyed, setShowDestroyed] = useState(false);
   const [burnMsg, setBurnMsg] = useState<Message | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [moderationAlert, setModerationAlert] = useState<"insult" | "scam" | "sexual" | null>(null);
@@ -8001,7 +8044,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     }
     if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
     if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
-    const rawQuoted = replyTo ? (replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
+    const rawQuoted = replyTo ? (replyTo.content === "[burned]" ? "Photo détruite" : replyTo.content.startsWith("[img1]") ? "Photo vue unique" : replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
     // Supprimer la citation imbriquée si le message cité est lui-même une réponse
     const cleanQuoted = rawQuoted.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/\]/g, "）").substring(0, 60);
     const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${cleanQuoted}]\n` : "";
@@ -8009,10 +8052,28 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); setReplyTo(null); }
   }, [auth, open, text, replyTo, msgCount, onShowPremium, editingMsg]);
 
-  const sendImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Étape 1 : sélection d'une photo → ouvre l'écran d'aperçu (aucun envoi immédiat)
+  const onPickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file || !open) return;
     if (!auth.isPremium) { onShowPremium("L'envoi de photos est réservé aux membres Premium !"); return; }
+    setPendingPreview(URL.createObjectURL(file));
+    setPendingFile(file);
+    setPendingViewOnce(false);
+  };
+  // Annule l'aperçu
+  const cancelPending = () => {
+    setPendingPreview(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+    setPendingFile(null);
+    setPendingViewOnce(false);
+  };
+  // Étape 2 : envoi depuis l'écran d'aperçu (avec l'option vue unique choisie)
+  const confirmSendImage = async () => {
+    if (!pendingFile || !open) return;
+    const file = pendingFile;
+    const once = pendingViewOnce;
+    cancelPending();
     setImgLoading(true);
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -8024,14 +8085,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       });
       if (r.ok) {
         const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
-        const content = viewOnce ? `[img1]${url}[/img1]` : `[img]${url}[/img]`;
+        const content = once ? `[img1]${url}[/img1]` : `[img]${url}[/img]`;
         const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
         if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
-        setViewOnce(false);
       }
     } catch {}
     setImgLoading(false);
-    e.target.value = "";
   };
 
   const isImage = (content: string) => content.startsWith("[img]") && content.endsWith("[/img]");
@@ -8205,7 +8264,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         </div>
                       ) : (
                       <div style={{ fontSize: "0.77rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#888", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, minWidth: 0 }}>
-                        {c.lastMsg?.content?.startsWith("[img]") ? "📷 Photo" : c.lastMsg?.content || "Dis bonjour !"}
+                        {(() => { const ct = c.lastMsg?.content; if (!ct) return "Dis bonjour !"; if (ct === "[burned]") return "🔥 Photo détruite"; if (ct.startsWith("[img1]")) return "👁️ Photo vue unique"; if (ct.startsWith("[img]")) return "📷 Photo"; return ct; })()}
                       </div>
                       )}
                       {(c.unreadCount || 0) > 0 && (
@@ -8499,19 +8558,35 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
                     {isBurned(m.content) ? (
-                      <div style={{ padding: "12px 16px", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", background: "rgba(0,0,0,0.05)", border: "1px dashed rgba(0,0,0,0.18)", display: "flex", alignItems: "center", gap: 8, color: "#999", fontSize: "0.82rem", fontStyle: "italic" }}>
-                        🔥 Photo détruite
+                      <div onClick={() => setShowDestroyed(true)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", cursor: "pointer", minWidth: 200 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#444" }}>Photo détruite</div>
+                          <div style={{ fontSize: "0.72rem", color: "#999" }}>Cette photo n'est plus disponible.</div>
+                        </div>
                       </div>
                     ) : isViewOnce(m.content) ? (
                       isMine ? (
-                        <div style={{ padding: "12px 16px", borderRadius: "14px 14px 4px 14px", background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.2)", display: "flex", alignItems: "center", gap: 8, color: G.rouge, fontSize: "0.82rem", fontWeight: 600 }}>
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                          Photo · vue unique
+                        <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "16px 16px 4px 16px", background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.18)", minWidth: 200 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.rouge }}>Photo vue unique</div>
+                            <div style={{ fontSize: "0.72rem", color: "#c0796f" }}>Envoyée</div>
+                          </div>
                         </div>
                       ) : (
-                        <div onClick={() => { setPreviewImg(getViewOnceUrl(m.content)); setBurnMsg(m); }} style={{ padding: "13px 16px", borderRadius: "14px 14px 14px 4px", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.28)", display: "flex", alignItems: "center", gap: 9, color: G.rouge, fontSize: "0.83rem", fontWeight: 700, cursor: "pointer" }}>
-                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                          Photo · vue unique — appuie pour voir
+                        <div onClick={() => { setBurnMsg(m); setPreviewImg(getViewOnceUrl(m.content)); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "16px 16px 16px 4px", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.26)", cursor: "pointer", minWidth: 200 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.13)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.rouge }}>Photo vue unique</div>
+                            <div style={{ fontSize: "0.72rem", color: "#c0796f", fontWeight: 600 }}>Appuie pour voir</div>
+                          </div>
                         </div>
                       )
                     ) : (
@@ -8724,14 +8799,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         )}
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", padding: "10px 12px" }}>
           {/* Bouton image - Premium */}
-          <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
-          {auth.isPremium && (
-            <div onClick={() => setViewOnce(v => !v)}
-              style={{ position: "relative", width: 40, height: 40, borderRadius: "50%", background: viewOnce ? "rgba(192,57,43,0.14)" : "rgba(44,26,14,0.06)", border: `1.5px solid ${viewOnce ? "rgba(192,57,43,0.4)" : G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={viewOnce ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <span style={{ position: "absolute", top: -2, right: -2, background: viewOnce ? G.rouge : "#aaa", color: "#fff", borderRadius: "50%", width: 15, height: 15, fontSize: "0.55rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>1</span>
-            </div>
-          )}
+          <input ref={imgRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
           <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
             style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
             {imgLoading ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : (
@@ -8907,8 +8975,62 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       {/* Modal aperçu image */}
       {previewImg && (
         <div onClick={closePreview} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={(e) => { e.stopPropagation(); closePreview(); }} style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}>✕</div>
+          <div onClick={(e) => { e.stopPropagation(); closePreview(); }} style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.35)", zIndex: 2 }}>✕</div>
+          {burnMsg && (
+            <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 22, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 50, padding: "7px 15px", color: "#fff", fontSize: "0.8rem", fontWeight: 600, zIndex: 2 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Vue unique
+            </div>
+          )}
           <img src={previewImg} alt="aperçu" onClick={e => e.stopPropagation()} style={{ maxWidth: "95%", maxHeight: "90vh", borderRadius: 12, objectFit: "contain" }} />
+          {burnMsg && (
+            <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 40px)", maxWidth: 440, display: "flex", alignItems: "center", gap: 11, background: "rgba(0,0,0,0.62)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 14, padding: "13px 16px", color: "#ddd", fontSize: "0.8rem", lineHeight: 1.45, zIndex: 2 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span><b style={{ color: "#fff" }}>Cette photo sera détruite</b> lorsque vous fermerez cet écran.</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Écran d'aperçu avant envoi (avec option vue unique) */}
+      {pendingPreview && (
+        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 510, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
+            <div onClick={cancelPending} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
+            <div onClick={confirmSendImage} style={{ color: "#fff", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", padding: "6px 4px" }}>Envoyer</div>
+          </div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: "0 12px", minHeight: 0 }}>
+            <img src={pendingPreview} alt="aperçu" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 14 }} />
+          </div>
+          <div style={{ padding: "16px 18px 26px" }}>
+            <div onClick={() => setPendingViewOnce(v => !v)} style={{ display: "flex", alignItems: "center", gap: 13, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 16, padding: "13px 15px", marginBottom: 14, cursor: "pointer" }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: pendingViewOnce ? G.rouge : "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.15s" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>Vue unique</div>
+                <div style={{ color: "#aaa", fontSize: "0.76rem" }}>La photo sera détruite après ouverture.</div>
+              </div>
+              <div style={{ width: 46, height: 27, borderRadius: 50, background: pendingViewOnce ? G.rouge : "rgba(255,255,255,0.25)", position: "relative", flexShrink: 0, transition: "background 0.15s" }}>
+                <div style={{ position: "absolute", top: 3, left: pendingViewOnce ? 22 : 3, width: 21, height: 21, borderRadius: "50%", background: "#fff", transition: "left 0.15s" }} />
+              </div>
+            </div>
+            <Btn variant="primary" onClick={confirmSendImage} style={{ width: "100%" }}>Envoyer</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* Modale : tentative d'ouverture d'une photo déjà détruite */}
+      {showDestroyed && (
+        <div onClick={() => setShowDestroyed(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 520, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#1c1c1e", borderRadius: 22, paddingTop: 30, width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#fff", margin: "0 22px 8px" }}>Impossible d'afficher cette photo</h3>
+            <p style={{ fontSize: "0.85rem", color: "#999", lineHeight: 1.5, margin: "0 22px 22px" }}>Cette photo a été détruite après avoir été vue.</p>
+            <div onClick={() => setShowDestroyed(false)} style={{ borderTop: "1px solid rgba(255,255,255,0.12)", padding: 15, color: G.rouge, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer" }}>Fermer</div>
+          </div>
         </div>
       )}
 
