@@ -4941,11 +4941,16 @@ const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onB
   const [showSignalerMenu, setShowSignalerMenu] = useState(false);
   return (
     <div className="profile-card" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
-      <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)" }}>
-        {prof.photo_url
-          ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-        }
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)" }}>
+          {prof.photo_url
+            ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          }
+        </div>
+        {!prof.hide_online_status && getOnlineStatus(prof.last_seen).label === "En ligne" && (
+          <span style={{ position: "absolute", bottom: -2, right: -2, width: 15, height: 15, borderRadius: "50%", background: "#27ae60", border: `2.5px solid ${G.blanc}`, boxShadow: "0 1px 4px rgba(0,0,0,0.25)" }} />
+        )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>} {prof.is_verified && <VerifiedBadge size={15} />}</div>
@@ -5737,6 +5742,13 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       <button onClick={() => { setViewMode("card"); window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } })); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
+      {/* Indicateur "En ligne" - haut gauche, en face de la croix. Rien si hors ligne ou statut masqué. */}
+      {!prof.hide_online_status && getOnlineStatus(prof.last_seen).label === "En ligne" && (
+        <div style={{ position: "absolute", top: 16, left: 16, display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "9px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: G.blanc, fontSize: "0.8rem", fontWeight: 700 }}>
+          <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#27ae60", boxShadow: "0 0 0 3px rgba(39,174,96,0.35)", flexShrink: 0 }} />
+          En ligne
+        </div>
+      )}
       <div style={{ position: "absolute", left: 18, right: 18, bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)", color: G.blanc }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
           <div style={{ fontSize: "1.85rem", fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{prof.name}, {prof.age} ans</div>
@@ -5782,7 +5794,7 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : "min(65vw, 320px)", maxHeight: isWide ? "calc(100vh - 280px)" : "min(65vw, 320px)", flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : 200, position: "relative" }}>{p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
+  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : "min(65vw, 320px)", maxHeight: isWide ? "calc(100vh - 280px)" : "min(65vw, 320px)", flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : 200, position: "relative" }}>{!p.hide_online_status && getOnlineStatus(p.last_seen).label === "En ligne" && (<div style={{ position: "absolute", top: 12, left: 12, zIndex: 3, display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "6px 11px", boxShadow: "0 4px 14px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: G.blanc, fontSize: "0.72rem", fontWeight: 700 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", boxShadow: "0 0 0 3px rgba(39,174,96,0.35)", flexShrink: 0 }} />En ligne</div>)}{p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
     <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div>
     {/* 3 traits menu - single tap/click → bottom sheet */}
@@ -8055,7 +8067,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     const cleanQuoted = rawQuoted.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/\]/g, "）").substring(0, 60);
     const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${cleanQuoted}]\n` : "";
     const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: prefix + text, is_read: false });
-    if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); setText(""); setReplyTo(null); }
+    const row = res[0] as (Message & { code?: string; message?: string }) | undefined;
+    if (row && row.id) {
+      // Insertion réussie : on ajoute la vraie bulle
+      setMsgs(m => [...m, row]); setMsgCount(c => c + 1); setText(""); setReplyTo(null);
+    } else if (row && (row.code === "P0001" || (typeof row.message === "string" && row.message.includes("FREE_MESSAGE_LIMIT_REACHED")))) {
+      // Refus du serveur : limite de messages gratuits atteinte (trigger trg_free_message_limit)
+      onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`);
+    }
+    // Tout autre échec (réseau, etc.) : on ne fait rien, le champ reste rempli pour réessayer
   }, [auth, open, text, replyTo, msgCount, onShowPremium, editingMsg]);
 
   // Étape 1 : sélection d'une photo → ouvre l'écran d'aperçu (aucun envoi immédiat)
