@@ -5260,7 +5260,7 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
   );
 });
 
-function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowPremium: (r: string) => void; isWide?: boolean }) {
+function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth: Auth; onShowPremium: (r: string) => void; isWide?: boolean; onGoMessages?: (pid: string) => void }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   // ── Statut "en ligne" en direct : rafraîchit last_seen des profils affichés toutes les 30s ──
   const onlineProfilesRef = useRef<Profile[]>([]);
@@ -5286,6 +5286,16 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
     };
     const iv = setInterval(refreshOnline, 30000);
     return () => clearInterval(iv);
+  }, [auth?.userId]);
+  const [matchedIds, setMatchedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!auth?.userId) return;
+    (async () => {
+      try {
+        const ms = await sb.query<{ user1: string; user2: string }>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=user1,user2`);
+        if (Array.isArray(ms)) setMatchedIds(new Set(ms.map(m => m.user1 === auth.userId ? m.user2 : m.user1)));
+      } catch {}
+    })();
   }, [auth?.userId]);
   const [likedIds, setLikedIds] = useState(new Set<string>());
   const [blockedIds, setBlockedIds] = useState(new Set<string>());
@@ -5876,7 +5886,11 @@ function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowP
             {viewedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{viewedProfile.religion}</span>}
           </div>
           {viewedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{viewedProfile.bio}</p>}
-          <Btn variant="primary" onClick={() => { handleLike(viewedProfile); setViewedProfile(null); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>❤️ Liker ce profil</Btn>
+          {matchedIds.has(viewedProfile.id) ? (
+            <Btn variant="primary" onClick={() => { const pid = viewedProfile.id; setViewedProfile(null); if (onGoMessages) onGoMessages(pid); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>Envoyer un message</Btn>
+          ) : (
+            <Btn variant="primary" onClick={() => { handleLike(viewedProfile); setViewedProfile(null); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>❤️ Liker ce profil</Btn>
+          )}
         </div>
       </div>
     </div>
@@ -16867,6 +16881,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                             Voir profils compatibles
                           </button>
+                          {req.profile?.id && <button onClick={() => { setSupportReply({ userId: req.profile!.id, report: { reason: `Réponse à la demande de mise en relation de ${req.profile!.name}` } as ReportRow, allMessageIds: [] }); setSupportReplyText(""); }} style={{ background: "rgba(26,92,58,0.08)", color: "#1A5C3A", border: "1.5px solid rgba(26,92,58,0.22)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Message</button>}
                           {req.status === "pending" && <button onClick={() => updateRequestStatus(req.id, "processing")} style={{ background: "rgba(41,128,185,0.08)", color: "#2980b9", border: "1.5px solid rgba(41,128,185,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Prendre en charge</button>}
                           {req.status === "processing" && <button onClick={() => updateRequestStatus(req.id, "done")} style={{ background: "rgba(39,174,96,0.08)", color: "#27ae60", border: "1.5px solid rgba(39,174,96,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Marquer traitée</button>}
                           {(req.status === "pending" || req.status === "processing") && <button onClick={() => updateRequestStatus(req.id, "cancelled")} style={{ background: "rgba(231,76,60,0.06)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.15)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>}
@@ -17988,7 +18003,7 @@ export default function App() {
       if (t === "likes") { setLikesReceived(0); try { localStorage.setItem(`moyo_likes_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
       if (t === "visitors") { setViewsReceived(0); try { localStorage.setItem(`moyo_visitors_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv}>
-      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} />}
+      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
