@@ -325,7 +325,7 @@ type Auth = {
 };
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
-type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]> };
+type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
@@ -7243,9 +7243,9 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
   const isMine = replyTo.sender_id === myId;
   const name = isMine ? "Toi" : (partnerName ?? "…");
   const accent = isMine ? G.vert : G.rouge;
-  const isImg = replyTo.content.startsWith("[img]");
+  const isImg = replyTo.content.startsWith("[img]") && !replyTo.is_view_once && !replyTo.is_destroyed;
   const raw = replyTo.content.replace(/^\[↩.*?\]\n/, "");
-  const preview = replyTo.content === "[burned]" ? "🔥 Photo détruite" : replyTo.content.startsWith("[img1]") ? "👁️ Photo vue unique" : (!isImg && raw.length > 80 ? raw.slice(0, 80) + "…" : raw);
+  const preview = replyTo.is_destroyed ? "Photo détruite" : replyTo.is_view_once ? "Photo vue unique" : (!isImg && raw.length > 80 ? raw.slice(0, 80) + "…" : raw);
   return (
     // ── ReplyBanner v2 : visible, robuste iOS, sans overflow caché ──
     <div style={{
@@ -7858,7 +7858,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       const [profiles, lastMsgs, unread] = await Promise.all([
         sb.query<Profile>(auth.token, "profiles", `?id=eq.${pid}`),
         sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&order=created_at.desc&limit=1`),
-        sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&sender_id=neq.${auth.userId}&is_read=eq.false`),
+        sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&sender_id=neq.${auth.userId}&sender_id=neq.${SUPPORT_TEAM_ID}&is_read=eq.false`),
       ]);
       return { ...m, partner: profiles[0], lastMsg: lastMsgs[0], unreadCount: unread.length };
     }));
@@ -8044,7 +8044,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     }
     if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
     if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
-    const rawQuoted = replyTo ? (replyTo.content === "[burned]" ? "Photo détruite" : replyTo.content.startsWith("[img1]") ? "Photo vue unique" : replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
+    const rawQuoted = replyTo ? (replyTo.is_destroyed ? "Photo détruite" : replyTo.is_view_once ? "Photo vue unique" : replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
     // Supprimer la citation imbriquée si le message cité est lui-même une réponse
     const cleanQuoted = rawQuoted.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/\]/g, "）").substring(0, 60);
     const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${cleanQuoted}]\n` : "";
@@ -8085,8 +8085,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       });
       if (r.ok) {
         const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
-        const content = once ? `[img1]${url}[/img1]` : `[img]${url}[/img]`;
-        const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
+        const content = `[img]${url}[/img]`;
+        const row: Record<string, unknown> = { match_id: open.id, sender_id: auth.userId, content, is_read: false };
+        if (once) row.is_view_once = true;
+        const res = await sb.insert<Message>(auth.token, "messages", row);
         if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
       }
     } catch {}
@@ -8095,28 +8097,30 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
 
   const isImage = (content: string) => content.startsWith("[img]") && content.endsWith("[/img]");
   const getImageUrl = (content: string) => content.slice(5, -6);
-  const isViewOnce = (content: string) => content.startsWith("[img1]") && content.endsWith("[/img1]");
-  const getViewOnceUrl = (content: string) => content.slice(6, -7);
-  const isBurned = (content: string) => content === "[burned]";
 
-  // Détruit une photo vue unique (appel Edge Function : supprime le fichier + marque le message)
-  const burnPhoto = async (m: Message) => {
-    if (!m.id) return;
-    setMsgs(list => list.map(x => x.id === m.id ? { ...x, content: "[burned]" } : x));
+  // Ouvre une photo vue unique : précharge en mémoire → détruit le fichier côté serveur → affiche le blob.
+  // Ainsi la photo est déjà détruite serveur dès l'ouverture (robuste même si l'app se ferme/recharge).
+  const openViewOnce = async (m: Message) => {
+    if (!m.id || m.is_destroyed) return;
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/burn-photo`, {
+      const resp = await fetch(getImageUrl(m.content));
+      const blob = await resp.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const now = new Date().toISOString();
+      setMsgs(list => list.map(x => x.id === m.id ? { ...x, is_destroyed: true, viewed_at: now, destroyed_at: now } : x));
+      fetch(`${SUPABASE_URL}/functions/v1/burn-photo`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
         body: JSON.stringify({ message_id: m.id }),
-      });
+      }).catch(() => {});
+      setBurnMsg(m);
+      setPreviewImg(objUrl);
     } catch {}
   };
-  // Ferme la visionneuse — et détruit la photo si c'était une vue unique
+  // Ferme la visionneuse (libère le blob mémoire)
   const closePreview = () => {
-    const toBurn = burnMsg;
-    setPreviewImg(null);
+    setPreviewImg(prev => { if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev); return null; });
     setBurnMsg(null);
-    if (toBurn) burnPhoto(toBurn);
   };
 
   const [showGift, setShowGift] = useState(false);
@@ -8264,7 +8268,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         </div>
                       ) : (
                       <div style={{ fontSize: "0.77rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#888", fontWeight: (c.unreadCount || 0) > 0 ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, minWidth: 0 }}>
-                        {(() => { const ct = c.lastMsg?.content; if (!ct) return "Dis bonjour !"; if (ct === "[burned]") return "🔥 Photo détruite"; if (ct.startsWith("[img1]")) return "👁️ Photo vue unique"; if (ct.startsWith("[img]")) return "📷 Photo"; return ct; })()}
+                        {(() => {
+                          const lm = c.lastMsg; const ct = lm?.content;
+                          if (!ct) return "Dis bonjour !";
+                          const isPhoto = ct.startsWith("[img]") && ct.endsWith("[/img]");
+                          if (isPhoto || lm?.is_destroyed || lm?.is_view_once) {
+                            let label = "Photo";
+                            let icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
+                            if (lm?.is_destroyed) { label = "Photo détruite"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>; }
+                            else if (lm?.is_view_once) { label = "Photo vue unique"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>; }
+                            return <span style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "middle" }}>{icon}<span>{label}</span></span>;
+                          }
+                          return ct;
+                        })()}
                       </div>
                       )}
                       {(c.unreadCount || 0) > 0 && (
@@ -8532,7 +8548,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
-          const isImg = isImage(m.content) || isViewOnce(m.content) || isBurned(m.content);
+          const isImg = isImage(m.content);
           const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
           const reactions = m.reactions || {};
           const reactionEntries = Object.entries(reactions).filter(([, users]) => users.length > 0);
@@ -8554,20 +8570,28 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
                     onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                   >
+                    {!m.is_view_once && !m.is_destroyed && (
                     <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 6, right: 6, zIndex: 3, cursor: "pointer", width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.78)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
-                    {isBurned(m.content) ? (
-                      <div onClick={() => setShowDestroyed(true)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", cursor: "pointer", minWidth: 200 }}>
+                    )}
+                    {m.is_destroyed ? (
+                      <div onClick={() => { if (!isMine) setShowDestroyed(true); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", cursor: isMine ? "default" : "pointer", minWidth: 200 }}>
                         <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
                         </div>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#444" }}>Photo détruite</div>
-                          <div style={{ fontSize: "0.72rem", color: "#999" }}>Cette photo n'est plus disponible.</div>
+                          {isMine ? (
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#444" }}>Photo consultée et détruite</div>
+                          ) : (
+                            <>
+                              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#444" }}>Photo détruite</div>
+                              <div style={{ fontSize: "0.72rem", color: "#999" }}>Cette photo a été consultée.</div>
+                            </>
+                          )}
                         </div>
                       </div>
-                    ) : isViewOnce(m.content) ? (
+                    ) : m.is_view_once ? (
                       isMine ? (
                         <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "16px 16px 4px 16px", background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.18)", minWidth: 200 }}>
                           <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -8579,7 +8603,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                           </div>
                         </div>
                       ) : (
-                        <div onClick={() => { setBurnMsg(m); setPreviewImg(getViewOnceUrl(m.content)); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "16px 16px 16px 4px", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.26)", cursor: "pointer", minWidth: 200 }}>
+                        <div onClick={() => openViewOnce(m)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "16px 16px 16px 4px", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.26)", cursor: "pointer", minWidth: 200 }}>
                           <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.13)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                           </div>
@@ -8986,7 +9010,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           {burnMsg && (
             <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 40px)", maxWidth: 440, display: "flex", alignItems: "center", gap: 11, background: "rgba(0,0,0,0.62)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 14, padding: "13px 16px", color: "#ddd", fontSize: "0.8rem", lineHeight: 1.45, zIndex: 2 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span><b style={{ color: "#fff" }}>Cette photo sera détruite</b> lorsque vous fermerez cet écran.</span>
+              <span><b style={{ color: "#fff" }}>Photo à vue unique</b> — elle vient d'être détruite et ne pourra plus être affichée.</span>
             </div>
           )}
         </div>
@@ -17087,6 +17111,7 @@ export default function App() {
   const [tab, setTab] = useState("discover");
   const [auth, setAuth] = useState<Auth | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const lastUnreadRef = useRef<number | null>(null);
   const [notifCount, setNotifCount] = useState(0);
   const [likesReceived, setLikesReceived] = useState(0);
   const [viewsReceived, setViewsReceived] = useState(0);
@@ -17599,11 +17624,14 @@ export default function App() {
         dIds = new Set(Array.isArray(dismissed) ? dismissed.map(d => d.dismissed_id) : []);
       } catch {}
       try {
-        const [likes, views] = await Promise.all([
+        const [likes, views, myMatches] = await Promise.all([
           sb.query<{ from_user: string }>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user`),
           sb.query<{ viewer_id: string }>(auth.token, "profile_views", `?viewed_id=eq.${auth.userId}&viewer_id=neq.${auth.userId}&select=viewer_id`),
+          sb.query<{ user1: string; user2: string }>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=user1,user2`),
         ]);
-        const likesCount = Array.isArray(likes) ? likes.filter(l => !dIds.has(l.from_user)).length : 0;
+        const matchedIds = new Set<string>();
+        if (Array.isArray(myMatches)) myMatches.forEach(mm => matchedIds.add(mm.user1 === auth.userId ? mm.user2 : mm.user1));
+        const likesCount = Array.isArray(likes) ? new Set(likes.filter(l => !dIds.has(l.from_user) && !matchedIds.has(l.from_user)).map(l => l.from_user)).size : 0;
         const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
         const currentTab = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
         // Ne pas écraser le zéro si l'onglet est actif OU si l'utilisateur l'a consulté récemment
@@ -17652,19 +17680,19 @@ export default function App() {
         const matches = await sb.query<{ id: string }>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
         if (!matches.length) { setUnreadCount(0); return; }
         const matchIds = matches.map(m => m.id).join(",");
-        const res = await sb.query<object>(auth.token, "messages", `?match_id=in.(${matchIds})&sender_id=neq.${auth.userId}&is_read=eq.false&select=id`);
+        const res = await sb.query<object>(auth.token, "messages", `?match_id=in.(${matchIds})&sender_id=neq.${auth.userId}&sender_id=neq.${SUPPORT_TEAM_ID}&is_read=eq.false&select=id`);
         const count = Array.isArray(res) ? res.length : 0;
-        setUnreadCount(prev => {
-          const activeTab3 = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
-          const msgSeen = localStorage.getItem(`moyo_messages_seen_${auth.userId}`);
-          const SEEN_THRESHOLD3 = 60 * 1000;
-          const msgJustSeen = msgSeen && (Date.now() - new Date(msgSeen).getTime()) < SEEN_THRESHOLD3;
-          if (activeTab3 === 'messages' || msgJustSeen) return 0;
-          if (count > prev && prev >= 0 && 'Notification' in window && Notification.permission === 'granted') {
-            showMoyoNotification('Moyo - Nouveau message', 'Vous avez reçu un nouveau message !');
-          }
-          return count;
-        });
+        const activeTab3 = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
+        const msgSeen = localStorage.getItem(`moyo_messages_seen_${auth.userId}`);
+        const SEEN_THRESHOLD3 = 60 * 1000;
+        const msgJustSeen = msgSeen && (Date.now() - new Date(msgSeen).getTime()) < SEEN_THRESHOLD3;
+        if (activeTab3 === 'messages' || msgJustSeen) { lastUnreadRef.current = 0; setUnreadCount(0); return; }
+        // Ne notifier que si le nombre AUGMENTE après le 1er relevé (jamais au tout 1er chargement)
+        if (lastUnreadRef.current !== null && count > lastUnreadRef.current && 'Notification' in window && Notification.permission === 'granted') {
+          showMoyoNotification('Moyo - Nouveau message', 'Vous avez reçu un nouveau message !');
+        }
+        lastUnreadRef.current = count;
+        setUnreadCount(count);
       } catch {}
     };
     checkUnread();
