@@ -326,7 +326,7 @@ type Auth = {
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
-type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile };
+type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
 const STATUS_BUCKETS = ["statuses", "status"] as const;
@@ -7375,6 +7375,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [partnerActionLoading, setPartnerActionLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  // Geste "glisser pour répondre" (façon WhatsApp)
+  const swipeRef = useRef<{ x: number; y: number; el: HTMLElement | null; active: boolean } | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [footerHeight, setFooterHeight] = useState(65);
   const [headerHeight, setHeaderHeight] = useState(60);
@@ -7631,7 +7633,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, profile: { ...ownProfile, is_premium: ownProfile.is_premium ?? auth.isPremium }, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
       setMyStatuses(mine);
 
-      if (!partnerIds.length) { setStatuses([]); return; }
+      // ── Statuts officiels Moyo : visibles par TOUT LE MONDE (gratuits inclus), regroupés sous "Moyo" ──
+      const moyoProfile: Profile = { id: "moyo-official", name: "Moyo", age: 0, city: "", gender: "", bio: "", photo_url: SUPPORT_TEAM_PHOTO || null, is_premium: true, is_verified: true };
+      const officialRaw = await sb.query<StatusPost>(auth.token, "statuses", `?is_official=eq.true&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
+      const officialEnriched = await Promise.all((Array.isArray(officialRaw) ? officialRaw : []).map(async st => ({ ...st, user_id: "moyo-official", profile: moyoProfile, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
+
+      if (!partnerIds.length) { setStatuses(officialEnriched); return; }
       const rows = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=in.(${partnerIds.join(",")})&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
       const byPartner = new Map(realConvs.map(c => [c.partner!.id, c.partner!]));
       const enriched = await Promise.all((Array.isArray(rows) ? rows : [])
@@ -7639,7 +7646,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         .filter(st => st.profile)
         .map(async st => ({ ...st, image_url: await resolveStatusImageUrl(auth.token, st.image_url) }))
       );
-      setStatuses(enriched);
+      setStatuses([...officialEnriched, ...enriched]);
     } catch {
       setStatuses([]);
       setMyStatuses([]);
@@ -8239,9 +8246,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           const st = group.first;
           return (
           <div key={group.userId} onClick={() => openStatusViewer(group.items, 0)} style={{ minWidth: 64, textAlign: "center", cursor: "pointer" }}>
-            <div style={{ position: "relative", width: 52, height: 52, borderRadius: "50%", margin: "0 auto 4px", padding: 3, border: `2px solid ${st.profile?.is_premium ? G.or : G.rouge}` }}>
+            <div style={{ position: "relative", width: 52, height: 52, borderRadius: "50%", margin: "0 auto 4px", padding: 3, border: `2px solid ${group.userId === "moyo-official" ? G.or : st.profile?.is_premium ? G.or : G.rouge}` }}>
               <Avatar url={st.profile?.photo_url} gender={st.profile?.gender} size={44} premium={false} />
-              <span style={{ position: "absolute", right: -2, bottom: 4, width: 10, height: 10, borderRadius: "50%", background: G.rouge, border: "2px solid #fff" }} />
+              {group.userId === "moyo-official"
+                ? <span style={{ position: "absolute", right: -3, bottom: 2, display: "flex" }}><VerifiedBadge size={15} /></span>
+                : <span style={{ position: "absolute", right: -2, bottom: 4, width: 10, height: 10, borderRadius: "50%", background: G.rouge, border: "2px solid #fff" }} />}
             </div>
             <div style={{ fontSize: "0.65rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.profile?.name || "Statut"}</div>
           </div>
@@ -8633,7 +8642,30 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           };
           const handleLongPressEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
           return (
-            <div key={i} className="msg-row" style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0 }}>
+            <div key={i} className="msg-row"
+              onTouchStart={(e) => { const t = e.touches[0]; swipeRef.current = { x: t.clientX, y: t.clientY, el: e.currentTarget as HTMLElement, active: false }; }}
+              onTouchMove={(e) => {
+                const s = swipeRef.current; if (!s || !s.el) return;
+                const t = e.touches[0]; const dx = t.clientX - s.x; const dy = t.clientY - s.y;
+                if (!s.active) {
+                  if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+                  // On n'active QUE pour un glissement franchement horizontal vers la droite (sinon on laisse le scroll)
+                  if (dx <= 0 || Math.abs(dx) <= Math.abs(dy)) { swipeRef.current = null; return; }
+                  s.active = true;
+                  if (longPressTimer.current) clearTimeout(longPressTimer.current);
+                }
+                const drag = Math.min(dx, 64);
+                s.el.style.transition = "none";
+                s.el.style.transform = `translateX(${drag}px)`;
+              }}
+              onTouchEnd={(e) => {
+                const s = swipeRef.current; swipeRef.current = null;
+                if (!s || !s.el) return;
+                s.el.style.transition = "transform 0.18s ease"; s.el.style.transform = "translateX(0)";
+                const dx = ((e.changedTouches[0]?.clientX) ?? s.x) - s.x;
+                if (s.active && dx > 48) { setReplyTo(m); try { (navigator as any).vibrate?.(15); } catch {} }
+              }}
+              style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0 }}>
               {isImg ? (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", width: "100%", justifyContent: isMine ? "flex-start" : "flex-start" }}>
                   <div
@@ -9308,8 +9340,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         <div style={{ position: "absolute", top: 24, left: 18, right: 18, display: "flex", alignItems: "center", gap: 10, color: "#fff", zIndex: 3 }}>
           <Avatar url={statusPreview.profile?.photo_url} gender={statusPreview.profile?.gender} size={44} premium={statusPreview.profile?.is_premium} />
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 900, fontSize: "1.02rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{statusPreview.profile?.name || "Statut"}</div>
-            <div style={{ fontSize: "0.78rem", opacity: 0.82 }}>Statut Moyo</div>
+            <div style={{ fontWeight: 900, fontSize: "1.02rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>{statusPreview.profile?.name || "Statut"}{statusPreview.is_official && <VerifiedBadge size={15} />}</div>
+            <div style={{ fontSize: "0.78rem", opacity: 0.82, display: "flex", alignItems: "center", gap: 6 }}>{statusPreview.is_official ? "Officiel" : "Statut Moyo"}{statusPreview.is_sponsored && <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 6, padding: "1px 7px", fontSize: "0.68rem", fontWeight: 700 }}>Sponsorisé</span>}</div>
           </div>
           {statusPreview.user_id === auth.userId && (
             <button
@@ -9326,6 +9358,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
         <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
         {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : "68vh", borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
+        {statusPreview.link_url && statusPreview.user_id !== auth.userId && (
+          <a href={statusPreview.link_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 92, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", textDecoration: "none", borderRadius: 14, padding: "13px 16px", fontWeight: 800, fontSize: "0.9rem", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
+            En savoir plus
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </a>
+        )}
         {statusPreview.user_id === auth.userId ? (
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 28, zIndex: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div style={{ borderRadius: 18, padding: "12px 14px", background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => loadStatusPeople(statusPreview.id || "", "views")}>
@@ -12820,6 +12858,69 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Reports ──
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived">("all");
+
+  // ── Statuts officiels Moyo (publiés depuis l'onglet Messagerie) ──
+  const [officialStatuses, setOfficialStatuses] = useState<StatusPost[]>([]);
+  const [stFile, setStFile] = useState<File | null>(null);
+  const [stPreview, setStPreview] = useState<string | null>(null);
+  const [stCaption, setStCaption] = useState("");
+  const [stSponsored, setStSponsored] = useState(false);
+  const [stLink, setStLink] = useState("");
+  const [stPublishing, setStPublishing] = useState(false);
+  const [stDeleting, setStDeleting] = useState<string | null>(null);
+  const stFileRef = useRef<HTMLInputElement>(null);
+
+  const onPickStatusFile = (f?: File) => {
+    if (!f) return;
+    setStFile(f);
+    const reader = new FileReader();
+    reader.onload = () => setStPreview(reader.result as string);
+    reader.readAsDataURL(f);
+  };
+  const loadOfficialStatuses = async () => {
+    try {
+      const now = new Date().toISOString();
+      const rows = await sb.query<StatusPost>(auth.token, "statuses", `?is_official=eq.true&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`);
+      const enriched = await Promise.all((Array.isArray(rows) ? rows : []).map(async s => ({ ...s, image_url: await resolveStatusImageUrl(auth.token, s.image_url) })));
+      setOfficialStatuses(enriched);
+    } catch { setOfficialStatuses([]); }
+  };
+  const publishOfficialStatus = async () => {
+    if (!stFile) { showToast("Choisis une image d'abord.", "error"); return; }
+    setStPublishing(true);
+    try {
+      const ext = (stFile.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${auth.userId}/official-${Date.now()}.${ext}`;
+      const up = await fetch(`${SUPABASE_URL}/storage/v1/object/statuses/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": stFile.type || "image/jpeg", "x-upsert": "true" },
+        body: stFile,
+      });
+      if (!up.ok) throw new Error("upload_failed");
+      const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      await sb.insert<StatusPost>(auth.token, "statuses", {
+        user_id: auth.userId, image_url: path, image_path: path,
+        caption: stCaption.trim() || null, is_official: true, is_sponsored: stSponsored,
+        link_url: stLink.trim() || null, expires_at,
+      });
+      showToast("Statut Moyo publié pour 24h.", "success");
+      setStFile(null); setStPreview(null); setStCaption(""); setStSponsored(false); setStLink("");
+      if (stFileRef.current) stFileRef.current.value = "";
+      loadOfficialStatuses();
+    } catch {
+      showToast("Échec de la publication. Vérifie le bucket 'statuses' et les colonnes.", "error");
+    } finally { setStPublishing(false); }
+  };
+  const deleteOfficialStatus = async (s: StatusPost) => {
+    if (!s.id) return;
+    setStDeleting(s.id);
+    try {
+      await sb.delete(auth.token, "statuses", `?id=eq.${s.id}`);
+      setOfficialStatuses(prev => prev.filter(x => x.id !== s.id));
+      showToast("Statut supprimé.", "success");
+    } catch { showToast("Suppression impossible.", "error"); }
+    finally { setStDeleting(null); }
+  };
   const [expandedArchived, setExpandedArchived] = useState<Set<string>>(new Set());
   const toggleArchived = (id: string) => setExpandedArchived(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [reportActionLoading, setReportActionLoading] = useState<string | null>(null); // report id en cours
@@ -14718,7 +14819,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "reviews") loadReviews();
                 if (key === "payments") loadPayments();
                 if (key === "logs") loadAdminLogs();
-                if (key === "messagerie") loadStats();
+                if (key === "messagerie") { loadStats(); loadOfficialStatuses(); }
                 if (key === "matches") {
                   loadProposals();
                   setProposalsBadgeCount(0);
@@ -15430,6 +15531,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* ═══════════════════════════════════════════ ONGLET SIGNALEMENTS */}
       {(activeTab === "reports" || activeTab === "messagerie") && (
         <div style={{ padding: "16px" }}>
+          <div style={{ display: activeTab === "messagerie" && window.innerWidth >= 900 ? "flex" : "block", gap: 16, alignItems: "flex-start" }}>
+          <div style={{ flex: activeTab === "messagerie" && window.innerWidth >= 900 ? "1 1 0%" : undefined, minWidth: 0, width: "100%" }}>
           {/* Sous-onglets — affichés uniquement sur Signalements (pas sur l'onglet Messagerie) */}
           {activeTab === "reports" && (
           <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
@@ -15990,6 +16093,62 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {reportActionLoading === "bulk" ? "Suppression…" : `Tout supprimer (${archivedCount})`}
             </button>
           )}
+          </div>{/* fin colonne gauche (messagerie) */}
+          {activeTab === "messagerie" && (
+            <div style={{ flex: window.innerWidth >= 900 ? "0 0 340px" : undefined, width: "100%", maxWidth: window.innerWidth >= 900 ? 360 : undefined, marginTop: window.innerWidth >= 900 ? 0 : 16 }}>
+              <div style={{ background: G.blanc, borderRadius: 16, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <h3 style={{ fontWeight: 800, fontSize: "0.9rem", color: G.brun, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  Statuts Moyo
+                </h3>
+                <p style={{ fontSize: "0.72rem", color: "#888", lineHeight: 1.5, marginBottom: 12 }}>Publie un statut officiel visible par <strong>tous les membres</strong> (gratuits inclus) pendant 24h — pour tes annonces et tes pubs.</p>
+
+                <input ref={stFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => onPickStatusFile(e.target.files?.[0] || undefined)} />
+
+                {stPreview ? (
+                  <div style={{ position: "relative", marginBottom: 10 }}>
+                    <img src={stPreview} alt="" style={{ width: "100%", borderRadius: 12, maxHeight: 220, objectFit: "cover", display: "block" }} />
+                    <button onClick={() => { setStFile(null); setStPreview(null); if (stFileRef.current) stFileRef.current.value = ""; }} style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.55)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                  </div>
+                ) : (
+                  <button onClick={() => stFileRef.current?.click()} style={{ width: "100%", border: `2px dashed ${G.gris}`, borderRadius: 12, padding: "22px 12px", background: "rgba(192,57,43,0.03)", color: G.rouge, fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", marginBottom: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Choisir une image
+                  </button>
+                )}
+
+                <input value={stCaption} onChange={e => setStCaption(e.target.value)} placeholder="Légende (optionnel)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", marginBottom: 8 }} />
+                <input value={stLink} onChange={e => setStLink(e.target.value)} placeholder="Lien « En savoir plus » (optionnel)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", marginBottom: 8 }} />
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 12, cursor: "pointer" }}>
+                  <input type="checkbox" checked={stSponsored} onChange={e => setStSponsored(e.target.checked)} />
+                  Marquer « Sponsorisé » (pub payée par un tiers)
+                </label>
+
+                <Btn variant="primary" onClick={publishOfficialStatus} loading={stPublishing} disabled={!stFile} style={{ width: "100%" }}>{stPublishing ? "Publication…" : "Publier le statut"}</Btn>
+
+                <div style={{ marginTop: 16, borderTop: `1px solid ${G.gris}`, paddingTop: 12 }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Statuts actifs ({officialStatuses.length})</div>
+                  {officialStatuses.length === 0 ? (
+                    <div style={{ fontSize: "0.75rem", color: "#aaa" }}>Aucun statut officiel actif.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {officialStatuses.map(s => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 10, padding: 8 }}>
+                          {s.image_url && <img src={s.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: "0.76rem", fontWeight: 600, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.caption || "Sans légende"}{s.is_sponsored ? " · Sponsorisé" : ""}</div>
+                            <div style={{ fontSize: "0.66rem", color: "#999" }}>Expire {s.expires_at ? new Date(s.expires_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}</div>
+                          </div>
+                          <button onClick={() => deleteOfficialStatus(s)} disabled={stDeleting === s.id} style={{ flexShrink: 0, border: "none", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          </div>{/* fin conteneur 75/25 */}
         </div>
       )}
 
