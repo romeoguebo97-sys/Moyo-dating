@@ -7269,6 +7269,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [showDeleteConv, setShowDeleteConv] = useState(false);
   const [imgLoading, setImgLoading] = useState(false);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
+  const [viewOnce, setViewOnce] = useState(false);
+  const [burnMsg, setBurnMsg] = useState<Message | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [moderationAlert, setModerationAlert] = useState<"insult" | "scam" | "sexual" | null>(null);
   const [showPartnerProfile, setShowPartnerProfile] = useState(false);
@@ -8022,9 +8024,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       });
       if (r.ok) {
         const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
-        const content = `[img]${url}[/img]`;
+        const content = viewOnce ? `[img1]${url}[/img1]` : `[img]${url}[/img]`;
         const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content, is_read: false });
         if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
+        setViewOnce(false);
       }
     } catch {}
     setImgLoading(false);
@@ -8033,6 +8036,29 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
 
   const isImage = (content: string) => content.startsWith("[img]") && content.endsWith("[/img]");
   const getImageUrl = (content: string) => content.slice(5, -6);
+  const isViewOnce = (content: string) => content.startsWith("[img1]") && content.endsWith("[/img1]");
+  const getViewOnceUrl = (content: string) => content.slice(6, -7);
+  const isBurned = (content: string) => content === "[burned]";
+
+  // Détruit une photo vue unique (appel Edge Function : supprime le fichier + marque le message)
+  const burnPhoto = async (m: Message) => {
+    if (!m.id) return;
+    setMsgs(list => list.map(x => x.id === m.id ? { ...x, content: "[burned]" } : x));
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/burn-photo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+        body: JSON.stringify({ message_id: m.id }),
+      });
+    } catch {}
+  };
+  // Ferme la visionneuse — et détruit la photo si c'était une vue unique
+  const closePreview = () => {
+    const toBurn = burnMsg;
+    setPreviewImg(null);
+    setBurnMsg(null);
+    if (toBurn) burnPhoto(toBurn);
+  };
 
   const [showGift, setShowGift] = useState(false);
   const [giftStep, setGiftStep] = useState<"operator" | "mtn" | "airtel">("operator");
@@ -8447,7 +8473,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           {msgs.length === 0 && <div style={{ textAlign: "center", color: "#555", padding: "24px 0", fontSize: "0.85rem" }}>Dites bonjour !</div>}
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
-          const isImg = isImage(m.content);
+          const isImg = isImage(m.content) || isViewOnce(m.content) || isBurned(m.content);
           const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
           const reactions = m.reactions || {};
           const reactionEntries = Object.entries(reactions).filter(([, users]) => users.length > 0);
@@ -8472,7 +8498,25 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 6, right: 6, zIndex: 3, cursor: "pointer", width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.78)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
-                    <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
+                    {isBurned(m.content) ? (
+                      <div style={{ padding: "12px 16px", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", background: "rgba(0,0,0,0.05)", border: "1px dashed rgba(0,0,0,0.18)", display: "flex", alignItems: "center", gap: 8, color: "#999", fontSize: "0.82rem", fontStyle: "italic" }}>
+                        🔥 Photo détruite
+                      </div>
+                    ) : isViewOnce(m.content) ? (
+                      isMine ? (
+                        <div style={{ padding: "12px 16px", borderRadius: "14px 14px 4px 14px", background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.2)", display: "flex", alignItems: "center", gap: 8, color: G.rouge, fontSize: "0.82rem", fontWeight: 600 }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          Photo · vue unique
+                        </div>
+                      ) : (
+                        <div onClick={() => { setPreviewImg(getViewOnceUrl(m.content)); setBurnMsg(m); }} style={{ padding: "13px 16px", borderRadius: "14px 14px 14px 4px", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.28)", display: "flex", alignItems: "center", gap: 9, color: G.rouge, fontSize: "0.83rem", fontWeight: 700, cursor: "pointer" }}>
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          Photo · vue unique — appuie pour voir
+                        </div>
+                      )
+                    ) : (
+                      <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
+                    )}
                     <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: isMine ? "flex-end" : "flex-start" }}>
                       <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
                       {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} />}
@@ -8681,6 +8725,13 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", padding: "10px 12px" }}>
           {/* Bouton image - Premium */}
           <input ref={imgRef} type="file" accept="image/*" onChange={sendImage} style={{ display: "none" }} />
+          {auth.isPremium && (
+            <div onClick={() => setViewOnce(v => !v)}
+              style={{ position: "relative", width: 40, height: 40, borderRadius: "50%", background: viewOnce ? "rgba(192,57,43,0.14)" : "rgba(44,26,14,0.06)", border: `1.5px solid ${viewOnce ? "rgba(192,57,43,0.4)" : G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={viewOnce ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span style={{ position: "absolute", top: -2, right: -2, background: viewOnce ? G.rouge : "#aaa", color: "#fff", borderRadius: "50%", width: 15, height: 15, fontSize: "0.55rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>1</span>
+            </div>
+          )}
           <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
             style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
             {imgLoading ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : (
@@ -8855,8 +8906,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
 
       {/* Modal aperçu image */}
       {previewImg && (
-        <div onClick={() => setPreviewImg(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={() => setPreviewImg(null)} style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}>✕</div>
+        <div onClick={closePreview} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={(e) => { e.stopPropagation(); closePreview(); }} style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}>✕</div>
           <img src={previewImg} alt="aperçu" onClick={e => e.stopPropagation()} style={{ maxWidth: "95%", maxHeight: "90vh", borderRadius: 12, objectFit: "contain" }} />
         </div>
       )}
