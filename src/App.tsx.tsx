@@ -5262,6 +5262,31 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
 
 function Discover({ auth, onShowPremium, isWide = false }: { auth: Auth; onShowPremium: (r: string) => void; isWide?: boolean }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  // ── Statut "en ligne" en direct : rafraîchit last_seen des profils affichés toutes les 30s ──
+  const onlineProfilesRef = useRef<Profile[]>([]);
+  useEffect(() => { onlineProfilesRef.current = profiles; }, [profiles]);
+  useEffect(() => {
+    if (!auth?.userId) return;
+    const refreshOnline = async () => {
+      const list = onlineProfilesRef.current;
+      if (!list.length) return;
+      const ids = list.slice(0, 100).map(pp => pp.id);
+      try {
+        const fresh = await sb.query<{ id: string; last_seen?: string; hide_online_status?: boolean }>(auth.token, "profiles", `?id=in.(${ids.join(",")})&select=id,last_seen,hide_online_status`);
+        if (!Array.isArray(fresh) || !fresh.length) return;
+        const fmap: Record<string, { last_seen?: string; hide_online_status?: boolean }> = {};
+        for (const f of fresh) fmap[f.id] = f;
+        // On reconstruit le tableau à chaque cycle : ça recalcule getOnlineStatus,
+        // donc le badge APPARAÎT quand qqn se connecte ET DISPARAÎT quand son last_seen dépasse 2 min.
+        setProfiles(prev => prev.map(pp => {
+          const f = fmap[pp.id];
+          return f ? { ...pp, last_seen: f.last_seen, hide_online_status: f.hide_online_status } : pp;
+        }));
+      } catch {}
+    };
+    const iv = setInterval(refreshOnline, 30000);
+    return () => clearInterval(iv);
+  }, [auth?.userId]);
   const [likedIds, setLikedIds] = useState(new Set<string>());
   const [blockedIds, setBlockedIds] = useState(new Set<string>());
   const [current, setCurrent] = useState(0);
