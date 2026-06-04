@@ -15436,8 +15436,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             {(["all", "user", "system", "archived"] as const).map(f => {
               const isActive = reportFilter === f;
               const isArchived = f === "archived";
-              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : f === "messaging" ? "Messagerie" : "Archivés";
-              const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : f === "user" ? profilePendingCount : f === "system" ? systemPendingCount : f === "messaging" ? messagingPendingCount : null;
+              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : "Archivés";
+              const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : f === "user" ? profilePendingCount : f === "system" ? systemPendingCount : null;
               return (
                 <div
                   key={f}
