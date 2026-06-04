@@ -7846,6 +7846,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
 
   const loadConvs = async () => {
     setLoading(true);
+    try {
     const res = await sb.query<Match>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&order=created_at.desc`);
     const supportRows = await sb.query<ReportRowLike>(auth.token, "reports", `?select=id,reason,reporter_id,reported_id,status,created_at&or=(reporter_id.eq.${auth.userId},reported_id.eq.${auth.userId})&order=created_at.desc&limit=50`).catch(() => [] as ReportRowLike[]);
     const hasSupport = supportRows.some(r => isSupportReason(r.reason));
@@ -7858,9 +7859,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       const [profiles, lastMsgs, unread] = await Promise.all([
         sb.query<Profile>(auth.token, "profiles", `?id=eq.${pid}`),
         sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&order=created_at.desc&limit=1`),
-        sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&sender_id=neq.${auth.userId}&sender_id=neq.${SUPPORT_TEAM_ID}&is_read=eq.false`),
+        sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&sender_id=neq.${auth.userId}&is_read=eq.false`),
       ]);
-      return { ...m, partner: profiles[0], lastMsg: lastMsgs[0], unreadCount: unread.length };
+      return { ...m, partner: profiles[0], lastMsg: lastMsgs[0], unreadCount: (Array.isArray(unread) ? unread.filter(u => u.sender_id !== SUPPORT_TEAM_ID) : []).length };
     }));
     const filtered = enriched.filter(c => c.partner);
     // Dédupliquer par partner id
@@ -7879,6 +7880,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     onUnreadCount(finalConvs.reduce((s, c) => s + (c.unreadCount || 0), 0));
     setLoading(false);
     return finalConvs;
+    } catch (e) {
+      setLoading(false);
+      return [] as Match[];
+    }
   };
 
   const loadMsgs = async (conv: Match) => {
@@ -17680,8 +17685,8 @@ export default function App() {
         const matches = await sb.query<{ id: string }>(auth.token, "matches", `?or=(user1.eq.${auth.userId},user2.eq.${auth.userId})&select=id`);
         if (!matches.length) { setUnreadCount(0); return; }
         const matchIds = matches.map(m => m.id).join(",");
-        const res = await sb.query<object>(auth.token, "messages", `?match_id=in.(${matchIds})&sender_id=neq.${auth.userId}&sender_id=neq.${SUPPORT_TEAM_ID}&is_read=eq.false&select=id`);
-        const count = Array.isArray(res) ? res.length : 0;
+        const res = await sb.query<{ sender_id: string }>(auth.token, "messages", `?match_id=in.(${matchIds})&sender_id=neq.${auth.userId}&is_read=eq.false&select=id,sender_id`);
+        const count = Array.isArray(res) ? res.filter(r => r.sender_id !== SUPPORT_TEAM_ID).length : 0;
         const activeTab3 = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
         const msgSeen = localStorage.getItem(`moyo_messages_seen_${auth.userId}`);
         const SEEN_THRESHOLD3 = 60 * 1000;
