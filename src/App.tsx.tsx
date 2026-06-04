@@ -7348,6 +7348,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [statusPaused, setStatusPaused] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deletedSupportIds = useRef<Set<string>>(new Set());
+  const destroyedIdsRef = useRef<Set<string>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
@@ -7545,7 +7546,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     }
     const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, async () => {
       const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
-      setMsgs(res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)));
+      setMsgs(res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)).map(m => (m.id && destroyedIdsRef.current.has(m.id)) ? { ...m, is_destroyed: true } : m));
     });
     return () => { try { ws?.close(); } catch {} };
   }, [open?.id]);
@@ -7557,7 +7558,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     const readInterval = setInterval(async () => {
       try {
         const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
-        const filtered = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId));
+        const filtered = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)).map(m => (m.id && destroyedIdsRef.current.has(m.id)) ? { ...m, is_destroyed: true } : m);
         setMsgs(prev => {
           const hasChange = filtered.some((m, i) => prev[i]?.is_read !== m.is_read || prev[i]?.id !== m.id || prev[i]?.reactions !== m.reactions);
           return hasChange ? filtered : prev;
@@ -8112,7 +8113,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       const blob = await resp.blob();
       const objUrl = URL.createObjectURL(blob);
       const now = new Date().toISOString();
+      destroyedIdsRef.current.add(m.id);
+      // 1) Marquage local instantané
       setMsgs(list => list.map(x => x.id === m.id ? { ...x, is_destroyed: true, viewed_at: now, destroyed_at: now } : x));
+      // 2) Persistance en base DIRECTEMENT depuis l'app (ne dépend plus de l'Edge Function pour l'état "détruit")
+      sb.update(auth.token, "messages", m.id, { is_destroyed: true, viewed_at: now, destroyed_at: now }).catch(() => {});
+      // 3) Suppression du fichier du Storage (droits admin → Edge Function)
       fetch(`${SUPABASE_URL}/functions/v1/burn-photo`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
@@ -8598,23 +8604,23 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                       </div>
                     ) : m.is_view_once ? (
                       isMine ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "16px 16px 4px 16px", background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.18)", minWidth: 200 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "18px 18px 4px 18px", background: G.rouge, minWidth: 200 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff" }}>Photo vue unique</div>
+                            <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.85)" }}>Envoyée</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div onClick={() => openViewOnce(m)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "18px 18px 18px 4px", background: G.blanc, border: `1px solid ${G.gris}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", cursor: "pointer", minWidth: 200 }}>
                           <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.rouge }}>Photo vue unique</div>
-                            <div style={{ fontSize: "0.72rem", color: "#c0796f" }}>Envoyée</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div onClick={() => openViewOnce(m)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "16px 16px 16px 4px", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.26)", cursor: "pointer", minWidth: 200 }}>
-                          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.13)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.rouge }}>Photo vue unique</div>
-                            <div style={{ fontSize: "0.72rem", color: "#c0796f", fontWeight: 600 }}>Appuie pour voir</div>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>Photo vue unique</div>
+                            <div style={{ fontSize: "0.72rem", color: G.rouge, fontWeight: 600 }}>Appuie pour voir</div>
                           </div>
                         </div>
                       )
