@@ -13152,6 +13152,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [officialStatuses, setOfficialStatuses] = useState<(StatusPost & { _views?: number; _replies?: number })[]>([]);
   const [confirmDeleteStatus, setConfirmDeleteStatus] = useState<StatusPost | null>(null);
   const [mktTab, setMktTab] = useState<"statuts" | "features">("statuts");
+  const [mktShowAll, setMktShowAll] = useState(false);
   const [featureRequests, setFeatureRequests] = useState<Array<{ id: string; user_id: string; gender?: string; status: string; created_at: string; profile?: any; _usedThisMonth?: number }>>([]);
   const [featureStatuses, setFeatureStatuses] = useState<Array<StatusPost & { profile?: any; _views?: number; _replies?: number; _likes?: number }>>([]);
   const [frProcessing, setFrProcessing] = useState<string | null>(null);
@@ -13240,8 +13241,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const ms = new Date(iso).getTime() - Date.now();
     if (ms <= 0) return "expiré";
     const h = Math.floor(ms / 3600000);
-    if (h >= 1) return `dans ${h} h`;
-    return `dans ${Math.max(1, Math.floor(ms / 60000))} min`;
+    const m = Math.floor((ms % 3600000) / 60000);
+    if (h >= 1) return `dans ${h}h ${m}m`;
+    return `dans ${Math.max(1, m)} min`;
   };
 
   // ── Demandes de mise en avant (Premium) ──
@@ -15215,7 +15217,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["reports", "Signalements", IcoAlert],
             ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
             ["messagerie", "Messagerie", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "messagerie" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
-            ["marketing", "Marketing", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "marketing" ? "#E67E22" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>],
+            ["marketing", "Marketing", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "marketing" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>],
             ["reviews", "Avis", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["payments", "Paiements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
@@ -16507,73 +16509,141 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* ═══════════════════════════════════════════ ONGLET MARKETING */}
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
-          <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo"], ["features", "Mises en avant"]] as const).map(([k, lbl]) => (
-              <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, padding: "8px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontSize: "0.8rem", fontWeight: 700, background: mktTab === k ? "#E67E22" : G.creme, color: mktTab === k ? "#fff" : "#777" }}>{lbl}</button>
+          <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
+            {([["statuts", "Statuts Moyo", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>]] as [("statuts" | "features"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+              <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "rgba(192,57,43,0.10)" : "#fff", color: mktTab === k ? G.rouge : "#555", border: mktTab === k ? `1.5px solid rgba(192,57,43,0.3)` : `1.5px solid ${G.gris}` }}>{ico}{lbl}</button>
+            ))}
+          </div>
+
+          {/* ── Cartes KPI ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
+            {([
+              { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
+              { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>, bg: "rgba(230,126,34,0.14)", label: "Demandes en attente", value: featureRequests.length, sub: "À valider", subColor: "#E67E22" },
+              { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>, bg: "rgba(142,68,173,0.14)", label: "Profils mis en avant", value: featureStatuses.length, sub: "actuellement affichés", subColor: "#8e44ad" },
+            ]).map((c, i) => (
+              <div key={i} style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: c.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{c.ic}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>{c.label}</div>
+                  <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{c.value}</div>
+                  <div style={{ fontSize: "0.72rem", color: c.subColor, fontWeight: 700, marginTop: 1 }}>{c.sub}</div>
+                </div>
+              </div>
             ))}
           </div>
 
           {mktTab === "statuts" && (
-            <div style={{ maxWidth: 560, margin: "0 auto" }}>
-              <div style={{ background: G.blanc, borderRadius: 16, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                <h3 style={{ fontWeight: 800, fontSize: "0.9rem", color: G.brun, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                  Statuts Moyo
-                </h3>
-                <p style={{ fontSize: "0.72rem", color: "#888", lineHeight: 1.5, marginBottom: 12 }}>Publie un statut officiel visible par <strong>tous les membres</strong> (gratuits inclus) pendant 24h — pour tes annonces et tes pubs.</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-start" }}>
+              {/* ── COLONNE GAUCHE : statuts actifs ── */}
+              <div style={{ flex: "2 1 460px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Statuts actifs</div>
+                  <button onClick={() => setActiveTab("stats")} style={{ display: "flex", alignItems: "center", gap: 7, background: G.creme, border: `1px solid ${G.gris}`, borderRadius: 10, padding: "8px 14px", fontSize: "0.75rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Voir les statistiques globales
+                  </button>
+                </div>
+                {officialStatuses.length === 0 ? (
+                  <div style={{ fontSize: "0.82rem", color: "#aaa", textAlign: "center", padding: "34px 0" }}>Aucun statut officiel actif pour le moment.</div>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      {(mktShowAll ? officialStatuses : officialStatuses.slice(0, 4)).map((s, idx, arr) => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 2px", borderBottom: idx < arr.length - 1 ? `1px solid ${G.gris}` : "none", flexWrap: "wrap" }}>
+                          {s.image_url ? <img src={s.image_url} alt="" style={{ width: 58, height: 50, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 58, height: 50, borderRadius: 10, background: G.creme, flexShrink: 0 }} />}
+                          <div style={{ flex: "1 1 170px", minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 230 }}>{s.caption || "Statut Moyo"}</span>
+                              {s.is_sponsored && <span style={{ background: "rgba(192,57,43,0.1)", color: G.rouge, borderRadius: 50, padding: "2px 9px", fontSize: "0.64rem", fontWeight: 800 }}>Sponsorisé</span>}
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 3 }}>Publié le {new Date(s.created_at || Date.now()).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })} à {new Date(s.created_at || Date.now()).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                            <div style={{ textAlign: "center" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.brun, fontWeight: 800, fontSize: "0.85rem" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{(s._views || 0).toLocaleString("fr-FR")}</div>
+                              <div style={{ fontSize: "0.62rem", color: "#aaa" }}>Vues</div>
+                            </div>
+                            <div style={{ textAlign: "center" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.brun, fontWeight: 800, fontSize: "0.85rem" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{s._replies || 0}</div>
+                              <div style={{ fontSize: "0.62rem", color: "#aaa" }}>Réponses</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.rouge, fontWeight: 700, fontSize: "0.72rem", whiteSpace: "nowrap" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Expire {expiresInLabel(s.expires_at)}</div>
+                            <button onClick={() => s.image_url && window.open(s.image_url, "_blank")} style={{ display: "flex", alignItems: "center", gap: 5, background: "#fff", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</button>
+                            <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ flexShrink: 0, border: "none", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {officialStatuses.length > 4 && (
+                      <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+                        <button onClick={() => setMktShowAll(v => !v)} style={{ display: "flex", alignItems: "center", gap: 7, background: "#fff", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>
+                          {mktShowAll ? "Voir moins" : "Voir plus de statuts"}
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: mktShowAll ? "rotate(180deg)" : "none" }}><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* ── COLONNE DROITE : nouveau statut ── */}
+              <div style={{ flex: "1 1 320px", background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Nouveau statut</div>
+                <p style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Publiez un statut officiel visible par tous les membres pendant 24h.</p>
 
                 <input ref={stFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => onPickStatusFile(e.target.files?.[0] || undefined)} />
 
                 {stPreview ? (
-                  <div style={{ position: "relative", marginBottom: 10 }}>
-                    <img src={stPreview} alt="" style={{ width: "100%", borderRadius: 12, maxHeight: 220, objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "relative", marginBottom: 12 }}>
+                    <img src={stPreview} alt="" style={{ width: "100%", borderRadius: 14, maxHeight: 220, objectFit: "cover", display: "block" }} />
                     <button onClick={() => { setStFile(null); setStPreview(null); if (stFileRef.current) stFileRef.current.value = ""; }} style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.55)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                   </div>
                 ) : (
-                  <button onClick={() => stFileRef.current?.click()} style={{ width: "100%", border: `2px dashed ${G.gris}`, borderRadius: 12, padding: "22px 12px", background: "rgba(192,57,43,0.03)", color: G.rouge, fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", marginBottom: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <button onClick={() => stFileRef.current?.click()} style={{ width: "100%", border: `2px dashed rgba(192,57,43,0.4)`, borderRadius: 14, padding: "26px 12px", background: "rgba(192,57,43,0.04)", color: G.rouge, fontWeight: 800, fontSize: "0.9rem", cursor: "pointer", marginBottom: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                     Choisir une image
+                    <span style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 600 }}>PNG, JPG ou WEBP. Max 5MB</span>
                   </button>
                 )}
 
-                <input value={stCaption} onChange={e => setStCaption(e.target.value)} placeholder="Légende (optionnel)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", marginBottom: 8 }} />
+                <div style={{ position: "relative", marginBottom: 10 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                  <input value={stCaption} onChange={e => setStCaption(e.target.value)} placeholder="Légende (optionnel)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: "12px 12px 12px 34px", fontSize: "0.85rem", outline: "none" }} />
+                </div>
+
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#777", marginBottom: 6 }}>Bouton d'action (optionnel)</div>
-                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                   {([["none", "Aucun"], ["link", "Lien"], ["phone", "Numéro"]] as ["none" | "link" | "phone", string][]).map(([val, lbl]) => (
-                    <button key={val} type="button" onClick={() => setStCtaType(val)} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${stCtaType === val ? G.rouge : G.gris}`, background: stCtaType === val ? "rgba(192,57,43,0.08)" : "#fff", color: stCtaType === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{lbl}</button>
+                    <button key={val} type="button" onClick={() => setStCtaType(val)} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${stCtaType === val ? G.rouge : G.gris}`, background: stCtaType === val ? "rgba(192,57,43,0.08)" : "#fff", color: stCtaType === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{lbl}</button>
                   ))}
                 </div>
                 {stCtaType === "link" && (
-                  <input value={stLink} onChange={e => setStLink(e.target.value)} placeholder="Lien https://… → bouton « En savoir plus »" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", marginBottom: 8 }} />
+                  <div style={{ position: "relative", marginBottom: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    <input value={stLink} onChange={e => setStLink(e.target.value)} placeholder="Lien « En savoir plus » (https://…)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: "12px 12px 12px 34px", fontSize: "0.85rem", outline: "none" }} />
+                  </div>
                 )}
                 {stCtaType === "phone" && (
-                  <input value={stPhone} onChange={e => setStPhone(e.target.value)} inputMode="tel" placeholder="Numéro +242… → bouton « Contacter »" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", marginBottom: 8 }} />
+                  <div style={{ position: "relative", marginBottom: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <input value={stPhone} onChange={e => setStPhone(e.target.value)} inputMode="tel" placeholder="Numéro +242… → bouton « Contacter »" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: "12px 12px 12px 34px", fontSize: "0.85rem", outline: "none" }} />
+                  </div>
                 )}
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 12, cursor: "pointer" }}>
-                  <input type="checkbox" checked={stSponsored} onChange={e => setStSponsored(e.target.checked)} />
-                  Marquer « Sponsorisé » (pub payée par un tiers)
+
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.8rem", color: "#555", margin: "4px 0 14px", cursor: "pointer", lineHeight: 1.35 }}>
+                  <input type="checkbox" checked={stSponsored} onChange={e => setStSponsored(e.target.checked)} style={{ marginTop: 2 }} />
+                  <span>Marquer comme sponsorisé<br /><span style={{ color: "#999", fontSize: "0.74rem" }}>(pub payée par un tiers)</span></span>
                 </label>
 
-                <Btn variant="primary" onClick={publishOfficialStatus} loading={stPublishing} disabled={!stFile} style={{ width: "100%" }}>{stPublishing ? "Publication…" : "Publier le statut"}</Btn>
+                <button onClick={publishOfficialStatus} disabled={!stFile || stPublishing} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: (!stFile || stPublishing) ? "rgba(192,57,43,0.45)" : G.rouge, color: "#fff", border: "none", borderRadius: 14, padding: "14px", fontWeight: 800, fontSize: "0.95rem", cursor: (!stFile || stPublishing) ? "not-allowed" : "pointer", boxShadow: "0 6px 18px rgba(192,57,43,0.28)" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  {stPublishing ? "Publication…" : "Publier le statut"}
+                </button>
 
-                <div style={{ marginTop: 16, borderTop: `1px solid ${G.gris}`, paddingTop: 12 }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Statuts actifs ({officialStatuses.length})</div>
-                  {officialStatuses.length === 0 ? (
-                    <div style={{ fontSize: "0.75rem", color: "#aaa" }}>Aucun statut officiel actif.</div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {officialStatuses.map(s => (
-                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 10, padding: 8 }}>
-                          {s.image_url && <img src={s.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: "0.76rem", fontWeight: 600, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.caption || "Sans légende"}{s.is_sponsored ? " · Sponsorisé" : ""}</div>
-                            <div style={{ fontSize: "0.66rem", color: "#999", marginTop: 2 }}>{s._views || 0} vues · {s._replies || 0} réponses · Expire {expiresInLabel(s.expires_at)}</div>
-                          </div>
-                          <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ flexShrink: 0, border: "none", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 9, background: "rgba(192,57,43,0.06)", borderRadius: 12, padding: "11px 14px" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  <span style={{ fontSize: "0.74rem", color: "#a14338", lineHeight: 1.4 }}>Le statut sera automatiquement supprimé après 24 heures.</span>
                 </div>
               </div>
             </div>
