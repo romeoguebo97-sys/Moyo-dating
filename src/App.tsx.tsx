@@ -7844,15 +7844,25 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const sendStatusReply = async (st?: StatusPost | null) => {
     const content = statusReplyText.trim();
     if (!st?.id || st.user_id === auth.userId || !content || statusActionLoading) return;
-    const match = getMatchWithUser(st.user_id);
-    if (!match) { setToast({ msg: "Vous devez avoir un match actif pour répondre à ce statut.", type: "error" }); return; }
     setStatusActionLoading(true);
     try {
-      const prefix = `[↩ Statut Moyo : ${st.caption || "Photo"}]\n`;
-      await sb.insert<Message>(auth.token, "messages", { match_id: match.id, sender_id: auth.userId, content: prefix + content, is_read: false });
-      setStatusReplyText("");
-      setStatusPaused(false);
-      setToast({ msg: "Réponse envoyée dans la conversation.", type: "success" });
+      const isOfficialOrFeature = st.is_official || st.is_feature || st.user_id === "moyo-official";
+      if (isOfficialOrFeature) {
+        // Réponse à un statut Moyo officiel / mise en avant → arrive dans la Messagerie admin (système support)
+        const reason = `${SUPPORT_PREFIX_USER} ↩ Statut Moyo [#${st.id}] : ${content}`;
+        await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: null, reason, status: "pending" });
+        setStatusReplyText("");
+        setStatusPaused(false);
+        setToast({ msg: "Réponse envoyée à l'équipe Moyo.", type: "success" });
+      } else {
+        const match = getMatchWithUser(st.user_id);
+        if (!match) { setToast({ msg: "Vous devez avoir un match actif pour répondre à ce statut.", type: "error" }); setStatusActionLoading(false); return; }
+        const prefix = `[↩ Statut Moyo : ${st.caption || "Photo"}]\n`;
+        await sb.insert<Message>(auth.token, "messages", { match_id: match.id, sender_id: auth.userId, content: prefix + content, is_read: false });
+        setStatusReplyText("");
+        setStatusPaused(false);
+        setToast({ msg: "Réponse envoyée dans la conversation.", type: "success" });
+      }
     } catch {
       setToast({ msg: "Impossible d’envoyer la réponse au statut.", type: "error" });
     } finally {
@@ -12859,8 +12869,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived">("all");
 
-  // ── Statuts officiels Moyo (publiés depuis l'onglet Messagerie) ──
-  const [officialStatuses, setOfficialStatuses] = useState<StatusPost[]>([]);
+  // ── Statuts officiels Moyo (publiés depuis l'onglet Marketing) ──
+  const [officialStatuses, setOfficialStatuses] = useState<(StatusPost & { _views?: number; _replies?: number })[]>([]);
+  const [confirmDeleteStatus, setConfirmDeleteStatus] = useState<StatusPost | null>(null);
   const [mktTab, setMktTab] = useState<"statuts" | "features">("statuts");
   const [stFile, setStFile] = useState<File | null>(null);
   const [stPreview, setStPreview] = useState<string | null>(null);
@@ -12882,7 +12893,17 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     try {
       const now = new Date().toISOString();
       const rows = await sb.query<StatusPost>(auth.token, "statuses", `?is_official=eq.true&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`);
-      const enriched = await Promise.all((Array.isArray(rows) ? rows : []).map(async s => ({ ...s, image_url: await resolveStatusImageUrl(auth.token, s.image_url) })));
+      const list = Array.isArray(rows) ? rows : [];
+      const ids = list.map(s => s.id).filter(Boolean) as string[];
+      const viewsBy: Record<string, number> = {};
+      const repliesBy: Record<string, number> = {};
+      if (ids.length) {
+        const views = await sb.query<{ status_id: string }>(auth.token, "status_status_views", `?status_id=in.(${ids.join(",")})&select=status_id`).catch(() => [] as { status_id: string }[]);
+        (Array.isArray(views) ? views : []).forEach(v => { viewsBy[v.status_id] = (viewsBy[v.status_id] || 0) + 1; });
+        const reps = await sb.query<{ reason: string }>(auth.token, "reports", `?reason=like.*%5B%23*&select=reason&limit=1000`).catch(() => [] as { reason: string }[]);
+        (Array.isArray(reps) ? reps : []).forEach(r => { ids.forEach(id => { if (r.reason && r.reason.includes(`[#${id}]`)) repliesBy[id] = (repliesBy[id] || 0) + 1; }); });
+      }
+      const enriched = await Promise.all(list.map(async s => ({ ...s, image_url: await resolveStatusImageUrl(auth.token, s.image_url), _views: viewsBy[s.id || ""] || 0, _replies: repliesBy[s.id || ""] || 0 })));
       setOfficialStatuses(enriched);
     } catch { setOfficialStatuses([]); }
   };
@@ -12921,6 +12942,14 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       showToast("Statut supprimé.", "success");
     } catch { showToast("Suppression impossible.", "error"); }
     finally { setStDeleting(null); }
+  };
+  const expiresInLabel = (iso?: string) => {
+    if (!iso) return "—";
+    const ms = new Date(iso).getTime() - Date.now();
+    if (ms <= 0) return "expiré";
+    const h = Math.floor(ms / 3600000);
+    if (h >= 1) return `dans ${h} h`;
+    return `dans ${Math.max(1, Math.floor(ms / 60000))} min`;
   };
   const [expandedArchived, setExpandedArchived] = useState<Set<string>>(new Set());
   const toggleArchived = (id: string) => setExpandedArchived(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -16149,15 +16178,24 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {s.image_url && <img src={s.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: "0.76rem", fontWeight: 600, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.caption || "Sans légende"}{s.is_sponsored ? " · Sponsorisé" : ""}</div>
-                            <div style={{ fontSize: "0.66rem", color: "#999" }}>Expire {s.expires_at ? new Date(s.expires_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}</div>
+                            <div style={{ fontSize: "0.66rem", color: "#999", marginTop: 2 }}>{s._views || 0} vues · {s._replies || 0} réponses · Expire {expiresInLabel(s.expires_at)}</div>
                           </div>
-                          <button onClick={() => deleteOfficialStatus(s)} disabled={stDeleting === s.id} style={{ flexShrink: 0, border: "none", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                          <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ flexShrink: 0, border: "none", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
               </div>
+              {confirmDeleteStatus && (
+                <ConfirmModal
+                  msg={"Supprimer ce statut ?\n\nCette action est irréversible."}
+                  confirmLabel="Supprimer"
+                  danger
+                  onConfirm={() => { const s = confirmDeleteStatus; setConfirmDeleteStatus(null); deleteOfficialStatus(s); }}
+                  onCancel={() => setConfirmDeleteStatus(null)}
+                />
+              )}
             </div>
           )}
 
