@@ -13018,7 +13018,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [confirmDeleteStatus, setConfirmDeleteStatus] = useState<StatusPost | null>(null);
   const [mktTab, setMktTab] = useState<"statuts" | "features">("statuts");
   const [featureRequests, setFeatureRequests] = useState<Array<{ id: string; user_id: string; gender?: string; status: string; created_at: string; profile?: any; _usedThisMonth?: number }>>([]);
-  const [featureStatuses, setFeatureStatuses] = useState<Array<StatusPost & { profile?: any }>>([]);
+  const [featureStatuses, setFeatureStatuses] = useState<Array<StatusPost & { profile?: any; _views?: number; _replies?: number; _likes?: number }>>([]);
   const [frProcessing, setFrProcessing] = useState<string | null>(null);
   const [stFile, setStFile] = useState<File | null>(null);
   const [stPreview, setStPreview] = useState<string | null>(null);
@@ -13106,13 +13106,29 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       const now = new Date().toISOString();
       const rows = await sb.query<StatusPost>(auth.token, "statuses", `?is_feature=eq.true&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`);
       const list = Array.isArray(rows) ? rows : [];
+      const ids = list.map(s => s.id).filter(Boolean) as string[];
       const uids = Array.from(new Set(list.map(s => s.feature_user_id).filter(Boolean) as string[]));
       const profilesById: Record<string, any> = {};
       if (uids.length) {
         const profs = await sb.query<any>(auth.token, "profiles", `?id=in.(${uids.join(",")})&select=id,name,age,city,gender,photo_url`).catch(() => [] as any[]);
         (Array.isArray(profs) ? profs : []).forEach((p: any) => { profilesById[p.id] = p; });
       }
-      setFeatureStatuses(list.map(s => ({ ...s, profile: profilesById[s.feature_user_id || ""] })));
+      const viewsBy: Record<string, number> = {};
+      const repliesBy: Record<string, number> = {};
+      if (ids.length) {
+        const views = await sb.query<{ status_id: string }>(auth.token, "status_status_views", `?status_id=in.(${ids.join(",")})&select=status_id`).catch(() => [] as { status_id: string }[]);
+        (Array.isArray(views) ? views : []).forEach(v => { viewsBy[v.status_id] = (viewsBy[v.status_id] || 0) + 1; });
+        const reps = await sb.query<{ reason: string }>(auth.token, "reports", `?reason=like.*%5B%23*&select=reason&limit=1000`).catch(() => [] as { reason: string }[]);
+        (Array.isArray(reps) ? reps : []).forEach(r => { ids.forEach(id => { if (r.reason && r.reason.includes(`[#${id}]`)) repliesBy[id] = (repliesBy[id] || 0) + 1; }); });
+      }
+      let likesRows: any[] = [];
+      if (uids.length) likesRows = await sb.query<any>(auth.token, "likes", `?to_user=in.(${uids.join(",")})&select=to_user,created_at`).catch(() => [] as any[]);
+      likesRows = Array.isArray(likesRows) ? likesRows : [];
+      setFeatureStatuses(list.map(s => {
+        const since = s.created_at ? new Date(s.created_at).getTime() : 0;
+        const likes = likesRows.filter(l => l.to_user === s.feature_user_id && new Date(l.created_at).getTime() >= since).length;
+        return { ...s, profile: profilesById[s.feature_user_id || ""], _views: viewsBy[s.id || ""] || 0, _replies: repliesBy[s.id || ""] || 0, _likes: likes };
+      }));
     } catch { setFeatureStatuses([]); }
   };
   const loadFeatureRequests = async () => {
@@ -16445,6 +16461,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun }}>{s.profile?.name || "Profil"}{s.profile?.age ? `, ${s.profile.age} ans` : ""}</div>
                           <div style={{ fontSize: "0.66rem", color: "#999" }}>Visible par les {s.target_gender === "Homme" ? "hommes" : "femmes"} · Expire {expiresInLabel(s.expires_at)}</div>
+                          <div style={{ fontSize: "0.66rem", color: "#E67E22", fontWeight: 600, marginTop: 1 }}>{s._views || 0} vues · {s._replies || 0} réponses · {s._likes || 0} likes</div>
                         </div>
                         <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ flexShrink: 0, border: "none", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 8, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Retirer</button>
                       </div>
