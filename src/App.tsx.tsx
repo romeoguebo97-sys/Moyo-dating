@@ -11618,7 +11618,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Onglet actif ──
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing">("stats");
 
   // ── Match Proposals ──
   type MatchProposal = {
@@ -12861,6 +12861,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Statuts officiels Moyo (publiés depuis l'onglet Messagerie) ──
   const [officialStatuses, setOfficialStatuses] = useState<StatusPost[]>([]);
+  const [mktTab, setMktTab] = useState<"statuts" | "features">("statuts");
   const [stFile, setStFile] = useState<File | null>(null);
   const [stPreview, setStPreview] = useState<string | null>(null);
   const [stCaption, setStCaption] = useState("");
@@ -14807,6 +14808,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["reports", "Signalements", IcoAlert],
             ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
             ["messagerie", "Messagerie", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "messagerie" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
+            ["marketing", "Marketing", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "marketing" ? "#E67E22" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>],
             ["reviews", "Avis", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["payments", "Paiements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
@@ -14819,7 +14821,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "reviews") loadReviews();
                 if (key === "payments") loadPayments();
                 if (key === "logs") loadAdminLogs();
-                if (key === "messagerie") { loadStats(); loadOfficialStatuses(); }
+                if (key === "messagerie") loadStats();
+                if (key === "marketing") loadOfficialStatuses();
                 if (key === "matches") {
                   loadProposals();
                   setProposalsBadgeCount(0);
@@ -14830,8 +14833,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 ...(window.innerWidth >= 640 ? { flex: 1 } : { flexShrink: 0 }),
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                 padding: "10px 12px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
-                color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge) : "#999",
-                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : G.rouge}` : "2.5px solid transparent",
+                color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : key === "marketing" ? "#E67E22" : G.rouge) : "#999",
+                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : key === "marketing" ? "#E67E22" : G.rouge}` : "2.5px solid transparent",
                 transition: "all 0.2s", whiteSpace: "nowrap",
               }}
             >
@@ -15531,8 +15534,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* ═══════════════════════════════════════════ ONGLET SIGNALEMENTS */}
       {(activeTab === "reports" || activeTab === "messagerie") && (
         <div style={{ padding: "16px" }}>
-          <div style={{ display: activeTab === "messagerie" && window.innerWidth >= 900 ? "flex" : "block", gap: 16, alignItems: "flex-start" }}>
-          <div style={{ flex: activeTab === "messagerie" && window.innerWidth >= 900 ? "1 1 0%" : undefined, minWidth: 0, width: "100%" }}>
           {/* Sous-onglets — affichés uniquement sur Signalements (pas sur l'onglet Messagerie) */}
           {activeTab === "reports" && (
           <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
@@ -16093,9 +16094,20 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {reportActionLoading === "bulk" ? "Suppression…" : `Tout supprimer (${archivedCount})`}
             </button>
           )}
-          </div>{/* fin colonne gauche (messagerie) */}
-          {activeTab === "messagerie" && (
-            <div style={{ flex: window.innerWidth >= 900 ? "0 0 340px" : undefined, width: "100%", maxWidth: window.innerWidth >= 900 ? 360 : undefined, marginTop: window.innerWidth >= 900 ? 0 : 16 }}>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET MARKETING */}
+      {activeTab === "marketing" && (
+        <div style={{ padding: "16px" }}>
+          <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
+            {([["statuts", "Statuts Moyo"], ["features", "Mises en avant"]] as const).map(([k, lbl]) => (
+              <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, padding: "8px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontSize: "0.8rem", fontWeight: 700, background: mktTab === k ? "#E67E22" : G.creme, color: mktTab === k ? "#fff" : "#777" }}>{lbl}</button>
+            ))}
+          </div>
+
+          {mktTab === "statuts" && (
+            <div style={{ maxWidth: 560, margin: "0 auto" }}>
               <div style={{ background: G.blanc, borderRadius: 16, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                 <h3 style={{ fontWeight: 800, fontSize: "0.9rem", color: G.brun, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
@@ -16148,7 +16160,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             </div>
           )}
-          </div>{/* fin conteneur 75/25 */}
+
+          {mktTab === "features" && (
+            <div style={{ maxWidth: 560, margin: "0 auto" }}>
+              <div style={{ background: G.blanc, borderRadius: 16, padding: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", textAlign: "center", color: "#999" }}>
+                <div style={{ fontWeight: 700, color: G.brun, marginBottom: 6 }}>Demandes de mise en avant</div>
+                <div style={{ fontSize: "0.82rem" }}>Les demandes Premium « Passer sur les Statuts Moyo » apparaîtront ici (à accepter ou refuser). Section branchée à l'étape suivante.</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
