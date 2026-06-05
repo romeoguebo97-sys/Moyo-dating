@@ -9490,12 +9490,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         {statusPreview.is_feature && (
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 78, left: 10, right: 10, bottom: 78, zIndex: 4, borderRadius: 24, overflow: "hidden", boxShadow: "0 18px 60px rgba(0,0,0,0.45)", background: "#1a1a1a" }}>
             {statusPreview.image_url && <img src={statusPreview.image_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 32%, rgba(0,0,0,0.05) 55%, transparent 100%)" }} />
-            <div style={{ position: "absolute", top: 14, left: 14, display: "flex", alignItems: "center", gap: 6, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", borderRadius: 999, padding: "6px 13px", fontSize: "0.78rem", fontWeight: 800, boxShadow: "0 6px 18px rgba(192,57,43,0.45)" }}>
+            {/* Zones de tap (comme les statuts individuels) : gauche = précédent, droite = suivant, appui long = pause. Limitées à la partie haute pour ne pas gêner les boutons. */}
+            <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 0, bottom: "42%", width: "34%", zIndex: 3, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
+            <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 0, bottom: "42%", width: "66%", zIndex: 3, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 32%, rgba(0,0,0,0.05) 55%, transparent 100%)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", top: 14, left: 14, display: "flex", alignItems: "center", gap: 6, background: G.rouge, color: "#fff", borderRadius: 999, padding: "6px 13px", fontSize: "0.78rem", fontWeight: 800, boxShadow: "0 6px 18px rgba(192,57,43,0.45)" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.4 6.5L21 9l-5 4.2L17.6 20 12 16.3 6.4 20 8 13.2 3 9l6.6-.5z"/></svg>
               Mise en avant
             </div>
-            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 18px 18px", color: "#fff" }}>
+            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 18px 18px", color: "#fff", zIndex: 5 }}>
               <div style={{ fontSize: "1.5rem", fontWeight: 900, textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>{statusPreview.feature_profile?.name || "Profil"}{statusPreview.feature_profile?.age ? `, ${statusPreview.feature_profile.age} ans` : ""}</div>
               {statusPreview.feature_profile?.city && (
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.92rem", opacity: 0.92, marginTop: 3 }}>
@@ -9535,7 +9538,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               <div><div style={{ fontSize: "0.72rem", opacity: 0.75 }}>J’aime</div><div style={{ fontWeight: 900 }}>{statusStats[statusPreview.id || ""]?.likes || 0}</div></div>
             </div>
           </div>
-        ) : (
+        ) : statusPreview.is_feature ? null : (
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 26, zIndex: 5, display: "flex", alignItems: "center", gap: 10 }}>
             <button onClick={() => toggleStatusLike(statusPreview)} disabled={statusActionLoading} aria-label="Aimer ce statut" style={{ height: 48, minWidth: 54, borderRadius: 999, border: "1px solid rgba(255,255,255,0.22)", background: statusLikedByMe[statusPreview.id || ""] ? "rgba(192,57,43,0.92)" : "rgba(255,255,255,0.13)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill={statusLikedByMe[statusPreview.id || ""] ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -14016,17 +14019,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
     if (!isPending(r)) return false;
     if (effectiveFilter === "user") return isProfileReport(r);
     if (effectiveFilter === "system") return isSystemReport(r);
-    return true; // "all" = tous les éléments en attente, toutes catégories confondues
+    return !isSupportInbox(r); // "all" = tous les signalements en attente, hors messagerie (qui a son propre onglet)
   });
 
   const archivedCount = reports.filter(r => ARCHIVED_STATUSES.includes(r.status)).length;
-  const pendingCount = reports.filter(isPending).length;
+  const pendingCount = reports.filter(r => isPending(r) && !isSupportInbox(r)).length;
   const profilePendingCount = reports.filter(r => isPending(r) && isProfileReport(r)).length;
   const systemPendingCount = reports.filter(r => isPending(r) && isSystemReport(r)).length;
   const messagingPendingCount = reports.filter(r => isPending(r) && isSupportInbox(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   // ── Badge global = signalements en attente + avis non lus + paiements en attente ──
-  const adminBadgeCount = pendingCount + unreadReviewsCount + pendingPaymentsCount;
+  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount;
   const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
