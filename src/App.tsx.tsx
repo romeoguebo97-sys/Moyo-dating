@@ -9722,7 +9722,7 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
       const profs = await sb.query<{ gender: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender&limit=1`).catch(() => [] as { gender: string }[]);
       const gender = profs?.[0]?.gender || "";
       const res = await sb.insert<{ id?: string }>(auth.token, "feature_requests", { user_id: auth.userId, gender, status: "en_attente" });
-      if (res && (res as any).id) { setSent(true); }
+      if (Array.isArray(res) && res[0] && res[0].id) { setSent(true); }
       else { setErrorModal("Impossible d'envoyer la demande pour le moment. Réessayez plus tard."); }
     } catch {
       setErrorModal("Impossible d'envoyer la demande pour le moment. Réessayez plus tard.");
@@ -13018,6 +13018,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [confirmDeleteStatus, setConfirmDeleteStatus] = useState<StatusPost | null>(null);
   const [mktTab, setMktTab] = useState<"statuts" | "features">("statuts");
   const [featureRequests, setFeatureRequests] = useState<Array<{ id: string; user_id: string; gender?: string; status: string; created_at: string; profile?: any; _usedThisMonth?: number }>>([]);
+  const [featureStatuses, setFeatureStatuses] = useState<Array<StatusPost & { profile?: any }>>([]);
   const [frProcessing, setFrProcessing] = useState<string | null>(null);
   const [stFile, setStFile] = useState<File | null>(null);
   const [stPreview, setStPreview] = useState<string | null>(null);
@@ -13085,6 +13086,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     try {
       await sb.delete(auth.token, "statuses", `?id=eq.${s.id}`);
       setOfficialStatuses(prev => prev.filter(x => x.id !== s.id));
+      setFeatureStatuses(prev => prev.filter(x => x.id !== s.id));
       showToast("Statut supprimé.", "success");
     } catch { showToast("Suppression impossible.", "error"); }
     finally { setStDeleting(null); }
@@ -13099,6 +13101,20 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Demandes de mise en avant (Premium) ──
+  const loadFeatureStatuses = async () => {
+    try {
+      const now = new Date().toISOString();
+      const rows = await sb.query<StatusPost>(auth.token, "statuses", `?is_feature=eq.true&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`);
+      const list = Array.isArray(rows) ? rows : [];
+      const uids = Array.from(new Set(list.map(s => s.feature_user_id).filter(Boolean) as string[]));
+      const profilesById: Record<string, any> = {};
+      if (uids.length) {
+        const profs = await sb.query<any>(auth.token, "profiles", `?id=in.(${uids.join(",")})&select=id,name,age,city,gender,photo_url`).catch(() => [] as any[]);
+        (Array.isArray(profs) ? profs : []).forEach((p: any) => { profilesById[p.id] = p; });
+      }
+      setFeatureStatuses(list.map(s => ({ ...s, profile: profilesById[s.feature_user_id || ""] })));
+    } catch { setFeatureStatuses([]); }
+  };
   const loadFeatureRequests = async () => {
     try {
       const reqs = await sb.query<any>(auth.token, "feature_requests", `?status=eq.en_attente&order=created_at.asc&limit=100`);
@@ -13130,14 +13146,16 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       const caption = `❤️ Célibataire à découvrir aujourd'hui\n${p.name}, ${p.age} ans, ${p.city}.\nVous aimez son profil ? Laissez un like pour lui montrer votre intérêt.`;
       const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const published_at = new Date().toISOString();
-      const st = await sb.insert<{ id?: string }>(auth.token, "statuses", {
+      const arr = await sb.insert<{ id?: string }>(auth.token, "statuses", {
         user_id: auth.userId, image_url: p.photo_url, image_path: null, caption,
         is_official: false, is_feature: true, target_gender: targetGender, feature_user_id: req.user_id, expires_at,
       });
-      if (!st || !(st as any).id) { showToast("Échec de la publication du statut.", "error"); setFrProcessing(null); return; }
-      await sb.update(auth.token, "feature_requests", req.id, { status: "accepte", published_at, expires_at, status_id: (st as any).id });
+      const st = Array.isArray(arr) ? arr[0] : null;
+      if (!st || !st.id) { showToast("Échec de la publication du statut.", "error"); setFrProcessing(null); return; }
+      await sb.update(auth.token, "feature_requests", req.id, { status: "accepte", published_at, expires_at, status_id: st.id });
       showToast("Mise en avant publiée pour 24h.", "success");
       loadFeatureRequests();
+      loadFeatureStatuses();
     } catch { showToast("Impossible d'accepter la demande.", "error"); }
     finally { setFrProcessing(null); }
   };
@@ -15051,7 +15069,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "payments") loadPayments();
                 if (key === "logs") loadAdminLogs();
                 if (key === "messagerie") loadStats();
-                if (key === "marketing") { loadOfficialStatuses(); loadFeatureRequests(); }
+                if (key === "marketing") { loadOfficialStatuses(); loadFeatureRequests(); loadFeatureStatuses(); }
                 if (key === "matches") {
                   loadProposals();
                   setProposalsBadgeCount(0);
@@ -16387,15 +16405,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   )}
                 </div>
               </div>
-              {confirmDeleteStatus && (
-                <ConfirmModal
-                  msg={"Supprimer ce statut ?\n\nCette action est irréversible."}
-                  confirmLabel="Supprimer"
-                  danger
-                  onConfirm={() => { const s = confirmDeleteStatus; setConfirmDeleteStatus(null); deleteOfficialStatus(s); }}
-                  onCancel={() => setConfirmDeleteStatus(null)}
-                />
-              )}
             </div>
           )}
 
@@ -16425,7 +16434,34 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 )}
               </div>
+              {featureStatuses.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", marginTop: 14 }}>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 800, color: G.brun, marginBottom: 4 }}>Mises en avant actives ({featureStatuses.length})</div>
+                  <p style={{ fontSize: "0.7rem", color: "#999", marginBottom: 10 }}>Profils actuellement affichés dans les Statuts Moyo. Tu peux retirer une mise en avant à tout moment.</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {featureStatuses.map(s => (
+                      <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 10, padding: 8 }}>
+                        <Avatar url={s.profile?.photo_url || s.image_url} gender={s.profile?.gender} size={40} premium={false} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun }}>{s.profile?.name || "Profil"}{s.profile?.age ? `, ${s.profile.age} ans` : ""}</div>
+                          <div style={{ fontSize: "0.66rem", color: "#999" }}>Visible par les {s.target_gender === "Homme" ? "hommes" : "femmes"} · Expire {expiresInLabel(s.expires_at)}</div>
+                        </div>
+                        <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ flexShrink: 0, border: "none", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 8, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Retirer</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+          )}
+          {confirmDeleteStatus && (
+            <ConfirmModal
+              msg={"Supprimer ce statut ?\n\nCette action est irréversible."}
+              confirmLabel="Supprimer"
+              danger
+              onConfirm={() => { const s = confirmDeleteStatus; setConfirmDeleteStatus(null); deleteOfficialStatus(s); }}
+              onCancel={() => setConfirmDeleteStatus(null)}
+            />
           )}
         </div>
       )}
