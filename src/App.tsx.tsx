@@ -9491,7 +9491,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 78, left: 10, right: 10, bottom: 78, zIndex: 4, borderRadius: 24, overflow: "hidden", boxShadow: "0 18px 60px rgba(0,0,0,0.45)", background: "#1a1a1a" }}>
             {statusPreview.image_url && <img src={statusPreview.image_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 32%, rgba(0,0,0,0.05) 55%, transparent 100%)" }} />
-            <div style={{ position: "absolute", top: 14, left: 14, display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#FF5E8A,#E53935)", color: "#fff", borderRadius: 999, padding: "6px 13px", fontSize: "0.78rem", fontWeight: 800, boxShadow: "0 6px 18px rgba(229,57,53,0.45)" }}>
+            <div style={{ position: "absolute", top: 14, left: 14, display: "flex", alignItems: "center", gap: 6, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", borderRadius: 999, padding: "6px 13px", fontSize: "0.78rem", fontWeight: 800, boxShadow: "0 6px 18px rgba(192,57,43,0.45)" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.4 6.5L21 9l-5 4.2L17.6 20 12 16.3 6.4 20 8 13.2 3 9l6.6-.5z"/></svg>
               Mise en avant
             </div>
@@ -9506,12 +9506,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               {statusPreview.caption && <div style={{ fontSize: "0.92rem", lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-line", textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}>{statusPreview.caption}</div>}
               {statusPreview.feature_user_id !== auth.userId && (
                 getMatchWithUser(statusPreview.feature_user_id) ? (
-                  <button onClick={(e) => { e.stopPropagation(); const m = getMatchWithUser(statusPreview.feature_user_id); closeStatusViewer(); if (m) setOpen(m); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: G.vert, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(26,92,58,0.45)" }}>
+                  <button onClick={(e) => { e.stopPropagation(); const m = getMatchWithUser(statusPreview.feature_user_id); closeStatusViewer(); if (m) setOpen(m); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: G.rouge, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.45)" }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     Envoyer un message
                   </button>
                 ) : (
-                  <button onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#E53935", color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(229,57,53,0.5)" }}>
+                  <button onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: G.rouge, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.5)" }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
                     Liker ce profil
                   </button>
