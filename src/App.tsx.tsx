@@ -326,7 +326,7 @@ type Auth = {
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
-type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null; is_feature?: boolean; target_gender?: string | null; feature_user_id?: string | null };
+type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null; is_feature?: boolean; target_gender?: string | null; feature_user_id?: string | null; feature_profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
 const STATUS_BUCKETS = ["statuses", "status"] as const;
@@ -7391,6 +7391,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [statusPreview, setStatusPreview] = useState<StatusPost | null>(null);
   const [statusPreviewList, setStatusPreviewList] = useState<StatusPost[]>([]);
   const [statusPreviewIndex, setStatusPreviewIndex] = useState(0);
+  const [featureProfileView, setFeatureProfileView] = useState<Profile | null>(null);
   const [statusProgress, setStatusProgress] = useState(0);
   const [statusReplyText, setStatusReplyText] = useState("");
   const [statusStats, setStatusStats] = useState<Record<string, { views: number; likes: number }>>({});
@@ -7639,7 +7640,14 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       const officialEnriched = await Promise.all((Array.isArray(officialRaw) ? officialRaw : []).map(async st => ({ ...st, user_id: "moyo-official", profile: moyoProfile, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
       // Mises en avant Premium : ciblées par genre (filtrées aussi côté serveur par RLS). Image = photo de profil (URL directe).
       const featRaw = await sb.query<StatusPost>(auth.token, "statuses", `?is_feature=eq.true&expires_at=gt.${encodeURIComponent(now)}&or=(target_gender.eq.${encodeURIComponent(ownProfile.gender || "_")},feature_user_id.eq.${auth.userId})&order=created_at.desc`).catch(() => [] as StatusPost[]);
-      const featEnriched = (Array.isArray(featRaw) ? featRaw : []).map(st => ({ ...st, user_id: "moyo-official", profile: moyoProfile, image_url: st.image_url || null }));
+      const featRawArr = Array.isArray(featRaw) ? featRaw : [];
+      const featUids = Array.from(new Set(featRawArr.map(s => s.feature_user_id).filter(Boolean) as string[]));
+      const featProfById: Record<string, Profile> = {};
+      if (featUids.length) {
+        const fp = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${featUids.join(",")})&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified`).catch(() => [] as Profile[]);
+        (Array.isArray(fp) ? fp : []).forEach(p => { featProfById[p.id] = p; });
+      }
+      const featEnriched = featRawArr.map(st => ({ ...st, user_id: "moyo-official", profile: moyoProfile, image_url: st.image_url || null, feature_profile: featProfById[st.feature_user_id || ""] }));
 
       if (!partnerIds.length) { setStatuses([...officialEnriched, ...featEnriched]); return; }
       const rows = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=in.(${partnerIds.join(",")})&is_official=eq.false&is_feature=eq.false&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
@@ -9334,6 +9342,29 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         </div>
       </div>
     )}
+    {featureProfileView && (
+      <div onClick={() => setFeatureProfileView(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 750, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 480, maxHeight: "92vh", overflow: "auto" }}>
+          <div style={{ position: "relative", width: "100%", height: 360, background: "#eee" }}>
+            {featureProfileView.photo_url ? <img src={featureProfileView.photo_url ?? undefined} alt={featureProfileView.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+            <div onClick={() => setFeatureProfileView(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.45)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "40px 18px 14px", background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)" }}>
+              <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>{featureProfileView.name}, {featureProfileView.age} ans{featureProfileView.is_verified && <VerifiedBadge size={15} />}</div>
+              <div style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.85)" }}>{featureProfileView.city}</div>
+            </div>
+          </div>
+          <div style={{ padding: "16px 18px 24px" }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <span style={{ background: featureProfileView.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: featureProfileView.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "5px 14px", fontSize: "0.8rem", fontWeight: 600 }}>{featureProfileView.gender}</span>
+            </div>
+            {featureProfileView.bio && <p style={{ fontSize: "0.9rem", color: "#555", lineHeight: 1.6, marginBottom: 18 }}>{featureProfileView.bio}</p>}
+            {featureProfileView.id !== auth.userId && (
+              <Btn variant="primary" onClick={() => { const id = featureProfileView.id; setFeatureProfileView(null); likeFeatureProfile({ feature_user_id: id } as StatusPost); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>❤️ Liker ce profil</Btn>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
     {statusPreview && (
       <div
         onPointerDownCapture={(e) => {
@@ -9368,8 +9399,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         <div style={{ position: "absolute", top: 24, left: 18, right: 18, display: "flex", alignItems: "center", gap: 10, color: "#fff", zIndex: 3 }}>
           <Avatar url={statusPreview.profile?.photo_url} gender={statusPreview.profile?.gender} size={44} premium={statusPreview.profile?.is_premium} />
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 900, fontSize: "1.02rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>{statusPreview.profile?.name || "Statut"}{statusPreview.is_official && <VerifiedBadge size={15} />}</div>
-            <div style={{ fontSize: "0.78rem", opacity: 0.82, display: "flex", alignItems: "center", gap: 6 }}>{statusPreview.is_official ? "Officiel" : "Statut Moyo"}{statusPreview.is_sponsored && <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 6, padding: "1px 7px", fontSize: "0.68rem", fontWeight: 700 }}>Sponsorisé</span>}</div>
+            <div style={{ fontWeight: 900, fontSize: "1.02rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>{statusPreview.profile?.name || "Statut"}{(statusPreview.profile?.id === "moyo-official" || statusPreview.is_official || statusPreview.is_feature) && <VerifiedBadge size={15} />}</div>
+            <div style={{ fontSize: "0.78rem", opacity: 0.82, display: "flex", alignItems: "center", gap: 6 }}>{(statusPreview.is_official || statusPreview.is_feature) ? "Statut officiel" : "Statut Moyo"}{statusPreview.is_sponsored && <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 6, padding: "1px 7px", fontSize: "0.68rem", fontWeight: 700 }}>Sponsorisé</span>}</div>
           </div>
           {statusPreview.user_id === auth.userId && (
             <button
@@ -9385,21 +9416,42 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         </div>
         <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
         <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
-        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : (statusPreview.link_url ? "58vh" : "68vh"), borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
+        {statusPreview.image_url && !statusPreview.is_feature ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : (statusPreview.link_url ? "58vh" : "68vh"), borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
         {statusPreview.link_url && statusPreview.user_id !== auth.userId && (
           <a href={statusPreview.link_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 92, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", textDecoration: "none", borderRadius: 14, padding: "13px 16px", fontWeight: 800, fontSize: "0.9rem", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
             En savoir plus
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
           </a>
         )}
-        {statusPreview.is_feature && statusPreview.caption && (
-          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 150, zIndex: 5, background: "linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.15))", borderRadius: 14, padding: "12px 14px", color: "#fff", fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.5, whiteSpace: "pre-line", textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}>{statusPreview.caption}</div>
-        )}
-        {statusPreview.is_feature && statusPreview.feature_user_id !== auth.userId && (
-          <button onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ position: "absolute", left: 18, right: 18, bottom: 96, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", border: "none", borderRadius: 14, padding: "13px 16px", fontWeight: 800, fontSize: "0.92rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            Liker ce profil
-          </button>
+        {statusPreview.is_feature && (
+          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 78, left: 10, right: 10, bottom: 78, zIndex: 4, borderRadius: 24, overflow: "hidden", boxShadow: "0 18px 60px rgba(0,0,0,0.45)", background: "#1a1a1a" }}>
+            {statusPreview.image_url && <img src={statusPreview.image_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 32%, rgba(0,0,0,0.05) 55%, transparent 100%)" }} />
+            <div style={{ position: "absolute", top: 14, left: 14, display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#FF5E8A,#E53935)", color: "#fff", borderRadius: 999, padding: "6px 13px", fontSize: "0.78rem", fontWeight: 800, boxShadow: "0 6px 18px rgba(229,57,53,0.45)" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.4 6.5L21 9l-5 4.2L17.6 20 12 16.3 6.4 20 8 13.2 3 9l6.6-.5z"/></svg>
+              Mise en avant
+            </div>
+            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 18px 18px", color: "#fff" }}>
+              <div style={{ fontSize: "1.5rem", fontWeight: 900, textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>{statusPreview.feature_profile?.name || "Profil"}{statusPreview.feature_profile?.age ? `, ${statusPreview.feature_profile.age} ans` : ""}</div>
+              {statusPreview.feature_profile?.city && (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.92rem", opacity: 0.92, marginTop: 3 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {statusPreview.feature_profile.city}
+                </div>
+              )}
+              {statusPreview.caption && <div style={{ fontSize: "0.92rem", lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-line", textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}>{statusPreview.caption}</div>}
+              {statusPreview.feature_user_id !== auth.userId && (
+                <button onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#E53935", color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(229,57,53,0.5)" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  Liker ce profil
+                </button>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); if (statusPreview.feature_profile) setFeatureProfileView(statusPreview.feature_profile); }} style={{ width: "100%", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "transparent", color: "#fff", border: "1.5px solid rgba(255,255,255,0.6)", borderRadius: 16, padding: "13px", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Voir le profil
+              </button>
+            </div>
+          </div>
         )}
         {statusPreview.user_id === auth.userId ? (
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 28, zIndex: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -13159,7 +13211,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       if (!p) { const arr = await sb.query<any>(auth.token, "profiles", `?id=eq.${req.user_id}&select=id,name,age,city,gender,photo_url&limit=1`).catch(() => [] as any[]); p = (Array.isArray(arr) ? arr : [])[0]; }
       if (!p || !p.photo_url) { showToast("Ce profil n'a pas de photo principale.", "error"); setFrProcessing(null); return; }
       const targetGender = p.gender === "Homme" ? "Femme" : "Homme";
-      const caption = `❤️ Célibataire à découvrir aujourd'hui\n${p.name}, ${p.age} ans, ${p.city}.\nVous aimez son profil ? Laissez un like pour lui montrer votre intérêt.`;
+      const caption = `Célibataire à découvrir aujourd'hui 💝\nVous aimez son profil ? Laissez un like pour lui montrer votre intérêt.`;
       const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const published_at = new Date().toISOString();
       const arr = await sb.insert<{ id?: string }>(auth.token, "statuses", {
