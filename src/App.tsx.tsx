@@ -9674,6 +9674,104 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   );
 }
 
+function FeatureRequestButton({ auth }: { auth: Auth }) {
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [errorModal, setErrorModal] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const d = new Date();
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+      const existing = await sb.query<{ id: string }>(auth.token, "feature_requests", `?user_id=eq.${auth.userId}&created_at=gte.${encodeURIComponent(monthStart)}&select=id`).catch(() => [] as { id: string }[]);
+      if ((Array.isArray(existing) ? existing.length : 0) >= 2) {
+        setErrorModal("Vous avez atteint la limite de 2 mises en avant ce mois-ci. Réessayez le mois prochain.");
+        setLoading(false);
+        return;
+      }
+      const profs = await sb.query<{ gender: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender&limit=1`).catch(() => [] as { gender: string }[]);
+      const gender = profs?.[0]?.gender || "";
+      const res = await sb.insert<{ id?: string }>(auth.token, "feature_requests", { user_id: auth.userId, gender, status: "en_attente" });
+      if (res && (res as any).id) { setSent(true); }
+      else { setErrorModal("Impossible d'envoyer la demande pour le moment. Réessayez plus tard."); }
+    } catch {
+      setErrorModal("Impossible d'envoyer la demande pour le moment. Réessayez plus tard.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div onClick={() => { setSent(false); setShowModal(true); }} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.3)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 10 }}>
+        <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
+          <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.88)", lineHeight: 1.4 }}>Boostez votre visibilité pendant 24h</div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+
+      {errorModal && (
+        <div onClick={() => setErrorModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, padding: "26px 24px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <p style={{ fontSize: "0.9rem", color: "#444", lineHeight: 1.7, marginBottom: 20 }}>{errorModal}</p>
+            <button onClick={() => setErrorModal(null)} style={{ width: "100%", background: "linear-gradient(135deg,#E67E22,#D35400)", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
+          </div>
+        </div>
+      )}
+
+      {showModal && (
+        <div onClick={() => { setShowModal(false); setSent(false); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 400, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div style={{ background: "linear-gradient(135deg,#E67E22,#D35400)", padding: "22px 20px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#fff" }}>🚀 Passer sur les Statuts Moyo</div>
+              <button onClick={() => { setShowModal(false); setSent(false); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ padding: "20px 22px 24px" }}>
+              {sent ? (
+                <div style={{ textAlign: "center", padding: "10px 0" }}>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Demande envoyée !</div>
+                  <div style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6 }}>L'équipe Moyo va valider votre mise en avant. Une fois acceptée, votre profil apparaîtra dans les Statuts Moyo pendant 24h.</div>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize: "0.9rem", color: "#444", lineHeight: 1.6, marginBottom: 16 }}>Faites découvrir votre profil à toute la communauté Moyo pendant 24 heures.</p>
+                  <div style={{ background: G.creme, borderRadius: 14, padding: "14px 16px", marginBottom: 20 }}>
+                    {[
+                      "Réservé aux membres Premium",
+                      "Maximum 2 mises en avant par mois",
+                      "Validation par l'équipe Moyo",
+                    ].map((c, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.84rem", color: "#555", padding: "4px 0" }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                        <span>{c}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => { setShowModal(false); setSent(false); }} style={{ flex: 1, padding: "13px", borderRadius: 50, border: `1.5px solid ${G.gris}`, background: G.creme, fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>Annuler</button>
+                    <button onClick={submit} disabled={loading} style={{ flex: 1.4, padding: "13px", borderRadius: 50, border: "none", background: "linear-gradient(135deg,#E67E22,#D35400)", color: "#fff", fontSize: "0.88rem", fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: loading ? 0.7 : 1 }}>{loading ? "Envoi…" : "Envoyer ma demande"}</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 function MatchRequestButton({ auth }: { auth: Auth }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ target_gender: "", target_city: "", target_age_min: "", target_age_max: "", message: "" });
@@ -10517,6 +10615,25 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Demander une mise en relation</div>
                   <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span>Réservé aux membres Premium</span>
+                  </div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+        )}
+
+        {/* ── Bouton Passer sur les Statuts Moyo (Premium uniquement) ── */}
+        {(!isWideProfile || ["main"].includes(activeSection)) && (
+          auth.isPremium
+            ? <FeatureRequestButton auth={auth} />
+            : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo !")} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 10, opacity: 0.75 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span>Réservé aux membres Premium</span>
                   </div>
