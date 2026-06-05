@@ -328,6 +328,16 @@ type Auth = {
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
+// Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné
+const broadcastTargetsUser = (target: string | null | undefined, isPremium: boolean, gender: string): boolean => {
+  switch ((target || "all").toLowerCase()) {
+    case "femmes": return gender === "Femme";
+    case "hommes": return gender === "Homme";
+    case "premium": return !!isPremium;
+    case "gratuit": return !isPremium;
+    default: return true; // "all"
+  }
+};
 type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null; is_feature?: boolean; target_gender?: string | null; feature_user_id?: string | null; feature_profile?: Profile };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
@@ -13003,10 +13013,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
   const [matchListLoading, setMatchListLoading] = useState(false);
   const [broadcastModal, setBroadcastModal] = useState(false);
+  const [msgSubTab, setMsgSubTab] = useState<"assistant" | "broadcast">("assistant");
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
   const [broadcastExpiresAt, setBroadcastExpiresAt] = useState("");
   const [broadcastResult, setBroadcastResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [broadcastTarget, setBroadcastTarget] = useState<"all" | "femmes" | "hommes" | "premium" | "gratuit">("all");
 
   useEffect(() => {
     if (!showPremiumList) return;
@@ -13151,7 +13163,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Statuts officiels Moyo (publiés depuis l'onglet Marketing) ──
   const [officialStatuses, setOfficialStatuses] = useState<(StatusPost & { _views?: number; _replies?: number })[]>([]);
   const [confirmDeleteStatus, setConfirmDeleteStatus] = useState<StatusPost | null>(null);
-  const [mktTab, setMktTab] = useState<"statuts" | "features">("statuts");
+  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event">("statuts");
   const [mktShowAll, setMktShowAll] = useState(false);
   const [featureRequests, setFeatureRequests] = useState<Array<{ id: string; user_id: string; gender?: string; status: string; created_at: string; profile?: any; _usedThisMonth?: number }>>([]);
   const [featureStatuses, setFeatureStatuses] = useState<Array<StatusPost & { profile?: any; _views?: number; _replies?: number; _likes?: number }>>([]);
@@ -14156,6 +14168,47 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         </div>
       )}
+      {premiumEventConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            {/* Header */}
+            <div style={{ background: premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, padding: "22px 20px 18px", textAlign: "center" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1.05rem" }}>
+                {premiumEventActive ? "Désactiver l'événement Premium ?" : "Activer l'événement Premium ?"}
+              </div>
+            </div>
+            {/* Corps */}
+            <div style={{ padding: "20px 22px 24px" }}>
+              <p style={{ fontSize: "0.88rem", color: "#444", lineHeight: 1.6, marginBottom: 16, textAlign: "center" }}>
+                {premiumEventActive
+                  ? "⚠️ Cela va retirer le statut Premium à tous les utilisateurs qui ne sont pas abonnés réels. Les vrais abonnés (avec premium_until valide) ne seront pas affectés."
+                  : "⚠️ Cela va activer le Premium pour TOUS les utilisateurs gratuitement. Utilisez uniquement pour un événement spécial."}
+              </p>
+              {!premiumEventActive && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 4, fontWeight: 600 }}>Date d'expiration <span style={{ color: G.rouge }}>*</span></div>
+                  <input type="datetime-local" value={premiumEventExpiresAt} onChange={e => setPremiumEventExpiresAt(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: "2px solid rgba(184,134,11,0.4)", fontSize: "0.84rem", outline: "none", fontFamily: "inherit" }} />
+                  <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 3 }}>Passé cette date, le Premium sera retiré automatiquement aux non-abonnés</div>
+                </div>
+              )}
+              <p style={{ fontSize: "0.78rem", color: "#e74c3c", fontWeight: 600, textAlign: "center", marginBottom: 20 }}>
+                Cette action affecte tous les utilisateurs de la plateforme.
+              </p>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => { setPremiumEventConfirm(false); setPremiumEventExpiresAt(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
+                  Annuler
+                </button>
+                <button disabled={!premiumEventActive && !premiumEventExpiresAt} onClick={() => { setPremiumEventConfirm(false); togglePremiumEvent(); }} style={{ flex: 1, background: !premiumEventActive && !premiumEventExpiresAt ? "#aaa" : premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: !premiumEventActive && !premiumEventExpiresAt ? "not-allowed" : "pointer" }}>
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {broadcastModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
@@ -14164,7 +14217,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               </div>
               <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a" }}>📢 Diffusion générale</div>
-              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>Ce message sera affiché à tous les utilisateurs connectés</div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>Destinataires : {broadcastTarget === "all" ? "tous les utilisateurs" : broadcastTarget === "femmes" ? "les femmes" : broadcastTarget === "hommes" ? "les hommes" : broadcastTarget === "premium" ? "les membres Premium" : "les membres gratuits"}</div>
             </div>
             <div style={{ padding: "16px 20px 20px" }}>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
@@ -14184,13 +14237,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 ))}
               </div>
               <textarea value={broadcastText} onChange={e => setBroadcastText(e.target.value)} placeholder="Écrivez votre message de diffusion…" rows={4} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "2px solid rgba(230,126,34,0.3)", fontSize: "0.84rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 6, fontWeight: 600 }}>Destinataires</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {([["all", "Tout le monde"], ["femmes", "Femmes"], ["hommes", "Hommes"], ["premium", "Premium"], ["gratuit", "Gratuits"]] as ["all" | "femmes" | "hommes" | "premium" | "gratuit", string][]).map(([val, lbl]) => (
+                    <button key={val} type="button" onClick={() => setBroadcastTarget(val)} style={{ padding: "7px 13px", borderRadius: 999, border: `1.5px solid ${broadcastTarget === val ? "#e67e22" : G.gris}`, background: broadcastTarget === val ? "rgba(230,126,34,0.12)" : "#fff", color: broadcastTarget === val ? "#d35400" : "#666", fontWeight: 700, fontSize: "0.74rem", cursor: "pointer" }}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
               <div style={{ marginTop: 10 }}>
                 <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 4, fontWeight: 600 }}>Date d'expiration du message <span style={{ color: G.rouge }}>*</span></div>
                 <input type="datetime-local" value={broadcastExpiresAt} onChange={e => setBroadcastExpiresAt(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: "2px solid rgba(230,126,34,0.3)", fontSize: "0.84rem", outline: "none", fontFamily: "inherit" }} />
                 <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 3 }}>Passé cette date, le message ne s'affichera plus</div>
               </div>
               <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button onClick={() => { setBroadcastModal(false); setBroadcastExpiresAt(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                <button onClick={() => { setBroadcastModal(false); setBroadcastExpiresAt(""); setBroadcastTarget("all"); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                 <button disabled={broadcastLoading || !broadcastExpiresAt} onClick={async () => {
                   if (!broadcastText.trim() || !broadcastExpiresAt) return;
                   // Sécurité : refuser une date d'expiration déjà passée
@@ -14203,7 +14264,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     const r = await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                      body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId, expires_at: new Date(broadcastExpiresAt).toISOString() }),
+                      body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId, expires_at: new Date(broadcastExpiresAt).toISOString(), target: broadcastTarget }),
                     });
                     // Vérifier le code HTTP : un fetch ne lève PAS d'erreur sur 4xx/5xx
                     if (!r.ok) {
@@ -14224,14 +14285,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     }
                     // Succès confirmé
                     setBroadcastLoading(false);
-                    setBroadcastModal(false); setBroadcastText(""); setBroadcastExpiresAt("");
+                    setBroadcastModal(false); setBroadcastText(""); setBroadcastExpiresAt(""); setBroadcastTarget("all");
                     setBroadcastResult({ ok: true, message: created.message || broadcastText.trim() });
                   } catch {
                     setBroadcastLoading(false);
                     setBroadcastResult({ ok: false, message: "Impossible de joindre le serveur. Vérifie ta connexion internet et réessaie." });
                   }
                 }} style={{ flex: 1, background: broadcastLoading || !broadcastExpiresAt ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading || !broadcastExpiresAt ? "not-allowed" : "pointer" }}>
-                  {broadcastLoading ? "Envoi…" : "Envoyer à tous"}
+                  {broadcastLoading ? "Envoi…" : broadcastTarget === "all" ? "Envoyer à tous" : "Envoyer (ciblé)"}
                 </button>
               </div>
             </div>
@@ -15604,62 +15665,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               )}
 
-              {/* ── ÉVÉNEMENT PREMIUM ── */}
-              <button
-                onClick={() => setPremiumEventConfirm(true)}
-                disabled={premiumEventLoading}
-                style={{ width: "100%", background: premiumEventActive ? `linear-gradient(135deg,#27ae60,#1e8449)` : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: premiumEventLoading ? "not-allowed" : "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: premiumEventLoading ? 0.7 : 1 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                {premiumEventLoading ? "En cours…" : premiumEventActive ? "⏹ Désactiver l'événement Premium" : "🎉 Événement Premium - Offrir à tous"}
-              </button>
+              {/* ── MODALE CONFIRMATION ÉVÉNEMENT PREMIUM (déplacée au niveau supérieur, sous-onglet Marketing) ── */}
 
-              {/* ── MODALE CONFIRMATION ÉVÉNEMENT PREMIUM ── */}
-              {premiumEventConfirm && (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-                  <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
-                    {/* Header */}
-                    <div style={{ background: premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, padding: "22px 20px 18px", textAlign: "center" }}>
-                      <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                      </div>
-                      <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1.05rem" }}>
-                        {premiumEventActive ? "Désactiver l'événement Premium ?" : "Activer l'événement Premium ?"}
-                      </div>
-                    </div>
-                    {/* Corps */}
-                    <div style={{ padding: "20px 22px 24px" }}>
-                      <p style={{ fontSize: "0.88rem", color: "#444", lineHeight: 1.6, marginBottom: 16, textAlign: "center" }}>
-                        {premiumEventActive
-                          ? "⚠️ Cela va retirer le statut Premium à tous les utilisateurs qui ne sont pas abonnés réels. Les vrais abonnés (avec premium_until valide) ne seront pas affectés."
-                          : "⚠️ Cela va activer le Premium pour TOUS les utilisateurs gratuitement. Utilisez uniquement pour un événement spécial."}
-                      </p>
-                      {!premiumEventActive && (
-                        <div style={{ marginBottom: 16 }}>
-                          <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 4, fontWeight: 600 }}>Date d'expiration <span style={{ color: G.rouge }}>*</span></div>
-                          <input type="datetime-local" value={premiumEventExpiresAt} onChange={e => setPremiumEventExpiresAt(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: "2px solid rgba(184,134,11,0.4)", fontSize: "0.84rem", outline: "none", fontFamily: "inherit" }} />
-                          <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 3 }}>Passé cette date, le Premium sera retiré automatiquement aux non-abonnés</div>
-                        </div>
-                      )}
-                      <p style={{ fontSize: "0.78rem", color: "#e74c3c", fontWeight: 600, textAlign: "center", marginBottom: 20 }}>
-                        Cette action affecte tous les utilisateurs de la plateforme.
-                      </p>
-                      <div style={{ display: "flex", gap: 10 }}>
-                        <button onClick={() => { setPremiumEventConfirm(false); setPremiumEventExpiresAt(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
-                          Annuler
-                        </button>
-                        <button disabled={!premiumEventActive && !premiumEventExpiresAt} onClick={() => { setPremiumEventConfirm(false); togglePremiumEvent(); }} style={{ flex: 1, background: !premiumEventActive && !premiumEventExpiresAt ? "#aaa" : premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: !premiumEventActive && !premiumEventExpiresAt ? "not-allowed" : "pointer" }}>
-                          Confirmer
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <button onClick={() => { setBroadcastModal(true); setBroadcastText(""); }} style={{ width: "100%", background: `linear-gradient(135deg,#e67e22,#d35400)`, color: G.blanc, border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                📢 Diffusion générale
-              </button>
 
               {/* ── VUE LISTE ── */}
               {usersViewMode === "list" ? (
@@ -15941,7 +15948,31 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
 
       {/* ═══════════════════════════════════════════ ONGLET SIGNALEMENTS */}
-      {(activeTab === "reports" || activeTab === "messagerie") && (
+      {activeTab === "messagerie" && (
+        <div style={{ padding: "16px 16px 0" }}>
+          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 2 }}>
+            {([["assistant", "Assistant Moyo", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>], ["broadcast", "Diffusion générale", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>]] as [("assistant" | "broadcast"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+              <button key={k} onClick={() => setMsgSubTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: msgSubTab === k ? G.rouge : "#fff", color: msgSubTab === k ? "#fff" : "#555", border: msgSubTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: msgSubTab === k ? "0 4px 12px rgba(192,57,43,0.25)" : "none" }}>{ico}{lbl}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {activeTab === "messagerie" && msgSubTab === "broadcast" && (
+        <div style={{ padding: "16px" }}>
+          <div style={{ maxWidth: 620, margin: "0 auto", background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(230,126,34,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+              <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Diffusion générale</div>
+            </div>
+            <p style={{ fontSize: "0.8rem", color: "#888", lineHeight: 1.5, marginBottom: 16 }}>Envoyez un message affiché à <strong>tous les utilisateurs connectés</strong> sous forme de bannière, jusqu'à une date d'expiration que vous choisissez.</p>
+            <button onClick={() => { setBroadcastModal(true); setBroadcastText(""); }} style={{ width: "100%", background: `linear-gradient(135deg,#e67e22,#d35400)`, color: G.blanc, border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 6px 18px rgba(230,126,34,0.28)" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              Nouvelle diffusion
+            </button>
+          </div>
+        </div>
+      )}
+      {(activeTab === "reports" || (activeTab === "messagerie" && msgSubTab === "assistant")) && (
         <div style={{ padding: "16px" }}>
           {/* Sous-onglets — affichés uniquement sur Signalements (pas sur l'onglet Messagerie) */}
           {activeTab === "reports" && (
@@ -16510,7 +16541,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>]] as [("statuts" | "features"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Événement Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>]] as [("statuts" | "features" | "event"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}</button>
             ))}
           </div>
@@ -16737,6 +16768,26 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <span style={{ fontSize: "0.8rem", color: "#7a4d22", lineHeight: 1.5 }}><strong>Règle de visibilité :</strong> Homme → visible par les femmes et lui-même · Femme → visible par les hommes et elle-même.</span>
               </div>
             </>
+          )}
+
+          {mktTab === "event" && (
+            <div style={{ maxWidth: 620, margin: "0 auto", background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(212,168,67,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Événement Premium</div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 3, background: premiumEventActive ? "rgba(39,174,96,0.12)" : G.creme, color: premiumEventActive ? "#1e8449" : "#999", borderRadius: 50, padding: "2px 10px", fontSize: "0.7rem", fontWeight: 800 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: premiumEventActive ? "#27ae60" : "#bbb" }} />
+                    {premiumEventActive ? "Actif actuellement" : "Inactif"}
+                  </div>
+                </div>
+              </div>
+              <p style={{ fontSize: "0.8rem", color: "#888", lineHeight: 1.5, marginBottom: 16 }}>Offrez le Premium <strong>gratuitement à tous les utilisateurs</strong> pour un événement spécial (lancement, promotion, fête). Les vrais abonnés ne sont pas affectés ; à la date d'expiration choisie, le Premium est retiré automatiquement aux non-abonnés.</p>
+              <button onClick={() => setPremiumEventConfirm(true)} disabled={premiumEventLoading} style={{ width: "100%", background: premiumEventActive ? `linear-gradient(135deg,#27ae60,#1e8449)` : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: premiumEventLoading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: premiumEventLoading ? 0.7 : 1, boxShadow: premiumEventActive ? "0 6px 18px rgba(39,174,96,0.28)" : "0 6px 18px rgba(212,168,67,0.3)" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                {premiumEventLoading ? "En cours…" : premiumEventActive ? "⏹ Désactiver l'événement Premium" : "🎉 Événement Premium - Offrir à tous"}
+              </button>
+            </div>
           )}
           {confirmDeleteStatus && (
             <ConfirmModal
@@ -17964,6 +18015,7 @@ export default function App() {
   const [premiumSuccess, setPremiumSuccess] = useState(false);
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
+  const [userGender, setUserGender] = useState<string>("");
   const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2" } | null>(null);
   const [proposalResponding, setProposalResponding] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -18284,22 +18336,24 @@ export default function App() {
   // ── Vérifier les broadcasts non vus à chaque connexion + polling ──
   useEffect(() => {
     if (!auth?.userId) return;
+    if (!userGender) {
+      fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=gender`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+        .then(r => r.ok ? r.json() : []).then((d: any) => { if (Array.isArray(d) && d[0]?.gender) setUserGender(d[0].gender); }).catch(() => {});
+    }
     const checkBroadcast = async () => {
       try {
         const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
         const r = await fetch(
-          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${lastSeen}&expires_at=gt.${new Date().toISOString()}&order=created_at.desc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${lastSeen}&expires_at=gt.${new Date().toISOString()}&order=created_at.desc&limit=10`,
           { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
         );
         if (!r.ok) return;
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
-          const broadcast = data[0];
-          // Marquer comme vu si expiré (nettoyage)
-          if (broadcast.expires_at && new Date(broadcast.expires_at) < new Date()) {
-            try { localStorage.setItem(`moyo_broadcast_seen_${auth.userId}`, new Date().toISOString()); } catch {}
-            return;
-          }
+          const now = Date.now();
+          // Première diffusion (la plus récente) qui n'est pas expirée ET qui cible cet utilisateur
+          const broadcast = data.find((b: any) => (!b.expires_at || new Date(b.expires_at).getTime() > now) && broadcastTargetsUser(b.target, !!auth.isPremium, userGender));
+          if (!broadcast) return;
           setPendingBroadcast(prev => prev?.id === broadcast.id ? prev : { id: broadcast.id, message: broadcast.message });
         }
       } catch {}
@@ -18307,7 +18361,7 @@ export default function App() {
     checkBroadcast();
     const interval = setInterval(checkBroadcast, POLL_BROADCAST_MS);
     return () => clearInterval(interval);
-  }, [auth?.userId]);
+  }, [auth?.userId, userGender]);
 
   // ── Vérifier expiration Premium au login ──
   // Ne jamais retirer le Premium à vie (premium_until >= 2090)
@@ -18624,18 +18678,15 @@ export default function App() {
           : new Date().toISOString();
         const since = lastSeen > registeredAt ? lastSeen : registeredAt;
         const r = await fetch(
-          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${since}&order=created_at.desc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/broadcasts?created_at=gt.${since}&order=created_at.desc&limit=10`,
           { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }
         );
         if (!r.ok) return;
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
-          const broadcast = data[0];
-          // Marquer comme vu si expiré (nettoyage)
-          if (broadcast.expires_at && new Date(broadcast.expires_at) < new Date()) {
-            try { localStorage.setItem(`moyo_broadcast_seen_${auth.userId}`, new Date().toISOString()); } catch {}
-            return;
-          }
+          const now = Date.now();
+          const broadcast = data.find((b: any) => (!b.expires_at || new Date(b.expires_at).getTime() > now) && broadcastTargetsUser(b.target, !!auth.isPremium, userGender));
+          if (!broadcast) return;
           setPendingBroadcast(prev => prev?.id === broadcast.id ? prev : { id: broadcast.id, message: broadcast.message });
         }
       } catch {}
@@ -18703,7 +18754,7 @@ export default function App() {
       clearInterval(sessionCheck);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [auth?.userId]);
+  }, [auth?.userId, userGender]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
 
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
