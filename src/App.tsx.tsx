@@ -89,7 +89,7 @@ let POLL_ADMIN_BADGE_MS = 5000;   // Badge admin
 let POLL_STATS_MS = 60000;        // Stats tableau de bord
 let POLL_BROADCAST_MS = 60000;    // Broadcasts
 let POLL_SUPPORT_MS = 6000;       // Messages support
-const FREE_LIMITS = { likes: 5, messages: 3 }; // valeurs par défaut, écrasées par app_settings
+const FREE_LIMITS = { likes: 5, messages: 3, matchRequests: 2, statusBoosts: 2 }; // valeurs par défaut, écrasées par app_settings
 const STATUS_LIMIT = 2;
 const LIFETIME_PREMIUM_UNTIL = "2099-12-31T23:59:59.000Z";
 let PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000; // valeur par défaut, écrasée par app_settings
@@ -155,7 +155,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -188,6 +188,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["landing_slogan"]) LANDING_SLOGAN = map["landing_slogan"];
   if (map["limit_likes_free"]) FREE_LIMITS.likes = parseInt(map["limit_likes_free"]) || 5;
   if (map["limit_messages_free"]) FREE_LIMITS.messages = parseInt(map["limit_messages_free"]) || 3;
+  if (map["limit_match_requests"]) FREE_LIMITS.matchRequests = parseInt(map["limit_match_requests"]) || 2;
+  if (map["limit_status_boosts"]) FREE_LIMITS.statusBoosts = parseInt(map["limit_status_boosts"]) || 2;
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
   if (map["premium_price_fcfa"]) PREMIUM_PRICE_FCFA = parseInt(map["premium_price_fcfa"]) || 3500;
   if (map["premium_price_eur"]) PREMIUM_PRICE_EUR = parseFloat(map["premium_price_eur"]) || 10;
@@ -3129,7 +3131,7 @@ const BOT_FAQ = [
   { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium coûte ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money ou Airtel Money. Activation sous 15 minutes.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: "Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez automatiquement 7 jours Premium offerts. Pas de limite !" },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
-  { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: "Moyo propose un service de mise en relation personnalisé réservé aux membres Premium. Depuis votre page Profil, appuyez sur le bouton rouge 'Demander une mise en relation', précisez vos critères (genre recherché, ville, tranche d'âge) et ajoutez un message optionnel. Notre équipe analyse votre demande et vous envoie une proposition dans l'application. Vous pouvez faire plusieurs demandes." },
+  { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo propose un service de mise en relation personnalisé réservé aux membres Premium. Depuis votre page Profil, appuyez sur le bouton rouge 'Demander une mise en relation', précisez vos critères (genre recherché, ville, tranche d'âge) et ajoutez un message optionnel. Notre équipe analyse votre demande et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
   { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand l'équipe Moyo vous propose une rencontre, un modal s'affiche automatiquement avec la photo, le nom, l'âge et la ville de la personne. Deux choix : 'Accepter' ou 'Refuser'. Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée pour les deux. La proposition expire si vous ne répondez pas dans le délai fixé par l'équipe." },
   { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: `Compte gratuit : ${FREE_LIMITS.likes} likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément.` },
   { q: ["message", "envoyer", "écrire", "conversation"], r: `Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message.` },
@@ -3558,6 +3560,8 @@ function AdminDesktopPage() {
   const [appConfig, setAppConfig] = React.useState({
     limitLikes: "5",
     limitMessages: "3",
+    limitMatchRequests: "2",
+    limitStatusBoosts: "2",
     limitPhotoSizeMb: "5",
     matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋",
     premiumPriceFcfa: "3500",
@@ -3584,7 +3588,7 @@ function AdminDesktopPage() {
     const allKeys = [
       "rule_block_same_gender_like",
       "modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises",
-      "limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message",
+      "limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
       "premium_price_fcfa","premium_duration_days",
       "feature_statuses","feature_gift_premium","feature_assistant",
       "maintenance_mode","maintenance_message",
@@ -3611,6 +3615,8 @@ function AdminDesktopPage() {
       setAppConfig(c => ({
         limitLikes: map["limit_likes_free"] || c.limitLikes,
         limitMessages: map["limit_messages_free"] || c.limitMessages,
+        limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests,
+        limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts,
         limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb,
         matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage,
         premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa,
@@ -3825,6 +3831,22 @@ function AdminDesktopPage() {
                     if (!auth) return;
                     await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
                     setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
+                    setEditingConfig(null);
+                  }} />
+              ))}
+              {([
+                ["limit_match_requests", "limitMatchRequests" as keyof typeof appConfig, "Demandes mise en relation/mois", appConfig.limitMatchRequests],
+                ["limit_status_boosts", "limitStatusBoosts" as keyof typeof appConfig, "Boosts statut/mois", appConfig.limitStatusBoosts],
+              ] as [string, keyof typeof appConfig, string, string][]).map(([key, ck, label, value]) => (
+                <EditableRow key={key} label={label} value={value} open={editingConfig === key} type="number"
+                  onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+                  editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value: editingConfigValue }) });
+                    setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
+                    if (key === "limit_match_requests") FREE_LIMITS.matchRequests = parseInt(editingConfigValue) || 2;
+                    if (key === "limit_status_boosts") FREE_LIMITS.statusBoosts = parseInt(editingConfigValue) || 2;
                     setEditingConfig(null);
                   }} />
               ))}
@@ -4443,14 +4465,14 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -4458,7 +4480,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -4493,6 +4515,9 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
       <OffCanvasSection title="Limites & Quotas">
         {([["limit_likes_free","limitLikes" as keyof typeof appConfig,"Likes gratuits/jour",appConfig.limitLikes,"number"],["limit_messages_free","limitMessages" as keyof typeof appConfig,"Messages gratuits/match",appConfig.limitMessages,"number"],["limit_photo_size_mb","limitPhotoSizeMb" as keyof typeof appConfig,"Taille max photo (Mo)",appConfig.limitPhotoSizeMb,"number"],["match_welcome_message","matchWelcomeMessage" as keyof typeof appConfig,"Message bienvenue match",appConfig.matchWelcomeMessage,"text"]] as [string, keyof typeof appConfig, string, string, string][]).map(([key,ck,label,value,type]) => (
           <EditableRow key={key} label={label} value={value} type={type as "text"|"number"} open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setEditingConfig(null); }} />
+        ))}
+        {([["limit_match_requests","limitMatchRequests" as keyof typeof appConfig,"Demandes mise en relation/mois",appConfig.limitMatchRequests],["limit_status_boosts","limitStatusBoosts" as keyof typeof appConfig,"Boosts statut/mois",appConfig.limitStatusBoosts]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
+          <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value: editingConfigValue }) }); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "limit_match_requests") FREE_LIMITS.matchRequests = parseInt(editingConfigValue) || 2; if (key === "limit_status_boosts") FREE_LIMITS.statusBoosts = parseInt(editingConfigValue) || 2; setEditingConfig(null); }} />
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Prix & Abonnement">
@@ -7885,11 +7910,30 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     const targetId = st?.feature_user_id;
     if (!targetId || targetId === auth.userId) return;
     try {
-      await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: targetId }).catch(() => {});
+      // Déjà liké ? (évite les doublons et la double consommation du quota)
+      const already = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${targetId}&select=from_user&limit=1`).catch(() => [] as object[]);
+      const alreadyLiked = Array.isArray(already) && already.length > 0;
+      // ── Quota journalier : les likes faits depuis les statuts comptent comme ceux de Découvrir ──
+      if (!alreadyLiked && !auth.isPremium) {
+        const today = new Date().toISOString().split("T")[0];
+        const tl = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&created_at=gte.${today}`).catch(() => [] as object[]);
+        if (Array.isArray(tl) && tl.length >= FREE_LIMITS.likes) {
+          onShowPremium(`Tu as utilisé tes ${FREE_LIMITS.likes} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !`);
+          return;
+        }
+      }
+      if (!alreadyLiked) await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: targetId }).catch(() => {});
       const mutual = await sb.query<object>(auth.token, "likes", `?from_user=eq.${targetId}&to_user=eq.${auth.userId}`).catch(() => [] as object[]);
       if (Array.isArray(mutual) && mutual.length) {
-        await sb.insert(auth.token, "matches", { user1: auth.userId, user2: targetId }).catch(() => {});
+        // Anti-doublon : ne créer le match que s'il n'existe pas déjà dans un sens ou l'autre
+        const [existFwd, existRev] = await Promise.all([
+          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${targetId}&select=id&limit=1`).catch(() => [] as { id: string }[]),
+          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${targetId}&user2=eq.${auth.userId}&select=id&limit=1`).catch(() => [] as { id: string }[]),
+        ]);
+        const exists = (existFwd?.[0]?.id || existRev?.[0]?.id) ? true : false;
+        if (!exists) await sb.insert(auth.token, "matches", { user1: auth.userId, user2: targetId }).catch(() => {});
         setToast({ msg: "C'est un match !", type: "success" });
+        loadConvs();
       } else {
         setToast({ msg: "Profil liké ! S'il vous like aussi, ce sera un match.", type: "success" });
       }
@@ -9359,7 +9403,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
             </div>
             {featureProfileView.bio && <p style={{ fontSize: "0.9rem", color: "#555", lineHeight: 1.6, marginBottom: 18 }}>{featureProfileView.bio}</p>}
             {featureProfileView.id !== auth.userId && (
-              <Btn variant="primary" onClick={() => { const id = featureProfileView.id; setFeatureProfileView(null); likeFeatureProfile({ feature_user_id: id } as StatusPost); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>❤️ Liker ce profil</Btn>
+              getMatchWithUser(featureProfileView.id) ? (
+                <Btn variant="primary" onClick={() => { const m = getMatchWithUser(featureProfileView.id); setFeatureProfileView(null); closeStatusViewer(); if (m) setOpen(m); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>💬 Envoyer un message</Btn>
+              ) : (
+                <Btn variant="primary" onClick={() => { const id = featureProfileView.id; setFeatureProfileView(null); likeFeatureProfile({ feature_user_id: id } as StatusPost); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>❤️ Liker ce profil</Btn>
+              )
             )}
           </div>
         </div>
@@ -9418,10 +9466,26 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
         {statusPreview.image_url && !statusPreview.is_feature ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : (statusPreview.link_url ? "58vh" : "68vh"), borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
         {statusPreview.link_url && statusPreview.user_id !== auth.userId && (
-          <a href={statusPreview.link_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 92, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", textDecoration: "none", borderRadius: 14, padding: "13px 16px", fontWeight: 800, fontSize: "0.9rem", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
-            En savoir plus
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
-          </a>
+          statusPreview.link_url.startsWith("tel:") ? (() => {
+            const digits = statusPreview.link_url.slice(4).replace(/[^\d]/g, "");
+            return (
+              <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 92, zIndex: 6, display: "flex", gap: 10 }}>
+                <a href={`https://wa.me/${digits}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "#25D366", color: "#fff", textDecoration: "none", borderRadius: 14, padding: "13px 10px", fontWeight: 800, fontSize: "0.86rem", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm5.8 14.13c-.24.68-1.42 1.31-1.95 1.36-.5.05-.98.24-3.3-.69-2.78-1.1-4.55-3.95-4.69-4.13-.14-.18-1.12-1.49-1.12-2.85 0-1.36.71-2.02.97-2.3.24-.26.53-.32.71-.32.18 0 .35 0 .51.01.16.01.39-.06.6.46.24.55.79 1.91.86 2.05.07.14.12.3.02.48-.09.18-.14.3-.27.46-.14.16-.29.36-.41.48-.14.14-.28.29-.12.57.16.27.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.21 1.37.27.14.43.12.59-.07.16-.18.68-.79.86-1.06.18-.27.36-.23.6-.14.24.09 1.55.73 1.81.87.27.14.45.2.51.31.07.11.07.64-.17 1.32z"/></svg>
+                  WhatsApp
+                </a>
+                <a href={statusPreview.link_url} onClick={e => e.stopPropagation()} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: G.rouge, color: "#fff", textDecoration: "none", borderRadius: 14, padding: "13px 10px", fontWeight: 800, fontSize: "0.86rem", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  Appeler
+                </a>
+              </div>
+            );
+          })() : (
+            <a href={statusPreview.link_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 92, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", textDecoration: "none", borderRadius: 14, padding: "13px 16px", fontWeight: 800, fontSize: "0.9rem", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
+              En savoir plus
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+            </a>
+          )
         )}
         {statusPreview.is_feature && (
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 78, left: 10, right: 10, bottom: 78, zIndex: 4, borderRadius: 24, overflow: "hidden", boxShadow: "0 18px 60px rgba(0,0,0,0.45)", background: "#1a1a1a" }}>
@@ -9441,10 +9505,17 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               )}
               {statusPreview.caption && <div style={{ fontSize: "0.92rem", lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-line", textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}>{statusPreview.caption}</div>}
               {statusPreview.feature_user_id !== auth.userId && (
-                <button onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#E53935", color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(229,57,53,0.5)" }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                  Liker ce profil
-                </button>
+                getMatchWithUser(statusPreview.feature_user_id) ? (
+                  <button onClick={(e) => { e.stopPropagation(); const m = getMatchWithUser(statusPreview.feature_user_id); closeStatusViewer(); if (m) setOpen(m); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: G.vert, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(26,92,58,0.45)" }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Envoyer un message
+                  </button>
+                ) : (
+                  <button onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#E53935", color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(229,57,53,0.5)" }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    Liker ce profil
+                  </button>
+                )
               )}
               <button onClick={(e) => { e.stopPropagation(); if (statusPreview.feature_profile) setFeatureProfileView(statusPreview.feature_profile); }} style={{ width: "100%", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "transparent", color: "#fff", border: "1.5px solid rgba(255,255,255,0.6)", borderRadius: 16, padding: "13px", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -9766,8 +9837,8 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
       const d = new Date();
       const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
       const existing = await sb.query<{ id: string }>(auth.token, "feature_requests", `?user_id=eq.${auth.userId}&created_at=gte.${encodeURIComponent(monthStart)}&select=id`).catch(() => [] as { id: string }[]);
-      if ((Array.isArray(existing) ? existing.length : 0) >= 2) {
-        setErrorModal("Vous avez atteint la limite de 2 mises en avant ce mois-ci. Réessayez le mois prochain.");
+      if ((Array.isArray(existing) ? existing.length : 0) >= FREE_LIMITS.statusBoosts) {
+        setErrorModal(`Vous avez atteint la limite de ${FREE_LIMITS.statusBoosts} mise${FREE_LIMITS.statusBoosts > 1 ? "s" : ""} en avant ce mois-ci. Réessayez le mois prochain.`);
         setLoading(false);
         return;
       }
@@ -9967,6 +10038,15 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                     if (aMin > aMax) { setErrorModal("L'âge minimum ne peut pas être supérieur à l'âge maximum."); return; }
                     setLoading(true);
                     try {
+                      // ── Limite mensuelle de demandes de mise en relation (configurable côté admin) ──
+                      const d = new Date();
+                      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+                      const existing = await sb.query<{ id: string }>(auth.token, "match_requests", `?user_id=eq.${auth.userId}&created_at=gte.${encodeURIComponent(monthStart)}&select=id`).catch(() => [] as { id: string }[]);
+                      if ((Array.isArray(existing) ? existing.length : 0) >= FREE_LIMITS.matchRequests) {
+                        setErrorModal(`Vous avez atteint la limite de ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} de mise en relation ce mois-ci. Réessayez le mois prochain.`);
+                        setLoading(false);
+                        return;
+                      }
                       await fetch(`${SUPABASE_URL}/rest/v1/match_requests`, {
                         method: "POST",
                         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
@@ -13077,6 +13157,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [stCaption, setStCaption] = useState("");
   const [stSponsored, setStSponsored] = useState(false);
   const [stLink, setStLink] = useState("");
+  const [stCtaType, setStCtaType] = useState<"none" | "link" | "phone">("none");
+  const [stPhone, setStPhone] = useState("");
   const [stPublishing, setStPublishing] = useState(false);
   const [stDeleting, setStDeleting] = useState<string | null>(null);
   const stFileRef = useRef<HTMLInputElement>(null);
@@ -13119,13 +13201,20 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       });
       if (!up.ok) throw new Error("upload_failed");
       const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      // CTA : soit un lien (« En savoir plus »), soit un numéro stocké en tel: (bouton « Contacter » = WhatsApp + appel)
+      const phoneClean = stPhone.trim().replace(/[^\d+]/g, "");
+      const linkUrl = stCtaType === "phone"
+        ? (phoneClean ? `tel:${phoneClean}` : null)
+        : stCtaType === "link"
+        ? (stLink.trim() || null)
+        : null;
       await sb.insert<StatusPost>(auth.token, "statuses", {
         user_id: auth.userId, image_url: path, image_path: path,
         caption: stCaption.trim() || null, is_official: true, is_sponsored: stSponsored,
-        link_url: stLink.trim() || null, expires_at,
+        link_url: linkUrl, expires_at,
       });
       showToast("Statut Moyo publié pour 24h.", "success");
-      setStFile(null); setStPreview(null); setStCaption(""); setStSponsored(false); setStLink("");
+      setStFile(null); setStPreview(null); setStCaption(""); setStSponsored(false); setStLink(""); setStCtaType("none"); setStPhone("");
       if (stFileRef.current) stFileRef.current.value = "";
       loadOfficialStatuses();
     } catch {
@@ -16445,7 +16534,18 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 )}
 
                 <input value={stCaption} onChange={e => setStCaption(e.target.value)} placeholder="Légende (optionnel)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", marginBottom: 8 }} />
-                <input value={stLink} onChange={e => setStLink(e.target.value)} placeholder="Lien « En savoir plus » (optionnel)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", marginBottom: 8 }} />
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#777", marginBottom: 6 }}>Bouton d'action (optionnel)</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                  {([["none", "Aucun"], ["link", "Lien"], ["phone", "Numéro"]] as ["none" | "link" | "phone", string][]).map(([val, lbl]) => (
+                    <button key={val} type="button" onClick={() => setStCtaType(val)} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${stCtaType === val ? G.rouge : G.gris}`, background: stCtaType === val ? "rgba(192,57,43,0.08)" : "#fff", color: stCtaType === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{lbl}</button>
+                  ))}
+                </div>
+                {stCtaType === "link" && (
+                  <input value={stLink} onChange={e => setStLink(e.target.value)} placeholder="Lien https://… → bouton « En savoir plus »" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", marginBottom: 8 }} />
+                )}
+                {stCtaType === "phone" && (
+                  <input value={stPhone} onChange={e => setStPhone(e.target.value)} inputMode="tel" placeholder="Numéro +242… → bouton « Contacter »" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", marginBottom: 8 }} />
+                )}
                 <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 12, cursor: "pointer" }}>
                   <input type="checkbox" checked={stSponsored} onChange={e => setStSponsored(e.target.checked)} />
                   Marquer « Sponsorisé » (pub payée par un tiers)
