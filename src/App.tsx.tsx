@@ -326,7 +326,7 @@ type Auth = {
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
-type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null };
+type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null; is_feature?: boolean; target_gender?: string | null; feature_user_id?: string | null };
 type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
 const STATUS_BUCKETS = ["statuses", "status"] as const;
@@ -7627,7 +7627,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       const partnerIds = Array.from(new Set(realConvs.map(c => c.partner!.id)));
       const now = new Date().toISOString();
 
-      const mineRaw = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
+      const mineRaw = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&is_official=eq.false&is_feature=eq.false&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
       const ownProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified&limit=1`).catch(() => [] as Profile[]);
       const ownProfile: Profile = ownProfiles?.[0] || { id: auth.userId, name: auth.name, age: 0, city: "", gender: "", bio: "", photo_url: null, is_premium: auth.isPremium };
       const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, profile: { ...ownProfile, is_premium: ownProfile.is_premium ?? auth.isPremium }, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
@@ -7637,16 +7637,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       const moyoProfile: Profile = { id: "moyo-official", name: "Moyo", age: 0, city: "", gender: "", bio: "", photo_url: SUPPORT_TEAM_PHOTO || null, is_premium: true, is_verified: true };
       const officialRaw = await sb.query<StatusPost>(auth.token, "statuses", `?is_official=eq.true&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
       const officialEnriched = await Promise.all((Array.isArray(officialRaw) ? officialRaw : []).map(async st => ({ ...st, user_id: "moyo-official", profile: moyoProfile, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
+      // Mises en avant Premium : ciblées par genre (filtrées aussi côté serveur par RLS). Image = photo de profil (URL directe).
+      const featRaw = await sb.query<StatusPost>(auth.token, "statuses", `?is_feature=eq.true&expires_at=gt.${encodeURIComponent(now)}&or=(target_gender.eq.${encodeURIComponent(ownProfile.gender || "_")},feature_user_id.eq.${auth.userId})&order=created_at.desc`).catch(() => [] as StatusPost[]);
+      const featEnriched = (Array.isArray(featRaw) ? featRaw : []).map(st => ({ ...st, user_id: "moyo-official", profile: moyoProfile, image_url: st.image_url || null }));
 
-      if (!partnerIds.length) { setStatuses(officialEnriched); return; }
-      const rows = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=in.(${partnerIds.join(",")})&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
+      if (!partnerIds.length) { setStatuses([...officialEnriched, ...featEnriched]); return; }
+      const rows = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=in.(${partnerIds.join(",")})&is_official=eq.false&is_feature=eq.false&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
       const byPartner = new Map(realConvs.map(c => [c.partner!.id, c.partner!]));
       const enriched = await Promise.all((Array.isArray(rows) ? rows : [])
         .map(st => ({ ...st, profile: byPartner.get(st.user_id) }))
         .filter(st => st.profile)
         .map(async st => ({ ...st, image_url: await resolveStatusImageUrl(auth.token, st.image_url) }))
       );
-      setStatuses([...officialEnriched, ...enriched]);
+      setStatuses([...officialEnriched, ...featEnriched, ...enriched]);
     } catch {
       setStatuses([]);
       setMyStatuses([]);
@@ -7662,7 +7665,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     try {
       const now = new Date().toISOString();
       // Vérification serveur obligatoire : évite de publier 2 + 2 statuts si l'état React n'est pas encore synchronisé.
-      const activeMine = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&expires_at=gt.${encodeURIComponent(now)}&select=id`)
+      const activeMine = await sb.query<StatusPost>(auth.token, "statuses", `?user_id=eq.${auth.userId}&is_official=eq.false&is_feature=eq.false&expires_at=gt.${encodeURIComponent(now)}&select=id`)
         .catch(() => [] as StatusPost[]);
       if ((Array.isArray(activeMine) ? activeMine.length : 0) >= STATUS_LIMIT) {
         setToast({ msg: `Tu as déjà ${STATUS_LIMIT}/${STATUS_LIMIT} statuts actifs. Attends l'expiration ou supprime un statut avant d'en publier un autre.`, type: "error" });
@@ -7868,6 +7871,21 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     } finally {
       setStatusActionLoading(false);
     }
+  };
+
+  const likeFeatureProfile = async (st?: StatusPost | null) => {
+    const targetId = st?.feature_user_id;
+    if (!targetId || targetId === auth.userId) return;
+    try {
+      await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: targetId }).catch(() => {});
+      const mutual = await sb.query<object>(auth.token, "likes", `?from_user=eq.${targetId}&to_user=eq.${auth.userId}`).catch(() => [] as object[]);
+      if (Array.isArray(mutual) && mutual.length) {
+        await sb.insert(auth.token, "matches", { user1: auth.userId, user2: targetId }).catch(() => {});
+        setToast({ msg: "C'est un match !", type: "success" });
+      } else {
+        setToast({ msg: "Profil liké ! S'il vous like aussi, ce sera un match.", type: "success" });
+      }
+    } catch { setToast({ msg: "Impossible de liker ce profil.", type: "error" }); }
   };
 
   const goStatusStep = (dir: 1 | -1) => {
@@ -9337,7 +9355,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         onPointerLeave={() => setStatusPaused(false)}
         onTouchEnd={() => setStatusPaused(false)}
         onTouchCancel={() => setStatusPaused(false)}
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "88px 18px 22px", touchAction: "none", overscrollBehavior: "contain" }}
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: `88px 18px ${statusPreview.link_url && statusPreview.user_id !== auth.userId ? 150 : 22}px`, touchAction: "none", overscrollBehavior: "contain" }}
         className="moyo-status-view"
       >
         <div style={{ position: "absolute", top: 10, left: 12, right: 12, display: "flex", gap: 4, zIndex: 3 }}>
@@ -9367,12 +9385,21 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         </div>
         <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
         <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
-        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : "68vh", borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
+        {statusPreview.image_url ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : (statusPreview.link_url ? "58vh" : "68vh"), borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
         {statusPreview.link_url && statusPreview.user_id !== auth.userId && (
           <a href={statusPreview.link_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 92, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", textDecoration: "none", borderRadius: 14, padding: "13px 16px", fontWeight: 800, fontSize: "0.9rem", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
             En savoir plus
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
           </a>
+        )}
+        {statusPreview.is_feature && statusPreview.caption && (
+          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 150, zIndex: 5, background: "linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.15))", borderRadius: 14, padding: "12px 14px", color: "#fff", fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.5, whiteSpace: "pre-line", textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}>{statusPreview.caption}</div>
+        )}
+        {statusPreview.is_feature && statusPreview.feature_user_id !== auth.userId && (
+          <button onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ position: "absolute", left: 18, right: 18, bottom: 96, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", border: "none", borderRadius: 14, padding: "13px 16px", fontWeight: 800, fontSize: "0.92rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            Liker ce profil
+          </button>
         )}
         {statusPreview.user_id === auth.userId ? (
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 28, zIndex: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -12990,6 +13017,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [officialStatuses, setOfficialStatuses] = useState<(StatusPost & { _views?: number; _replies?: number })[]>([]);
   const [confirmDeleteStatus, setConfirmDeleteStatus] = useState<StatusPost | null>(null);
   const [mktTab, setMktTab] = useState<"statuts" | "features">("statuts");
+  const [featureRequests, setFeatureRequests] = useState<Array<{ id: string; user_id: string; gender?: string; status: string; created_at: string; profile?: any; _usedThisMonth?: number }>>([]);
+  const [frProcessing, setFrProcessing] = useState<string | null>(null);
   const [stFile, setStFile] = useState<File | null>(null);
   const [stPreview, setStPreview] = useState<string | null>(null);
   const [stCaption, setStCaption] = useState("");
@@ -13067,6 +13096,60 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const h = Math.floor(ms / 3600000);
     if (h >= 1) return `dans ${h} h`;
     return `dans ${Math.max(1, Math.floor(ms / 60000))} min`;
+  };
+
+  // ── Demandes de mise en avant (Premium) ──
+  const loadFeatureRequests = async () => {
+    try {
+      const reqs = await sb.query<any>(auth.token, "feature_requests", `?status=eq.en_attente&order=created_at.asc&limit=100`);
+      const list = Array.isArray(reqs) ? reqs : [];
+      const uids = Array.from(new Set(list.map((r: any) => r.user_id)));
+      const profilesById: Record<string, any> = {};
+      if (uids.length) {
+        const profs = await sb.query<any>(auth.token, "profiles", `?id=in.(${uids.join(",")})&select=id,name,age,city,gender,photo_url`).catch(() => [] as any[]);
+        (Array.isArray(profs) ? profs : []).forEach((p: any) => { profilesById[p.id] = p; });
+      }
+      const d = new Date();
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+      const usedBy: Record<string, number> = {};
+      if (uids.length) {
+        const monthReqs = await sb.query<any>(auth.token, "feature_requests", `?user_id=in.(${uids.join(",")})&created_at=gte.${encodeURIComponent(monthStart)}&status=eq.accepte&select=user_id`).catch(() => [] as any[]);
+        (Array.isArray(monthReqs) ? monthReqs : []).forEach((r: any) => { usedBy[r.user_id] = (usedBy[r.user_id] || 0) + 1; });
+      }
+      setFeatureRequests(list.map((r: any) => ({ ...r, profile: profilesById[r.user_id], _usedThisMonth: usedBy[r.user_id] || 0 })));
+    } catch { setFeatureRequests([]); }
+  };
+  const acceptFeatureRequest = async (req: any) => {
+    if (frProcessing) return;
+    setFrProcessing(req.id);
+    try {
+      let p = req.profile;
+      if (!p) { const arr = await sb.query<any>(auth.token, "profiles", `?id=eq.${req.user_id}&select=id,name,age,city,gender,photo_url&limit=1`).catch(() => [] as any[]); p = (Array.isArray(arr) ? arr : [])[0]; }
+      if (!p || !p.photo_url) { showToast("Ce profil n'a pas de photo principale.", "error"); setFrProcessing(null); return; }
+      const targetGender = p.gender === "Homme" ? "Femme" : "Homme";
+      const caption = `❤️ Célibataire à découvrir aujourd'hui\n${p.name}, ${p.age} ans, ${p.city}.\nVous aimez son profil ? Laissez un like pour lui montrer votre intérêt.`;
+      const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const published_at = new Date().toISOString();
+      const st = await sb.insert<{ id?: string }>(auth.token, "statuses", {
+        user_id: auth.userId, image_url: p.photo_url, image_path: null, caption,
+        is_official: false, is_feature: true, target_gender: targetGender, feature_user_id: req.user_id, expires_at,
+      });
+      if (!st || !(st as any).id) { showToast("Échec de la publication du statut.", "error"); setFrProcessing(null); return; }
+      await sb.update(auth.token, "feature_requests", req.id, { status: "accepte", published_at, expires_at, status_id: (st as any).id });
+      showToast("Mise en avant publiée pour 24h.", "success");
+      loadFeatureRequests();
+    } catch { showToast("Impossible d'accepter la demande.", "error"); }
+    finally { setFrProcessing(null); }
+  };
+  const refuseFeatureRequest = async (req: any) => {
+    if (frProcessing) return;
+    setFrProcessing(req.id);
+    try {
+      await sb.update(auth.token, "feature_requests", req.id, { status: "refuse" });
+      showToast("Demande refusée.", "success");
+      loadFeatureRequests();
+    } catch { showToast("Impossible de refuser la demande.", "error"); }
+    finally { setFrProcessing(null); }
   };
   const [expandedArchived, setExpandedArchived] = useState<Set<string>>(new Set());
   const toggleArchived = (id: string) => setExpandedArchived(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -14968,7 +15051,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "payments") loadPayments();
                 if (key === "logs") loadAdminLogs();
                 if (key === "messagerie") loadStats();
-                if (key === "marketing") loadOfficialStatuses();
+                if (key === "marketing") { loadOfficialStatuses(); loadFeatureRequests(); }
                 if (key === "matches") {
                   loadProposals();
                   setProposalsBadgeCount(0);
@@ -16318,9 +16401,29 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
           {mktTab === "features" && (
             <div style={{ maxWidth: 560, margin: "0 auto" }}>
-              <div style={{ background: G.blanc, borderRadius: 16, padding: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", textAlign: "center", color: "#999" }}>
-                <div style={{ fontWeight: 700, color: G.brun, marginBottom: 6 }}>Demandes de mise en avant</div>
-                <div style={{ fontSize: "0.82rem" }}>Les demandes Premium « Passer sur les Statuts Moyo » apparaîtront ici (à accepter ou refuser). Section branchée à l'étape suivante.</div>
+              <div style={{ background: G.blanc, borderRadius: 16, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <h3 style={{ fontWeight: 800, fontSize: "0.9rem", color: G.brun, marginBottom: 4 }}>Demandes de mise en avant</h3>
+                <p style={{ fontSize: "0.72rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>À l'acceptation, le profil est publié 24h dans les Statuts Moyo, visible uniquement par le genre opposé.</p>
+                {featureRequests.length === 0 ? (
+                  <div style={{ fontSize: "0.8rem", color: "#aaa", textAlign: "center", padding: "20px 0" }}>Aucune demande en attente.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {featureRequests.map(req => (
+                      <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 12, background: G.creme, borderRadius: 12, padding: 10 }}>
+                        <Avatar url={req.profile?.photo_url} gender={req.profile?.gender} size={48} premium={false} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.86rem", fontWeight: 700, color: G.brun }}>{req.profile?.name || "—"}{req.profile?.age ? `, ${req.profile.age} ans` : ""}</div>
+                          <div style={{ fontSize: "0.72rem", color: "#888" }}>{req.profile?.city || "—"} · {req.profile?.gender || "—"}</div>
+                          <div style={{ fontSize: "0.66rem", color: "#aaa", marginTop: 2 }}>Demandé le {new Date(req.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · {req._usedThisMonth || 0} déjà ce mois</div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
+                          <button onClick={() => acceptFeatureRequest(req)} disabled={frProcessing === req.id} style={{ border: "none", background: "#27ae60", color: "#fff", borderRadius: 8, padding: "7px 14px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", opacity: frProcessing === req.id ? 0.6 : 1 }}>{frProcessing === req.id ? "…" : "Accepter"}</button>
+                          <button onClick={() => refuseFeatureRequest(req)} disabled={frProcessing === req.id} style={{ border: `1px solid ${G.gris}`, background: "#fff", color: "#e74c3c", borderRadius: 8, padding: "7px 14px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Refuser</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
