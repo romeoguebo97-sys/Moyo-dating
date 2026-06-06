@@ -17,10 +17,37 @@ const RELIGIONS = [
   "Croyant du message", "Musulman(e)", "Autre", "Non pratiquant(e)",
 ];
 const CONTACT_PATTERNS = [
-  /(\+?[\d][\s\-.]?){8,}/,
-  /[\w.-]+@[\w.-]+\.\w+/,
-  /(whatsapp|whatsap|whatsab|watsap|watsapp|wtsapp|wassap|telegram|telega|snapchat|\bsnap\b|viber|wechat|we.?chat|skype|discord|messenger|\bimo\b|zangi|botim|\bkakao\b)/i,
-  /(facebook|\bfb\b|instagram|\binsta\b|instagrame|tiktok|tik.?tok|twitter)/i,
+  // ── Détection automatique ──
+  /(\+?[\d][\s\-.]?){8,}/,                                   // suites de 8 chiffres ou plus (avec/sans séparateurs)
+  /(?:\+|\b00)\d{2,3}/,                                       // indicatifs internationaux : +33 +242 +243 +225 +221 +237, 0033…
+  /\b0[67]\b/,                                                // préfixes mobiles 06 / 07
+  /[\w.-]+@[\w.-]+\.\w+/,                                     // adresses e-mail
+  /@[a-z0-9._]{2,}/i,                                         // pseudos précédés de @ (@instagram, @gmail, @snapchat…)
+  /(https?:\/\/|www\.|wa\.me|t\.me|\.me\/|bit\.ly|tinyurl|tiktok\.com)/i, // liens
+  /z[ée]ro\s?(six|sept)/i,                                    // « zéro six » / « zéro sept »
+  // ── Applications & réseaux ──
+  /(whatsapp|whatsap|whatsab|watsap|watsapp|wtsapp|wassap|\bwa\b|\bw\.?a\b|telegram|telega|snapchat|\bsnap\b|viber|wechat|we.?chat|skype|discord|messenger|\bimo\b|\bsignal\b|zangi|botim|\bkakao\b)/i,
+  /(facebook|face.?book|\bfb\b|instagram|insta.?gram|\binsta\b|tiktok|tik.?tok|twitter)/i,
+  // ── Contournements « lettres espacées » ──
+  /w\s*h\s*a\s*t\s*s\s*a\s*p\s*p/i,
+  /n\s*u\s*m\s*[ée]?\s*r\s*o/i,
+  /s\s*n\s*a\s*p/i,
+  // ── Mots « contact » ──
+  /(num[ée]ro|\bnumero\b|\bnum\b|t[ée]l[ée]phone|telephone|\btél\b|\btel\b(?!\s+(que|qu'|quel|le|les))|portable|\bmobile\b|\bphone\b|\bvisio\b|\bvocal\b|ar?obase)/i,
+  // ── Expressions de demande / redirection (même sans mot « contact ») ──
+  /(donne|passe|envoie|envoi|file|balance|prends?|laisse).{0,14}(moi|ton|mon|votre).{0,8}(num[ée]ro|numero|\bnum\b|contact|mobile|portable|t[ée]l|whatsapp|insta|snap|facebook|phone|06|07)/i,
+  /je te donne.{0,8}(mon|num[ée]ro|contact|whatsapp|insta|snap)/i,
+  /(ton|votre|mon|son|nos|vos)\s*contacts?\b/i,
+  /[ée]chang(?:er|eons|e|és?)\s*(?:nos|les|vos|des|ton|nos\s)?\s*(contacts?|num[ée]ros?|numero|coordonn|t[ée]l|whatsapp|insta|snap)/i,
+  /(ton|votre)\s*0[67]\b/i,
+  /comment.{0,10}(te|vous|t')\s*(joindre|contacter|recontacter|atteindre|appeler)/i,
+  /(discuter|parler|parlons|continuer|on se parle|on parle|on discute|on continue).{0,12}(ailleurs|en priv[ée]|en dehors|autre part)/i,
+  /viens.{0,8}(en priv[ée]|sur whatsapp|sur insta|sur snap|sur telegram|sur messenger|ailleurs)/i,
+  /(ajoute|ajout|[ée]cris|ecris|contacte|rejoins|retrouve|trouve|message)[\s-]?(moi|nous)/i,
+  /tu as.{0,8}(whatsapp|insta|instagram|snap|snapchat|telegram|facebook|tiktok|un compte)/i,
+  /appel(le)?[\s-]?(moi|nous|vid[ée]o|vocal)/i,
+  /fais.?moi.?un.?appel/i,
+  // ── Anciens motifs conservés ──
   /(mon num|mon numero|mon numéro|appelle.?moi|contacte.?moi|écris.?moi.?sur|ecris.?moi.?sur|rejoins.?moi.?sur|mon contact\b|mon tel\b)/i,
 ];
 // Mots interdits "contacts" (gratuit uniquement) — ajoutés par l'admin depuis Configuration → Sécurité
@@ -328,9 +355,17 @@ type Auth = {
 type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
-// Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné
+// Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
+// target peut être composite "genre|abonnement" (ex. "femmes|premium") ou une ancienne valeur simple.
 const broadcastTargetsUser = (target: string | null | undefined, isPremium: boolean, gender: string): boolean => {
-  switch ((target || "all").toLowerCase()) {
+  const t = (target || "all").toLowerCase();
+  if (t.includes("|")) {
+    const [g, p] = t.split("|");
+    const genderOk = g === "all" || (g === "femmes" && gender === "Femme") || (g === "hommes" && gender === "Homme");
+    const planOk = p === "all" || (p === "premium" && isPremium) || (p === "gratuit" && !isPremium);
+    return genderOk && planOk;
+  }
+  switch (t) {
     case "femmes": return gender === "Femme";
     case "hommes": return gender === "Homme";
     case "premium": return !!isPremium;
@@ -8196,7 +8231,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       }
       return;
     }
-    if (!auth.isPremium && hasContactInfo(text)) { onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !"); return; }
+    if (!auth.isPremium && hasContactInfo(text)) {
+      // ── Signalement automatique : tentative de partage/demande de contact par un compte gratuit ──
+      try {
+        await sb.insert(auth.token, "reports", {
+          reporter_id: auth.userId,
+          reported_id: null,
+          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim().substring(0, 120)}`,
+          status: "pending",
+        });
+      } catch {}
+      onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !");
+      return;
+    }
     if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
     const rawQuoted = replyTo ? (replyTo.is_destroyed ? "Photo détruite" : replyTo.is_view_once ? "Photo vue unique" : replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
     // Supprimer la citation imbriquée si le message cité est lui-même une réponse
@@ -13019,6 +13066,58 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [broadcastExpiresAt, setBroadcastExpiresAt] = useState("");
   const [broadcastResult, setBroadcastResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [broadcastTarget, setBroadcastTarget] = useState<"all" | "femmes" | "hommes" | "premium" | "gratuit">("all");
+  const [broadcastGender, setBroadcastGender] = useState<"all" | "femmes" | "hommes">("all");
+  const [broadcastPlan, setBroadcastPlan] = useState<"all" | "premium" | "gratuit">("all");
+  const [broadcastList, setBroadcastList] = useState<{ id: string; message: string; target?: string; created_at?: string; expires_at?: string }[]>([]);
+  const [broadcastDeleting, setBroadcastDeleting] = useState<string | null>(null);
+  const [broadcastShowAll, setBroadcastShowAll] = useState(false);
+  const [audienceCount, setAudienceCount] = useState<number | null>(null);
+  const [broadcastDate, setBroadcastDate] = useState("");
+  const [broadcastTime, setBroadcastTime] = useState("");
+  const [broadcastPreview, setBroadcastPreview] = useState<string | null>(null);
+  const loadBroadcasts = React.useCallback(async () => {
+    if (!auth) return;
+    try {
+      const now = new Date().toISOString();
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/broadcasts?expires_at=gt.${now}&order=created_at.desc&limit=50`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      if (!r.ok) return;
+      const d = await r.json().catch(() => []);
+      if (Array.isArray(d)) setBroadcastList(d);
+    } catch {}
+  }, [auth]);
+  const deleteBroadcast = async (id: string) => {
+    if (!auth) return;
+    setBroadcastDeleting(id);
+    try {
+      // On "arrête" la diffusion en la faisant expirer immédiatement (robuste même sans droit DELETE)
+      await fetch(`${SUPABASE_URL}/rest/v1/broadcasts?id=eq.${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ expires_at: new Date(Date.now() - 1000).toISOString() }) });
+      setBroadcastList(prev => prev.filter(b => b.id !== id));
+    } catch {}
+    setBroadcastDeleting(null);
+  };
+  // Audience estimée (compte des profils correspondant au ciblage Genre × Abonnement)
+  React.useEffect(() => {
+    if (!auth || activeTab !== "messagerie" || msgSubTab !== "broadcast") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        let q = "?select=id";
+        if (broadcastGender === "femmes") q += "&gender=eq.Femme";
+        else if (broadcastGender === "hommes") q += "&gender=eq.Homme";
+        if (broadcastPlan === "premium") q += "&is_premium=eq.true";
+        else if (broadcastPlan === "gratuit") q += "&is_premium=eq.false";
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles${q}`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
+        const cr = r.headers.get("content-range") || "";
+        const total = cr.includes("/") ? parseInt(cr.split("/")[1]) : NaN;
+        if (!cancelled) setAudienceCount(isNaN(total) ? null : total);
+      } catch { if (!cancelled) setAudienceCount(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [auth, activeTab, msgSubTab, broadcastGender, broadcastPlan]);
+  // Charger la liste des diffusions actives en entrant dans le sous-onglet
+  React.useEffect(() => {
+    if (activeTab === "messagerie" && msgSubTab === "broadcast") loadBroadcasts();
+  }, [activeTab, msgSubTab, loadBroadcasts]);
 
   useEffect(() => {
     if (!showPremiumList) return;
@@ -14300,6 +14399,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
       {/* ── Modale de résultat de diffusion (vrai succès / vraie erreur) ── */}
+      {broadcastPreview !== null && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setBroadcastPreview(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 380, boxShadow: "0 24px 64px rgba(44,26,14,0.25)", overflow: "hidden" }}>
+            <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "20px", color: "#fff", display: "flex", alignItems: "center", gap: 10 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem" }}>Aperçu de la diffusion</div>
+            </div>
+            <div style={{ padding: 20 }}>
+              <div style={{ fontSize: "0.7rem", color: "#999", marginBottom: 8 }}>Voici comment la bannière apparaît aux utilisateurs ciblés :</div>
+              <div style={{ background: G.creme, borderRadius: 12, padding: "14px 16px", fontSize: "0.88rem", color: G.brun, lineHeight: 1.5 }}>{broadcastPreview}</div>
+              <button onClick={() => setBroadcastPreview(null)} style={{ width: "100%", marginTop: 16, background: G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
       {broadcastResult && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setBroadcastResult(null)}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.25)", overflow: "hidden" }}>
@@ -14330,7 +14444,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 </>
               )}
-              <button onClick={() => { if (!broadcastResult.ok) setBroadcastModal(true); setBroadcastResult(null); }} style={{ width: "100%", background: broadcastResult.ok ? `linear-gradient(135deg,${G.vert},#134029)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: G.blanc, border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.03em" }}>
+              <button onClick={() => { setBroadcastResult(null); }} style={{ width: "100%", background: broadcastResult.ok ? `linear-gradient(135deg,${G.vert},#134029)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: G.blanc, border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.03em" }}>
                 {broadcastResult.ok ? "Parfait" : "Réessayer"}
               </button>
             </div>
@@ -15959,16 +16073,154 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {activeTab === "messagerie" && msgSubTab === "broadcast" && (
         <div style={{ padding: "16px" }}>
-          <div style={{ maxWidth: 620, margin: "0 auto", background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(230,126,34,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-              <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Diffusion générale</div>
+          {/* ── Composer ── */}
+          <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: "1.15rem", color: G.brun }}>Diffusion générale</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888" }}>Envoyez une annonce visible à tous les utilisateurs sélectionnés.</div>
+                </div>
+              </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(39,174,96,0.1)", color: "#1e8449", borderRadius: 50, padding: "6px 13px", fontSize: "0.76rem", fontWeight: 800 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60" }} />{broadcastList.length} diffusion{broadcastList.length > 1 ? "s" : ""} active{broadcastList.length > 1 ? "s" : ""}</div>
             </div>
-            <p style={{ fontSize: "0.8rem", color: "#888", lineHeight: 1.5, marginBottom: 16 }}>Envoyez un message affiché à <strong>tous les utilisateurs connectés</strong> sous forme de bannière, jusqu'à une date d'expiration que vous choisissez.</p>
-            <button onClick={() => { setBroadcastModal(true); setBroadcastText(""); }} style={{ width: "100%", background: `linear-gradient(135deg,#e67e22,#d35400)`, color: G.blanc, border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 6px 18px rgba(230,126,34,0.28)" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              Nouvelle diffusion
-            </button>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 22 }}>
+              {/* GAUCHE : modèles rapides */}
+              <div style={{ flex: "1 1 210px", minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: "0.92rem", color: G.brun }}><svg width="16" height="16" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Modèles rapides</div>
+                <div style={{ fontSize: "0.74rem", color: "#999", margin: "3px 0 12px" }}>Cliquez sur un modèle pour préremplir le message.</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(115px, 1fr))", gap: 8 }}>
+                  {([
+                    { lbl: "Maintenance", col: "#E67E22", txt: "Moyo est en maintenance ce soir de [H] à [H]. Merci de votre compréhension.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
+                    { lbl: "Nouvelle fonctionnalité", col: "#8e44ad", txt: "Nouvelle fonctionnalité disponible : [PRÉCISION]", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg> },
+                    { lbl: "Mise à jour disponible", col: "#2980b9", txt: "Une mise à jour est disponible. Rechargez l'application pour en profiter.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> },
+                    { lbl: "Promo Premium", col: "#E67E22", txt: "Profitez de -50% sur le Premium ce weekend uniquement !", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> },
+                    { lbl: "Rappel événement", col: "#c0392b", txt: "Rappel : [ÉVÉNEMENT] aura lieu le [DATE]. Ne manquez pas ça !", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+                    { lbl: "Communauté", col: "#16a085", txt: "La communauté Moyo grandit ! Invitez vos amis à nous rejoindre.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+                    { lbl: "Sécurité", col: "#27ae60", txt: "Pour votre sécurité, ne partagez jamais vos informations personnelles.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+                  ]).map(m => (
+                    <button key={m.lbl} onClick={() => setBroadcastText(m.txt)} style={{ display: "flex", alignItems: "center", gap: 8, background: broadcastText === m.txt ? "rgba(192,57,43,0.06)" : "#fff", border: `1.5px solid ${broadcastText === m.txt ? G.rouge : G.gris}`, borderRadius: 12, padding: "10px 11px", cursor: "pointer", textAlign: "left" }}>
+                      <span style={{ width: 30, height: 30, borderRadius: 9, background: m.col + "1f", color: m.col, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{m.ic}</span>
+                      <span style={{ fontSize: "0.74rem", fontWeight: 700, color: G.brun, lineHeight: 1.2 }}>{m.lbl}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* DROITE : formulaire */}
+              <div style={{ flex: "2 1 330px", minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 7 }}>1. Message à diffuser</div>
+                <div style={{ position: "relative", marginBottom: 18 }}>
+                  <textarea value={broadcastText} onChange={e => setBroadcastText(e.target.value.slice(0, 500))} maxLength={500} placeholder="Écrivez votre message ici…" rows={4} style={{ width: "100%", boxSizing: "border-box", padding: "12px 12px 26px", borderRadius: 12, border: `1.5px solid ${G.gris}`, fontSize: "0.86rem", resize: "vertical", outline: "none", fontFamily: "inherit" }} />
+                  <div style={{ position: "absolute", right: 12, bottom: 9, fontSize: "0.7rem", color: "#aaa" }}>{broadcastText.length} / 500 caractères</div>
+                </div>
+
+                <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 8 }}>2. Destinataires</div>
+                <div style={{ fontSize: "0.72rem", color: "#999", fontWeight: 700, marginBottom: 6 }}>Genre</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                  {([["all", "Tout le monde", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>], ["femmes", "Femmes", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="5"/><line x1="12" y1="13" x2="12" y2="22"/><line x1="9" y1="18" x2="15" y2="18"/></svg>], ["hommes", "Hommes", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="14" r="5"/><line x1="13.5" y1="10.5" x2="20" y2="4"/><polyline points="15 4 20 4 20 9"/></svg>]] as ["all" | "femmes" | "hommes", string, React.ReactElement][]).map(([val, lbl, ico]) => (
+                    <button key={val} type="button" onClick={() => setBroadcastGender(val)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 15px", borderRadius: 999, border: `1.5px solid ${broadcastGender === val ? G.rouge : G.gris}`, background: broadcastGender === val ? "rgba(192,57,43,0.08)" : "#fff", color: broadcastGender === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{ico}{lbl}</button>
+                  ))}
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "#999", fontWeight: 700, marginBottom: 6 }}>Abonnement</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                  {([["all", "Tous", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20l-2-9-5 4-3-7-3 7-5-4-2 9z"/></svg>], ["premium", "Premium", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20l-2-9-5 4-3-7-3 7-5-4-2 9z"/></svg>], ["gratuit", "Gratuits", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>]] as ["all" | "premium" | "gratuit", string, React.ReactElement][]).map(([val, lbl, ico]) => (
+                    <button key={val} type="button" onClick={() => setBroadcastPlan(val)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 15px", borderRadius: 999, border: `1.5px solid ${broadcastPlan === val ? G.rouge : G.gris}`, background: broadcastPlan === val ? "rgba(192,57,43,0.08)" : "#fff", color: broadcastPlan === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{ico}{lbl}</button>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "flex-end" }}>
+                  <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 8 }}>3. Date d'expiration <span style={{ color: G.rouge }}>*</span></div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input type="date" value={broadcastDate} onChange={e => setBroadcastDate(e.target.value)} style={{ flex: 2, minWidth: 0, boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit" }} />
+                      <input type="time" value={broadcastTime} onChange={e => setBroadcastTime(e.target.value)} style={{ flex: 1, minWidth: 0, boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit" }} />
+                    </div>
+                  </div>
+                  <div style={{ flex: "1 1 200px", display: "flex", alignItems: "center", gap: 10, background: "rgba(39,174,96,0.08)", borderRadius: 12, padding: "11px 14px" }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e8449" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <div>
+                      <div style={{ fontSize: "0.72rem", color: "#1e8449", fontWeight: 600 }}>Audience estimée</div>
+                      <div style={{ fontSize: "1.15rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{audienceCount === null ? "…" : audienceCount.toLocaleString("fr-FR")} {audienceCount === 1 ? "utilisateur" : "utilisateurs"}</div>
+                      <div style={{ fontSize: "0.66rem", color: "#888" }}>Selon vos critères actuels</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18, flexWrap: "wrap" }}>
+                  <button onClick={() => { setBroadcastText(""); setBroadcastDate(""); setBroadcastTime(""); setBroadcastGender("all"); setBroadcastPlan("all"); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                  <button disabled={broadcastLoading || !broadcastText.trim() || !broadcastDate} onClick={async () => {
+                    if (!broadcastText.trim() || !broadcastDate) return;
+                    const iso = new Date(`${broadcastDate}T${broadcastTime || "00:00"}`).toISOString();
+                    if (new Date(iso).getTime() <= Date.now()) { setBroadcastResult({ ok: false, message: "La date d'expiration est déjà passée. Choisis une date dans le futur, sinon le message ne s'affichera chez personne." }); return; }
+                    setBroadcastLoading(true);
+                    try {
+                      const r = await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId, expires_at: iso, target: `${broadcastGender}|${broadcastPlan}` }) });
+                      if (!r.ok) {
+                        let detail = `Erreur ${r.status}`;
+                        try { const e = await r.json(); detail = e.message || e.hint || e.details || detail; } catch {}
+                        if (r.status === 401 || r.status === 403) detail = "Accès refusé par la base de données (règle RLS sur « broadcasts »).";
+                        if (String(detail).includes("target")) detail = "La colonne « target » manque dans la table broadcasts. Ajoute-la dans Supabase : ALTER TABLE broadcasts ADD COLUMN target text DEFAULT 'all';";
+                        setBroadcastLoading(false); setBroadcastResult({ ok: false, message: detail }); return;
+                      }
+                      const data = await r.json().catch(() => []);
+                      const created = Array.isArray(data) ? data[0] : data;
+                      if (!created || !created.id) { setBroadcastLoading(false); setBroadcastResult({ ok: false, message: "Le serveur n'a renvoyé aucune ligne créée. Vérifie les permissions de la table « broadcasts »." }); return; }
+                      setBroadcastLoading(false);
+                      setBroadcastText(""); setBroadcastDate(""); setBroadcastTime(""); setBroadcastGender("all"); setBroadcastPlan("all");
+                      setBroadcastResult({ ok: true, message: created.message || broadcastText.trim() });
+                      loadBroadcasts();
+                    } catch { setBroadcastLoading(false); setBroadcastResult({ ok: false, message: "Impossible de joindre le serveur. Vérifie ta connexion et réessaie." }); }
+                  }} style={{ display: "flex", alignItems: "center", gap: 8, background: (broadcastLoading || !broadcastText.trim() || !broadcastDate) ? "rgba(192,57,43,0.45)" : G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: "0.88rem", fontWeight: 800, cursor: (broadcastLoading || !broadcastText.trim() || !broadcastDate) ? "not-allowed" : "pointer", boxShadow: "0 6px 18px rgba(192,57,43,0.28)" }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    {broadcastLoading ? "Envoi…" : "Publier la diffusion"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Diffusions actives ── */}
+          <div style={{ background: G.blanc, borderRadius: 18, padding: 18, marginTop: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 12 }}>Diffusions actives ({broadcastList.length})</div>
+            {broadcastList.length === 0 ? (
+              <div style={{ fontSize: "0.82rem", color: "#aaa", textAlign: "center", padding: "30px 0" }}>Aucune diffusion active.</div>
+            ) : (
+              <>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {(broadcastShowAll ? broadcastList : broadcastList.slice(0, 5)).map((b, idx, arr) => {
+                    const parts = (b.target || "all|all").split("|");
+                    const g = parts[0] || "all"; const pl = parts[1] || "all";
+                    const genreLbl = g === "femmes" ? "Femmes" : g === "hommes" ? "Hommes" : "Tout le monde";
+                    const planLbl = pl === "premium" ? "Premium" : pl === "gratuit" ? "Gratuits" : "Tous";
+                    return (
+                      <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 2px", borderBottom: idx < arr.length - 1 ? `1px solid ${G.gris}` : "none", flexWrap: "wrap" }}>
+                        <div style={{ width: 46, height: 46, borderRadius: 10, background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+                        <div style={{ flex: "1 1 170px", minWidth: 0 }}>
+                          <div style={{ fontSize: "0.86rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.message}</div>
+                          <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2 }}>Publié le {new Date(b.created_at || Date.now()).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })} à {new Date(b.created_at || Date.now()).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+                        </div>
+                        <div style={{ flex: "0 0 auto", minWidth: 110 }}>
+                          <div style={{ fontSize: "0.74rem", color: "#666", fontWeight: 600 }}>{genreLbl}</div>
+                          <div style={{ display: "inline-block", fontSize: "0.64rem", fontWeight: 700, color: pl === "premium" ? "#B8860B" : pl === "gratuit" ? "#1e8449" : "#888", background: pl === "premium" ? "rgba(212,168,67,0.15)" : pl === "gratuit" ? "rgba(39,174,96,0.12)" : G.creme, borderRadius: 50, padding: "1px 8px", marginTop: 2 }}>{planLbl}</div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.rouge, fontWeight: 700, fontSize: "0.74rem", whiteSpace: "nowrap" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Expire {expiresInLabel(b.expires_at)}</div>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(39,174,96,0.1)", color: "#1e8449", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#27ae60" }} />En ligne</div>
+                        <button onClick={() => setBroadcastPreview(b.message)} style={{ display: "flex", alignItems: "center", gap: 5, background: "#fff", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</button>
+                        <button onClick={() => deleteBroadcast(b.id)} disabled={broadcastDeleting === b.id} style={{ flexShrink: 0, border: `1px solid rgba(231,76,60,0.3)`, background: "rgba(231,76,60,0.08)", color: "#e74c3c", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {broadcastList.length > 5 && (
+                  <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+                    <button onClick={() => setBroadcastShowAll(v => !v)} style={{ display: "flex", alignItems: "center", gap: 7, background: "#fff", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>{broadcastShowAll ? "Voir moins" : "Voir toutes les diffusions"}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: broadcastShowAll ? "rotate(180deg)" : "none" }}><polyline points="6 9 12 15 18 9"/></svg></button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
