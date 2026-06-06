@@ -2932,6 +2932,10 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     if (!form.age || isNaN(ageNum) || ageNum < 18 || ageNum > 99) {
       setErrorMsg("Vous devez avoir au moins 18 ans."); setLoading(false); return;
     }
+    // Sécurité : interdire les coordonnées dans les champs publics du profil (bio, nom, profession, etc.)
+    if (hasContactInfo([form.name, form.bio, form.profession, form.hobbies, form.city].filter(Boolean).join(" "))) {
+      setErrorMsg("Ton profil contient des coordonnées (numéro, WhatsApp, réseau social, lien…). Pour la sécurité de tous, le partage de contact dans le profil public n'est pas autorisé. Retire-les pour continuer."); setLoading(false); return;
+    }
     let token = tempToken;
     let userId = tempUserId;
     // Si le token est manquant, tenter un re-login silencieux
@@ -10288,6 +10292,12 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   };
   const saveProfile = async () => {
     if (form.age && (form.age < 18 || form.age > 99)) { setErrorMsg("Vous devez avoir entre 18 et 99 ans. Modification refusée."); return; }
+    // Sécurité : interdire les coordonnées dans les champs publics (bio, nom, profession, centres d'intérêt, ville).
+    // Le champ "téléphone" privé n'est PAS concerné (il sert à la récupération de compte et reste invisible).
+    if (hasContactInfo([form.name, form.bio, form.profession, form.hobbies, form.city].filter(Boolean).join(" "))) {
+      setErrorMsg("Votre profil contient des coordonnées (numéro, WhatsApp, réseau social, lien…). Pour la sécurité de tous, le partage de contact dans le profil public n'est pas autorisé. Retirez-les pour enregistrer.");
+      return;
+    }
     await sb.update(auth.token, "profiles", auth.userId, { name: form.name, age: form.age, city: form.city, bio: form.bio, religion: form.religion, profession: (form.profession || "").trim() || null, hobbies: (form.hobbies || "").trim() || null, phone: (form.phone || "").trim() || null });
     setProfile(p => p ? { ...p, ...(form as Profile) } : null);
     setEditing(false);
