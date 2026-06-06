@@ -58,7 +58,20 @@ const buildContactBannedRegex = (raw: string) => {
   const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   try { CONTACT_BANNED_REGEX = new RegExp(`(${escaped.join("|")})`, "i"); } catch { CONTACT_BANNED_REGEX = null; }
 };
-const hasContactInfo = (text: string): boolean => CONTACT_PATTERNS.some(p => p.test(text)) || (CONTACT_BANNED_REGEX !== null && CONTACT_BANNED_REGEX.test(text));
+// Compte les chiffres réels du texte (peu importe espaces/lettres/ponctuation entre eux) + chiffres écrits en toutes lettres.
+const countObfuscatedDigits = (text: string): number => {
+  const realDigits = (text.match(/\d/g) || []).length;
+  // chiffres écrits en toutes lettres : on compte une SUITE d'au moins 4 mots-chiffres consécutifs (évite "un homme", "deux enfants")
+  let spelled = 0;
+  const seq = text.toLowerCase().match(/(?:\b(?:z[ée]ro|zero|un|une|deux|trois|quatre|cinq|six|sept|huit|neuf|dix)\b[\s.,'\-]*){4,}/g);
+  if (seq) for (const s of seq) spelled += (s.match(/z[ée]ro|zero|une|un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix/g) || []).length;
+  return realDigits + spelled;
+};
+const hasContactInfo = (text: string): boolean =>
+  CONTACT_PATTERNS.some(p => p.test(text))
+  || (CONTACT_BANNED_REGEX !== null && CONTACT_BANNED_REGEX.test(text))
+  || countObfuscatedDigits(text) >= 8; // 8 chiffres ou plus (sous n'importe quelle forme) = numéro déguisé
+
 
 // ── MODÉRATION : insultes, arnaques, contenu interdit ──
 const MODERATION_RULES: { pattern: RegExp; type: "insult" | "scam" | "sexual" }[] = [
@@ -1581,6 +1594,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Comment suis-je informé d'un nouveau match ?", desc: "Dès qu'un match est créé, un message de bienvenue apparaît automatiquement dans la conversation. Le badge rouge sur l'onglet Messages se met à jour en temps réel." },
       { icon: "Q", titre: "Si je unlike quelqu'un, que se passe-t-il ?", desc: "Le like disparait des deux côtés instantanément. Si vous aviez un match, la conversation et tous les messages sont supprimés." },
       { icon: "Q", titre: "Que se passe-t-il si j'envoie un message irrespectueux ?", desc: "Moyo bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement automatique est envoyé à notre équipe." },
+      { icon: "Q", titre: "Pourquoi je ne peux pas partager mon numéro ou mon WhatsApp ?", desc: "Pour ta sécurité et contre les arnaques, le partage d'un numéro, d'un réseau social ou d'un lien est bloqué dans les messages et dans le profil (bio, nom…) pour les comptes gratuits. Cela vaut même si tu espaces les chiffres ou les écris en lettres. L'abonnement Premium débloque le partage de coordonnées en conversation privée." },
+      { icon: "Q", titre: "Mon compte est suspendu avec un décompte, que faire ?", desc: "Il s'agit d'une suspension temporaire suite à un non-respect des règles. Tu n'as rien à faire : à la fin du décompte affiché, tu peux te reconnecter automatiquement. Une suspension définitive, elle, nécessite de contacter l'assistance." },
       { icon: "Q", titre: "Comment réagir à un message ?", desc: "Appuyez longuement sur un message pour ouvrir le menu de réactions (👍 ❤️ 😂 😮 😢 🙏). Une seule réaction par message est autorisée." },
       { icon: "Q", titre: "Comment contacter l'assistance Moyo ?", desc: "Appuyez sur l'icône verte (Assistant Moyo) à côté du bouton Guide. Vous pouvez poser vos questions ou signaler un problème directement depuis l'app." },
       { icon: "Q", titre: "Puis-je voir le profil de quelqu'un depuis les messages ?", desc: "Oui. Dans une conversation, appuyez sur la photo de profil de votre match en haut de l'écran pour voir sa fiche complète." },
@@ -1612,6 +1627,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "verified", titre: "Vos droits (RGPD)", desc: `Accès, modification et suppression de vos données sur demande à ${CONTACT_EMAIL}` },
       { icon: "chat", titre: "CGU - Utilisation", desc: "Moyo est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
       { icon: "alert", titre: "Contenus interdits", desc: "Faux profils, harcèlement, contenus illégaux, tentatives d'arnaque ou usurpation d'identité sont strictement interdits." },
+      { icon: "shield", titre: "Sanctions & poursuites", desc: "Moyo se réserve le droit de porter plainte et d'engager des poursuites judiciaires contre toute personne enfreignant les présentes conditions d'utilisation." },
       { icon: "star2", titre: "Premium & paiement", desc: "Certaines fonctionnalités sont accessibles via abonnement. Paiements via prestataires sécurisés (MTN MoMo, Airtel Money) pour le Congo, et Stripe (carte Visa/Mastercard) pour la diaspora." },
     ]},
     { id: "mentions", title: "Mentions légales", emoji: "⚖️", items: [
@@ -3257,6 +3273,8 @@ const BOT_FAQ = [
   { q: ["message", "envoyer", "écrire", "conversation"], r: `Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message.` },
   { q: ["réaction", "réagir", "emoji", "like message"], r: "Appuyez longuement sur un message pour ouvrir le menu de réactions. Une seule réaction par message est autorisée : choisir une nouvelle réaction remplace automatiquement l'ancienne." },
   { q: ["insulte", "bloqué", "interdit", "avertissement", "modération"], r: "Moyo bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés. Un avertissement s'affiche et un signalement est transmis à notre équipe. Les comportements répétés entraînent la suppression du compte." },
+  { q: ["numéro", "numero", "whatsapp", "contact", "téléphone", "partager numéro", "reseau", "réseau", "snap", "insta", "lien"], r: "Pour ta sécurité et contre les arnaques, le partage d'un numéro, d'un réseau social ou d'un lien est bloqué dans les messages et dans le profil (bio, nom…) pour les comptes gratuits — même en espaçant les chiffres ou en les écrivant en lettres. L'abonnement Premium débloque le partage de coordonnées en conversation privée." },
+  { q: ["suspendu", "suspension", "banni temporaire", "décompte", "temporaire", "réactiver"], r: "Une suspension temporaire affiche un décompte : à la fin, tu peux te reconnecter automatiquement, rien à faire. Une suspension définitive nécessite de contacter l'assistance pour toute réclamation." },
   { q: ["photo", "image", "profil", "modifier"], r: "Allez dans l'onglet Profil → Modifier ma photo. Un outil de recadrage s'ouvre pour cadrer votre photo parfaitement." },
   { q: ["visible", "invisible", "disparaître", "cacher"], r: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
   { q: ["badge", "vérifié", "vérification", "bleu"], r: "La vérification est gratuite. Allez dans Profil → Faire vérifier mon compte → WhatsApp. Réponse sous 24h." },
@@ -4985,7 +5003,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             { title: "Mise en relation Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Ce service est réservé aux membres Premium. Notre équipe recherche personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : passez Premium → allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → précisez vos critères (genre recherché, ville, tranche d'âge) → ajoutez un message optionnel → envoyez.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
-            { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe."] },
+            { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe.", "Partage de contacts : pour ta sécurité, le partage d'un numéro, d'un réseau social ou d'un lien n'est pas autorisé dans les messages ni dans ton profil (bio, nom…) en compte gratuit. Passe les premiers échanges sur Moyo ; l'abonnement Premium débloque le partage de coordonnées en conversation privée.", "Sanctions : en cas de non-respect des règles, un compte peut être averti, suspendu temporairement (avec un décompte avant reconnexion automatique) ou banni définitivement."] },
             { title: "Premium - " + PREMIUM_PRICE_FCFA.toLocaleString() + " FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
               "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.",
               "Paiement via MTN Mobile Money ou Airtel Money - les deux opérateurs sont disponibles.",
@@ -13340,6 +13358,61 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Reports ──
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived">("all");
+  const [archiveSearch, setArchiveSearch] = useState("");
+  const [archiveTypeFilter, setArchiveTypeFilter] = useState<"all" | "messaging" | "system" | "profile">("all");
+  const [archiveActionFilter, setArchiveActionFilter] = useState<"all" | "reviewed" | "rejected" | "banned" | "archived">("all");
+  const [archivePage, setArchivePage] = useState(1);
+  // ── Modèles de réponse (Assistant Moyo) ──
+  const TEMPLATE_CATS = ["Accueil", "Abonnement", "Paiement", "Sécurité", "Fonctionnalités", "Signalements", "Mise en avant", "Autre"];
+  const DEFAULT_SUPPORT_TEMPLATES = [
+    { id: "t1", category: "Accueil", title: "Accueil - Message de bienvenue", content: "Bonjour 👋 Merci de contacter Moyo. Comment pouvons-nous vous aider aujourd'hui ?" },
+    { id: "t2", category: "Abonnement", title: "Abonnement - Annulation", content: "Oui, vous pouvez annuler votre abonnement Premium à tout moment depuis vos paramètres. L'accès Premium reste actif jusqu'à la fin de votre période en cours." },
+    { id: "t3", category: "Abonnement", title: "Abonnement - Activation", content: "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟" },
+    { id: "t4", category: "Paiement", title: "Paiement - Échec de paiement", content: "Votre paiement a malheureusement échoué. Veuillez vérifier vos informations et réessayer, ou essayer un autre moyen de paiement." },
+    { id: "t5", category: "Paiement", title: "Paiement - Confirmation", content: "Nous avons bien reçu votre paiement. Votre Premium sera activé sous peu. Merci de votre confiance !" },
+    { id: "t6", category: "Sécurité", title: "Sécurité - Signalement", content: "Merci pour votre signalement. Notre équipe va l'examiner dans les plus brefs délais. Nous vous tiendrons informé(e) si nécessaire." },
+    { id: "t7", category: "Sécurité", title: "Sécurité - Photo non conforme", content: "Votre photo de profil ne respecte pas nos conditions. Merci d'utiliser une photo claire de votre visage, sinon votre compte pourra être suspendu." },
+    { id: "t8", category: "Fonctionnalités", title: "Fonctionnalité - Explication", content: "Cette fonctionnalité vous permet de [description]. N'hésitez pas si vous avez d'autres questions !" },
+    { id: "t9", category: "Fonctionnalités", title: "Fonctionnalité - Matchs", content: "Pour discuter avec quelqu'un, likez son profil. Si la personne vous like en retour, le match se débloque automatiquement !" },
+    { id: "t10", category: "Signalements", title: "Signalement - Suivi", content: "Votre signalement a bien été pris en compte. Merci de contribuer à la sécurité de la communauté Moyo." },
+    { id: "t11", category: "Mise en avant", title: "Mise en avant - Validée", content: "Votre demande de mise en avant a été acceptée ! Votre profil apparaîtra dans les Statuts Moyo pendant 24h." },
+    { id: "t12", category: "Autre", title: "Autre - Remerciement", content: "Merci beaucoup de nous avoir contactés. Belle journée sur Moyo ! 💛" },
+  ];
+  const [supportTemplates, setSupportTemplates] = useState<{ id: string; category: string; title: string; content: string }[]>(DEFAULT_SUPPORT_TEMPLATES);
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [templateCat, setTemplateCat] = useState("all");
+  const [templateModal, setTemplateModal] = useState<null | { id?: string; title: string; content: string; category: string }>(null);
+  const [tplMenu, setTplMenu] = useState<string | null>(null);
+  useEffect(() => {
+    if (!auth) return;
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.support_templates&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const d = await r.json().catch(() => []);
+        if (Array.isArray(d) && d[0]?.value) { const parsed = JSON.parse(d[0].value); if (Array.isArray(parsed) && parsed.length) setSupportTemplates(parsed); }
+      } catch {}
+    })();
+  }, [auth]);
+  const persistTemplates = async (next: { id: string; category: string; title: string; content: string }[]) => {
+    setSupportTemplates(next);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates" }, body: JSON.stringify({ key: "support_templates", value: JSON.stringify(next) }) });
+    } catch {}
+  };
+  const copyTemplate = async (content: string) => {
+    try { await navigator.clipboard.writeText(content); }
+    catch { try { const ta = document.createElement("textarea"); ta.value = content; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); } catch {} }
+    showToast("Modèle copié", "success");
+  };
+  const saveTemplate = () => {
+    if (!templateModal || !templateModal.title.trim() || !templateModal.content.trim()) return;
+    const draft = templateModal;
+    let next;
+    if (draft.id) next = supportTemplates.map(t => t.id === draft.id ? { ...t, title: draft.title.trim(), content: draft.content.trim(), category: draft.category } : t);
+    else next = [{ id: `t_${Date.now()}`, title: draft.title.trim(), content: draft.content.trim(), category: draft.category }, ...supportTemplates];
+    persistTemplates(next); setTemplateModal(null);
+  };
+  const deleteTemplate = (id: string) => { setTplMenu(null); persistTemplates(supportTemplates.filter(t => t.id !== id)); showToast("Modèle supprimé", "success"); };
 
   // ── Statuts officiels Moyo (publiés depuis l'onglet Marketing) ──
   const [officialStatuses, setOfficialStatuses] = useState<(StatusPost & { _views?: number; _replies?: number })[]>([]);
@@ -14029,6 +14102,24 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
     }
     setReportActionLoading(null);
+  };
+
+  // ── Suppression d'une seule archive ──
+  const deleteOneArchivedReport = (id?: string) => {
+    if (!id) return;
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setConfirmModal({
+      msg: "Supprimer définitivement cet élément des archives ? Les profils, messages et avertissements ne sont pas supprimés.",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" } });
+          if (!r.ok && r.status !== 204) { showToast(`Erreur suppression (${r.status}).`, "error"); return; }
+          setReports(prev => prev.filter(rep => rep.id !== id));
+          showToast("Archive supprimée.", "success");
+        } catch { showToast("Erreur réseau.", "error"); }
+      },
+    });
   };
 
   // ── Suppression de TOUTES les archives (bulk delete) ──
@@ -14784,6 +14875,36 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {templateModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setTemplateModal(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 22, width: "100%", maxWidth: 460, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{templateModal.id ? "Modifier le modèle" : "Créer un modèle"}</div>
+              <button onClick={() => setTemplateModal(null)} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
+            </div>
+            <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888", marginBottom: 6 }}>Titre</div>
+                <input value={templateModal.title} onChange={e => setTemplateModal(m => m ? { ...m, title: e.target.value } : m)} placeholder="Ex : Abonnement - Annulation" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", fontFamily: "inherit" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888", marginBottom: 6 }}>Catégorie</div>
+                <select value={templateModal.category} onChange={e => setTemplateModal(m => m ? { ...m, category: e.target.value } : m)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", background: "#fff", cursor: "pointer" }}>
+                  {TEMPLATE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888", marginBottom: 6 }}>Contenu</div>
+                <textarea value={templateModal.content} onChange={e => setTemplateModal(m => m ? { ...m, content: e.target.value } : m)} placeholder="Rédigez la réponse type…" rows={5} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button onClick={() => setTemplateModal(null)} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "11px 20px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                <button onClick={saveTemplate} disabled={!templateModal.title.trim() || !templateModal.content.trim()} style={{ background: (!templateModal.title.trim() || !templateModal.content.trim()) ? "rgba(192,57,43,0.4)" : G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "11px 20px", fontSize: "0.84rem", fontWeight: 800, cursor: (!templateModal.title.trim() || !templateModal.content.trim()) ? "not-allowed" : "pointer" }}>{templateModal.id ? "Enregistrer" : "Créer"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {banModal && (() => {
         const u = banModal;
         const close = () => setBanModal(null);
@@ -15086,7 +15207,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
                     ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
                     ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
-                    ["Bannir", "Interdit l'accès à la plateforme. Action irréversible sans intervention admin."],
+                    ["Bannir (3 options)", "Le bouton Bannir ouvre un menu : (1) Bannissement définitif — accès bloqué jusqu'à ce qu'un admin débannisse ; (2) Éjection immédiate — la session active est coupée sur-le-champ, la personne est renvoyée à l'accueil et ne peut plus se reconnecter ; (3) Bannissement temporaire — durée au choix (1h, 6h, 24h, 3j, 7j ou libre) : l'utilisateur voit un décompte et se reconnecte automatiquement à la fin."],
                     ["Supprimer", "Efface définitivement le compte et toutes ses données."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
@@ -15109,7 +15230,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Profils", "Filtre les signalements manuels d'utilisateurs contre d'autres profils. À examiner en priorité."],
                     ["Système", "Signalements générés automatiquement par la modération (insultes, arnaques, contenus sexuels, alertes techniques)."],
                     ["Messagerie", "Boîte de réception regroupant tous les échanges avec les utilisateurs (signalements + support). Chaque conversation est groupée par utilisateur avec photo, nom, dernier message et badge non lu. Le bouton Répondre ouvre une modale pour répondre directement — le message arrive dans la messagerie de l'utilisateur sous le nom Assistance Moyo (\"Répond sous 24h\")."],
-                    ["Archivés", "Signalements traités, rejetés ou ayant entraîné un bannissement. Chaque archive peut être supprimée définitivement. Le bouton 'Tout supprimer' nettoie toutes les archives d'un coup."],
+                    ["Archives", "Tous les signalements traités, rejetés, ayant entraîné un bannissement ou archivés. La page offre une recherche, des filtres par type (Messagerie / Auto-modération / Signalement) et par action (Traité / Rejeté / Banni / Archivé), un regroupement par date (Aujourd'hui, Hier…) et une pagination (10 par page). Chaque ligne peut être dépliée (Voir les détails) ou supprimée. 'Tout supprimer' nettoie toutes les archives d'un coup."],
+                    ["Modération auto des contacts", "Quand un utilisateur gratuit tente de partager ou demander un numéro, un réseau social ou un lien (dans un message OU dans son profil), l'envoi est bloqué et un signalement automatique [AUTO-MOD CONTACT] est créé dans la catégorie Système. La détection couvre les numéros même très espacés, écrits en lettres ou avec des caractères intercalés."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -15171,6 +15293,46 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ background: G.creme, borderRadius: 10, padding: "12px 14px", fontSize: "0.82rem", color: G.brun, lineHeight: 1.7 }}>
                   Un avertissement est une étape préventive avant bannissement. L'utilisateur voit une modal officielle MOYO à sa prochaine connexion. Lorsqu'il clique <strong>"OK, j'ai compris"</strong>, la plateforme enregistre qu'il a bien pris connaissance de l'avertissement. L'admin peut ainsi suivre le 1er, 2e ou 3e avertissement et adapter la décision en conséquence.
+                </div>
+              </div>
+
+              {/* Section Messagerie */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Messagerie</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Assistant Moyo", "Centre de support. À gauche : la conversation avec l'utilisateur (infos, historique, zone de réponse, Archiver). À droite : la bibliothèque de Modèles de réponse."],
+                    ["Modèles de réponse", "Réponses prédéfinies pour répondre plus vite. Créez-en (titre, catégorie, contenu), modifiez/supprimez via le menu ⋮, recherchez et filtrez par catégorie. Le bouton Copier place le texte dans le presse-papiers (notification 'Modèle copié') pour le coller dans la conversation. Les modèles sont partagés entre tous les admins."],
+                    ["Diffusion générale", "Envoie une annonce (bannière) aux utilisateurs. Vous choisissez le message, un modèle rapide, la cible (Genre : tout le monde / femmes / hommes × Abonnement : tous / premium / gratuits) et une date d'expiration. L'audience estimée et la liste des diffusions actives sont affichées ; chaque diffusion peut être prévisualisée ou arrêtée."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section Marketing */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Marketing</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Statuts Moyo", "Publiez des statuts officiels (sponsorisés) visibles par les membres, avec une option de bouton d'action (lien ou numéro WhatsApp/appel). Gérez les statuts actifs et leur durée de vie."],
+                    ["Mises en avant", "Validez les demandes de mise en avant des profils Premium (24h dans les Statuts Moyo, visibles par le genre opposé). Suivez les mises en avant actives (vues, likes, réponses) et retirez-les si besoin."],
+                    ["Événement Premium", "Offrez le Premium gratuitement à tous les utilisateurs pour un événement (lancement, promo, fête). Les vrais abonnés ne sont pas affectés ; à la date d'expiration choisie, le Premium est retiré automatiquement aux non-abonnés."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -16354,14 +16516,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
       {(activeTab === "reports" || (activeTab === "messagerie" && msgSubTab === "assistant")) && (
-        <div style={{ padding: "16px" }}>
+        <div style={{ padding: "16px", display: (activeTab === "messagerie" && msgSubTab === "assistant") ? "flex" : "block", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <div style={{ flex: (activeTab === "messagerie" && msgSubTab === "assistant") ? "1.3 1 430px" : undefined, minWidth: 0, width: (activeTab === "messagerie" && msgSubTab === "assistant") ? undefined : "100%" }}>
           {/* Sous-onglets — affichés uniquement sur Signalements (pas sur l'onglet Messagerie) */}
           {activeTab === "reports" && (
           <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
             {(["all", "user", "system", "archived"] as const).map(f => {
               const isActive = reportFilter === f;
               const isArchived = f === "archived";
-              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : "Archivés";
+              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : "Archives";
               const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : f === "user" ? profilePendingCount : f === "system" ? systemPendingCount : null;
               return (
                 <div
@@ -16400,6 +16563,132 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
           )}
 
+          {activeTab === "reports" && reportFilter === "archived" ? (() => {
+            const typeOf = (r: ReportRow) => isSupportInbox(r) ? "messaging" : isSystemReport(r) ? "system" : "profile";
+            const q = archiveSearch.trim().toLowerCase();
+            let list = reports.filter(r => ARCHIVED_STATUSES.includes(r.status)).filter(r => {
+              if (archiveTypeFilter !== "all" && typeOf(r) !== archiveTypeFilter) return false;
+              if (archiveActionFilter !== "all" && r.status !== archiveActionFilter) return false;
+              if (q) {
+                const p = reportProfilesCache[r.reporter_id]; const p2 = r.reported_id ? reportProfilesCache[r.reported_id] : null;
+                if (!`${r.reason || ""} ${p?.name || ""} ${p2?.name || ""}`.toLowerCase().includes(q)) return false;
+              }
+              return true;
+            });
+            list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+            const PER = 10;
+            const totalPages = Math.max(1, Math.ceil(list.length / PER));
+            const page = Math.min(archivePage, totalPages);
+            const pageItems = list.slice((page - 1) * PER, page * PER);
+            const dayLabel = (iso?: string) => {
+              const d = new Date(iso || Date.now()); const today = new Date(); const y = new Date(); y.setDate(today.getDate() - 1);
+              const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+              const ds = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+              return same(d, today) ? `Aujourd'hui · ${ds}` : same(d, y) ? `Hier · ${ds}` : ds;
+            };
+            const groups: { lbl: string; items: ReportRow[] }[] = [];
+            for (const r of pageItems) { const lbl = dayLabel(r.created_at); let g = groups.find(x => x.lbl === lbl); if (!g) { g = { lbl, items: [] }; groups.push(g); } g.items.push(r); }
+            const meta = (r: ReportRow) => {
+              const t = typeOf(r);
+              const nm = (id?: string | null) => (id ? reportProfilesCache[id]?.name : "") || "";
+              if (t === "messaging") return { t, color: "#27ae60", bg: "rgba(39,174,96,0.12)", typeLabel: "Messagerie", actor: "Modération", title: `Conversation avec ${nm(r.reporter_id) || "un membre"}`, sub: r.status === "archived" ? "Discussion archivée" : "Discussion traitée", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e8449" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> };
+              if (t === "system") return { t, color: "#E67E22", bg: "rgba(230,126,34,0.14)", typeLabel: "Auto-modération", actor: "Système", title: `Auto-modération sur ${nm(r.reporter_id) || nm(r.reported_id) || "un membre"}`, sub: (r.reason || "").includes("CONTACT") ? "Tentative de partage de contact" : "Contenu modéré automatiquement", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> };
+              return { t, color: "#e74c3c", bg: "rgba(231,76,60,0.12)", typeLabel: "Signalement", actor: "Modération", title: `Signalement sur ${nm(r.reported_id) || "un profil"}`, sub: r.status === "rejected" ? "Signalement rejeté après examen" : r.status === "banned" ? "Profil banni après examen" : "Signalement traité", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> };
+            };
+            return (
+              <div>
+                {/* Barre recherche + filtres */}
+                <div style={{ background: G.blanc, borderRadius: 16, padding: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", marginBottom: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  <div style={{ flex: "1 1 220px", display: "flex", alignItems: "center", gap: 8, background: G.creme, borderRadius: 10, padding: "9px 12px", minWidth: 0 }}>
+                    <IcoSearch />
+                    <input value={archiveSearch} onChange={e => { setArchiveSearch(e.target.value); setArchivePage(1); }} placeholder="Rechercher dans les archives…" style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: "0.82rem", color: G.brun }} />
+                  </div>
+                  <select value={archiveTypeFilter} onChange={e => { setArchiveTypeFilter(e.target.value as any); setArchivePage(1); }} style={{ border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px", fontSize: "0.8rem", color: G.brun, background: "#fff", cursor: "pointer", fontWeight: 600 }}>
+                    <option value="all">Tous les types</option>
+                    <option value="messaging">Messagerie</option>
+                    <option value="system">Auto-modération</option>
+                    <option value="profile">Signalement</option>
+                  </select>
+                  <select value={archiveActionFilter} onChange={e => { setArchiveActionFilter(e.target.value as any); setArchivePage(1); }} style={{ border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px", fontSize: "0.8rem", color: G.brun, background: "#fff", cursor: "pointer", fontWeight: 600 }}>
+                    <option value="all">Toutes les actions</option>
+                    <option value="reviewed">Traité</option>
+                    <option value="rejected">Rejeté</option>
+                    <option value="banned">Banni</option>
+                    <option value="archived">Archivé</option>
+                  </select>
+                </div>
+
+                {/* Liste groupée par date */}
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "8px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  {list.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "36px 0" }}>
+                      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                      <p style={{ color: "#bbb", fontSize: "0.84rem" }}>Aucune archive ne correspond à ta recherche.</p>
+                    </div>
+                  ) : groups.map(grp => (
+                    <div key={grp.lbl}>
+                      <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#999", textTransform: "none", padding: "14px 0 8px" }}>{grp.lbl}</div>
+                      {grp.items.map(r => {
+                        const m = meta(r);
+                        const st = reportStatusStyle(r.status);
+                        const expanded = expandedArchived.has(r.id || "");
+                        const time = new Date(r.created_at || Date.now()).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                        return (
+                          <div key={r.id} style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 2px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                              <div style={{ width: 42, height: 42, borderRadius: "50%", background: m.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{m.icon}</div>
+                              <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+                                <div style={{ fontSize: "0.88rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</div>
+                                <div style={{ fontSize: "0.74rem", color: "#999" }}>{m.sub}</div>
+                              </div>
+                              <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
+                                <span style={{ background: m.bg, color: m.color, borderRadius: 50, padding: "3px 11px", fontSize: "0.68rem", fontWeight: 700 }}>{m.typeLabel}</span>
+                                <span style={{ background: st.bg, color: st.color, borderRadius: 50, padding: "3px 11px", fontSize: "0.68rem", fontWeight: 700 }}>{st.label}</span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, minWidth: 90 }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <div><div style={{ fontSize: "0.74rem", fontWeight: 700, color: "#666" }}>{m.actor}</div><div style={{ fontSize: "0.66rem", color: "#aaa" }}>{time}</div></div>
+                              </div>
+                              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                                <button onClick={() => toggleArchived(r.id || "")} style={{ display: "flex", alignItems: "center", gap: 5, border: `1px solid ${G.gris}`, background: "#fff", color: G.brun, borderRadius: 9, padding: "7px 11px", fontSize: "0.73rem", fontWeight: 700, cursor: "pointer" }}><IcoEye />Voir{expanded ? " moins" : " les détails"}</button>
+                                <button onClick={() => deleteOneArchivedReport(r.id)} title="Supprimer" style={{ border: `1px solid rgba(231,76,60,0.3)`, background: "rgba(231,76,60,0.06)", color: "#e74c3c", borderRadius: 9, padding: "7px 9px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                              </div>
+                            </div>
+                            {expanded && (
+                              <div style={{ marginTop: 10, background: G.creme, borderRadius: 12, padding: "12px 14px", fontSize: "0.78rem", color: "#555", lineHeight: 1.6 }}>
+                                <div style={{ fontWeight: 700, color: G.brun, marginBottom: 4 }}>Détail</div>
+                                <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{r.reason || "—"}</div>
+                                <div style={{ marginTop: 8, fontSize: "0.72rem", color: "#999" }}>Statut : {st.label} · {new Date(r.created_at || Date.now()).toLocaleString("fr-FR")}</div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {list.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, flexWrap: "wrap", gap: 10 }}>
+                    <div style={{ fontSize: "0.76rem", color: "#999" }}>Affichage de {(page - 1) * PER + 1} à {Math.min(page * PER, list.length)} sur {list.length} archive{list.length > 1 ? "s" : ""}</div>
+                    {totalPages > 1 && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <button onClick={() => setArchivePage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ border: `1px solid ${G.gris}`, background: "#fff", borderRadius: 9, padding: "7px 11px", cursor: page <= 1 ? "not-allowed" : "pointer", opacity: page <= 1 ? 0.5 : 1, color: G.brun }}>‹</button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1).map((n, idx, arr) => (
+                          <React.Fragment key={n}>
+                            {idx > 0 && n - arr[idx - 1] > 1 && <span style={{ color: "#bbb" }}>…</span>}
+                            <button onClick={() => setArchivePage(n)} style={{ border: `1px solid ${n === page ? G.rouge : G.gris}`, background: n === page ? G.rouge : "#fff", color: n === page ? "#fff" : G.brun, borderRadius: 9, padding: "7px 12px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", minWidth: 34 }}>{n}</button>
+                          </React.Fragment>
+                        ))}
+                        <button onClick={() => setArchivePage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ border: `1px solid ${G.gris}`, background: "#fff", borderRadius: 9, padding: "7px 11px", cursor: page >= totalPages ? "not-allowed" : "pointer", opacity: page >= totalPages ? 0.5 : 1, color: G.brun }}>›</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })() : (
           <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", maxWidth: effectiveFilter === "messaging" ? 760 : undefined, margin: effectiveFilter === "messaging" ? "0 auto" : undefined, width: effectiveFilter === "messaging" ? "100%" : undefined, boxSizing: "border-box" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
@@ -16850,6 +17139,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             )}
           </div>
+          )}
 
           {/* Info policy SQL - visible seulement hors archive, et seulement sur Signalements */}
           {activeTab === "reports" && reportFilter !== "archived" && (
@@ -16914,6 +17204,59 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               }
               {reportActionLoading === "bulk" ? "Suppression…" : `Tout supprimer (${archivedCount})`}
             </button>
+          )}
+          </div>
+          {(activeTab === "messagerie" && msgSubTab === "assistant") && (
+            <div style={{ flex: "1 1 360px", minWidth: 0 }}>
+              <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Modèles de réponse</div>
+                  <button onClick={() => setTemplateModal({ title: "", content: "", category: "Autre" })} style={{ display: "flex", alignItems: "center", gap: 6, background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "8px 13px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Créer un modèle</button>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: G.creme, borderRadius: 10, padding: "9px 12px", marginBottom: 10 }}>
+                  <IcoSearch />
+                  <input value={templateSearch} onChange={e => setTemplateSearch(e.target.value)} placeholder="Rechercher un modèle…" style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: "0.82rem", color: G.brun }} />
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                  {(["all", ...TEMPLATE_CATS]).map(c => {
+                    const active = templateCat === c;
+                    return <button key={c} onClick={() => setTemplateCat(c)} style={{ padding: "5px 11px", borderRadius: 999, border: `1.5px solid ${active ? G.rouge : G.gris}`, background: active ? "rgba(192,57,43,0.08)" : "#fff", color: active ? G.rouge : "#666", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{c === "all" ? `Tous (${supportTemplates.length})` : c}</button>;
+                  })}
+                </div>
+                {(() => {
+                  const q = templateSearch.trim().toLowerCase();
+                  const filtered = supportTemplates.filter(t => (templateCat === "all" || t.category === templateCat) && (!q || `${t.title} ${t.content}`.toLowerCase().includes(q)));
+                  if (filtered.length === 0) return <div style={{ textAlign: "center", color: "#bbb", fontSize: "0.82rem", padding: "26px 0" }}>Aucun modèle trouvé.</div>;
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {filtered.map(t => (
+                        <div key={t.id} style={{ position: "relative", border: `1px solid ${G.gris}`, borderRadius: 14, padding: 14 }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ display: "inline-block", background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "1px 9px", fontSize: "0.62rem", fontWeight: 800, marginBottom: 5 }}>{t.category}</div>
+                              <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun }}>{t.title}</div>
+                            </div>
+                            <button onClick={() => setTplMenu(tplMenu === t.id ? null : t.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#999", fontSize: "1.1rem", lineHeight: 1, padding: "0 4px", flexShrink: 0 }}>⋮</button>
+                          </div>
+                          {tplMenu === t.id && (
+                            <div style={{ position: "absolute", top: 36, right: 12, background: "#fff", borderRadius: 10, boxShadow: "0 6px 20px rgba(0,0,0,0.15)", border: `1px solid ${G.gris}`, zIndex: 5, overflow: "hidden", minWidth: 130 }}>
+                              <button onClick={() => { setTemplateModal({ id: t.id, title: t.title, content: t.content, category: t.category }); setTplMenu(null); }} style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "#fff", padding: "10px 14px", fontSize: "0.78rem", color: G.brun, cursor: "pointer" }}>✏️ Modifier</button>
+                              <button onClick={() => deleteTemplate(t.id)} style={{ display: "block", width: "100%", textAlign: "left", border: "none", borderTop: `1px solid ${G.gris}`, background: "#fff", padding: "10px 14px", fontSize: "0.78rem", color: "#e74c3c", cursor: "pointer" }}>🗑 Supprimer</button>
+                            </div>
+                          )}
+                          <div style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, margin: "6px 0 12px", whiteSpace: "pre-wrap" }}>{t.content}</div>
+                          <button onClick={() => copyTemplate(t.content)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${G.gris}`, background: "#fff", color: G.brun, borderRadius: 9, padding: "7px 13px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copier</button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+                <div style={{ background: "rgba(192,57,43,0.05)", borderRadius: 12, padding: "10px 13px", marginTop: 14, fontSize: "0.72rem", color: G.rouge, display: "flex", alignItems: "center", gap: 7 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  Utilisez les modèles pour répondre plus rapidement et garder une communication cohérente.
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}
