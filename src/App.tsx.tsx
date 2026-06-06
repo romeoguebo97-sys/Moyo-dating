@@ -18,7 +18,7 @@ const RELIGIONS = [
 ];
 const CONTACT_PATTERNS = [
   // ── Détection automatique ──
-  /(\+?[\d][\s\-.]?){8,}/,                                   // suites de 8 chiffres ou plus (avec/sans séparateurs)
+  /(?:\+?\d[\s.\-]*){7,}/,                                   // suite de 7+ chiffres même très espacés (0 6 6 8 9 3 5 1 9) — anti-contournement
   /(?:\+|\b00)\d{2,3}/,                                       // indicatifs internationaux : +33 +242 +243 +225 +221 +237, 0033…
   /\b0[67]\b/,                                                // préfixes mobiles 06 / 07
   /[\w.-]+@[\w.-]+\.\w+/,                                     // adresses e-mail
@@ -352,7 +352,7 @@ type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number };
+type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null };
 type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -2648,11 +2648,71 @@ function AuthLayout({ children, onBack }: { children: React.ReactNode; onBack: (
   </div>;
 }
 
+// Écran de bannissement : message permanent OU décompte pour un bannissement temporaire.
+function BanScreen({ until, onExpire, onBack }: { until?: string | null; onExpire?: () => void; onBack?: () => void }) {
+  const target = until ? new Date(until).getTime() : 0;
+  const [remaining, setRemaining] = React.useState(() => Math.max(0, target - Date.now()));
+  React.useEffect(() => {
+    if (!until) return;
+    const tick = () => {
+      const r = Math.max(0, target - Date.now());
+      setRemaining(r);
+      if (r <= 0 && onExpire) onExpire();
+    };
+    tick();
+    const i = setInterval(tick, 1000);
+    return () => clearInterval(i);
+  }, [until, target, onExpire]);
+  const isTemp = !!until;
+  const expired = isTemp && remaining <= 0;
+  const h = Math.floor(remaining / 3600000);
+  const m = Math.floor((remaining % 3600000) / 60000);
+  const s = Math.floor((remaining % 60000) / 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: `linear-gradient(160deg, ${G.rouge}, ${G.rougeDark})` }}>
+      <div style={{ background: "#fff", borderRadius: 24, maxWidth: 420, width: "100%", padding: "32px 26px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ width: 70, height: 70, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        </div>
+        <h2 style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, margin: "0 0 10px" }}>Accès suspendu</h2>
+        {isTemp ? (
+          expired ? (
+            <>
+              <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ta suspension est terminée. Tu peux te reconnecter.</p>
+              <button onClick={onExpire} style={{ width: "100%", background: G.vert, color: "#fff", border: "none", borderRadius: 14, padding: "14px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer" }}>Me reconnecter</button>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Tu as enfreint nos règles d'utilisation. Ton compte est temporairement bloqué. Tu pourras te reconnecter automatiquement à la fin du décompte.</p>
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 8 }}>
+                {[[h, "h"], [m, "min"], [s, "s"]].map(([v, lbl], i) => (
+                  <div key={i} style={{ background: "rgba(192,57,43,0.08)", borderRadius: 14, padding: "12px 14px", minWidth: 64 }}>
+                    <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.rouge, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{pad(v as number)}</div>
+                    <div style={{ fontSize: "0.66rem", color: "#999", marginTop: 4 }}>{lbl as string}</div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: "0.74rem", color: "#aaa", marginTop: 14 }}>Reconnexion possible automatiquement à la fin du décompte.</p>
+            </>
+          )
+        ) : (
+          <>
+            <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à {CONTACT_EMAIL} ou sur WhatsApp au {formatWhatsApp(CONTACT_WHATSAPP)}.</p>
+            {onBack && <button onClick={onBack} style={{ width: "100%", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Retour à l'accueil</button>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth) => void }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [tempBanUntil, setTempBanUntil] = useState<string | null>(null);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
@@ -2688,6 +2748,16 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         await sb.signOut(res.access_token);
         setErrorMsg(`Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à ${CONTACT_EMAIL} ou sur WhatsApp au ${formatWhatsApp(CONTACT_WHATSAPP)}`);
         setLoading(false); return;
+      }
+      const banUntil = (profiles[0] as any).ban_until as string | null | undefined;
+      if (banUntil && new Date(banUntil).getTime() > Date.now()) {
+        await sb.signOut(res.access_token);
+        setTempBanUntil(banUntil);
+        setLoading(false); return;
+      }
+      if (banUntil && new Date(banUntil).getTime() <= Date.now()) {
+        // Bannissement temporaire expiré → nettoyage et accès rétabli
+        try { await sb.update(res.access_token, "profiles", res.user.id, { ban_until: null, is_visible: true }); } catch {}
       }
 
       // ── Vérifier si le profil est incomplet (pas de photo) ──
@@ -2727,6 +2797,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     setForgotSent(true);
   };
 
+  if (tempBanUntil) return <BanScreen until={tempBanUntil} onExpire={() => setTempBanUntil(null)} />;
   if (showForgot) return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 24 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2></div>{forgotSent ? <div style={{ textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><p style={{ color: "#555", fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p><Btn variant="ghost" onClick={() => { setShowForgot(false); setForgotSent(false); }}>← Retour à la connexion</Btn></div> : <><Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" /><Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowForgot(false)} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div></>}</AuthLayout>;
 
   return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
@@ -11964,6 +12035,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     is_admin?: boolean;
     is_verified?: boolean;
     is_banned?: boolean;
+    ban_until?: string | null;
     is_visible?: boolean;
     created_at?: string;
     last_seen?: string;
@@ -13516,6 +13588,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [toast, setToast] = useState<ToastState>(null);
   const [confirmModal, setConfirmModal] = useState<{ msg: string; onConfirm: () => void } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // userId en cours
+  const [banModal, setBanModal] = useState<AdminProfile | null>(null);
+  const [banHours, setBanHours] = useState("24");
   const [showHelp, setShowHelp] = useState(false);
 
   // ── Utilitaires ──
@@ -14710,6 +14784,51 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {banModal && (() => {
+        const u = banModal;
+        const close = () => setBanModal(null);
+        const doBan = (updates: Partial<AdminProfile>, msg: string) => { close(); adminAction(u.id, updates, msg); };
+        const hours = Math.max(1, parseInt(banHours) || 0);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 22, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" }}>
+              <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Bannir {u.name}</div>
+                <button onClick={close} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
+              </div>
+              <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Option 1 : définitif */}
+                <button onClick={() => doBan({ is_banned: true, is_visible: false }, `${u.name} a été banni(e) définitivement.`)} style={{ textAlign: "left", border: `1.5px solid ${G.gris}`, background: "#fff", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ fontSize: "1.3rem" }}>🚫</span>
+                  <span><span style={{ fontWeight: 800, color: G.brun, fontSize: "0.92rem" }}>Bannissement définitif</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>Accès bloqué jusqu'à ce qu'un admin le débannisse. Le compte est conservé.</span></span>
+                </button>
+                {/* Option 2 : éjection immédiate */}
+                <button onClick={() => doBan({ is_banned: true, is_visible: false }, `${u.name} a été éjecté(e) immédiatement.`)} style={{ textAlign: "left", border: `1.5px solid rgba(231,76,60,0.4)`, background: "rgba(231,76,60,0.04)", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ fontSize: "1.3rem" }}>⚡</span>
+                  <span><span style={{ fontWeight: 800, color: "#c0392b", fontSize: "0.92rem" }}>Éjection immédiate</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>La session active est coupée sur-le-champ : la personne est renvoyée à l'accueil et ne peut plus se reconnecter.</span></span>
+                </button>
+                {/* Option 3 : temporaire */}
+                <div style={{ border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: 14 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
+                    <span style={{ fontSize: "1.3rem" }}>⏳</span>
+                    <span><span style={{ fontWeight: 800, color: G.brun, fontSize: "0.92rem" }}>Bannissement temporaire</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>Bloqué pendant une durée définie, avec décompte affiché. Reconnexion automatique à la fin.</span></span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
+                    <input type="number" min={1} value={banHours} onChange={e => setBanHours(e.target.value)} style={{ width: 90, boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 11px", fontSize: "0.86rem", outline: "none" }} />
+                    <span style={{ fontSize: "0.82rem", color: "#666" }}>heure(s)</span>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                      {[1, 6, 24, 72, 168].map(h => (
+                        <button key={h} onClick={() => setBanHours(String(h))} style={{ border: `1px solid ${G.gris}`, background: parseInt(banHours) === h ? "rgba(192,57,43,0.1)" : "#fff", color: parseInt(banHours) === h ? G.rouge : "#777", borderRadius: 8, padding: "5px 9px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}>{h >= 24 ? `${h / 24}j` : `${h}h`}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={() => doBan({ is_banned: false, is_visible: false, ban_until: new Date(Date.now() + hours * 3600000).toISOString() }, `${u.name} a été banni(e) pour ${hours}h.`)} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.86rem", fontWeight: 800, cursor: "pointer" }}>Bannir pour {hours}h</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {warnModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
@@ -15865,8 +15984,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
                           <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
                           {!u.is_banned
-                            ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Bannir ${u.name} ?`, () => adminAction(u.id, { is_banned: true, is_visible: false }, `${u.name} a été banni(e).`)); }} />
-                            : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true }, `${u.name} a été débanni(e).`)); }} />
+                            ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setBanModal(u); setBanHours("24"); }} />
+                            : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
                           }
                           <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
                           <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
@@ -16016,11 +16135,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             onClick={() => {
                               if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }
                               if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
-                              confirm(`Bannir ${u.name} ? Il/elle ne pourra plus accéder à l'application.`, () => adminAction(u.id, { is_banned: true, is_visible: false }, `${u.name} a été banni(e).`));
+                              setBanModal(u); setBanHours("24");
                             }} />
                         ) : (
                           <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate}
-                            onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true }, `${u.name} a été débanni(e).`)); }} />
+                            onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
                         )}
                         <ActionBtn label="Supprimer" color="#c0392b" disabled={isLoading || cannotModerate}
                           onClick={() => {
@@ -18280,6 +18399,7 @@ export default function App() {
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [userGender, setUserGender] = useState<string>("");
+  const [selfBan, setSelfBan] = useState<{ until: string | null } | null>(null);
   const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2" } | null>(null);
   const [proposalResponding, setProposalResponding] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -18626,6 +18746,29 @@ export default function App() {
     const interval = setInterval(checkBroadcast, POLL_BROADCAST_MS);
     return () => clearInterval(interval);
   }, [auth?.userId, userGender]);
+
+  // ── Éjection en direct : déconnecte immédiatement une session active si le compte est banni ──
+  useEffect(() => {
+    if (!auth?.userId) return;
+    const checkBan = async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=is_banned,ban_until`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        if (!r.ok) return;
+        const d = await r.json().catch(() => []);
+        const p = Array.isArray(d) ? d[0] : null;
+        if (!p) return;
+        const tempActive = p.ban_until && new Date(p.ban_until).getTime() > Date.now();
+        if (p.is_banned || tempActive) {
+          setSelfBan({ until: p.is_banned ? null : p.ban_until });
+          setAuth(null);
+          try { localStorage.removeItem("moyo_session"); } catch {}
+        }
+      } catch {}
+    };
+    checkBan();
+    const i = setInterval(checkBan, 20000);
+    return () => clearInterval(i);
+  }, [auth?.userId]);
 
   // ── Vérifier expiration Premium au login ──
   // Ne jamais retirer le Premium à vie (premium_until >= 2090)
@@ -19059,6 +19202,9 @@ export default function App() {
   ) : null;
 
   if (!sessionLoaded) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: G.blanc }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>;
+
+  // ── Écran de bannissement (éjection en direct) : prioritaire sur tout le reste ──
+  if (selfBan) return <BanScreen until={selfBan.until} onExpire={() => { setSelfBan(null); setPage("login"); }} onBack={() => { setSelfBan(null); setPage("landing"); }} />;
 
   // ── Mode Admin Desktop : ?admin=1 dans l'URL ──
   if (new URLSearchParams(window.location.search).get("admin") === "1") {
