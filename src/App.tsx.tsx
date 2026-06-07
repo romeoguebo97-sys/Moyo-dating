@@ -13440,6 +13440,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       default: return base;
     }
   };
+    const [mktTab, setMktTab] = useState<"statuts" | "features" | "event">("statuts");
   const campTargetLabel = (t: string) => CAMP_TARGETS.find(x => x.key === t)?.label || "Tous les utilisateurs gratuits";
   const campName = (t: string) => ({ all: "Premium pour tous", femmes: "Premium spécial femmes", hommes: "Premium spécial hommes", nouveaux: "Bienvenue nouveaux inscrits", inactifs: "Campagne de réengagement", actifs: "Premium membres actifs", verifies: "Premium comptes vérifiés" } as Record<string, string>)[t] || "Campagne Premium";
   useEffect(() => {
@@ -13562,7 +13563,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Statuts officiels Moyo (publiés depuis l'onglet Marketing) ──
   const [officialStatuses, setOfficialStatuses] = useState<(StatusPost & { _views?: number; _replies?: number })[]>([]);
   const [confirmDeleteStatus, setConfirmDeleteStatus] = useState<StatusPost | null>(null);
-  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event">("statuts");
+  
   const [mktShowAll, setMktShowAll] = useState(false);
   const [featureRequests, setFeatureRequests] = useState<Array<{ id: string; user_id: string; gender?: string; status: string; created_at: string; profile?: any; _usedThisMonth?: number }>>([]);
   const [featureStatuses, setFeatureStatuses] = useState<Array<StatusPost & { profile?: any; _views?: number; _replies?: number; _likes?: number }>>([]);
