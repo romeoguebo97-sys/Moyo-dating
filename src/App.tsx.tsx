@@ -14,7 +14,8 @@ const VILLES = [
 
 const RELIGIONS = [
   "Chrétien(ne)", "Catholique", "Protestant(e)", "Évangélique",
-  "Croyant du message", "Musulman(e)", "Autre", "Non pratiquant(e)",
+  "Kimbanguiste", "Témoin de Jéhovah", "Croyant du message", "Musulman(e)",
+  "Brahnamiste", "Autre", "Athée", "Non pratiquant(e)",
 ];
 const CONTACT_PATTERNS = [
   // ── Détection automatique ──
@@ -10009,15 +10010,15 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
 
   return (
     <>
-      <div onClick={() => { setSent(false); setShowModal(true); }} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.3)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 10 }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+      <div onClick={() => { setSent(false); setShowModal(true); }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(230,126,34,0.2)", marginBottom: 10 }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
-          <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.88)", lineHeight: 1.4 }}>Boostez votre visibilité pendant 24h</div>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a", marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
+          <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Boostez votre visibilité pendant 24h</div>
         </div>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
 
       {errorModal && (
@@ -10083,15 +10084,15 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
   const [errorModal, setErrorModal] = useState<string | null>(null);
   return (
     <>
-      <div onClick={() => setShowModal(true)} style={{ background: `linear-gradient(135deg,${G.rouge} 0%,${G.rougeDark} 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(192,57,43,0.3)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 10 }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <div onClick={() => setShowModal(true)} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(192,57,43,0.18)", marginBottom: 10 }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Demander une mise en relation</div>
-          <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>Notre équipe trouve la personne qui vous correspond</div>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a", marginBottom: 3 }}>Demander une mise en relation</div>
+          <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Notre équipe trouve la personne qui vous correspond</div>
         </div>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
       {/* ── Modal erreur même genre ── */}
       {errorModal && (
@@ -10968,15 +10969,15 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           } else {
             window.open(`https://wa.me/?text=${msg}`, "_blank");
           }
-        }} style={{ background: `linear-gradient(135deg,${G.vert} 0%,#0f3d25 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(26,92,58,0.35)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)" }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(26,92,58,0.2)" }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Parrainer un ami</div>
-            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.or }}>7 jours Premium offerts</span> pour chaque ami qui s'abonne</div>
+            <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a", marginBottom: 3 }}>Parrainer un ami</div>
+            <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.vert }}>7 jours Premium offerts</span> pour chaque ami qui s'abonne</div>
           </div>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </div>}
         {/* Email de connexion + Vérification */}
         {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, borderRadius: 18, border: emailVerified ? "1.5px solid rgba(39,174,96,0.3)" : "1.5px solid rgba(192,57,43,0.2)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden" }}>
