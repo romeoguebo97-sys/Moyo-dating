@@ -14,7 +14,7 @@ const VILLES = [
 
 const RELIGIONS = [
   "Chrétien(ne)", "Catholique", "Protestant(e)", "Évangélique",
-  "Kimbanguiste", "Témoin de Jéhovah", "Croyant du message", "Musulman(e)",
+  "Kimbanguiste", "Témoin de Jéhovah", "Croyant(e) du message", "Musulman(e)",
   "Brahnamiste", "Autre", "Athée", "Non pratiquant(e)",
 ];
 const CONTACT_PATTERNS = [
@@ -809,6 +809,16 @@ const GLOBAL_CSS = `
     background-size: 200px 200px;
   }
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  @keyframes shimmer{0%{background-position:-450px 0}100%{background-position:450px 0}}
+  .skeleton{background:#e7e4dd;background-image:linear-gradient(90deg,rgba(255,255,255,0) 0,rgba(255,255,255,0.7) 50%,rgba(255,255,255,0) 100%);background-size:450px 100%;background-repeat:no-repeat;animation:shimmer 1.25s ease-in-out infinite;border-radius:10px}
+  button{transition:transform .12s cubic-bezier(.34,1.56,.64,1)}
+  button:active{transform:scale(.95)}
+  .tap{transition:transform .14s cubic-bezier(.34,1.56,.64,1)}
+  .tap:active{transform:scale(.97)}
+  .card-hover:active{transform:scale(.985)}
+  @keyframes pageIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+  .page-anim{animation:pageIn .26s cubic-bezier(.22,.61,.36,1)}
+  @media(prefers-reduced-motion:reduce){.skeleton{animation:none}.page-anim{animation:none}button:active,.tap:active,.card-hover:active{transform:none}}
   /* ── Chat textarea : comportement naturel iOS/Android ── */
   .chat-textarea {
     -webkit-appearance: none;
@@ -5625,6 +5635,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   };
 
   const handleLike = useCallback(async (p: Profile) => {
+    try { (navigator as any).vibrate?.(15); } catch {}
     if (myGender && p.gender && myGender === p.gender) {
       try {
         const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
@@ -5741,7 +5752,27 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     if (!profiles.length) return [];
     return [...profiles];
   }, [profiles]);
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
+  if (loading) return (
+    <div style={{ padding: isWide ? 16 : "14px 16px 8px", maxWidth: 520, margin: "0 auto" }}>
+      <div style={{ background: G.blanc, borderRadius: 22, overflow: "hidden", boxShadow: "0 8px 36px rgba(44,26,14,0.10)" }}>
+        <div className="skeleton" style={{ width: "100%", height: "min(65vw, 320px)", borderRadius: 0 }} />
+        <div style={{ padding: "16px 16px 18px" }}>
+          <div className="skeleton" style={{ width: "60%", height: 18, marginBottom: 12 }} />
+          <div className="skeleton" style={{ width: "40%", height: 13, marginBottom: 18 }} />
+          <div style={{ display: "flex", gap: 8 }}>
+            <div className="skeleton" style={{ width: 80, height: 26, borderRadius: 50 }} />
+            <div className="skeleton" style={{ width: 64, height: 26, borderRadius: 50 }} />
+            <div className="skeleton" style={{ width: 72, height: 26, borderRadius: 50 }} />
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 22, marginTop: 22 }}>
+        <div className="skeleton" style={{ width: 58, height: 58, borderRadius: "50%" }} />
+        <div className="skeleton" style={{ width: 70, height: 70, borderRadius: "50%" }} />
+        <div className="skeleton" style={{ width: 58, height: 58, borderRadius: "50%" }} />
+      </div>
+    </div>
+  );
 
   return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
@@ -6692,11 +6723,17 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
 
   // ── Spinner ──
   const Spinner = () => (
-    <div style={{ textAlign: "center", padding: 44 }}>
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5"
-        strokeLinecap="round" style={{ animation: "pulse 0.9s ease-in-out infinite" }}>
-        <circle cx="12" cy="12" r="10"/>
-      </svg>
+    <div style={{ padding: "6px 2px" }}>
+      {[0, 1, 2, 3, 4].map(i => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0" }}>
+          <div className="skeleton" style={{ width: 54, height: 54, borderRadius: "50%", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div className="skeleton" style={{ width: "55%", height: 13, marginBottom: 8 }} />
+            <div className="skeleton" style={{ width: "35%", height: 11 }} />
+          </div>
+          <div className="skeleton" style={{ width: 64, height: 30, borderRadius: 50, flexShrink: 0 }} />
+        </div>
+      ))}
     </div>
   );
 
@@ -7539,6 +7576,32 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [partnerActionLoading, setPartnerActionLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  // Défilement vers le message cité (clic sur la citation)
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
+  const scrollToQuoted = (who: string, quoted: string, currentId?: string) => {
+    const wantMine = who === "Toi" || who === "Vous";
+    const q = (quoted || "").replace(/\[↩[^\]]*\]\s*/g, "").trim().toLowerCase().slice(0, 40);
+    const idx = currentId ? msgs.findIndex(x => x.id === currentId) : msgs.length;
+    const start = idx >= 0 ? idx - 1 : msgs.length - 1;
+    let target: Message | null = null;
+    for (let i = start; i >= 0; i--) {
+      const mm = msgs[i]; if (!mm) continue;
+      const mine = mm.sender_id === auth.userId;
+      if (wantMine !== mine) continue;
+      let body = mm.content.replace(/^\[↩ .+? : [\s\S]+?\]\n/, "");
+      if (quoted === "Photo") { if (body.startsWith("[img]")) { target = mm; break; } continue; }
+      const b = body.trim().toLowerCase();
+      if (q && (b.startsWith(q) || b.includes(q))) { target = mm; break; }
+    }
+    if (!target) return;
+    const el = msgRefs.current[target.id];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMsgId(target.id);
+      setTimeout(() => setHighlightedMsgId(h => h === target!.id ? null : h), 1600);
+    }
+  };
   // Geste "glisser pour répondre" (façon WhatsApp)
   const swipeRef = useRef<{ x: number; y: number; el: HTMLElement | null; active: boolean } | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
@@ -8283,6 +8346,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
 
   const send = useCallback(async () => {
     if (!text.trim() || !open) return;
+    try { (navigator as any).vibrate?.(12); } catch {}
     // ── Mode édition : on met à jour le message existant au lieu d'en créer un nouveau ──
     if (editingMsg && editingMsg.id) {
       const msgId = editingMsg.id;
@@ -8873,7 +8937,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           };
           const handleLongPressEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
           return (
-            <div key={i} className="msg-row"
+            <div key={i} className="msg-row" ref={el => { msgRefs.current[m.id] = el; }}
               onTouchStart={(e) => { const t = e.touches[0]; swipeRef.current = { x: t.clientX, y: t.clientY, el: e.currentTarget as HTMLElement, active: false }; }}
               onTouchMove={(e) => {
                 const s = swipeRef.current; if (!s || !s.el) return;
@@ -8896,7 +8960,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 const dx = ((e.changedTouches[0]?.clientX) ?? s.x) - s.x;
                 if (s.active && dx > 48) { setReplyTo(m); try { (navigator as any).vibrate?.(15); } catch {} }
               }}
-              style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0 }}>
+              style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: reactionEntries.length > 0 ? 18 : 0, transition: "background 0.4s ease", background: highlightedMsgId === m.id ? "rgba(212,168,67,0.22)" : "transparent", borderRadius: 14, padding: highlightedMsgId === m.id ? "4px 6px" : 0 }}>
               {isImg ? (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", width: "100%", justifyContent: isMine ? "flex-start" : "flex-start" }}>
                   <div
@@ -9019,7 +9083,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                             .substring(0, 80);
                           const isPhoto = cleanQuoted === "Photo";
                           return <>
-                            <div style={{ background: isMine ? "rgba(0,0,0,0.18)" : "rgba(192,57,43,0.07)", borderRadius: 8, marginBottom: 6, overflow: "hidden", display: "flex" }}>
+                            <div onClick={(e) => { e.stopPropagation(); scrollToQuoted(who, cleanQuoted, m.id); }} title="Aller au message" style={{ background: isMine ? "rgba(0,0,0,0.18)" : "rgba(192,57,43,0.07)", borderRadius: 8, marginBottom: 6, overflow: "hidden", display: "flex", cursor: "pointer" }}>
                               {/* Barre colorée gauche */}
                               <div style={{ width: 3, flexShrink: 0, background: isMine ? "rgba(255,255,255,0.6)" : G.rouge }} />
                               {/* Texte cité */}
@@ -13342,6 +13406,86 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     }
   };
   const [warnCustom, setWarnCustom] = useState("");
+  // ── CAMPAGNES PREMIUM (ciblage) ──
+  const CAMP_TARGETS: { key: string; label: string; badge?: string }[] = [
+    { key: "all", label: "Tous les utilisateurs gratuits", badge: "Recommandé" },
+    { key: "femmes", label: "Femmes uniquement" },
+    { key: "hommes", label: "Hommes uniquement" },
+    { key: "nouveaux", label: "Nouveaux inscrits (moins de 30 jours)" },
+    { key: "inactifs", label: "Utilisateurs inactifs depuis 30 jours" },
+    { key: "actifs", label: "Utilisateurs actifs cette semaine" },
+    { key: "verifies", label: "Comptes vérifiés" },
+  ];
+  const [campTarget, setCampTarget] = useState("all");
+  const [campDays, setCampDays] = useState(7);
+  const [campEndDate, setCampEndDate] = useState("");
+  const [campMessage, setCampMessage] = useState("");
+  const [campCount, setCampCount] = useState<number | null>(null);
+  const [campCountLoading, setCampCountLoading] = useState(false);
+  const [campLaunching, setCampLaunching] = useState(false);
+  const [campConfirm, setCampConfirm] = useState(false);
+  const [campaignsHistory, setCampaignsHistory] = useState<any[]>([]);
+  const [campShowAll, setCampShowAll] = useState(false);
+  const campFilter = (t: string) => {
+    const d30 = new Date(Date.now() - 30 * 86400000).toISOString();
+    const d7 = new Date(Date.now() - 7 * 86400000).toISOString();
+    const base = "is_premium=eq.false";
+    switch (t) {
+      case "femmes": return `${base}&gender=eq.Femme`;
+      case "hommes": return `${base}&gender=eq.Homme`;
+      case "nouveaux": return `${base}&created_at=gte.${d30}`;
+      case "inactifs": return `${base}&last_seen=lt.${d30}`;
+      case "actifs": return `${base}&last_seen=gte.${d7}`;
+      case "verifies": return `${base}&is_verified=eq.true`;
+      default: return base;
+    }
+  };
+  const campTargetLabel = (t: string) => CAMP_TARGETS.find(x => x.key === t)?.label || "Tous les utilisateurs gratuits";
+  const campName = (t: string) => ({ all: "Premium pour tous", femmes: "Premium spécial femmes", hommes: "Premium spécial hommes", nouveaux: "Bienvenue nouveaux inscrits", inactifs: "Campagne de réengagement", actifs: "Premium membres actifs", verifies: "Premium comptes vérifiés" } as Record<string, string>)[t] || "Campagne Premium";
+  useEffect(() => {
+    if (activeTab !== "marketing" || mktTab !== "event") return;
+    let cancelled = false;
+    setCampCountLoading(true);
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${campFilter(campTarget)}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
+        const cr = r.headers.get("content-range"); const total = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0;
+        if (!cancelled) setCampCount(isNaN(total) ? 0 : total);
+      } catch { if (!cancelled) setCampCount(null); }
+      finally { if (!cancelled) setCampCountLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [campTarget, activeTab, mktTab]);
+  const loadCampaigns = async () => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_campaigns&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => []);
+      if (Array.isArray(d) && d[0]?.value) { const p = JSON.parse(d[0].value); if (Array.isArray(p)) setCampaignsHistory(p); }
+    } catch {}
+  };
+  useEffect(() => { if (auth) loadCampaigns(); }, [auth]);
+  const launchCampaign = async () => {
+    if (!campEndDate) { showToast("Choisis une date de fin.", "error"); return; }
+    setCampLaunching(true); setCampConfirm(false);
+    try {
+      const endISO = new Date(campEndDate).toISOString();
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?${campFilter(campTarget)}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_premium: true }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: "true" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_expires_at`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: endISO }) });
+      setPremiumEventActive(true);
+      const rec = { id: `c_${Date.now()}`, name: campName(campTarget), sub: campMessage.trim() ? campMessage.trim().slice(0, 60) : `${campDays} jours offerts`, target: campTarget, targetLabel: campTargetLabel(campTarget), days: campDays, beneficiaries: campCount || 0, start: new Date().toISOString(), end: endISO, message: campMessage.trim() };
+      const next = [rec, ...campaignsHistory].slice(0, 50);
+      setCampaignsHistory(next);
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates" }, body: JSON.stringify({ key: "premium_campaigns", value: JSON.stringify(next) }) });
+      if (campMessage.trim()) {
+        const genderPart = campTarget === "femmes" ? "femmes" : campTarget === "hommes" ? "hommes" : "all";
+        await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ message: campMessage.trim(), created_by: auth.userId, expires_at: endISO, target: `${genderPart}|all` }) });
+      }
+      showToast(`Campagne lancée : ${campCount || 0} bénéficiaires.`, "success");
+      setCampMessage("");
+    } catch { showToast("Erreur lors du lancement de la campagne.", "error"); }
+    finally { setCampLaunching(false); }
+  };
   const [warnLoading, setWarnLoading] = useState(false);
 
   // ── Stats ──
@@ -17266,7 +17410,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Événement Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>]] as [("statuts" | "features" | "event"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>]] as [("statuts" | "features" | "event"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}</button>
             ))}
           </div>
@@ -17497,24 +17641,133 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             </>
           )}
 
-          {mktTab === "event" && (
-            <div style={{ maxWidth: 620, margin: "0 auto", background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(212,168,67,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Événement Premium</div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 3, background: premiumEventActive ? "rgba(39,174,96,0.12)" : G.creme, color: premiumEventActive ? "#1e8449" : "#999", borderRadius: 50, padding: "2px 10px", fontSize: "0.7rem", fontWeight: 800 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: premiumEventActive ? "#27ae60" : "#bbb" }} />
-                    {premiumEventActive ? "Actif actuellement" : "Inactif"}
+          {mktTab === "event" && (() => {
+            const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+            const visibleCamps = campShowAll ? campaignsHistory : campaignsHistory.slice(0, 3);
+            return (
+              <div>
+                {premiumEventActive && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.3)", borderRadius: 14, padding: "12px 16px", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", fontWeight: 700, color: "#1e8449" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60" }} />Une campagne Premium est actuellement active.</div>
+                    <button onClick={() => setPremiumEventConfirm(true)} disabled={premiumEventLoading} style={{ background: "#fff", color: "#c0392b", border: "1px solid rgba(192,57,43,0.3)", borderRadius: 9, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}>{premiumEventLoading ? "…" : "Arrêter la campagne"}</button>
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+                  {/* ── Formulaire ── */}
+                  <div style={{ flex: "1.4 1 460px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 22, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                      <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(212,168,67,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: "1.15rem", color: G.brun }}>Créer une campagne Premium</div>
+                        <div style={{ fontSize: "0.8rem", color: "#888" }}>Offrez le Premium gratuitement à des utilisateurs ciblés pour un événement spécial.</div>
+                      </div>
+                    </div>
+
+                    <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>1. Cible de la campagne</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
+                      {CAMP_TARGETS.map(t => {
+                        const active = campTarget === t.key;
+                        return (
+                          <div key={t.key} onClick={() => setCampTarget(t.key)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 13px", borderRadius: 11, border: `1.5px solid ${active ? "#E67E22" : G.gris}`, background: active ? "rgba(230,126,34,0.06)" : "#fff", cursor: "pointer" }}>
+                            <span style={{ width: 17, height: 17, borderRadius: "50%", border: `2px solid ${active ? "#E67E22" : "#ccc"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{active && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#E67E22" }} />}</span>
+                            <span style={{ flex: 1, fontSize: "0.84rem", fontWeight: active ? 700 : 500, color: G.brun }}>{t.label}</span>
+                            {t.badge && <span style={{ background: "rgba(39,174,96,0.12)", color: "#1e8449", borderRadius: 50, padding: "2px 9px", fontSize: "0.64rem", fontWeight: 800 }}>{t.badge}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>2. Durée du Premium offert</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+                      {[1, 3, 7, 15, 30].map(d => (
+                        <button key={d} onClick={() => setCampDays(d)} style={{ flex: "1 1 auto", padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${campDays === d ? "#E67E22" : G.gris}`, background: campDays === d ? "#E67E22" : "#fff", color: campDays === d ? "#fff" : "#555", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}>{d} jour{d > 1 ? "s" : ""}</button>
+                      ))}
+                    </div>
+
+                    <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>3. Date de fin de la campagne</div>
+                    <input type="date" value={campEndDate} onChange={e => setCampEndDate(e.target.value)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 13px", fontSize: "0.86rem", outline: "none", color: G.brun }} />
+                    <div style={{ fontSize: "0.72rem", color: "#999", margin: "6px 0 20px" }}>À la date sélectionnée, le Premium sera retiré automatiquement.</div>
+
+                    <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>4. Message affiché aux bénéficiaires <span style={{ color: "#aaa", fontWeight: 500 }}>(optionnel)</span></div>
+                    <textarea value={campMessage} onChange={e => setCampMessage(e.target.value.slice(0, 200))} rows={3} placeholder="🎉 Moyo vous offre le Premium pour célébrer un événement. Profitez-en !" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 13px", fontSize: "0.84rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
+                    <div style={{ textAlign: "right", fontSize: "0.7rem", color: "#aaa", marginTop: 4 }}>{campMessage.length}/200</div>
+
+                    <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18 }}>
+                      <button onClick={() => { setCampMessage(""); setCampEndDate(""); setCampTarget("all"); setCampDays(7); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 11, padding: "12px 22px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Réinitialiser</button>
+                      <button onClick={() => { if (!campEndDate) { showToast("Choisis une date de fin.", "error"); return; } setCampConfirm(true); }} disabled={campLaunching} style={{ background: campLaunching ? "rgba(230,126,34,0.5)" : "#E67E22", color: "#fff", border: "none", borderRadius: 11, padding: "12px 22px", fontSize: "0.84rem", fontWeight: 800, cursor: campLaunching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 7, boxShadow: "0 6px 16px rgba(230,126,34,0.3)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>{campLaunching ? "Lancement…" : "Lancer la campagne"}</button>
+                    </div>
+                  </div>
+
+                  {/* ── Panneau résumé ── */}
+                  <div style={{ flex: "1 1 300px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                    <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, marginBottom: 14 }}>Aperçu de la campagne</div>
+                    <div style={{ background: "linear-gradient(135deg,#8e7cc3,#b8a4e0)", borderRadius: 14, padding: 16, color: "#fff", marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M2 19h20l-2-7-4 3-4-7-4 7-4-3z"/></svg></div>
+                        <div><div style={{ fontWeight: 800, fontSize: "1.02rem" }}>Premium offert {campDays} jours</div><div style={{ fontSize: "0.74rem", opacity: 0.85 }}>{campName(campTarget)}</div></div>
+                      </div>
+                    </div>
+                    {[["Cible", campTargetLabel(campTarget)], ["Durée", `${campDays} jours`], ["Date de fin", campEndDate ? fmtDate(new Date(campEndDate).toISOString()) : "—"], ["Utilisateurs concernés", campCountLoading ? "…" : campCount === null ? "—" : `${campCount.toLocaleString("fr-FR")} utilisateurs`]].map(([k, v], i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "9px 0", borderBottom: i < 3 ? `1px solid ${G.creme}` : "none" }}>
+                        <span style={{ fontSize: "0.78rem", color: "#999" }}>{k}</span>
+                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, textAlign: "right" }}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{ background: "rgba(230,126,34,0.08)", borderRadius: 12, padding: "12px 14px", marginTop: 14, display: "flex", gap: 9 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                      <div style={{ fontSize: "0.74rem", color: "#9a5a1a", lineHeight: 1.5 }}><strong>Impact estimé</strong><br />{campCountLoading ? "Calcul en cours…" : `${(campCount || 0).toLocaleString("fr-FR")} utilisateur${(campCount || 0) > 1 ? "s" : ""} recevront le Premium gratuitement pendant ${campDays} jours.`}</div>
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "#aaa", lineHeight: 1.5, marginTop: 12, display: "flex", gap: 7 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      <span>Les abonnés Premium actuels ne sont pas impactés. Le Premium sera retiré automatiquement à la date de fin.</span>
+                    </div>
                   </div>
                 </div>
+
+                {/* ── Historique des campagnes ── */}
+                <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginTop: 16 }}>
+                  <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, marginBottom: 14 }}>Campagnes précédentes</div>
+                  {campaignsHistory.length === 0 ? (
+                    <div style={{ textAlign: "center", color: "#bbb", fontSize: "0.82rem", padding: "24px 0" }}>Aucune campagne lancée pour le moment.</div>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 0.8fr 1fr 1.4fr 1fr", gap: 10, fontSize: "0.7rem", fontWeight: 800, color: "#aaa", padding: "0 0 8px", borderBottom: `1px solid ${G.gris}`, minWidth: 620 }}>
+                        <span>Campagne</span><span>Cible</span><span>Durée</span><span>Bénéficiaires</span><span>Période</span><span>Statut</span>
+                      </div>
+                      {visibleCamps.map(c => {
+                        const ended = c.end && new Date(c.end) < new Date();
+                        return (
+                          <div key={c.id} style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 0.8fr 1fr 1.4fr 1fr", gap: 10, alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${G.creme}`, minWidth: 620 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(142,124,195,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="15" height="15" viewBox="0 0 24 24" fill="#8e7cc3" stroke="none"><path d="M2 19h20l-2-7-4 3-4-7-4 7-4-3z"/></svg></div>
+                              <div style={{ minWidth: 0 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div><div style={{ fontSize: "0.68rem", color: "#aaa", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.sub}</div></div>
+                            </div>
+                            <span style={{ fontSize: "0.76rem", color: "#666" }}>{c.targetLabel}</span>
+                            <span style={{ fontSize: "0.76rem", color: "#666" }}>{c.days} j</span>
+                            <span style={{ fontSize: "0.76rem", color: "#666", fontWeight: 700 }}>{(c.beneficiaries || 0).toLocaleString("fr-FR")}</span>
+                            <span style={{ fontSize: "0.72rem", color: "#666" }}>{fmtDate(c.start)} – {fmtDate(c.end)}</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.72rem", fontWeight: 700, color: ended ? "#1e8449" : "#E67E22" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: ended ? "#27ae60" : "#E67E22" }} />{ended ? "Terminée" : "En cours"}</span>
+                          </div>
+                        );
+                      })}
+                      {campaignsHistory.length > 3 && (
+                        <div style={{ textAlign: "center", marginTop: 12 }}>
+                          <button onClick={() => setCampShowAll(s => !s)} style={{ background: "transparent", border: "none", color: "#E67E22", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{campShowAll ? "Voir moins" : `Voir toutes les campagnes (${campaignsHistory.length})`}</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-              <p style={{ fontSize: "0.8rem", color: "#888", lineHeight: 1.5, marginBottom: 16 }}>Offrez le Premium <strong>gratuitement à tous les utilisateurs</strong> pour un événement spécial (lancement, promotion, fête). Les vrais abonnés ne sont pas affectés ; à la date d'expiration choisie, le Premium est retiré automatiquement aux non-abonnés.</p>
-              <button onClick={() => setPremiumEventConfirm(true)} disabled={premiumEventLoading} style={{ width: "100%", background: premiumEventActive ? `linear-gradient(135deg,#27ae60,#1e8449)` : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: premiumEventLoading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: premiumEventLoading ? 0.7 : 1, boxShadow: premiumEventActive ? "0 6px 18px rgba(39,174,96,0.28)" : "0 6px 18px rgba(212,168,67,0.3)" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                {premiumEventLoading ? "En cours…" : premiumEventActive ? "⏹ Désactiver l'événement Premium" : "🎉 Événement Premium - Offrir à tous"}
-              </button>
-            </div>
+            );
+          })()}
+          {campConfirm && (
+            <ConfirmModal
+              msg={`Lancer cette campagne ?\n\n${(campCount || 0).toLocaleString("fr-FR")} utilisateur(s) ciblé(s) (${campTargetLabel(campTarget)}) recevront le Premium gratuitement pendant ${campDays} jours, jusqu'au ${campEndDate ? new Date(campEndDate).toLocaleDateString("fr-FR") : "—"}.\n\nLes abonnés payants ne sont pas affectés.`}
+              confirmLabel="Lancer la campagne"
+              onConfirm={launchCampaign}
+              onCancel={() => setCampConfirm(false)}
+            />
           )}
           {confirmDeleteStatus && (
             <ConfirmModal
@@ -19582,6 +19835,7 @@ export default function App() {
       if (t === "likes") { setLikesReceived(0); try { localStorage.setItem(`moyo_likes_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
       if (t === "visitors") { setViewsReceived(0); try { localStorage.setItem(`moyo_visitors_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv}>
+      <div key={tab} className="page-anim" style={{ width: "100%", height: "100%" }}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
@@ -19589,6 +19843,7 @@ export default function App() {
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} />}
       {tab === "admin" && <AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
+      </div>
     </AppShell>
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} />}
     {premiumSuccess && (
