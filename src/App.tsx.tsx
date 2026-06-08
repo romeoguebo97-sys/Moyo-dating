@@ -1122,10 +1122,35 @@ const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, pr
 });
 
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
-  const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "proof">("offer");
+  const [step, setStep] = useState<"offer" | "mtn" | "airtel">("offer");
   const [txRef, setTxRef] = useState("");
   const [txSent, setTxSent] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
+  const [showAllAdv, setShowAllAdv] = useState(false);
+  const [stats, setStats] = useState<{ couples: number | null; premium: number | null }>({ couples: null, premium: null });
+  const gold = "#D4A843";
+
+  useEffect(() => {
+    const cnt = async (path: string) => {
+      try { const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "count=exact", "Range": "0-0" } }); const cr = r.headers.get("content-range"); return cr ? parseInt(cr.split("/")[1] || "0", 10) : null; } catch { return null; }
+    };
+    (async () => {
+      const premium = await cnt("profiles?is_premium=eq.true&select=id");
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      const couples = await cnt(`match_proposals?status=in.(accepted,matched)&created_at=gte.${weekAgo}&select=id`);
+      setStats({ premium, couples });
+    })();
+  }, [token]);
+
+  const title = reason && reason.trim() ? reason.trim() : "Passez à Premium";
+  const fmt = (n: number | null) => n === null ? "…" : n.toLocaleString("fr-FR");
+
+  const highlights = [
+    { t: "Messages illimités", d: "Discutez sans aucune limite", svg: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> },
+    { t: "Voir qui vous aime", d: "Découvrez tous vos admirateurs", svg: <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /> },
+    { t: "Publier des statuts", d: "Partagez vos moments", svg: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z" /></> },
+    { t: "Profil mis en avant", d: "Soyez vu en premier", svg: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /> },
+  ];
 
   const avantages = [
     { icon: "msg", titre: "Messages illimités", desc: `Discute sans limite (gratuit = ${FREE_LIMITS.messages}/match)` },
@@ -1143,249 +1168,189 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
     { icon: "verified", titre: "Profil vérifié", desc: "Badge de confiance visible sur ton profil" },
     { icon: "support", titre: "Support prioritaire", desc: "Assistance rapide 7j/7" },
   ];
-
   const getIcon = (id: string) => {
     const svgs: Record<string, React.ReactElement> = {
-      photo: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
-      status: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-      gift: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
-      referral: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-      msg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-      phone: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
-      heart: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
-      eye: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-      star: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-      star2: <svg width="18" height="18" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-      check2: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-      filter: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
-      visitors: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-      verified: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
-      support: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+      photo: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>,
+      status: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
+      gift: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>,
+      referral: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+      msg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>,
+      phone: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>,
+      heart: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>,
+      eye: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>,
+      star2: <svg width="18" height="18" viewBox="0 0 24 24" fill={gold} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
+      check2: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>,
+      filter: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>,
+      visitors: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+      verified: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
+      support: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
     };
-    return svgs[id] || <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
+    return svgs[id] || <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>;
   };
 
-  // ── Étape offre ──
+  const mtnLogo = (h = 18) => <svg viewBox="0 0 120 60" width={h * 2} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="8" /><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="5" /><text x="60" y="39" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="24" fill="#1a1a1a">MTN</text></svg>;
+  const airtelLogo = (h = 22) => <svg viewBox="0 0 80 60" width={h * 1.4} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="80" height="60" fill="#E40000" rx="8" /><path d="M14 40 Q9 18 24 12 Q39 6 41 21 Q43 35 30 37 Q17 39 15 31" fill="white" stroke="none" /><text x="46" y="30" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="white">airtel</text><text x="46" y="46" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="12" fill="#fff">money</text></svg>;
+
+  // ════════ ÉCRAN 1 : OFFRE ════════
   if (step === "offer") return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto", display: "flex", flexDirection: "column" }}>
-        <div style={{ background: `linear-gradient(135deg,#D4A843,#B8922E)`, padding: "14px 20px 20px", position: "relative", flexShrink: 0 }}>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-            <div onClick={onClose} style={{ cursor: "pointer", opacity: 0.85, background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </div>
-            <div>
-              <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.72rem", fontWeight: 600 }}>Passe à</div>
-              <div style={{ color: G.blanc, fontSize: "1.3rem", fontWeight: 800 }}>Premium</div>
-            </div>
-            <div style={{ marginLeft: "auto", textAlign: "right" }}>
-              <div style={{ color: G.blanc, fontSize: "1.6rem", fontWeight: 800 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}</div>
-              <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>/mois</div>
-            </div>
-          </div>
-          {reason && <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: "0.8rem", color: G.blanc, fontWeight: 600, marginBottom: 12 }}>{reason}</div>}
-          {/* Boutons opérateurs dans le header */}
-          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.8)", textAlign: "center", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>Congo - Payez avec</div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ flex: 1, background: PAY_MTN_ENABLED ? "linear-gradient(135deg,#FFCC00,#F5A623)" : "#cccccc", color: PAY_MTN_ENABLED ? "#1a1a1a" : "#888", border: "none", borderRadius: 14, padding: "12px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: PAY_MTN_ENABLED ? "0 4px 14px rgba(0,0,0,0.15)" : "none", opacity: PAY_MTN_ENABLED ? 1 : 0.7 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
-                MTN MoMo
-              </span>
-              {!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}>Temporairement indisponible</span>}
-            </button>
-            <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ flex: 1, background: PAY_AIRTEL_ENABLED ? "white" : "#cccccc", color: PAY_AIRTEL_ENABLED ? "#c0392b" : "#888", border: PAY_AIRTEL_ENABLED ? "2px solid #e74c3c" : "2px solid #bbb", borderRadius: 14, padding: "12px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.7 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <svg viewBox="0 0 80 60" width="28" height="21" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="60" fill="white" rx="4"/><path d="M12 38 Q8 18 22 12 Q36 6 38 20 Q40 34 28 36 Q16 38 14 30" fill="#e74c3c" stroke="none"/><text x="44" y="28" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#e74c3c">airtel</text><text x="44" y="44" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#D4A843">money</text></svg>
-                Airtel Money
-              </span>
-              {!PAY_AIRTEL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}>Temporairement indisponible</span>}
-            </button>
-          </div>
-          {/* Bouton Stripe pour la diaspora */}
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8 }}>Diaspora - Payer par carte</div>
-            <button onClick={async () => {
-              try {
-                // Ouvrir la fenêtre AVANT le fetch (sinon bloqué sur mobile)
-                const win = window.open("", "_blank");
-                const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY },
-                  body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }),
-                });
-                const data = await r.json();
-                if (data.url && win) {
-                  win.location.href = data.url;
-                } else {
-                  win?.close();
-                  alert("Erreur : " + (data.error || "inconnue"));
-                }
-              } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
-            }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "linear-gradient(135deg,#1A5C3A,#0D2E1C)" : "#cccccc", color: PAY_CB_ENABLED ? "white" : "#888", border: "none", borderRadius: 14, padding: "13px 10px", fontSize: "0.88rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: PAY_CB_ENABLED ? "0 4px 14px rgba(26,92,58,0.4)" : "none", opacity: PAY_CB_ENABLED ? 1 : 0.7 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={PAY_CB_ENABLED ? "white" : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                Visa / Mastercard · {PREMIUM_PRICE_EUR}€
-              </span>
-              {!PAY_CB_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}>Temporairement indisponible</span>}
-            </button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
+      <div style={{ background: "#FCFBF8", borderRadius: 28, width: "100%", maxWidth: 410, maxHeight: "94vh", overflowY: "auto", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "30px 22px 22px" }}>
+        <div onClick={onClose} style={{ position: "absolute", top: 16, right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, position: "relative" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", left: "26%", top: 6, opacity: 0.7 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", right: "26%", top: 14, opacity: 0.6 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(212,168,67,0.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
           </div>
         </div>
-        <div style={{ padding: "8px 0", flex: 1 }}>
-          {avantages.map((a) => (
-            <div key={a.titre} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", borderBottom: `1px solid ${G.gris}` }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: `linear-gradient(135deg,${G.or},#B8922E)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{getIcon(a.icon)}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#111" }}>{a.titre}</div>
-                <div style={{ fontSize: "0.78rem", color: "#555", marginTop: 1 }}>{a.desc}</div>
+        <div style={{ textAlign: "center", fontSize: "1.55rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2, marginBottom: 8, padding: "0 6px" }}>{title}</div>
+        <div style={{ textAlign: "center", fontSize: "0.92rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 16, padding: "0 10px" }}>Cette fonctionnalité est réservée aux membres Premium.</div>
+        <div style={{ textAlign: "center", marginBottom: 18 }}>
+          <span style={{ fontSize: "2.2rem", fontWeight: 800, color: gold }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")}</span>
+          <span style={{ fontSize: "1.1rem", fontWeight: 800, color: gold, marginLeft: 6 }}>FCFA</span>
+          <span style={{ fontSize: "0.95rem", color: "#9a9a9a", marginLeft: 6 }}>/ mois</span>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+          <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "12px 13px", display: "flex", alignItems: "center", gap: 9 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{fmt(stats.couples)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
+          </div>
+          <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "12px 13px", display: "flex", alignItems: "center", gap: 9 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
+            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{fmt(stats.premium)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
+          </div>
+        </div>
+        <div style={{ background: "#fff", borderRadius: 18, padding: "6px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 18 }}>
+          {(showAllAdv ? avantages : highlights).map((a: any, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 13, padding: "12px 0", borderBottom: i < (showAllAdv ? avantages.length : highlights.length) - 1 ? "1px solid #f0ede6" : "none" }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {showAllAdv ? getIcon(a.icon) : <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{a.svg}</svg>}
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#1a1a2e" }}>{showAllAdv ? a.titre : a.t}</div>
+                <div style={{ fontSize: "0.78rem", color: "#9a9a9a" }}>{showAllAdv ? a.desc : a.d}</div>
+              </div>
             </div>
           ))}
+          <div onClick={() => setShowAllAdv(s => !s)} style={{ textAlign: "center", padding: "12px 0 10px", color: gold, fontWeight: 700, fontSize: "0.86rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+            {showAllAdv ? "Voir moins" : "Voir tous les avantages"}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAllAdv ? "rotate(-90deg)" : "rotate(0)" }}><polyline points="9 18 15 12 9 6" /></svg>
+          </div>
         </div>
-        <div style={{ padding: "16px 20px 32px", flexShrink: 0 }}>
-          <button onClick={onClose} style={{ width: "100%", fontSize: "0.88rem", color: "#555", cursor: "pointer", fontWeight: 600, padding: "13px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc }}>
-            Non merci, plus tard
-          </button>
+        <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 10 }}>CONGO — PAYEZ AVEC</div>
+        <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 10 }}>
+          {mtnLogo(18)} MTN MoMo{!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+        </button>
+        <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: "#fff", color: "#E40000", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#E40000" : "#dcdcdc"}`, borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 18, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
+          {airtelLogo(20)} Airtel Money{!PAY_AIRTEL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+        </button>
+        <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 10 }}>DIASPORA — PAYER PAR CARTE</div>
+        <button onClick={async () => {
+          if (!PAY_CB_ENABLED) return;
+          try {
+            const win = window.open("", "_blank");
+            const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
+            const data = await r.json();
+            if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
+          } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
+        }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "#1a1a2e" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 18 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+          Visa / Mastercard{!PAY_CB_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+        </button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#a8a8a8", fontSize: "0.8rem" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+          Paiement 100% sécurisé
         </div>
       </div>
     </div>
   );
 
-  // ── Étape MTN ──
-  if (step === "mtn") return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto" }}>
-        <div style={{ background: "linear-gradient(135deg,#FFCC00,#F5A623)", padding: "20px 20px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <div onClick={() => setStep("offer")} style={{ cursor: "pointer", background: "rgba(0,0,0,0.1)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+  // ════════ ÉCRANS 2 & 3 : PAIEMENT (MTN / AIRTEL) ════════
+  const OP = step === "mtn"
+    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}#`, placeholder: "Ex : 7753031542", operator: "MTN", tint: "#fff8e6", tintBorder: "rgba(245,166,35,0.4)", tintText: "#9a6a00", logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)" }
+    : { name: "Airtel Money", main: "#E40000", onColor: "#fff", numBg: "#E40000", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", tint: "#fff0f0", tintBorder: "rgba(228,0,0,0.3)", tintText: "#c0392b", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
+  const tel = `tel:${OP.ussd.replace(/#/g, "%23")}`;
+  const submit = async () => {
+    setTxLoading(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: txRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending" }) });
+      setTxSent(true);
+    } catch { setTxSent(true); }
+    setTxLoading(false);
+  };
+  const numBadge = (n: string) => <div style={{ width: 26, height: 26, borderRadius: "50%", background: OP.numBg, color: OP.numColor, fontWeight: 800, fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</div>;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <div style={{ background: OP.main, padding: "16px 18px 14px", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div onClick={() => { setStep("offer"); setTxSent(false); setTxRef(""); }} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
             </div>
-            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 10 }}>
-              <svg viewBox="0 0 120 60" width="48" height="24" xmlns="http://www.w3.org/2000/svg">
-                <rect width="120" height="60" fill="#FFCC00" rx="4"/>
-                <ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/>
-                <text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text>
-              </svg>
-              MTN Mobile Money
-            </div>
+            {OP.logo}
+            <div style={{ fontWeight: 800, fontSize: "1.15rem", color: OP.onColor }}>{OP.name}</div>
           </div>
-          <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>{`Paiement sécurisé - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA / 1 mois`}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, marginLeft: 4, fontSize: "0.82rem", color: OP.subColor, fontWeight: 600 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+            Paiement sécurisé • {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA / mois
+          </div>
         </div>
-        <div style={{ padding: "20px 20px 32px" }}>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
           {/* Étape 1 */}
-          <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : {PAY_MTN_RESPONSABLE}</div>
-            <a href={`tel:*105*2*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
+          <div style={{ background: "#fff", borderRadius: 16, padding: 18, marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("1")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Effectuez votre paiement</div></div>
+            <div style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.55, marginBottom: 16 }}>Votre paiement {OP.name} sera reçu et traité par notre responsable des finances.<br /><span style={{ fontWeight: 700, color: "#444" }}>{OP.responsable}</span></div>
+            <a href={tel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", background: OP.main, color: OP.onColor, borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, textDecoration: "none", boxSizing: "border-box" as any }}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+              Appuyer pour payer - {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
             </a>
-            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}#`}</div>
+            <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "12px", marginTop: 12, textAlign: "center" }}>
+              <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>ou composez ce code depuis votre mobile</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace", letterSpacing: 0.5 }}>{OP.ussd}</div>
+            </div>
           </div>
+
           {/* Étape 2 */}
-          <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
-            <div style={{ fontSize: "0.78rem", color: "#777", marginBottom: 10, lineHeight: 1.5 }}>Après validation du paiement MTN, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
-            <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex de l'ID : 7753031542" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${txRef ? "#FFCC00" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
+          <div style={{ background: "#fff", borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("2")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Entrez ce numéro ID ci-dessous</div></div>
+            <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.55, marginBottom: 14 }}>Après validation du paiement {OP.operator}, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+              <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder={OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: "#1a1a2e", background: "transparent" }} />
+            </div>
+            <div style={{ background: OP.tint, border: `1px solid ${OP.tintBorder}`, borderRadius: 12, padding: "12px 14px", display: "flex", gap: 10 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={OP.tintText} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+              <div><div style={{ fontWeight: 800, fontSize: "0.82rem", color: OP.tintText, marginBottom: 2 }}>Important</div><div style={{ fontSize: "0.78rem", color: "#777", lineHeight: 1.5 }}>Vous devez entrer le numéro de transaction (ID) reçu par SMS pour que votre paiement soit confirmé.</div></div>
+            </div>
           </div>
-          {/* Bouton envoyer */}
-          {!txSent ? (
-            <button disabled={!txRef.trim() || txLoading} onClick={async () => {
-              setTxLoading(true);
-              try {
-                await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" },
-                  body: JSON.stringify({ user_id: userId, operator: "MTN", tx_ref: txRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending" }),
-                });
-                setTxSent(true);
-              } catch { setTxSent(true); }
-              setTxLoading(false);
-            }} style={{ width: "100%", background: !txRef.trim() || txLoading ? "#ccc" : "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !txRef.trim() ? "not-allowed" : "pointer", boxShadow: txRef.trim() ? "0 4px 14px rgba(245,166,35,0.35)" : "none" }}>
-              {txLoading ? "Envoi en cours…" : "✓ J'ai payé - Envoyer la preuve"}
-            </button>
-          ) : (
-            <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: "18px", textAlign: "center" }}>
-              <div style={{ fontSize: "2rem", marginBottom: 8 }}>✅</div>
-              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>Preuve envoyée avec succès !</div>
-              <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier votre paiement et activer votre Premium dans les plus brefs délais. Vous recevrez une notification dès l'activation.</div>
-              <button onClick={onClose} style={{ marginTop: 14, background: "#27ae60", color: G.blanc, border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
+
+          {txSent && (
+            <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: 18, textAlign: "center", marginTop: 14 }}>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>✓ Numéro ID envoyé avec succès !</div>
+              <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier votre paiement et activer votre Premium dans les plus brefs délais.</div>
+              <button onClick={onClose} style={{ marginTop: 14, background: "#27ae60", color: "#fff", border: "none", borderRadius: 50, padding: "11px 26px", fontWeight: 700, cursor: "pointer", fontSize: "0.86rem" }}>Fermer</button>
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
 
-  // ── Étape Airtel ──
-  if (step === "airtel") return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom)" }}>
-        <div style={{ background: "linear-gradient(135deg,#e74c3c,#c0392b)", padding: "20px 20px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <div onClick={() => setStep("offer")} style={{ cursor: "pointer", background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-            </div>
-            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.blanc, display: "flex", alignItems: "center", gap: 8 }}>
-              <svg viewBox="0 0 80 60" width="42" height="28" xmlns="http://www.w3.org/2000/svg">
-                <rect width="80" height="60" fill="rgba(255,255,255,0.15)" rx="4"/>
-                <path d="M12 38 Q8 18 22 12 Q36 6 38 20 Q40 34 28 36 Q16 38 14 30" fill="white" stroke="none"/>
-                <text x="44" y="28" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="white">airtel</text>
-                <text x="44" y="44" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#D4A843">money</text>
-              </svg>
-              Airtel Money
-            </div>
-          </div>
-          <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", marginLeft: 42 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA - 1 mois Premium`}</div>
-        </div>
-        <div style={{ padding: "20px 20px 32px" }}>
-          <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : {PAY_AIRTEL_RESPONSABLE}</div>
-            <a href={`tel:*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
-            </a>
-            <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}#`}</div>
-          </div>
-          <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
-            <div style={{ fontSize: "0.78rem", color: "#777", marginBottom: 10, lineHeight: 1.5 }}>Après validation du paiement Airtel, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
-            <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex de l'ID : PP260523.2232.A52074" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${txRef ? "#e74c3c" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
-          </div>
-          {!txSent ? (
-            <button disabled={!txRef.trim() || txLoading} onClick={async () => {
-              setTxLoading(true);
-              try {
-                await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" },
-                  body: JSON.stringify({ user_id: userId, operator: "Airtel", tx_ref: txRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending" }),
-                });
-                setTxSent(true);
-              } catch { setTxSent(true); }
-              setTxLoading(false);
-            }} style={{ width: "100%", background: !txRef.trim() || txLoading ? "#ccc" : "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !txRef.trim() ? "not-allowed" : "pointer", boxShadow: txRef.trim() ? "0 4px 14px rgba(231,76,60,0.35)" : "none" }}>
-              {txLoading ? "Envoi en cours…" : "✓ J'ai payé - Envoyer la preuve"}
+        {!txSent && (
+          <div style={{ padding: "14px 16px", background: "#fff", borderTop: "1px solid #eee", flexShrink: 0 }}>
+            <button disabled={!txRef.trim() || txLoading} onClick={submit} style={{ width: "100%", background: !txRef.trim() || txLoading ? "#d2d2d2" : OP.main, color: !txRef.trim() || txLoading ? "#888" : OP.onColor, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !txRef.trim() ? "not-allowed" : "pointer" }}>
+              {txLoading ? "Envoi en cours…" : "✓ J'ai payé - Envoyer mon numéro ID"}
             </button>
-          ) : (
-            <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: "18px", textAlign: "center" }}>
-              <div style={{ fontSize: "2rem", marginBottom: 8 }}>✅</div>
-              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>Preuve envoyée avec succès !</div>
-              <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier votre paiement et activer votre Premium dans les plus brefs délais. Vous recevrez une notification dès l'activation.</div>
-              <button onClick={onClose} style={{ marginTop: 14, background: "#27ae60", color: G.blanc, border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#a8a8a8", fontSize: "0.78rem", marginTop: 12 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              Paiement 100% sécurisé
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
-
-  return null;
 }
 
 function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
@@ -12310,21 +12275,34 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [mmView, setMmView] = useState<any | null>(null);
   const [mmFilters, setMmFilters] = useState({ pastRefusals: true, existingMatches: true, reported: true, banned: true, teamRefused: true, activeOnly: false });
   const pairKey = (a: string, b: string) => [a, b].sort().join("_");
+  // ── Contraintes OBLIGATOIRES (vérifiées avant tout score) ──
+  const mmEligible = (a: any, b: any) => {
+    const ra = a.relational_profile || {}, rb = b.relational_profile || {};
+    // Âge recherché respecté des DEUX côtés (si une tranche est définie)
+    const inRange = (person: any, range: any) => {
+      if (!range || !range.age_min || !range.age_max || !person.age) return true; // pas de critère → on n'élimine pas
+      return person.age >= range.age_min && person.age <= range.age_max;
+    };
+    if (!inRange(b, ra)) return false; // B doit entrer dans la tranche cherchée par A
+    if (!inRange(a, rb)) return false; // A doit entrer dans la tranche cherchée par B
+    // Localisation recherchée respectée des DEUX côtés (si une ville est définie)
+    if (ra.city && b.city && ra.city !== b.city) return false; // A cherche une ville ≠ celle de B
+    if (rb.city && a.city && rb.city !== a.city) return false; // B cherche une ville ≠ celle de A
+    return true;
+  };
   const mmScore = (a: any, b: any) => {
+    // (l'âge et la localisation cherchée sont déjà garantis par mmEligible)
     const ra = a.relational_profile || {}, rb = b.relational_profile || {};
     let s = 0; const reasons: string[] = [];
-    if (a.religion && b.religion && a.religion === b.religion) { s += 20; reasons.push(`Même religion : ${a.religion}`); }
-    else if (ra.religion === "Sans importance" || rb.religion === "Sans importance") s += 8;
-    if (ra.project && rb.project && ra.project === rb.project) { s += 20; reasons.push(`Même objectif : ${ra.project}`); }
+    if (a.religion && b.religion && a.religion === b.religion) { s += 25; reasons.push(`Même religion : ${a.religion}`); }
+    else if (ra.religion === "Sans importance" || rb.religion === "Sans importance") s += 10;
+    if (ra.project && rb.project && ra.project === rb.project) { s += 25; reasons.push(`Même objectif : ${ra.project}`); }
     if (a.city && b.city && a.city === b.city) { s += 15; reasons.push(`Même ville : ${a.city}`); }
-    else if (/diaspora/i.test(a.city || "") && /diaspora/i.test(b.city || "")) { s += 7; reasons.push("Tous deux en diaspora"); }
-    const bInA = ra.age_min && ra.age_max && b.age ? (b.age >= ra.age_min && b.age <= ra.age_max) : false;
-    const aInB = rb.age_min && rb.age_max && a.age ? (a.age >= rb.age_min && a.age <= rb.age_max) : false;
-    if (bInA && aInB) { s += 15; reasons.push("Âge compatible"); } else if (bInA || aInB) s += 7;
+    else if (/diaspora/i.test(a.city || "") && /diaspora/i.test(b.city || "")) { s += 8; reasons.push("Tous deux en diaspora"); }
     const ci = (Array.isArray(ra.interests) ? ra.interests : []).filter((x: string) => (Array.isArray(rb.interests) ? rb.interests : []).includes(x));
-    if (ci.length) { s += Math.min(ci.length * 4, 15); reasons.push(`${ci.length} centre${ci.length > 1 ? "s" : ""} d'intérêt commun${ci.length > 1 ? "s" : ""}`); }
+    if (ci.length) { s += Math.min(ci.length * 5, 20); reasons.push(`${ci.length} centre${ci.length > 1 ? "s" : ""} d'intérêt commun${ci.length > 1 ? "s" : ""}`); }
     const cq = (Array.isArray(ra.qualities) ? ra.qualities : []).filter((x: string) => (Array.isArray(rb.qualities) ? rb.qualities : []).includes(x));
-    if (cq.length) { s += Math.min(cq.length * 3, 15); reasons.push(`${cq.length} valeur${cq.length > 1 ? "s" : ""} commune${cq.length > 1 ? "s" : ""}`); }
+    if (cq.length) { s += Math.min(cq.length * 4, 20); reasons.push(`${cq.length} valeur${cq.length > 1 ? "s" : ""} commune${cq.length > 1 ? "s" : ""}`); }
     return { score: Math.min(s, 99), reasons };
   };
   const mmLevel = (score: number) => score >= 90 ? { label: "Compatibilité élevée", color: "#8e44ad" } : score >= 75 ? { label: "Bonne compatibilité", color: "#e67e22" } : score >= 50 ? { label: "Compatibilité moyenne", color: "#2980b9" } : { label: "Faible compatibilité", color: "#9aa0a6" };
@@ -12358,6 +12336,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
           if (mmFilters.existingMatches && matchedPairs.has(k)) continue;
           if ((mmFilters.pastRefusals || mmFilters.teamRefused) && refusedPairs.has(k)) continue;
           if (mmFilters.reported && (reportedIds.has(a.id) || reportedIds.has(b.id))) continue;
+          if (!mmEligible(a, b)) continue;
           const { score, reasons } = mmScore(a, b);
           if (score < 50) continue;
           const man = a.gender === "Homme" ? a : b, woman = a.gender === "Femme" ? a : b;
