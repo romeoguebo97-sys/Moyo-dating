@@ -168,6 +168,9 @@ let SOCIAL_TIKTOK = "https://www.tiktok.com/@moyo_congo";
 let SOCIAL_YOUTUBE = "https://www.youtube.com/@Moyo-congo";
 // Page d'accueil (landing)
 let LANDING_MEMBERS = "12 000+ membres";
+// Statistiques "vitrine" de la modale Premium — saisies à la main dans l'admin (vide = compte automatique réel)
+let PREMIUM_STAT_COUPLES = "";
+let PREMIUM_STAT_MEMBERS = "";
 let LANDING_TITLE_START = "Trouve ton";
 let LANDING_TITLE_HIGHLIGHT = "âme sœur";
 let LANDING_TITLE_END = "Congolais.e";
@@ -196,7 +199,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -223,6 +226,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["social_tiktok"] !== undefined) SOCIAL_TIKTOK = map["social_tiktok"];
   if (map["social_youtube"] !== undefined) SOCIAL_YOUTUBE = map["social_youtube"];
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
+  if (map["premium_stat_couples"] !== undefined) PREMIUM_STAT_COUPLES = map["premium_stat_couples"];
+  if (map["premium_stat_members"] !== undefined) PREMIUM_STAT_MEMBERS = map["premium_stat_members"];
   if (map["landing_title_start"]) LANDING_TITLE_START = map["landing_title_start"];
   if (map["landing_title_highlight"]) LANDING_TITLE_HIGHLIGHT = map["landing_title_highlight"];
   if (map["landing_title_end"]) LANDING_TITLE_END = map["landing_title_end"];
@@ -1130,6 +1135,14 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   const [stats, setStats] = useState<{ couples: number | null; premium: number | null }>({ couples: null, premium: null });
   const gold = "#D4A843";
 
+  // Verrouille le défilement de la page derrière la modale (évite que le fond bouge)
+  useEffect(() => {
+    const body = document.body, html = document.documentElement;
+    const prevB = body.style.overflow, prevH = html.style.overflow, prevOB = (body.style as any).overscrollBehavior;
+    body.style.overflow = "hidden"; html.style.overflow = "hidden"; (body.style as any).overscrollBehavior = "none";
+    return () => { body.style.overflow = prevB; html.style.overflow = prevH; (body.style as any).overscrollBehavior = prevOB; };
+  }, []);
+
   useEffect(() => {
     const cnt = async (path: string) => {
       try { const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "count=exact", "Range": "0-0" } }); const cr = r.headers.get("content-range"); return cr ? parseInt(cr.split("/")[1] || "0", 10) : null; } catch { return null; }
@@ -1193,8 +1206,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
   // ════════ ÉCRAN 1 : OFFRE ════════
   if (step === "offer") return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
-      <div style={{ background: "#FCFBF8", borderRadius: 24, width: "100%", maxWidth: 400, maxHeight: "96vh", overflowY: "auto", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "18px 20px 16px" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 14, overscrollBehavior: "contain", touchAction: "none" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#FCFBF8", borderRadius: 24, width: "100%", maxWidth: 400, maxHeight: "96vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "18px 20px 16px" }}>
         <div onClick={onClose} style={{ position: "absolute", top: 16, right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </div>
@@ -1205,7 +1218,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <svg width="27" height="27" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
           </div>
         </div>
-        <div style={{ textAlign: "center", fontSize: "1.3rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.18, marginBottom: 6, padding: "0 6px" }}>{title}</div>
+        <div style={{ textAlign: "center", fontSize: "1.1rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.18, marginBottom: 6, padding: "0 6px" }}>{title}</div>
         <div style={{ textAlign: "center", fontSize: "0.84rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 10, padding: "0 10px" }}>Cette fonctionnalité est réservée aux membres Premium.</div>
         <div style={{ textAlign: "center", marginBottom: 12 }}>
           <span style={{ fontSize: "1.9rem", fontWeight: 800, color: gold }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")}</span>
@@ -1215,26 +1228,26 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
           <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{fmt(stats.couples)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
+            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_COUPLES.trim() ? PREMIUM_STAT_COUPLES : fmt(stats.couples)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
           </div>
           <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
-            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{fmt(stats.premium)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
+            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_MEMBERS.trim() ? PREMIUM_STAT_MEMBERS : fmt(stats.premium)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
           </div>
         </div>
-        <div style={{ background: "#fff", borderRadius: 18, padding: "4px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 14 }}>
+        <div style={{ background: "#fff", borderRadius: 18, padding: "3px 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 14 }}>
           {(showAllAdv ? avantages : highlights).map((a: any, i: number) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 13, padding: "9px 0", borderBottom: i < (showAllAdv ? avantages.length : highlights.length) - 1 ? "1px solid #f0ede6" : "none" }}>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {showAllAdv ? getIcon(a.icon) : <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{a.svg}</svg>}
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "7px 0", borderBottom: i < (showAllAdv ? avantages.length : highlights.length) - 1 ? "1px solid #f0ede6" : "none" }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {showAllAdv ? getIcon(a.icon) : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{a.svg}</svg>}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a2e" }}>{showAllAdv ? a.titre : a.t}</div>
-                <div style={{ fontSize: "0.76rem", color: "#9a9a9a" }}>{showAllAdv ? a.desc : a.d}</div>
+                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#1a1a2e" }}>{showAllAdv ? a.titre : a.t}</div>
+                <div style={{ fontSize: "0.66rem", color: "#9a9a9a" }}>{showAllAdv ? a.desc : a.d}</div>
               </div>
             </div>
           ))}
-          <div onClick={() => setShowAllAdv(s => !s)} style={{ textAlign: "center", padding: "9px 0 6px", color: gold, fontWeight: 700, fontSize: "0.84rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+          <div onClick={() => setShowAllAdv(s => !s)} style={{ textAlign: "center", padding: "8px 0 5px", color: gold, fontWeight: 700, fontSize: "0.74rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
             {showAllAdv ? "Voir moins" : "Voir tous les avantages"}
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAllAdv ? "rotate(-90deg)" : "rotate(0)" }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
@@ -1283,8 +1296,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   const numBadge = (n: string) => <div style={{ width: 26, height: 26, borderRadius: "50%", background: OP.numBg, color: OP.numColor, fontWeight: 800, fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</div>;
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
         <div style={{ background: OP.main, padding: "16px 18px 14px", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div onClick={() => { setStep("offer"); setTxSent(false); setTxRef(""); }} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -1299,7 +1312,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
           {/* Étape 1 */}
           <div style={{ background: "#fff", borderRadius: 16, padding: 18, marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("1")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Effectuez votre paiement</div></div>
@@ -4304,7 +4317,13 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
     if (key === "pay_airtel_number") PAY_AIRTEL_NUMBER = value;
     if (key === "pay_airtel_responsable") PAY_AIRTEL_RESPONSABLE = value;
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value }) });
+      // Méthode robuste : on met à jour la ligne existante (PATCH), et on l'insère seulement si elle n'existe pas.
+      // Ne dépend d'AUCUNE contrainte d'unicité sur app_settings.key.
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ value }) });
+      const updated = await r.json().catch(() => []);
+      if (!Array.isArray(updated) || updated.length === 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ key, value }) });
+      }
       setSavedCoords(s => ({ ...s, [field]: value }));
       setEditingField(null);
     } catch {}
@@ -4481,12 +4500,15 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
       ["landing_title_highlight", "Titre — mot coloré (ex: âme sœur)"],
       ["landing_title_end", "Titre — fin (ex: Congolais.e)"],
       ["landing_slogan", "Slogan sous le titre"],
+      ["premium_stat_couples", "Modale Premium — couples formés cette semaine (vide = calcul auto)"],
+      ["premium_stat_members", "Modale Premium — membres Premium actifs (vide = calcul auto)"],
     ],
   };
   const defaults: Record<string, string> = {
     contact_email: CONTACT_EMAIL, contact_whatsapp: CONTACT_WHATSAPP, contact_address: CONTACT_ADDRESS,
     social_facebook: SOCIAL_FACEBOOK, social_instagram: SOCIAL_INSTAGRAM, social_tiktok: SOCIAL_TIKTOK, social_youtube: SOCIAL_YOUTUBE,
     landing_members_count: LANDING_MEMBERS, landing_title_start: LANDING_TITLE_START, landing_title_highlight: LANDING_TITLE_HIGHLIGHT, landing_title_end: LANDING_TITLE_END, landing_slogan: LANDING_SLOGAN,
+    premium_stat_couples: PREMIUM_STAT_COUPLES, premium_stat_members: PREMIUM_STAT_MEMBERS,
   };
   const list = fields[group];
   const [vals, setVals] = React.useState<Record<string, string>>(() => { const o: Record<string, string> = {}; list.forEach(([k]) => { o[k] = defaults[k]; }); return o; });
@@ -4520,6 +4542,8 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     if (key === "landing_title_highlight") LANDING_TITLE_HIGHLIGHT = value;
     if (key === "landing_title_end") LANDING_TITLE_END = value;
     if (key === "landing_slogan") LANDING_SLOGAN = value;
+    if (key === "premium_stat_couples") PREMIUM_STAT_COUPLES = value;
+    if (key === "premium_stat_members") PREMIUM_STAT_MEMBERS = value;
   };
   const doSave = async (key: string) => {
     setConfirmKey(null);
