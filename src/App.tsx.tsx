@@ -1133,6 +1133,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   const [txLoading, setTxLoading] = useState(false);
   const [showAllAdv, setShowAllAdv] = useState(false);
   const [stats, setStats] = useState<{ couples: number | null; premium: number | null }>({ couples: null, premium: null });
+  const [manualStats, setManualStats] = useState<{ couples: string; members: string }>({ couples: PREMIUM_STAT_COUPLES, members: PREMIUM_STAT_MEMBERS });
   const gold = "#D4A843";
 
   // Verrouille le défilement de la page derrière la modale (évite que le fond bouge)
@@ -1153,19 +1154,31 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
       const couples = await cnt(`match_proposals?status=in.(accepted,matched)&created_at=gte.${weekAgo}&select=id`);
       setStats({ premium, couples });
     })();
+    // Lecture directe des chiffres "vitrine" saisis dans l'admin (toujours à jour à l'ouverture)
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(premium_stat_couples,premium_stat_members)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` } });
+        const d = await r.json().catch(() => []);
+        if (Array.isArray(d)) {
+          const m: Record<string, string> = {}; d.forEach((x: any) => { m[x.key] = x.value; });
+          setManualStats({ couples: m["premium_stat_couples"] ?? PREMIUM_STAT_COUPLES, members: m["premium_stat_members"] ?? PREMIUM_STAT_MEMBERS });
+        }
+      } catch {}
+    })();
   }, [token]);
 
   const title = reason && reason.trim() ? reason.trim() : "Passez à Premium";
   const fmt = (n: number | null) => n === null ? "…" : n.toLocaleString("fr-FR");
 
   const highlights = [
+    { t: "Mise en relation personnalisée", d: "Notre équipe vous présente des profils compatibles", svg: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></> },
     { t: "Messages illimités", d: "Discutez sans aucune limite", svg: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> },
     { t: "Voir qui vous aime", d: "Découvrez tous vos admirateurs", svg: <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /> },
     { t: "Publier des statuts", d: "Partagez vos moments", svg: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z" /></> },
-    { t: "Profil mis en avant", d: "Soyez vu en premier", svg: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /> },
   ];
 
   const avantages = [
+    { icon: "match", titre: "Mise en relation personnalisée", desc: "Notre équipe te présente des profils compatibles" },
     { icon: "msg", titre: "Messages illimités", desc: `Discute sans limite (gratuit = ${FREE_LIMITS.messages}/match)` },
     { icon: "heart", titre: "Likes illimités", desc: `Like sans limite (gratuit = ${FREE_LIMITS.likes}/jour)` },
     { icon: "eye", titre: "Voir qui t'a liké", desc: "Découvre tous tes admirateurs secrets" },
@@ -1197,6 +1210,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
       visitors: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
       verified: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
       support: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
+      match: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
     };
     return svgs[id] || <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>;
   };
@@ -1228,11 +1242,11 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
           <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_COUPLES.trim() ? PREMIUM_STAT_COUPLES : fmt(stats.couples)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
+            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{manualStats.couples.trim() ? manualStats.couples : fmt(stats.couples)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
           </div>
           <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
-            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_MEMBERS.trim() ? PREMIUM_STAT_MEMBERS : fmt(stats.premium)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
+            <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{manualStats.members.trim() ? manualStats.members : fmt(stats.premium)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
           </div>
         </div>
         <div style={{ background: "#fff", borderRadius: 18, padding: "3px 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 14 }}>
