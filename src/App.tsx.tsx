@@ -2,6 +2,21 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "
 
 const SUPABASE_URL = "https://mcswcapxpruiffzrxfvl.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nx44ipF3_X98flDVXxBZ5A_aztvDdgN";
+
+// Enregistrement fiable d'un réglage dans app_settings : met à jour la ligne existante (PATCH),
+// et ne l'insère (POST) que si elle n'existe pas. Ne dépend d'aucun "upsert" / contrainte spéciale.
+async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}`, { method: "PATCH", headers: { ...H, "Prefer": "return=representation" }, body: JSON.stringify({ value }) });
+    const updated = await r.json().catch(() => []);
+    if (!Array.isArray(updated) || updated.length === 0) {
+      const ins = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Prefer": "return=minimal" }, body: JSON.stringify({ key, value }) });
+      return ins.ok;
+    }
+    return true;
+  } catch { return false; }
+}
 const APP_URL = "https://www.moyo-congo.com";
 
 const VILLES = [
@@ -3984,7 +3999,7 @@ function AdminDesktopPage() {
                   editValue={editingConfigValue} onEdit={setEditingConfigValue}
                   onSave={async () => {
                     if (!auth) return;
-                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value: editingConfigValue }) });
+                    await saveSetting(key, editingConfigValue, auth.token);
                     setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
                     if (key === "limit_match_requests") FREE_LIMITS.matchRequests = parseInt(editingConfigValue) || 2;
                     if (key === "limit_status_boosts") FREE_LIMITS.statusBoosts = parseInt(editingConfigValue) || 2;
@@ -4565,7 +4580,12 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     const value = vals[key];
     applyGlobal(key, value);
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value }) });
+      // Méthode robuste : PATCH la ligne existante, et POST seulement si elle n'existe pas (ne dépend d'aucun upsert).
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ value }) });
+      const updated = await r.json().catch(() => []);
+      if (!Array.isArray(updated) || updated.length === 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ key, value }) });
+      }
       setSaved(s => ({ ...s, [key]: value }));
       setEditing(null);
     } catch {}
@@ -4669,7 +4689,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
           <EditableRow key={key} label={label} value={value} type={type as "text"|"number"} open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setEditingConfig(null); }} />
         ))}
         {([["limit_match_requests","limitMatchRequests" as keyof typeof appConfig,"Demandes mise en relation/mois",appConfig.limitMatchRequests],["limit_status_boosts","limitStatusBoosts" as keyof typeof appConfig,"Boosts statut/mois",appConfig.limitStatusBoosts]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
-          <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value: editingConfigValue }) }); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "limit_match_requests") FREE_LIMITS.matchRequests = parseInt(editingConfigValue) || 2; if (key === "limit_status_boosts") FREE_LIMITS.statusBoosts = parseInt(editingConfigValue) || 2; setEditingConfig(null); }} />
+          <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await saveSetting(key, editingConfigValue, auth.token); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "limit_match_requests") FREE_LIMITS.matchRequests = parseInt(editingConfigValue) || 2; if (key === "limit_status_boosts") FREE_LIMITS.statusBoosts = parseInt(editingConfigValue) || 2; setEditingConfig(null); }} />
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Prix & Abonnement">
@@ -9212,7 +9232,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 // ── Drapeaux : Congo + Afrique + diaspora ──
                 "🇨🇬","🇨🇩","🇩🇿","🇦🇴","🇧🇯","🇧🇼","🇧🇫","🇧🇮","🇨🇲","🇨🇻","🇨🇫","🇹🇩","🇰🇲","🇨🇮","🇩🇯","🇪🇬","🇬🇶","🇪🇷","🇸🇿","🇪🇹","🇬🇦","🇬🇲","🇬🇭","🇬🇳","🇬🇼","🇰🇪","🇱🇸","🇱🇷","🇱🇾","🇲🇬","🇲🇼","🇲🇱","🇲🇷","🇲🇺","🇲🇦","🇲🇿","🇳🇦","🇳🇪","🇳🇬","🇷🇼","🇸🇹","🇸🇳","🇸🇨","🇸🇱","🇸🇴","🇿🇦","🇸🇸","🇸🇩","🇹🇿","🇹🇬","🇹🇳","🇺🇬","🇿🇲","🇿🇼",
                 "🇫🇷","🇧🇪","🇨🇦","🇺🇸","🇬🇧","🇨🇭","🇩🇪","🇮🇹","🇵🇹","🇪🇸","🇳🇱","🇨🇳","🇦🇪","🇹🇷","🇧🇷","🇦🇺"].map(em => (
-                  <span key={em} onClick={() => { setText(prev => prev + em); }} style={{ fontSize: "1.45rem", cursor: "pointer", lineHeight: 1, padding: "3px 2px", borderRadius: 6, transition: "transform 0.1s", userSelect: "none", WebkitUserSelect: "none" }}
+                  <span key={em} className="no-invert" onClick={() => { setText(prev => prev + em); }} style={{ fontSize: "1.45rem", cursor: "pointer", lineHeight: 1, padding: "3px 2px", borderRadius: 6, transition: "transform 0.1s", userSelect: "none", WebkitUserSelect: "none" }}
                     onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.25)")}
                     onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
                   >{em}</span>
@@ -9653,7 +9673,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         onTouchEnd={() => setStatusPaused(false)}
         onTouchCancel={() => setStatusPaused(false)}
         style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: `88px 18px ${statusPreview.link_url && statusPreview.user_id !== auth.userId ? 150 : 22}px`, touchAction: "none", overscrollBehavior: "contain" }}
-        className="moyo-status-view"
+        className="moyo-status-view no-invert"
       >
         <div style={{ position: "absolute", top: 10, left: 12, right: 12, display: "flex", gap: 4, zIndex: 3 }}>
           {(statusPreviewList.length ? statusPreviewList : [statusPreview]).map((st, i) => (
@@ -13198,7 +13218,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const resetFinance = async () => {
     const now = new Date().toISOString();
-    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "finance_reset_at", value: now }) });
+    await saveSetting("finance_reset_at", now, auth.token);
     setFinanceResetAt(now);
     logAdminAction(auth.token, auth.userId, auth.name, "Statistiques financières réinitialisées", auth.userId);
     showToast("Données financières réinitialisées à partir d'aujourd'hui.", "success");
@@ -13208,7 +13228,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const willExclude = !next.has(pid);
     if (willExclude) next.add(pid); else next.delete(pid);
     setFinanceExcluded(next);
-    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "finance_excluded_ids", value: JSON.stringify(Array.from(next)) }) });
+    await saveSetting("finance_excluded_ids", JSON.stringify(Array.from(next)), auth.token);
     logAdminAction(auth.token, auth.userId, auth.name, willExclude ? `Paiement exclu du CA (test) - réf: ${txRef}` : `Paiement réintégré au CA - réf: ${txRef}`, auth.userId);
     showToast(willExclude ? "Paiement exclu du chiffre d'affaires." : "Paiement réintégré au chiffre d'affaires.", "success");
   };
@@ -13704,7 +13724,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       const rec = { id: `c_${Date.now()}`, name: campName(campTarget), sub: campMessage.trim() ? campMessage.trim().slice(0, 60) : `${campDays} jours offerts`, target: campTarget, targetLabel: campTargetLabel(campTarget), days: campDays, beneficiaries: campCount || 0, start: new Date().toISOString(), end: endISO, message: campMessage.trim() };
       const next = [rec, ...campaignsHistory].slice(0, 50);
       setCampaignsHistory(next);
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates" }, body: JSON.stringify({ key: "premium_campaigns", value: JSON.stringify(next) }) });
+      await saveSetting("premium_campaigns", JSON.stringify(next), auth.token);
       if (campMessage.trim()) {
         const genderPart = campTarget === "femmes" ? "femmes" : campTarget === "hommes" ? "hommes" : "all";
         await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ message: campMessage.trim(), created_by: auth.userId, expires_at: endISO, target: `${genderPart}|all` }) });
@@ -13769,7 +13789,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const persistTemplates = async (next: { id: string; category: string; title: string; content: string }[]) => {
     setSupportTemplates(next);
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates" }, body: JSON.stringify({ key: "support_templates", value: JSON.stringify(next) }) });
+      await saveSetting("support_templates", JSON.stringify(next), auth.token);
     } catch {}
   };
   const copyTemplate = async (content: string) => {
@@ -20202,6 +20222,26 @@ export default function App() {
     {darkMode && <style>{`
       img, video, [style*="background-image"] { filter: invert(100%) hue-rotate(180deg) !important; }
       .no-invert { filter: invert(100%) hue-rotate(180deg) !important; }
+      /* Dans un îlot non-inversé (viewer Statuts...), les descendants ne sont pas re-filtrés */
+      .no-invert [style], .no-invert img, .no-invert video, .no-invert svg { filter: none !important; }
+      /* ── Couleurs de marque INCHANGÉES en mode sombre (rouge, doré, vert, orange, violet) ── */
+      /* Rouge Moyo #C0392B */
+      [style*="#C0392B"], [style*="rgb(192, 57, 43)"], [style*="rgb(192,57,43)"],
+      /* Rouge foncé #922B21 */
+      [style*="#922B21"], [style*="rgb(146, 43, 33)"], [style*="rgb(146,43,33)"],
+      /* Doré Moyo #D4A843 + #B8860B */
+      [style*="#D4A843"], [style*="rgb(212, 168, 67)"], [style*="rgb(212,168,67)"], [style*="#B8860B"], [style*="rgb(184, 134, 11)"],
+      /* Vert Moyo #1A5C3A */
+      [style*="#1A5C3A"], [style*="rgb(26, 92, 58)"], [style*="rgb(26,92,58)"],
+      /* Orange marketing #E67E22 */
+      [style*="#E67E22"], [style*="rgb(230, 126, 34)"], [style*="rgb(230,126,34)"],
+      /* Violet matchmaking #7c3aed / #8e44ad */
+      [style*="#7c3aed"], [style*="#7C3AED"], [style*="rgb(124, 58, 237)"], [style*="#8e44ad"], [style*="#8E44AD"], [style*="rgb(142, 68, 173)"] {
+        filter: invert(100%) hue-rotate(180deg) !important;
+      }
+      /* Les médias à l'intérieur d'un bloc de marque ne doivent pas être ré-inversés deux fois */
+      [style*="#C0392B"] img, [style*="rgb(192, 57, 43)"] img, [style*="#922B21"] img,
+      [style*="#D4A843"] img, [style*="#1A5C3A"] img, [style*="#E67E22"] img, [style*="#7c3aed"] img, [style*="#8e44ad"] img { filter: none !important; }
     `}</style>}
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
