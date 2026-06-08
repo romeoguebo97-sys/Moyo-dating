@@ -20198,16 +20198,10 @@ export default function App() {
   if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
   if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
-  return <div style={darkMode ? { filter: "invert(93%) hue-rotate(180deg)", minHeight: "100vh" } : {}}>
+  return <div style={darkMode ? { filter: "invert(100%) hue-rotate(180deg)", minHeight: "100vh", background: "#fff" } : {}}>
     {darkMode && <style>{`
-      img, video { filter: invert(100%) hue-rotate(180deg) !important; }
+      img, video, [style*="background-image"] { filter: invert(100%) hue-rotate(180deg) !important; }
       .no-invert { filter: invert(100%) hue-rotate(180deg) !important; }
-      [style*="background: #C0392B"], [style*="background: rgb(192, 57, 43)"],
-      [style*="background-color: #C0392B"], [style*="background: linear-gradient(135deg, rgb(192"],
-      [style*="color: #C0392B"], [style*="color: rgb(192, 57, 43)"],
-      [style*="stroke: #C0392B"], [style*="fill: #C0392B"] {
-        filter: invert(100%) hue-rotate(180deg) !important;
-      }
     `}</style>}
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
