@@ -1194,59 +1194,59 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   // ════════ ÉCRAN 1 : OFFRE ════════
   if (step === "offer") return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
-      <div style={{ background: "#FCFBF8", borderRadius: 28, width: "100%", maxWidth: 410, maxHeight: "94vh", overflowY: "auto", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "30px 22px 22px" }}>
+      <div style={{ background: "#FCFBF8", borderRadius: 24, width: "100%", maxWidth: 400, maxHeight: "96vh", overflowY: "auto", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "18px 20px 16px" }}>
         <div onClick={onClose} style={{ position: "absolute", top: 16, right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, position: "relative" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", left: "26%", top: 6, opacity: 0.7 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", right: "26%", top: 14, opacity: 0.6 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(212,168,67,0.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="34" height="34" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 8, position: "relative" }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", left: "28%", top: 4, opacity: 0.7 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", right: "28%", top: 10, opacity: 0.6 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
+          <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(212,168,67,0.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="27" height="27" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
           </div>
         </div>
-        <div style={{ textAlign: "center", fontSize: "1.55rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2, marginBottom: 8, padding: "0 6px" }}>{title}</div>
-        <div style={{ textAlign: "center", fontSize: "0.92rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 16, padding: "0 10px" }}>Cette fonctionnalité est réservée aux membres Premium.</div>
-        <div style={{ textAlign: "center", marginBottom: 18 }}>
-          <span style={{ fontSize: "2.2rem", fontWeight: 800, color: gold }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")}</span>
-          <span style={{ fontSize: "1.1rem", fontWeight: 800, color: gold, marginLeft: 6 }}>FCFA</span>
-          <span style={{ fontSize: "0.95rem", color: "#9a9a9a", marginLeft: 6 }}>/ mois</span>
+        <div style={{ textAlign: "center", fontSize: "1.3rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.18, marginBottom: 6, padding: "0 6px" }}>{title}</div>
+        <div style={{ textAlign: "center", fontSize: "0.84rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 10, padding: "0 10px" }}>Cette fonctionnalité est réservée aux membres Premium.</div>
+        <div style={{ textAlign: "center", marginBottom: 12 }}>
+          <span style={{ fontSize: "1.9rem", fontWeight: 800, color: gold }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")}</span>
+          <span style={{ fontSize: "1rem", fontWeight: 800, color: gold, marginLeft: 6 }}>FCFA</span>
+          <span style={{ fontSize: "0.9rem", color: "#9a9a9a", marginLeft: 6 }}>/ mois</span>
         </div>
-        <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-          <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "12px 13px", display: "flex", alignItems: "center", gap: 9 }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+          <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
             <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{fmt(stats.couples)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
           </div>
-          <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "12px 13px", display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
             <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{fmt(stats.premium)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
           </div>
         </div>
-        <div style={{ background: "#fff", borderRadius: 18, padding: "6px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 18 }}>
+        <div style={{ background: "#fff", borderRadius: 18, padding: "4px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 14 }}>
           {(showAllAdv ? avantages : highlights).map((a: any, i: number) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 13, padding: "12px 0", borderBottom: i < (showAllAdv ? avantages.length : highlights.length) - 1 ? "1px solid #f0ede6" : "none" }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 13, padding: "9px 0", borderBottom: i < (showAllAdv ? avantages.length : highlights.length) - 1 ? "1px solid #f0ede6" : "none" }}>
+              <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {showAllAdv ? getIcon(a.icon) : <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{a.svg}</svg>}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#1a1a2e" }}>{showAllAdv ? a.titre : a.t}</div>
-                <div style={{ fontSize: "0.78rem", color: "#9a9a9a" }}>{showAllAdv ? a.desc : a.d}</div>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a2e" }}>{showAllAdv ? a.titre : a.t}</div>
+                <div style={{ fontSize: "0.76rem", color: "#9a9a9a" }}>{showAllAdv ? a.desc : a.d}</div>
               </div>
             </div>
           ))}
-          <div onClick={() => setShowAllAdv(s => !s)} style={{ textAlign: "center", padding: "12px 0 10px", color: gold, fontWeight: 700, fontSize: "0.86rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+          <div onClick={() => setShowAllAdv(s => !s)} style={{ textAlign: "center", padding: "9px 0 6px", color: gold, fontWeight: 700, fontSize: "0.84rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
             {showAllAdv ? "Voir moins" : "Voir tous les avantages"}
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAllAdv ? "rotate(-90deg)" : "rotate(0)" }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
         </div>
-        <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 10 }}>CONGO — PAYEZ AVEC</div>
-        <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 10 }}>
+        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>CONGO — PAYEZ AVEC</div>
+        <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
           {mtnLogo(18)} MTN MoMo{!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
         </button>
-        <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: "#fff", color: "#E40000", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#E40000" : "#dcdcdc"}`, borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 18, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
+        <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: "#fff", color: "#E40000", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#E40000" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
           {airtelLogo(20)} Airtel Money{!PAY_AIRTEL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
         </button>
-        <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 10 }}>DIASPORA — PAYER PAR CARTE</div>
+        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>DIASPORA — PAYER PAR CARTE</div>
         <button onClick={async () => {
           if (!PAY_CB_ENABLED) return;
           try {
@@ -1255,11 +1255,11 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             const data = await r.json();
             if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
           } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
-        }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "#1a1a2e" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 18 }}>
+        }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "#1a1a2e" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
           Visa / Mastercard{!PAY_CB_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
         </button>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#a8a8a8", fontSize: "0.8rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#a8a8a8", fontSize: "0.78rem" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
           Paiement 100% sécurisé
         </div>
@@ -1316,7 +1316,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
           {/* Étape 2 */}
           <div style={{ background: "#fff", borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("2")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Entrez ce numéro ID ci-dessous</div></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("2")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Entrez le numéro ID ci-dessous</div></div>
             <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.55, marginBottom: 14 }}>Après validation du paiement {OP.operator}, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
