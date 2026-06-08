@@ -190,6 +190,10 @@ let LANDING_TITLE_START = "Trouve ton";
 let LANDING_TITLE_HIGHLIGHT = "âme sœur";
 let LANDING_TITLE_END = "Congolais.e";
 let LANDING_SLOGAN = "Moyo connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.";
+// Chiffres du bandeau d'accueil ("Chaque jour...") — éditables depuis l'admin
+let LANDING_STAT_MEMBERS = "12 000+";
+let LANDING_STAT_COUPLES = "850+";
+let LANDING_STAT_CITIES = "19";
 // Formate le numéro WhatsApp pour l'affichage : "242065132012" -> "+242 06 513 20 12"
 function formatWhatsApp(num: string): string {
   const d = (num || "").replace(/\D/g, "");
@@ -214,7 +218,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -243,6 +247,9 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
   if (map["premium_stat_couples"] !== undefined) PREMIUM_STAT_COUPLES = map["premium_stat_couples"];
   if (map["premium_stat_members"] !== undefined) PREMIUM_STAT_MEMBERS = map["premium_stat_members"];
+  if (map["landing_stat_members"]) LANDING_STAT_MEMBERS = map["landing_stat_members"];
+  if (map["landing_stat_couples"]) LANDING_STAT_COUPLES = map["landing_stat_couples"];
+  if (map["landing_stat_cities"]) LANDING_STAT_CITIES = map["landing_stat_cities"];
   if (map["landing_title_start"]) LANDING_TITLE_START = map["landing_title_start"];
   if (map["landing_title_highlight"]) LANDING_TITLE_HIGHLIGHT = map["landing_title_highlight"];
   if (map["landing_title_end"]) LANDING_TITLE_END = map["landing_title_end"];
@@ -2203,11 +2210,14 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         {/* Phrase déplacée ici */}
         <p style={{ textAlign: "center", color: "#555", fontSize: "0.85rem", marginBottom: 16, marginTop: -8 }}>Chaque jour, de nouveaux couples se forment au Congo et dans la diaspora</p>
         <div className="landing-stats fu5" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, maxWidth: 600, margin: "0 auto" }}>
-          {[
-            { target: 12000, suffix: "+", l: "Membres inscrits", svg: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
-            { target: 850, suffix: "+", l: "Couples formés", svg: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
-            { target: 19, suffix: "", l: "Villes & diasporas", svg: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> },
-          ].map(({ target, suffix, l, svg }) => (
+          {(() => {
+            const parseStat = (s: string) => { const digits = (String(s).match(/\d/g) || []).join(""); const target = parseInt(digits || "0", 10) || 0; const m = String(s).match(/[^\d\s][^\d]*$/); return { target, suffix: m ? m[0].trim() : "" }; };
+            const m1 = parseStat(LANDING_STAT_MEMBERS), m2 = parseStat(LANDING_STAT_COUPLES), m3 = parseStat(LANDING_STAT_CITIES);
+            return [
+            { target: m1.target, suffix: m1.suffix, l: "Membres inscrits", svg: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+            { target: m2.target, suffix: m2.suffix, l: "Couples formés", svg: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
+            { target: m3.target, suffix: m3.suffix, l: "Villes & diasporas", svg: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> },
+          ];})().map(({ target, suffix, l, svg }) => (
             <StatCounter key={l} target={target} suffix={suffix} label={l} svg={svg} />
           ))}
         </div>
@@ -4529,6 +4539,9 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
       ["landing_title_highlight", "Titre — mot coloré (ex: âme sœur)"],
       ["landing_title_end", "Titre — fin (ex: Congolais.e)"],
       ["landing_slogan", "Slogan sous le titre"],
+      ["landing_stat_members", "Bandeau accueil — Membres inscrits (ex: 12 000+)"],
+      ["landing_stat_couples", "Bandeau accueil — Couples formés (ex: 850+)"],
+      ["landing_stat_cities", "Bandeau accueil — Villes & diasporas (ex: 19)"],
       ["premium_stat_couples", "Modale Premium — couples formés cette semaine (vide = calcul auto)"],
       ["premium_stat_members", "Modale Premium — membres Premium actifs (vide = calcul auto)"],
     ],
@@ -4538,6 +4551,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     social_facebook: SOCIAL_FACEBOOK, social_instagram: SOCIAL_INSTAGRAM, social_tiktok: SOCIAL_TIKTOK, social_youtube: SOCIAL_YOUTUBE,
     landing_members_count: LANDING_MEMBERS, landing_title_start: LANDING_TITLE_START, landing_title_highlight: LANDING_TITLE_HIGHLIGHT, landing_title_end: LANDING_TITLE_END, landing_slogan: LANDING_SLOGAN,
     premium_stat_couples: PREMIUM_STAT_COUPLES, premium_stat_members: PREMIUM_STAT_MEMBERS,
+    landing_stat_members: LANDING_STAT_MEMBERS, landing_stat_couples: LANDING_STAT_COUPLES, landing_stat_cities: LANDING_STAT_CITIES,
   };
   const list = fields[group];
   const [vals, setVals] = React.useState<Record<string, string>>(() => { const o: Record<string, string> = {}; list.forEach(([k]) => { o[k] = defaults[k]; }); return o; });
@@ -4573,6 +4587,9 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     if (key === "landing_slogan") LANDING_SLOGAN = value;
     if (key === "premium_stat_couples") PREMIUM_STAT_COUPLES = value;
     if (key === "premium_stat_members") PREMIUM_STAT_MEMBERS = value;
+    if (key === "landing_stat_members") LANDING_STAT_MEMBERS = value;
+    if (key === "landing_stat_couples") LANDING_STAT_COUPLES = value;
+    if (key === "landing_stat_cities") LANDING_STAT_CITIES = value;
   };
   const doSave = async (key: string) => {
     setConfirmKey(null);
@@ -7216,6 +7233,36 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const [confirmUnmatch, setConfirmUnmatch] = useState<Match | null>(null);
   const [confirmBlockMatch, setConfirmBlockMatch] = useState<Match | null>(null);
   const isUnmatching = useRef(false);
+  // ── Sous-onglets : Matchs / Propositions ──
+  const [matchSubTab, setMatchSubTab] = useState<"matches" | "proposals">("matches");
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [propLoading, setPropLoading] = useState(false);
+  const loadProposals = async () => {
+    setPropLoading(true);
+    try {
+      const res = await sb.query<any>(auth.token, "match_proposals", `?or=(user1_id.eq.${auth.userId},user2_id.eq.${auth.userId})&order=created_at.desc`);
+      const visible = (Array.isArray(res) ? res : []).filter(pr => !pr.archived);
+      const enriched = await Promise.all(visible.map(async (pr) => {
+        const otherId = pr.user1_id === auth.userId ? pr.user2_id : pr.user1_id;
+        const profs = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${otherId}`).catch(() => []);
+        return { ...pr, other: Array.isArray(profs) ? profs[0] : undefined };
+      }));
+      setProposals(enriched.filter(p => p.other));
+    } catch { setProposals([]); }
+    setPropLoading(false);
+  };
+  useEffect(() => { if (matchSubTab === "proposals") loadProposals(); }, [matchSubTab]);
+  const propStatus = (pr: any) => {
+    const s = pr.status;
+    if (["accepted", "matched"].includes(s)) return { label: "Acceptée", color: G.vert, bg: "rgba(26,92,58,0.1)" };
+    if (["refused", "declined", "rejected"].includes(s)) return { label: "Refusée", color: "#888", bg: "#F0F0F0" };
+    if ((pr.expires_at && new Date(pr.expires_at) < new Date()) || s === "expired") return { label: "Expirée", color: "#aaa", bg: "#F5F5F5" };
+    return { label: "En attente", color: "#B8860B", bg: "rgba(212,168,67,0.14)" };
+  };
+  const acceptProposal = async (pr: any) => { setProposals(prev => prev.map(x => x.id === pr.id ? { ...x, status: "accepted" } : x)); try { await sb.update(auth.token, "match_proposals", pr.id, { status: "accepted" }); } catch {} };
+  const refuseProposal = async (pr: any) => { setProposals(prev => prev.map(x => x.id === pr.id ? { ...x, status: "refused" } : x)); try { await sb.update(auth.token, "match_proposals", pr.id, { status: "refused" }); } catch {} };
+  const deleteProposal = async (pr: any) => { setProposals(prev => prev.filter(x => x.id !== pr.id)); try { await sb.update(auth.token, "match_proposals", pr.id, { archived: true }); } catch {} };
+  const propPending = proposals.filter(p => propStatus(p).label === "En attente").length;
 
   useEffect(() => { loadMatches(); }, []);
 
@@ -7302,10 +7349,43 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: 12 }}>
       <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>
     </div>
+
+    {/* ── Bannière dynamique (s'adapte au sous-onglet) ── */}
+    <div style={{ background: matchSubTab === "proposals" ? "linear-gradient(135deg,#8e44ad,#7c3aed)" : `linear-gradient(135deg,${G.vert},#0f3d25)`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: G.blanc, display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {matchSubTab === "proposals"
+          ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          : <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+          {matchSubTab === "proposals"
+            ? (proposals.length > 1 ? `${proposals.length} propositions` : `${proposals.length} proposition`)
+            : (matches.length > 1 ? `${matches.length} matchs` : `${matches.length} match`)}
+        </div>
+        <div style={{ fontSize: "0.75rem", opacity: 0.85, marginTop: 2 }}>
+          {matchSubTab === "proposals" ? "Mises en relation proposées par Moyo" : "Vos coups de cœur réciproques"}
+        </div>
+      </div>
+      {matchSubTab === "proposals" && propPending > 0 && (
+        <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>{propPending > 9 ? "9+" : propPending}</div>
+      )}
+    </div>
+
+    {/* ── Switch Matchs / Propositions ── */}
+    <InnerSwitch
+      value={matchSubTab}
+      onChange={v => setMatchSubTab(v as "matches" | "proposals")}
+      options={[
+        { id: "matches", label: `Matchs${matches.length > 0 ? ` (${matches.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
+        { id: "proposals", label: `Propositions${proposals.length > 0 ? ` (${proposals.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+      ]}
+    />
+
     {/* Overlay fermeture menu */}
     {menuMatchId && <div style={{ position: "fixed", inset: 0, zIndex: 49 }} onClick={() => setMenuMatchId(null)} />}
 
-    {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div>
+    {matchSubTab === "matches" && (loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div>
     : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><p>Continue à liker des profils pour avoir des matchs !</p></div>
     : viewMode === "list" ? (
       <div>
@@ -7421,7 +7501,50 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
           );
         })()}
       </div>
-    )}
+    ))}
+
+    {matchSubTab === "proposals" && (propLoading ? (
+      <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+    ) : proposals.length === 0 ? (
+      <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(124,58,237,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <p style={{ fontWeight: 700, marginBottom: 4 }}>Aucune proposition pour l'instant</p>
+        <p style={{ fontSize: "0.82rem", color: "#999" }}>Moyo vous présentera ici les profils sélectionnés pour vous.</p>
+      </div>
+    ) : (
+      <div>
+        {proposals.map(pr => {
+          const st = propStatus(pr); const o = pr.other; const pending = st.label === "En attente";
+          return (
+            <div key={pr.id} className="card-hover" style={{ background: G.blanc, borderRadius: 16, padding: 12, marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <div onClick={() => o && setSelectedMatch({ id: pr.id, user1: auth.userId, user2: o.id, created_at: pr.created_at, partner: o } as any)} style={{ width: 58, height: 58, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", cursor: "pointer" }}>
+                  {o?.photo_url ? <img src={o.photo_url} alt={o?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111" }}>{o?.name}{o?.age ? `, ${o.age} ans` : ""}</span>
+                    <Badge label={st.label} color={st.color} bg={st.bg} />
+                  </div>
+                  <div style={{ fontSize: "0.73rem", color: "#777", marginTop: 3, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {o?.city && <span><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>{o.city}</span>}
+                    {pr.created_at && <span style={{ color: "#aaa" }}>Proposé le {new Date(pr.created_at).toLocaleDateString("fr-FR")}</span>}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                {pending && <>
+                  <button onClick={() => acceptProposal(pr)} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>✓ Accepter</button>
+                  <button onClick={() => refuseProposal(pr)} style={{ flex: 1, background: G.blanc, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Refuser</button>
+                </>}
+                {st.label === "Acceptée" && o && <button onClick={() => { if (onGoMessages) onGoMessages(o.id); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Envoyer un message</button>}
+                <button onClick={() => deleteProposal(pr)} title="Retirer de ma liste" style={{ flex: pending || st.label === "Acceptée" ? "0 0 auto" : 1, background: G.blanc, color: "#c0392b", border: `1.5px solid rgba(192,57,43,0.3)`, borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Supprimer</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    ))}
 
     {selectedMatch && p && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedMatch(null)}>
       <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
