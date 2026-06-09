@@ -12847,6 +12847,179 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const mmIgnore = (s: any) => { setMmIgnored(prev => new Set(prev).add(s.key)); setMmSuggestions(prev => prev.filter(x => x.key !== s.key)); };
 
+  // ── Fiche de compatibilité relationnelle (génération + impression/PDF) ──
+  const generateFiche = (s: any) => {
+    const man = s.man, woman = s.woman;
+    const ra = man.relational_profile || {}, rb = woman.relational_profile || {};
+    const get = (rp: any, k: string, legacy?: string) => rp?.self?.[k] ?? rp?.[legacy ?? k] ?? "";
+    const arr = (rp: any, k: string, legacy?: string) => { const v = rp?.self?.[k] ?? rp?.[legacy ?? k]; return Array.isArray(v) ? v : []; };
+    const projA = get(ra, "project"), projB = get(rb, "project");
+    const relA = man.religion || get(ra, "religion"), relB = woman.religion || get(rb, "religion");
+    const intA = arr(ra, "interests"), intB = arr(rb, "interests");
+    const valA = arr(ra, "values", "qualities"), valB = arr(rb, "values", "qualities");
+    const childA = get(ra, "wants_children"), childB = get(rb, "wants_children");
+    const lifeA = arr(ra, "lifestyle"), lifeB = arr(rb, "lifestyle");
+    const inter = (x: string[], y: string[]) => x.filter(v => y.includes(v));
+    const commonInt = inter(intA, intB), commonVal = inter(valA, valB);
+    const ageGap = (man.age && woman.age) ? Math.abs(man.age - woman.age) : null;
+    const isDiaspora = (c: string) => /diaspora|france|belg|canada|usa|états|europe/i.test(c || "");
+    // Sous-scores par critère (0-100)
+    const scObjectif = projA && projB ? (projA === projB ? 100 : 55) : 60;
+    const scLoc = man.city && woman.city ? (man.city === woman.city ? 100 : (isDiaspora(man.city) && isDiaspora(woman.city) ? 70 : 40)) : 55;
+    const indiff = ra?.search?.religion === "Indifférent" || rb?.search?.religion === "Indifférent" || relA === "Sans importance" || relB === "Sans importance";
+    const scReligion = relA && relB ? (relA === relB ? 100 : (indiff ? 80 : 45)) : 60;
+    const scAge = ageGap === null ? 70 : Math.max(45, 100 - ageGap * 6);
+    const denomInt = Math.max(intA.length, intB.length, 1), denomVal = Math.max(valA.length, valB.length, 1);
+    const scInt = (intA.length && intB.length) ? Math.max(40, Math.round(commonInt.length / denomInt * 100)) : 50;
+    const scVal = (valA.length && valB.length) ? Math.max(40, Math.round(commonVal.length / denomVal * 100)) : 50;
+    const childMatch = childA && childB ? (childA === childB ? 100 : 55) : null;
+    const lifeOverlap = (lifeA.length && lifeB.length) ? Math.round(inter(lifeA, lifeB).length / Math.max(lifeA.length, lifeB.length, 1) * 100) : null;
+    const visionParts = [childMatch, lifeOverlap, scReligion].filter(x => x !== null) as number[];
+    const scVision = visionParts.length ? Math.round(visionParts.reduce((a, b) => a + b, 0) / visionParts.length) : 65;
+    const criteria = [
+      { label: "Objectif relationnel", score: scObjectif }, { label: "Localisation", score: scLoc },
+      { label: "Religion / Confession", score: scReligion }, { label: "Tranche d'âge", score: scAge },
+      { label: "Centres d'intérêt", score: scInt }, { label: "Valeurs personnelles", score: scVal },
+      { label: "Vision de vie", score: scVision },
+    ];
+    const global = Math.round(criteria.reduce((a, c) => a + c.score, 0) / criteria.length);
+    const stars = Math.max(1, Math.min(5, Math.round(global / 20)));
+    const level = global >= 85 ? "EXCELLENTE COMPATIBILITÉ" : global >= 70 ? "BONNE COMPATIBILITÉ" : global >= 55 ? "COMPATIBILITÉ MOYENNE" : "COMPATIBILITÉ À APPROFONDIR";
+    // Points forts
+    const forts: string[] = [];
+    if (man.city && man.city === woman.city) forts.push("Même ville de résidence");
+    else if (isDiaspora(man.city) && isDiaspora(woman.city)) forts.push("Tous deux en diaspora");
+    if (relA && relA === relB) forts.push("Même confession religieuse");
+    if (projA && projA === projB) forts.push("Même objectif relationnel");
+    if (commonInt.length) forts.push(`${commonInt.length} centre${commonInt.length > 1 ? "s" : ""} d'intérêt commun${commonInt.length > 1 ? "s" : ""}`);
+    if (commonVal.length) forts.push(`${commonVal.length} valeur${commonVal.length > 1 ? "s" : ""} commune${commonVal.length > 1 ? "s" : ""}`);
+    if (childA && childA === childB) forts.push("Même vision sur les enfants");
+    if (ageGap !== null && ageGap <= 5) forts.push("Écart d'âge faible");
+    if (!forts.length) forts.push("Profils compatibles selon les critères Moyo");
+    const ref = s.prop?.id ? `MOYO-MI-${String(s.prop.id).slice(0, 8).toUpperCase()}` : `MOYO-MI-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const today = new Date().toLocaleDateString("fr-FR");
+    const esc = (t: any) => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+    const R = "#C0392B"; const GOLD = "#D4A843";
+    const profileCard = (p: any, label: string, proj: string, ints: string[], vals: string[]) => `
+      <div class="pcard">
+        <div class="ptag">${label}</div>
+        <div class="phead">
+          <div class="pphoto">${p.photo_url ? `<img src="${esc(p.photo_url)}" crossorigin="anonymous"/>` : ""}</div>
+          <div class="pinfo">
+            <div class="pname">${esc(p.name)} ${p.is_verified ? "✔" : ""}</div>
+            <div class="pmeta">🎂 ${esc(p.age || "—")} ans</div>
+            <div class="pmeta">📍 ${esc(p.city || "—")}</div>
+            <div class="pmeta">✝ ${esc(p.religion || "—")}</div>
+            <div class="pobj"><b>Objectif :</b> ${esc(proj || "—")}</div>
+          </div>
+        </div>
+        <div class="pdiv"></div>
+        <div class="pline">Profession : <span>${esc(p.profession || "")}</span></div>
+        <div class="pline">Situation familiale : <span></span></div>
+        <div class="ptwo">
+          <div><div class="pst">❤ CENTRES D'INTÉRÊT</div>${(ints.length ? ints : ["—"]).map(i => `<div class="pli">• ${esc(i)}</div>`).join("")}</div>
+          <div><div class="pst">🛡 VALEURS</div>${(vals.length ? vals : ["—"]).map(v => `<div class="pli">• ${esc(v)}</div>`).join("")}</div>
+        </div>
+      </div>`;
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Fiche de compatibilité - ${esc(man.name)} & ${esc(woman.name)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}
+  body{background:#eceef3;color:#222;padding:18px}
+  .sheet{max-width:1040px;margin:0 auto;background:#fff;border:3px solid ${R};border-radius:14px;overflow:hidden}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 26px 14px}
+  .logo{font-size:1.8rem;font-weight:900;letter-spacing:-1px;display:flex;align-items:center;gap:7px}.logo small{display:block;font-size:.58rem;font-weight:600;color:#888;letter-spacing:0;margin-top:2px}
+  .logo .lh{width:26px;height:26px;flex-shrink:0}
+  .title{text-align:center;flex:1}.title h1{color:${R};font-size:1.5rem;font-weight:900;letter-spacing:1px}.title h2{color:#888;font-size:.9rem;font-weight:600;letter-spacing:3px}
+  .meta{text-align:right;font-size:.72rem;color:#555;line-height:1.7}.meta b{color:${R}}
+  .row{display:flex;gap:16px;padding:0 26px}
+  .pcard{flex:1;border:1.5px solid #f0d4d0;border-radius:12px;padding:14px;position:relative}
+  .ptag{position:absolute;top:-11px;left:14px;background:${R};color:#fff;font-size:.64rem;font-weight:800;padding:3px 12px;border-radius:50px;letter-spacing:.5px}
+  .phead{display:flex;gap:12px;margin-top:6px}
+  .pphoto{width:78px;height:78px;border-radius:50%;overflow:hidden;background:#f0e6e0;border:2px solid ${R};flex-shrink:0}.pphoto img{width:100%;height:100%;object-fit:cover}
+  .pname{font-size:1.15rem;font-weight:900;color:${R}}.pmeta{font-size:.74rem;color:#555;margin-top:2px}.pobj{font-size:.74rem;color:#222;margin-top:4px}.pobj b{color:${R}}
+  .pdiv{border-top:1px dashed #e0b8b2;margin:12px 0}
+  .pline{font-size:.74rem;color:#555;margin-bottom:7px}.pline span{display:inline-block;border-bottom:1px solid #ccc;min-width:140px}
+  .ptwo{display:flex;gap:14px;margin-top:6px}.pst{font-size:.66rem;font-weight:800;color:${R};margin-bottom:5px}.pli{font-size:.74rem;color:#333;margin-bottom:3px}
+  .center{width:230px;text-align:center;padding-top:8px}
+  .cglobal{font-size:.78rem;font-weight:800;color:#444;letter-spacing:1px}
+  .circle{width:130px;height:130px;border-radius:50%;margin:8px auto;display:flex;flex-direction:column;align-items:center;justify-content:center;background:conic-gradient(${R} ${global}%,#f0dcd8 0);}
+  .circle .inner{width:104px;height:104px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .circle .pct{font-size:2rem;font-weight:900;color:${R}}
+  .clevel{font-weight:900;color:${R};font-size:.95rem;margin-top:6px}
+  .stars{font-size:1.1rem;color:${R};margin:4px 0}
+  .cnote{font-size:.68rem;color:#888;font-style:italic;margin-top:8px;line-height:1.5;padding:0 6px}
+  .sec{padding:18px 26px 0}
+  .grid2{display:flex;gap:16px}
+  .box{flex:1;border:1.5px solid #f0d4d0;border-radius:12px;padding:14px;margin-top:14px}
+  .box h3{color:${R};font-size:.82rem;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .crit{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:.76rem;color:#333}
+  .crit .lab{flex:1}.crit .bar{width:120px;height:7px;background:#eee;border-radius:5px;overflow:hidden}.crit .bar i{display:block;height:100%;background:${R}}.crit .sc{width:38px;text-align:right;font-weight:800;color:${R}}
+  .chk{font-size:.78rem;color:#333;margin-bottom:7px;display:flex;align-items:center;gap:8px}.chk .ic{color:${R};font-weight:900}
+  .approf{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.approf div{font-size:.74rem;color:#444;display:flex;gap:6px;align-items:center}.approf .sq{width:11px;height:11px;border:1.5px solid #c9a59f;border-radius:3px;flex-shrink:0}
+  .lines div{border-bottom:1px dotted #ccc;height:20px}
+  .dec div{font-size:.76rem;color:#333;margin-bottom:7px;display:flex;gap:8px;align-items:center}.dec .sq{width:12px;height:12px;border:1.5px solid #c9a59f;border-radius:3px}
+  .footer{background:${R};color:#fff;text-align:center;padding:12px;font-size:.78rem;font-weight:600;margin-top:18px;display:flex;justify-content:space-between;padding-left:26px;padding-right:26px}
+  .conf{border:1.5px solid #f0d4d0;border-radius:12px;padding:12px;font-size:.68rem;color:#666;line-height:1.5}.conf b{color:${R};display:block;margin-bottom:4px}
+  .bar-actions{max-width:1040px;margin:0 auto 14px;display:flex;gap:10px;justify-content:flex-end}
+  .btn{background:${R};color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:.85rem;font-weight:700;cursor:pointer}
+  @media print{.bar-actions{display:none}body{background:#fff;padding:0}.sheet{border:none}}
+</style></head><body>
+<div class="bar-actions"><button class="btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button></div>
+<div class="sheet">
+  <div class="top">
+    <div class="logo">
+      <svg class="lh" viewBox="0 0 24 24" fill="${R}"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      <div><span style="color:${R}">Mo</span><span style="color:${GOLD}">yo</span><small>Construisons des relations qui durent</small></div>
+    </div>
+    <div class="title"><h1>FICHE DE COMPATIBILITÉ</h1><h2>RELATIONNELLE</h2></div>
+    <div class="meta">Date de génération : <b>${today}</b><br/>Référence : <b>${ref}</b></div>
+  </div>
+  <div class="row">
+    ${profileCard(man, "PROFIL HOMME", projA, intA, valA)}
+    <div class="center">
+      <div class="cglobal">COMPATIBILITÉ GLOBALE</div>
+      <div class="circle"><div class="inner"><div class="pct">${global}%</div><div style="font-size:1.1rem">❤</div></div></div>
+      <div class="clevel">${level}</div>
+      <div class="stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</div>
+      <div class="cnote">Cette analyse est basée sur les informations renseignées par les deux profils et les critères de compatibilité Moyo.</div>
+    </div>
+    ${profileCard(woman, "PROFIL FEMME", projB, intB, valB)}
+  </div>
+  <div class="sec"><div class="grid2">
+    <div class="box" style="margin-top:0">
+      <h3>📊 ANALYSE DE COMPATIBILITÉ</h3>
+      ${criteria.map(c => `<div class="crit"><span class="lab">${c.label}</span><span class="bar"><i style="width:${c.score}%"></i></span><span class="sc">${c.score}%</span></div>`).join("")}
+    </div>
+    <div style="flex:1">
+      <div class="box" style="margin-top:0"><h3>✅ POINTS FORTS DU COUPLE</h3>${forts.map(f => `<div class="chk"><span class="ic">✓</span>${esc(f)}</div>`).join("")}</div>
+      <div class="box"><h3>⚠ POINTS À APPROFONDIR</h3><div class="approf">
+        ${["Vision du mariage", "Gestion financière", "Projet de vie commun", "Distance géographique future", "Désir d'enfants", "Compatibilité des caractères"].map(x => `<div><span class="sq"></span>${x}</div>`).join("")}
+      </div></div>
+    </div>
+  </div></div>
+  <div class="sec"><div class="grid2">
+    <div class="box"><h3>✎ OBSERVATIONS DE L'ADMINISTRATEUR</h3><div class="lines"><div></div><div></div><div></div><div></div></div></div>
+    <div class="box"><h3>⚖ DÉCISION MOYO</h3><div class="dec">
+      <div><span class="sq"></span>Mise en relation validée</div>
+      <div><span class="sq"></span>Entretien complémentaire recommandé</div>
+      <div><span class="sq"></span>Mise en relation refusée</div>
+      <div style="margin-top:6px">Commentaire :</div></div>
+      <div class="lines"><div></div><div></div></div>
+    </div>
+  </div></div>
+  <div class="sec"><div class="grid2">
+    <div class="conf" style="flex:1"><b>🔒 CONFIDENTIEL</b>Ce document est strictement confidentiel et destiné uniquement à l'usage interne de Moyo. Ne pas partager avec des tiers sans autorisation.<br/><br/>ID Proposition : <b style="color:${R}">${ref}</b></div>
+    <div class="conf" style="flex:1"><b>✍ SIGNATURE</b>Administrateur Moyo : ____________________<br/><br/>Date : ____ / ____ / ________</div>
+  </div></div>
+  <div class="footer"><span>♥ moyo</span><span>Construisons des relations qui durent</span><span>www.moyo-app.com</span></div>
+</div>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { showToast("Autorisez les pop-ups pour générer la fiche.", "error"); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  };
+
   const loadArchivedItems = async () => {
     setMatchArchiveLoading(true);
     try {
@@ -19214,6 +19387,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <button onClick={() => setMmView(s.woman)} style={{ flex: "1 1 auto", border: `1px solid ${G.gris}`, background: "#fff", color: "#555", borderRadius: 9, padding: "9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Voir profil femme</button>
                           <button onClick={() => mmIgnore(s)} style={{ flex: "0 0 auto", border: `1px solid ${G.gris}`, background: "#fff", color: "#888", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>✕ Ignorer</button>
                           <button onClick={() => mmProposeCouple(s)} style={{ flex: "1 1 auto", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>❤ Proposer ce couple</button>
+                          <button onClick={() => generateFiche(s)} style={{ flex: "1 1 100%", background: "#fff", color: G.rouge, border: `1.5px solid ${G.rouge}`, borderRadius: 9, padding: "10px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Générer la fiche de compatibilité relationnelle
+                          </button>
                         </div>
                       </div>
                     );
