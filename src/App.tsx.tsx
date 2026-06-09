@@ -12900,6 +12900,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const today = new Date().toLocaleDateString("fr-FR");
     const esc = (t: any) => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
     const R = "#C0392B"; const GOLD = "#D4A843";
+    const safeName = `${man.name || "homme"}_${woman.name || "femme"}`.replace(/[^a-zA-Z0-9]+/g, "_");
     const profileCard = (p: any, label: string, proj: string, ints: string[], vals: string[]) => `
       <div class="pcard">
         <div class="ptag">${label}</div>
@@ -12925,25 +12926,24 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 <title>Fiche de compatibilité - ${esc(man.name)} & ${esc(woman.name)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}
-  body{background:#eceef3;color:#222;padding:18px}
-  .sheet{max-width:1040px;margin:0 auto;background:#fff;border:3px solid ${R};border-radius:14px;overflow:hidden}
+  body{background:#eceef3;color:#1a1a1a;padding:18px}
+  .sheet{max-width:1040px;margin:0 auto;background:#fff;border:2px solid #1a1a1a;border-radius:14px;overflow:hidden}
   .top{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 26px 14px}
   .logo{font-size:1.8rem;font-weight:900;letter-spacing:-1px;display:flex;align-items:center;gap:7px}.logo small{display:block;font-size:.58rem;font-weight:600;color:#888;letter-spacing:0;margin-top:2px}
-  .logo .lh{width:26px;height:26px;flex-shrink:0}
   .title{text-align:center;flex:1}.title h1{color:${R};font-size:1.5rem;font-weight:900;letter-spacing:1px}.title h2{color:#888;font-size:.9rem;font-weight:600;letter-spacing:3px}
-  .meta{text-align:right;font-size:.72rem;color:#555;line-height:1.7}.meta b{color:${R}}
+  .meta{text-align:right;font-size:.72rem;color:#555;line-height:1.7}.meta b{color:#1a1a1a}
   .row{display:flex;gap:16px;padding:0 26px}
-  .pcard{flex:1;border:1.5px solid #f0d4d0;border-radius:12px;padding:14px;position:relative}
-  .ptag{position:absolute;top:-11px;left:14px;background:${R};color:#fff;font-size:.64rem;font-weight:800;padding:3px 12px;border-radius:50px;letter-spacing:.5px}
+  .pcard{flex:1;border:1.5px solid #dcdcdc;border-radius:12px;padding:14px;position:relative}
+  .ptag{position:absolute;top:-11px;left:14px;background:#1a1a1a;color:#fff;font-size:.64rem;font-weight:800;padding:3px 12px;border-radius:50px;letter-spacing:.5px}
   .phead{display:flex;gap:12px;margin-top:6px}
-  .pphoto{width:78px;height:78px;border-radius:50%;overflow:hidden;background:#f0e6e0;border:2px solid ${R};flex-shrink:0}.pphoto img{width:100%;height:100%;object-fit:cover}
-  .pname{font-size:1.15rem;font-weight:900;color:${R}}.pmeta{font-size:.74rem;color:#555;margin-top:2px}.pobj{font-size:.74rem;color:#222;margin-top:4px}.pobj b{color:${R}}
-  .pdiv{border-top:1px dashed #e0b8b2;margin:12px 0}
+  .pphoto{width:78px;height:78px;border-radius:50%;overflow:hidden;background:#eee;border:2px solid #1a1a1a;flex-shrink:0}.pphoto img{width:100%;height:100%;object-fit:cover}
+  .pname{font-size:1.15rem;font-weight:900;color:#1a1a1a}.pmeta{font-size:.74rem;color:#555;margin-top:2px}.pobj{font-size:.74rem;color:#222;margin-top:4px}.pobj b{color:${R}}
+  .pdiv{border-top:1px dashed #d5d5d5;margin:12px 0}
   .pline{font-size:.74rem;color:#555;margin-bottom:7px}.pline span{display:inline-block;border-bottom:1px solid #ccc;min-width:140px}
-  .ptwo{display:flex;gap:14px;margin-top:6px}.pst{font-size:.66rem;font-weight:800;color:${R};margin-bottom:5px}.pli{font-size:.74rem;color:#333;margin-bottom:3px}
+  .ptwo{display:flex;gap:14px;margin-top:6px}.pst{font-size:.66rem;font-weight:800;color:#1a1a1a;margin-bottom:5px}.pli{font-size:.74rem;color:#333;margin-bottom:3px}
   .center{width:230px;text-align:center;padding-top:8px}
-  .cglobal{font-size:.78rem;font-weight:800;color:#444;letter-spacing:1px}
-  .circle{width:130px;height:130px;border-radius:50%;margin:8px auto;display:flex;flex-direction:column;align-items:center;justify-content:center;background:conic-gradient(${R} ${global}%,#f0dcd8 0);}
+  .cglobal{font-size:.78rem;font-weight:800;color:#1a1a1a;letter-spacing:1px}
+  .circle{width:130px;height:130px;border-radius:50%;margin:8px auto;display:flex;flex-direction:column;align-items:center;justify-content:center;background:conic-gradient(${R} ${global}%,#eee 0);}
   .circle .inner{width:104px;height:104px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
   .circle .pct{font-size:2rem;font-weight:900;color:${R}}
   .clevel{font-weight:900;color:${R};font-size:.95rem;margin-top:6px}
@@ -12951,25 +12951,25 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   .cnote{font-size:.68rem;color:#888;font-style:italic;margin-top:8px;line-height:1.5;padding:0 6px}
   .sec{padding:18px 26px 0}
   .grid2{display:flex;gap:16px}
-  .box{flex:1;border:1.5px solid #f0d4d0;border-radius:12px;padding:14px;margin-top:14px}
-  .box h3{color:${R};font-size:.82rem;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:7px}
-  .crit{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:.76rem;color:#333}
+  .box{flex:1;border:1.5px solid #dcdcdc;border-radius:12px;padding:14px;margin-top:14px}
+  .box h3{color:#1a1a1a;font-size:.82rem;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:7px;border-left:3px solid ${R};padding-left:8px}
+  .crit{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:.76rem;color:#1a1a1a}
   .crit .lab{flex:1}.crit .bar{width:120px;height:7px;background:#eee;border-radius:5px;overflow:hidden}.crit .bar i{display:block;height:100%;background:${R}}.crit .sc{width:38px;text-align:right;font-weight:800;color:${R}}
-  .chk{font-size:.78rem;color:#333;margin-bottom:7px;display:flex;align-items:center;gap:8px}.chk .ic{color:${R};font-weight:900}
-  .approf{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.approf div{font-size:.74rem;color:#444;display:flex;gap:6px;align-items:center}.approf .sq{width:11px;height:11px;border:1.5px solid #c9a59f;border-radius:3px;flex-shrink:0}
+  .chk{font-size:.78rem;color:#1a1a1a;margin-bottom:7px;display:flex;align-items:center;gap:8px}.chk .ic{color:${R};font-weight:900}
+  .approf{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.approf div{font-size:.74rem;color:#1a1a1a;display:flex;gap:6px;align-items:center}.approf .sq{width:11px;height:11px;border:1.5px solid #aaa;border-radius:3px;flex-shrink:0}
   .lines div{border-bottom:1px dotted #ccc;height:20px}
-  .dec div{font-size:.76rem;color:#333;margin-bottom:7px;display:flex;gap:8px;align-items:center}.dec .sq{width:12px;height:12px;border:1.5px solid #c9a59f;border-radius:3px}
-  .footer{background:${R};color:#fff;text-align:center;padding:12px;font-size:.78rem;font-weight:600;margin-top:18px;display:flex;justify-content:space-between;padding-left:26px;padding-right:26px}
-  .conf{border:1.5px solid #f0d4d0;border-radius:12px;padding:12px;font-size:.68rem;color:#666;line-height:1.5}.conf b{color:${R};display:block;margin-bottom:4px}
+  .dec div{font-size:.76rem;color:#1a1a1a;margin-bottom:7px;display:flex;gap:8px;align-items:center}.dec .sq{width:12px;height:12px;border:1.5px solid #aaa;border-radius:3px}
+  .footer{background:#1a1a1a;color:#fff;text-align:center;padding:12px;font-size:.78rem;font-weight:600;margin-top:18px;display:flex;justify-content:space-between;padding-left:26px;padding-right:26px;border-top:3px solid ${R}}
+  .conf{border:1.5px solid #dcdcdc;border-radius:12px;padding:12px;font-size:.68rem;color:#666;line-height:1.5}.conf b{color:${R};display:block;margin-bottom:4px}
   .bar-actions{max-width:1040px;margin:0 auto 14px;display:flex;gap:10px;justify-content:flex-end}
   .btn{background:${R};color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:.85rem;font-weight:700;cursor:pointer}
+  .btn2{background:#fff;color:#1a1a1a;border:1.5px solid #1a1a1a;border-radius:8px;padding:10px 16px;font-size:.85rem;font-weight:700;cursor:pointer}
   @media print{.bar-actions{display:none}body{background:#fff;padding:0}.sheet{border:none}}
 </style></head><body>
-<div class="bar-actions"><button class="btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button></div>
-<div class="sheet">
+<div class="bar-actions"><button id="dlbtn" class="btn" onclick="dl()">📥 Télécharger la fiche (PDF)</button><button class="btn2" onclick="window.print()">Imprimer</button></div>
+<div class="sheet" id="sheet">
   <div class="top">
     <div class="logo">
-      <svg class="lh" viewBox="0 0 24 24" fill="${R}"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
       <div><span style="color:${R}">Mo</span><span style="color:${GOLD}">yo</span><small>Construisons des relations qui durent</small></div>
     </div>
     <div class="title"><h1>FICHE DE COMPATIBILITÉ</h1><h2>RELATIONNELLE</h2></div>
@@ -13012,8 +13012,19 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     <div class="conf" style="flex:1"><b>🔒 CONFIDENTIEL</b>Ce document est strictement confidentiel et destiné uniquement à l'usage interne de Moyo. Ne pas partager avec des tiers sans autorisation.<br/><br/>ID Proposition : <b style="color:${R}">${ref}</b></div>
     <div class="conf" style="flex:1"><b>✍ SIGNATURE</b>Administrateur Moyo : ____________________<br/><br/>Date : ____ / ____ / ________</div>
   </div></div>
-  <div class="footer"><span>♥ moyo</span><span>Construisons des relations qui durent</span><span>www.moyo-app.com</span></div>
+  <div class="footer"><span>♥ Moyo</span><span>Construisons des relations qui durent · www.moyo-congo.com</span><span>Page 1/1</span></div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+  function dl(){
+    var btn=document.getElementById('dlbtn');
+    if(typeof html2pdf==='undefined'){ alert("Le module de téléchargement charge encore, réessayez dans 2 secondes (ou utilisez Imprimer)."); return; }
+    var el=document.getElementById('sheet');
+    var prev=btn.textContent; btn.textContent='⏳ Génération du PDF...'; btn.disabled=true;
+    var w=el.offsetWidth, h=el.offsetHeight;
+    html2pdf().set({margin:0, filename:'Fiche_compatibilite_${safeName}.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'}, jsPDF:{unit:'px',format:[w,h],orientation:(w>h?'l':'p')}}).from(el).save().then(function(){ btn.textContent=prev; btn.disabled=false; }).catch(function(){ btn.textContent=prev; btn.disabled=false; alert("Échec du téléchargement. Utilisez le bouton Imprimer puis « Enregistrer en PDF »."); });
+  }
+</script>
 </body></html>`;
     const w = window.open("", "_blank");
     if (!w) { showToast("Autorisez les pop-ups pour générer la fiche.", "error"); return; }
@@ -15285,8 +15296,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const systemPendingCount = reports.filter(r => isPending(r) && isSystemReport(r)).length;
   const messagingPendingCount = reports.filter(r => isPending(r) && isSupportInbox(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
-  // ── Badge global = signalements en attente + avis non lus + paiements en attente ──
-  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount;
+  // ── Badge global = signalements en attente + avis non lus + paiements en attente + nouvelles demandes de mise en relation ──
+  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge;
   const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
@@ -19278,7 +19289,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "archived") loadArchivedItems();
               }} style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 50, border: `2px solid ${matchSubTab === key ? color : G.gris}`, background: matchSubTab === key ? color : G.blanc, color: matchSubTab === key ? "#fff" : "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                 {label}
-                {key === "requests" && matchRequestsBadge > 0 && <span style={{ background: "#fff", color: G.rouge, borderRadius: 50, fontSize: "0.55rem", fontWeight: 800, padding: "1px 5px" }}>{matchRequestsBadge}</span>}
+                {key === "requests" && matchRequestsBadge > 0 && <span style={{ background: matchSubTab === key ? "#fff" : G.rouge, color: matchSubTab === key ? G.rouge : "#fff", borderRadius: 50, fontSize: "0.55rem", fontWeight: 800, padding: "1px 6px" }}>{matchRequestsBadge}</span>}
                 {key === "matchmaking" && mmSuggestions.length > 0 && <span style={{ background: matchSubTab === key ? "#fff" : "#7c3aed", color: matchSubTab === key ? "#7c3aed" : "#fff", borderRadius: 50, fontSize: "0.55rem", fontWeight: 800, padding: "1px 6px" }}>{mmSuggestions.length}</span>}
               </button>
             ))}
