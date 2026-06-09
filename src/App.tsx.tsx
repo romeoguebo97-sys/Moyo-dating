@@ -7229,7 +7229,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
   );
 }
 
-function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchStart, onUnmatchEnd }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void; onGoMessages?: (partnerId?: string) => void; onUnmatchStart?: () => void; onUnmatchEnd?: () => void }) {
+function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchStart, onUnmatchEnd, jumpToProposals }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void; onGoMessages?: (partnerId?: string) => void; onUnmatchStart?: () => void; onUnmatchEnd?: () => void; jumpToProposals?: number }) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -7238,16 +7238,20 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const [confirmUnmatch, setConfirmUnmatch] = useState<Match | null>(null);
   const [confirmBlockMatch, setConfirmBlockMatch] = useState<Match | null>(null);
   const isUnmatching = useRef(false);
-  // ── Sous-onglets : Propositions / Matchs ──
-  const [matchSubTab, setMatchSubTab] = useState<"proposals" | "matches">("proposals");
+  // ── Sous-onglets : Mes demandes / Propositions / Matchs ──
+  const [matchSubTab, setMatchSubTab] = useState<"demandes" | "proposals" | "matches">("demandes");
+  useEffect(() => { if (jumpToProposals && jumpToProposals > 0) setMatchSubTab("proposals"); }, [jumpToProposals]);
   const isPremiumReal = auth.isPremium;
   const [proposals, setProposals] = useState<any[]>([]);
   const [propLoading, setPropLoading] = useState(false);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [reqLoading, setReqLoading] = useState(false);
   const loadProposals = async () => {
     setPropLoading(true);
     try {
       const res = await sb.query<any>(auth.token, "match_proposals", `?or=(user1_id.eq.${auth.userId},user2_id.eq.${auth.userId})&order=created_at.desc`);
-      const visible = (Array.isArray(res) ? res : []).filter(pr => !pr.archived);
+      // Onglet Propositions = UNIQUEMENT les mises en relation issues d'une demande utilisateur (source "request")
+      const visible = (Array.isArray(res) ? res : []).filter(pr => !pr.archived && pr.source === "request");
       const enriched = await Promise.all(visible.map(async (pr) => {
         const otherId = pr.user1_id === auth.userId ? pr.user2_id : pr.user1_id;
         const profs = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${otherId}`).catch(() => []);
@@ -7257,7 +7261,15 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     } catch { setProposals([]); }
     setPropLoading(false);
   };
-  useEffect(() => { if (matchSubTab === "proposals") loadProposals(); }, [matchSubTab]);
+  const loadMyRequests = async () => {
+    setReqLoading(true);
+    try {
+      const res = await sb.query<any>(auth.token, "match_requests", `?user_id=eq.${auth.userId}&order=created_at.desc`);
+      setMyRequests(Array.isArray(res) ? res : []);
+    } catch { setMyRequests([]); }
+    setReqLoading(false);
+  };
+  useEffect(() => { if (matchSubTab === "proposals") loadProposals(); if (matchSubTab === "demandes") loadMyRequests(); }, [matchSubTab, jumpToProposals]);
   const myRole = (pr: any) => pr.user1_id === auth.userId ? "user1" : "user2";
   const myResp = (pr: any) => myRole(pr) === "user1" ? pr.user1_response : pr.user2_response;
   const otherResp = (pr: any) => myRole(pr) === "user1" ? pr.user2_response : pr.user1_response;
@@ -7387,32 +7399,37 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     </div>
 
     {/* ── Bannière dynamique : rouge (gratuit) / doré (Premium), même design ── */}
-    <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: isPremiumReal ? "#111" : G.blanc, display: "flex", alignItems: "center", gap: 12 }}>
-      <div style={{ width: 36, height: 36, borderRadius: "50%", background: isPremiumReal ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        {matchSubTab === "proposals"
-          ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isPremiumReal ? "#111" : "#fff"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          : <svg width="16" height="16" viewBox="0 0 24 24" fill={isPremiumReal ? "#111" : "#fff"} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
-      </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-          {matchSubTab === "proposals"
-            ? (proposals.length > 1 ? `${proposals.length} propositions` : `${proposals.length} proposition`)
-            : (matches.length > 1 ? `${matches.length} matchs` : `${matches.length} match`)}
+    {(() => {
+      const cfg = matchSubTab === "demandes"
+        ? { count: myRequests.length, word: myRequests.length > 1 ? "demandes" : "demande", sub: "Vos demandes de mise en relation" }
+        : matchSubTab === "proposals"
+        ? { count: proposals.length, word: proposals.length > 1 ? "propositions" : "proposition", sub: "Suite à vos demandes de mise en relation" }
+        : { count: matches.length, word: matches.length > 1 ? "matchs" : "match", sub: "Vos coups de cœur réciproques" };
+      const icon = matchSubTab === "matches"
+        ? <svg width="16" height="16" viewBox="0 0 24 24" fill={isPremiumReal ? "#111" : "#fff"} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        : matchSubTab === "demandes"
+        ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isPremiumReal ? "#111" : "#fff"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isPremiumReal ? "#111" : "#fff"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+      return (
+      <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: isPremiumReal ? "#111" : G.blanc, display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", background: isPremiumReal ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{cfg.count} {cfg.word}</div>
+          <div style={{ fontSize: "0.75rem", opacity: 0.85, marginTop: 2 }}>{cfg.sub}</div>
         </div>
-        <div style={{ fontSize: "0.75rem", opacity: 0.85, marginTop: 2 }}>
-          {matchSubTab === "proposals" ? "Mises en relation proposées par Moyo" : "Vos coups de cœur réciproques"}
-        </div>
+        {matchSubTab === "proposals" && propPending > 0 && (
+          <div style={{ background: isPremiumReal ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>{propPending > 9 ? "9+" : propPending}</div>
+        )}
       </div>
-      {matchSubTab === "proposals" && propPending > 0 && (
-        <div style={{ background: isPremiumReal ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>{propPending > 9 ? "9+" : propPending}</div>
-      )}
-    </div>
+      );
+    })()}
 
-    {/* ── Switch Propositions / Matchs ── */}
+    {/* ── Switch : Mes demandes / Propositions / Matchs ── */}
     <InnerSwitch
       value={matchSubTab}
-      onChange={v => setMatchSubTab(v as "proposals" | "matches")}
+      onChange={v => setMatchSubTab(v as "demandes" | "proposals" | "matches")}
       options={[
+        { id: "demandes", label: `Mes demandes${myRequests.length > 0 ? ` (${myRequests.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
         { id: "proposals", label: `Propositions${proposals.length > 0 ? ` (${proposals.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
         { id: "matches", label: `Matchs${matches.length > 0 ? ` (${matches.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
       ]}
@@ -7420,6 +7437,47 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
 
     {/* Overlay fermeture menu */}
     {menuMatchId && <div style={{ position: "fixed", inset: 0, zIndex: 49 }} onClick={() => setMenuMatchId(null)} />}
+
+    {matchSubTab === "demandes" && (reqLoading ? (
+      <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+    ) : myRequests.length === 0 ? (
+      <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <p style={{ fontWeight: 700, marginBottom: 4 }}>Aucune demande pour l'instant</p>
+        <p style={{ fontSize: "0.82rem", color: "#999" }}>Faites une demande depuis votre profil avec « Demander une mise en relation ».</p>
+      </div>
+    ) : (
+      <div>
+        {myRequests.map(rq => {
+          const s = rq.status || "pending";
+          const stCfg = s === "completed" || s === "matched" || s === "done"
+            ? { label: "Proposition envoyée", color: G.vert, bg: "rgba(26,92,58,0.1)" }
+            : s === "rejected" || s === "closed"
+            ? { label: "Clôturée", color: "#888", bg: "#F0F0F0" }
+            : { label: "En cours d'analyse", color: "#B8860B", bg: "rgba(212,168,67,0.14)" };
+          return (
+            <div key={rq.id} style={{ background: G.blanc, borderRadius: 16, padding: 14, marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  Demande de mise en relation
+                </span>
+                <Badge label={stCfg.label} color={stCfg.color} bg={stCfg.bg} />
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5 }}>
+                {rq.target_gender && <div>Recherche : <b style={{ color: "#333" }}>{rq.target_gender === "Homme" ? "un homme" : rq.target_gender === "Femme" ? "une femme" : rq.target_gender}</b></div>}
+                {rq.target_city && <div>Ville : <b style={{ color: "#333" }}>{rq.target_city}</b></div>}
+                {(rq.target_age_min || rq.target_age_max) && <div>Âge : <b style={{ color: "#333" }}>{rq.target_age_min || "?"} – {rq.target_age_max || "?"} ans</b></div>}
+              </div>
+              {rq.created_at && <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 8 }}>Envoyée le {new Date(rq.created_at).toLocaleDateString("fr-FR")}</div>}
+              {(s === "completed" || s === "matched" || s === "done") && (
+                <button onClick={() => setMatchSubTab("proposals")} style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Voir la proposition</button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    ))}
 
     {matchSubTab === "matches" && (loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div>
     : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><p>Continue à liker des profils pour avoir des matchs !</p></div>
@@ -10379,13 +10437,25 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
   const REL_RELIGIONS = ["Sans importance", ...RELIGIONS];
   const REL_QUALITIES = ["Responsable", "Fidèle", "Respectueux(se)", "Pratiquant(e)", "Stable professionnellement", "Ambitieux(se)", "Calme", "Sociable", "Orienté famille", "Veut des enfants", "Non-fumeur", "Non-buveur"];
   const REL_INTERESTS = ["Lecture", "Musique", "Voyage", "Sport", "Cuisine", "Entrepreneuriat", "Cinéma", "Spiritualité", "Technologie", "Nature"];
+  // ── Nouveaux champs (architecture "Qui je suis" / "Ce que je recherche") ──
+  const REL_VALUES = ["Responsable", "Fidèle", "Respectueux(se)", "Pratiquant(e)", "Stable professionnellement", "Ambitieux(se)", "Calme", "Sociable", "Orienté famille", "Honnête", "Généreux(se)", "Patient(e)"];
+  const REL_CHILDREN = ["Je veux des enfants", "J'ai déjà des enfants", "Je ne veux pas d'enfants", "Ouvert(e) à la discussion"];
+  const REL_LIFESTYLE = ["Non-fumeur(se)", "Fumeur(se)", "Non-buveur(se)", "Buveur(se) occasionnel(le)", "Sportif(ve)", "Vie nocturne", "Casanier(ère)", "Religieux(se) pratiquant(e)"];
+  const REL_SEARCH_CITIES = ["Partout au Congo", ...REL_CITIES];
+  const REL_SEARCH_RELIGIONS = ["Indifférent", ...RELIGIONS];
   const [relProfile, setRelProfile] = useState<any>(null);
   const [myGender, setMyGender] = useState("");
   const [showRelPrompt, setShowRelPrompt] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [wStep, setWStep] = useState(1);
   const [savingRel, setSavingRel] = useState(false);
-  const [rel, setRel] = useState({ city: "", age_min: "", age_max: "", project: "", religion: "", qualities: [] as string[], interests: [] as string[], note: "" });
+  const [rel, setRel] = useState({
+    // Bloc « Qui je suis »
+    project: "", religion: "", values: [] as string[], interests: [] as string[], wants_children: "", lifestyle: [] as string[],
+    // Bloc « Ce que je recherche »
+    search_city: "", age_min: "", age_max: "", search_religion: "", search_values: [] as string[], search_interests: [] as string[],
+    note: "",
+  });
   useEffect(() => {
     (async () => {
       try {
@@ -10395,7 +10465,22 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
         const rp = Array.isArray(d) && d[0] ? d[0].relational_profile : null;
         if (rp && typeof rp === "object") {
           setRelProfile(rp);
-          setRel(prev => ({ ...prev, city: rp.city || "", age_min: rp.age_min ? String(rp.age_min) : "", age_max: rp.age_max ? String(rp.age_max) : "", project: rp.project || "", religion: rp.religion || "", qualities: Array.isArray(rp.qualities) ? rp.qualities : [], interests: Array.isArray(rp.interests) ? rp.interests : [], note: rp.note || "" }));
+          setRel(prev => ({
+            ...prev,
+            project: rp.self?.project ?? rp.project ?? "",
+            religion: rp.self?.religion ?? rp.religion ?? "",
+            values: Array.isArray(rp.self?.values) ? rp.self.values : (Array.isArray(rp.qualities) ? rp.qualities : []),
+            interests: Array.isArray(rp.self?.interests) ? rp.self.interests : (Array.isArray(rp.interests) ? rp.interests : []),
+            wants_children: rp.self?.wants_children ?? "",
+            lifestyle: Array.isArray(rp.self?.lifestyle) ? rp.self.lifestyle : [],
+            search_city: rp.search?.city ?? rp.city ?? "",
+            age_min: (rp.search?.age_min ?? rp.age_min) ? String(rp.search?.age_min ?? rp.age_min) : "",
+            age_max: (rp.search?.age_max ?? rp.age_max) ? String(rp.search?.age_max ?? rp.age_max) : "",
+            search_religion: rp.search?.religion ?? "",
+            search_values: Array.isArray(rp.search?.values) ? rp.search.values : [],
+            search_interests: Array.isArray(rp.search?.interests) ? rp.search.interests : [],
+            note: rp.note || "",
+          }));
         }
       } catch {}
     })();
@@ -10403,14 +10488,38 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
   const toggleIn = (arr: string[], v: string, max?: number) => arr.includes(v) ? arr.filter(x => x !== v) : (max && arr.length >= max ? arr : [...arr, v]);
   const saveRel = async () => {
     setSavingRel(true);
-    const payload = { city: rel.city, age_min: parseInt(rel.age_min) || null, age_max: parseInt(rel.age_max) || null, project: rel.project, religion: rel.religion, qualities: rel.qualities, interests: rel.interests, note: rel.note.trim(), updated_at: new Date().toISOString() };
+    const aMin = parseInt(rel.age_min) || null, aMax = parseInt(rel.age_max) || null;
+    const oppGender = myGender === "Homme" ? "Femme" : myGender === "Femme" ? "Homme" : "";
+    const legacyCity = rel.search_city === "Partout au Congo" ? "" : rel.search_city;
+    const payload = {
+      // ── Bloc « Qui je suis » ──
+      self: { project: rel.project, religion: rel.religion, values: rel.values, interests: rel.interests, wants_children: rel.wants_children, lifestyle: rel.lifestyle },
+      // ── Bloc « Ce que je recherche » ──
+      search: { gender: oppGender, city: rel.search_city, age_min: aMin, age_max: aMax, religion: rel.search_religion, values: rel.search_values, interests: rel.search_interests },
+      note: rel.note.trim(),
+      // ── Champs hérités (compatibilité moteur actuel + bouton de demande) ──
+      city: legacyCity, age_min: aMin, age_max: aMax, project: rel.project, religion: rel.religion, qualities: rel.values, interests: rel.interests,
+      updated_at: new Date().toISOString(),
+    };
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ relational_profile: payload }) });
       setRelProfile(payload);
       setShowWizard(false); setWStep(1);
-      setForm(f => ({ ...f, target_city: payload.city || f.target_city, target_age_min: payload.age_min ? String(payload.age_min) : f.target_age_min, target_age_max: payload.age_max ? String(payload.age_max) : f.target_age_max }));
+      setForm(f => ({ ...f, target_city: legacyCity || f.target_city, target_age_min: aMin ? String(aMin) : f.target_age_min, target_age_max: aMax ? String(aMax) : f.target_age_max }));
     } catch { setErrorModal("Erreur lors de l'enregistrement. Réessayez."); }
     setSavingRel(false);
+  };
+  const [showDeleteRel, setShowDeleteRel] = useState(false);
+  const [deletingRel, setDeletingRel] = useState(false);
+  const deleteRel = async () => {
+    setDeletingRel(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ relational_profile: null }) });
+      setRelProfile(null);
+      setRel({ project: "", religion: "", values: [], interests: [], wants_children: "", lifestyle: [], search_city: "", age_min: "", age_max: "", search_religion: "", search_values: [], search_interests: [], note: "" });
+      setShowDeleteRel(false); setShowModal(false);
+    } catch { setErrorModal("Erreur lors de la suppression. Réessayez."); }
+    setDeletingRel(false);
   };
   return (
     <>
@@ -10425,9 +10534,32 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
       {relProfile && (
-        <div onClick={() => { setShowWizard(true); setWStep(1); }} className="tap" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", margin: "-4px 0 12px", padding: "8px 10px", color: G.rouge, fontSize: "0.78rem", fontWeight: 700 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
-          Modifier mon profil relationnel
+        <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "-4px 0 12px" }}>
+          <div onClick={() => { setShowWizard(true); setWStep(1); }} className="tap" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "8px 10px", color: G.rouge, fontSize: "0.78rem", fontWeight: 700 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+            Modifier mon profil relationnel
+          </div>
+          <div style={{ width: 1, height: 16, background: G.gris }} />
+          <div onClick={() => setShowDeleteRel(true)} className="tap" style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "8px 10px", color: "#999", fontSize: "0.78rem", fontWeight: 700 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Supprimer
+          </div>
+        </div>
+      )}
+      {/* ── Modal confirmation suppression du profil relationnel ── */}
+      {showDeleteRel && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10004, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !deletingRel && setShowDeleteRel(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, padding: "24px 22px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1a1a1a", marginBottom: 6 }}>Supprimer votre profil relationnel ?</div>
+            <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 20 }}>Vos critères (qui vous êtes et ce que vous recherchez) seront effacés. Vous pourrez en recréer un à tout moment. Vos matchs et conversations ne sont pas affectés.</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowDeleteRel(false)} disabled={deletingRel} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+              <button onClick={deleteRel} disabled={deletingRel} style={{ flex: 1, background: deletingRel ? "rgba(192,57,43,0.5)" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: deletingRel ? "not-allowed" : "pointer" }}>{deletingRel ? "Suppression…" : "Supprimer"}</button>
+            </div>
+          </div>
         </div>
       )}
       {/* ── Modal erreur même genre ── */}
@@ -10561,75 +10693,82 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
         const chip = (label: string, active: boolean, onClick: () => void, dim?: boolean) => (
           <button key={label} onClick={onClick} style={{ padding: "9px 13px", borderRadius: 50, border: `1.5px solid ${active ? G.rouge : G.gris}`, background: active ? "rgba(192,57,43,0.08)" : G.blanc, color: active ? G.rouge : (dim ? "#bbb" : "#555"), fontSize: "0.8rem", fontWeight: 700, cursor: dim ? "not-allowed" : "pointer" }}>{label}</button>
         );
+        const fieldLabel = (txt: string, req?: boolean) => <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 8, marginTop: 18 }}>{txt}{req && <span style={{ color: G.rouge }}> *</span>}</label>;
         const aMin = parseInt(rel.age_min), aMax = parseInt(rel.age_max);
-        const step1ok = rel.city && rel.age_min && rel.age_max && !isNaN(aMin) && !isNaN(aMax) && aMin >= 18 && aMax >= 18 && aMin <= aMax;
-        const step2ok = rel.project && rel.religion;
-        const canNext = wStep === 1 ? step1ok : wStep === 2 ? step2ok : true;
-        const titles = ["Localisation recherchée", "Projet recherché", "Qualités recherchées", "Centres d'intérêt"];
+        // Étape 1 « Qui je suis » : projet + religion obligatoires
+        const step1ok = !!rel.project && !!rel.religion;
+        // Étape 2 « Ce que je recherche » : localisation + tranche d'âge valides
+        const step2ok = !!rel.search_city && !!rel.age_min && !!rel.age_max && !isNaN(aMin) && !isNaN(aMax) && aMin >= 18 && aMax >= 18 && aMin <= aMax;
+        const canNext = wStep === 1 ? step1ok : step2ok;
+        const oppGender = myGender === "Homme" ? "une femme" : myGender === "Femme" ? "un homme" : "le genre opposé";
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-            <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
-              <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "18px 20px 14px", flexShrink: 0 }}>
+            <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 440, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+              <div style={{ background: wStep === 1 ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : `linear-gradient(135deg,${G.vert},#0f3d25)`, padding: "18px 20px 14px", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ fontWeight: 800, fontSize: "0.98rem", color: "#fff" }}>Profil relationnel</div>
                   <button onClick={() => { setShowWizard(false); setWStep(1); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff" }}>✕</button>
                 </div>
                 <div style={{ display: "flex", gap: 5, marginTop: 12 }}>
-                  {[1, 2, 3, 4].map(s => <div key={s} style={{ flex: 1, height: 4, borderRadius: 4, background: s <= wStep ? "#fff" : "rgba(255,255,255,0.3)" }} />)}
+                  {[1, 2].map(s => <div key={s} style={{ flex: 1, height: 4, borderRadius: 4, background: s <= wStep ? "#fff" : "rgba(255,255,255,0.3)" }} />)}
                 </div>
-                <div style={{ fontSize: "0.74rem", color: "rgba(255,255,255,0.85)", marginTop: 8 }}>Étape {wStep}/4 · {titles[wStep - 1]}</div>
+                <div style={{ fontSize: "0.8rem", color: "#fff", fontWeight: 700, marginTop: 8 }}>{wStep === 1 ? "Étape 1 — Parlez-nous d'abord de vous" : "Étape 2 — Ce que vous recherchez"}</div>
               </div>
 
-              <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px 22px" }}>
-                {wStep === 1 && (
+              <div style={{ flex: 1, overflowY: "auto", padding: "4px 20px 22px" }}>
+                {wStep === 1 ? (
                   <>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Ville souhaitée <span style={{ color: G.rouge }}>*</span></label>
-                    <select value={rel.city} onChange={e => setRel(r => ({ ...r, city: e.target.value }))} style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", background: G.blanc, marginBottom: 16 }}>
-                      <option value="">Choisir une ville…</option>
-                      {REL_CITIES.map(v => <option key={v} value={v}>{v}</option>)}
+                    <div style={{ fontSize: "0.74rem", color: "#888", background: G.creme, borderRadius: 10, padding: "9px 12px", lineHeight: 1.5, marginTop: 16 }}>Votre sexe, âge et localisation sont déjà repris de votre profil. Décrivez ici qui vous êtes.</div>
+                    {fieldLabel("Projet relationnel", true)}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_PROJECTS.map(p => chip(p, rel.project === p, () => setRel(r => ({ ...r, project: r.project === p ? "" : p }))))}</div>
+                    {fieldLabel("Votre religion", true)}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{RELIGIONS.map(p => chip(p, rel.religion === p, () => setRel(r => ({ ...r, religion: r.religion === p ? "" : p }))))}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
+                      <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "#333" }}>Vos valeurs personnelles</label>
+                      <span style={{ fontSize: "0.72rem", color: rel.values.length >= 5 ? G.rouge : "#999", fontWeight: 700 }}>{rel.values.length}/5</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>{REL_VALUES.map(p => chip(p, rel.values.includes(p), () => setRel(r => ({ ...r, values: toggleIn(r.values, p, 5) })), !rel.values.includes(p) && rel.values.length >= 5))}</div>
+                    {fieldLabel("Vos centres d'intérêt")}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_INTERESTS.map(p => chip(p, rel.interests.includes(p), () => setRel(r => ({ ...r, interests: toggleIn(r.interests, p) }))))}</div>
+                    {fieldLabel("Désir d'enfants")}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_CHILDREN.map(p => chip(p, rel.wants_children === p, () => setRel(r => ({ ...r, wants_children: r.wants_children === p ? "" : p }))))}</div>
+                    {fieldLabel("Habitudes de vie")}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_LIFESTYLE.map(p => chip(p, rel.lifestyle.includes(p), () => setRel(r => ({ ...r, lifestyle: toggleIn(r.lifestyle, p) }))))}</div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: "0.74rem", color: "#888", background: "rgba(26,92,58,0.08)", borderRadius: 10, padding: "9px 12px", lineHeight: 1.5, marginTop: 16 }}>Moyo vous proposera des profils correspondant à <b>{oppGender}</b>. Précisez vos préférences.</div>
+                    {fieldLabel("Localisation recherchée", true)}
+                    <select value={rel.search_city} onChange={e => setRel(r => ({ ...r, search_city: e.target.value }))} style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", background: G.blanc }}>
+                      <option value="">Choisir…</option>
+                      {REL_SEARCH_CITIES.map(v => <option key={v} value={v}>{v}</option>)}
                     </select>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Tranche d'âge souhaitée <span style={{ color: G.rouge }}>*</span></label>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+                    {fieldLabel("Tranche d'âge recherchée", true)}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                       <input type="number" placeholder="Âge min" value={rel.age_min} min={18} max={99} onChange={e => setRel(r => ({ ...r, age_min: e.target.value }))} style={{ padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box" }} />
                       <input type="number" placeholder="Âge max" value={rel.age_max} min={18} max={99} onChange={e => setRel(r => ({ ...r, age_max: e.target.value }))} style={{ padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box" }} />
                     </div>
-                    <div style={{ fontSize: "0.74rem", color: "#999", background: G.creme, borderRadius: 10, padding: "9px 12px", lineHeight: 1.5 }}>Le genre recherché est automatique : Moyo vous propose des profils du genre opposé.</div>
-                  </>
-                )}
-                {wStep === 2 && (
-                  <>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>Projet recherché <span style={{ color: G.rouge }}>*</span></label>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>{REL_PROJECTS.map(p => chip(p, rel.project === p, () => setRel(r => ({ ...r, project: r.project === p ? "" : p }))))}</div>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>Religion souhaitée <span style={{ color: G.rouge }}>*</span></label>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_RELIGIONS.map(p => chip(p, rel.religion === p, () => setRel(r => ({ ...r, religion: r.religion === p ? "" : p }))))}</div>
-                  </>
-                )}
-                {wStep === 3 && (
-                  <>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <label style={{ fontSize: "0.76rem", fontWeight: 700, color: "#555" }}>Qualités recherchées</label>
-                      <span style={{ fontSize: "0.72rem", color: rel.qualities.length >= 5 ? G.rouge : "#999", fontWeight: 700 }}>{rel.qualities.length}/5</span>
+                    {fieldLabel("Religion souhaitée")}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_SEARCH_RELIGIONS.map(p => chip(p, rel.search_religion === p, () => setRel(r => ({ ...r, search_religion: r.search_religion === p ? "" : p }))))}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
+                      <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "#333" }}>Valeurs souhaitées</label>
+                      <span style={{ fontSize: "0.72rem", color: rel.search_values.length >= 5 ? G.rouge : "#999", fontWeight: 700 }}>{rel.search_values.length}/5</span>
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_QUALITIES.map(p => chip(p, rel.qualities.includes(p), () => setRel(r => ({ ...r, qualities: toggleIn(r.qualities, p, 5) })), !rel.qualities.includes(p) && rel.qualities.length >= 5))}</div>
-                    <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 12 }}>Choisissez jusqu'à 5 qualités.</div>
-                  </>
-                )}
-                {wStep === 4 && (
-                  <>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>Centres d'intérêt</label>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>{REL_INTERESTS.map(p => chip(p, rel.interests.includes(p), () => setRel(r => ({ ...r, interests: toggleIn(r.interests, p) }))))}</div>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Message complémentaire <span style={{ color: "#aaa", fontWeight: 500 }}>(facultatif)</span></label>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>{REL_VALUES.map(p => chip(p, rel.search_values.includes(p), () => setRel(r => ({ ...r, search_values: toggleIn(r.search_values, p, 5) })), !rel.search_values.includes(p) && rel.search_values.length >= 5))}</div>
+                    {fieldLabel("Centres d'intérêt souhaités")}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_INTERESTS.map(p => chip(p, rel.search_interests.includes(p), () => setRel(r => ({ ...r, search_interests: toggleIn(r.search_interests, p) }))))}</div>
+                    {fieldLabel("Message complémentaire (facultatif)")}
                     <textarea value={rel.note} onChange={e => setRel(r => ({ ...r, note: e.target.value.slice(0, 300) }))} rows={3} placeholder="Précisez ce qui compte pour vous…" style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
                   </>
                 )}
               </div>
 
               <div style={{ display: "flex", gap: 10, padding: "14px 20px", borderTop: `1px solid ${G.gris}`, flexShrink: 0 }}>
-                {wStep > 1 && <button onClick={() => setWStep(s => s - 1)} style={{ flex: "0 0 auto", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 18px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Précédent</button>}
-                {wStep < 4 ? (
-                  <button onClick={() => canNext && setWStep(s => s + 1)} disabled={!canNext} style={{ flex: 1, background: canNext ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(192,57,43,0.4)", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 800, cursor: canNext ? "pointer" : "not-allowed" }}>Suivant</button>
+                {wStep > 1 && <button onClick={() => setWStep(1)} style={{ flex: "0 0 auto", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 18px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Précédent</button>}
+                {wStep < 2 ? (
+                  <button onClick={() => canNext && setWStep(2)} disabled={!canNext} style={{ flex: 1, background: canNext ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(192,57,43,0.4)", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 800, cursor: canNext ? "pointer" : "not-allowed" }}>Suivant</button>
                 ) : (
-                  <button onClick={saveRel} disabled={savingRel} style={{ flex: 1, background: savingRel ? "rgba(39,174,96,0.5)" : "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 800, cursor: savingRel ? "not-allowed" : "pointer" }}>{savingRel ? "Enregistrement…" : "Enregistrer mon profil"}</button>
+                  <button onClick={saveRel} disabled={savingRel || !canNext} style={{ flex: 1, background: (savingRel || !canNext) ? "rgba(39,174,96,0.5)" : "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 800, cursor: (savingRel || !canNext) ? "not-allowed" : "pointer" }}>{savingRel ? "Enregistrement…" : "Enregistrer mon profil"}</button>
                 )}
               </div>
             </div>
@@ -12616,7 +12755,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const mmProposeCouple = async (s: any) => {
     try {
       const expiresAt = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
-      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId, source: "moyo" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId, source: "request" }) });
       logAdminAction(auth.token, auth.userId, auth.name, `Couple proposé (matchmaking) : ${s.man.name} ↔ ${s.woman.name} — ${s.score}%`, s.man.id);
       showToast("Couple proposé !", "success");
       setMmSuggestions(prev => prev.filter(x => x.key !== s.key));
@@ -19606,7 +19745,9 @@ export default function App() {
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [userGender, setUserGender] = useState<string>("");
   const [selfBan, setSelfBan] = useState<{ until: string | null } | null>(null);
-  const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2" } | null>(null);
+  const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string } | null>(null);
+  const [propJump, setPropJump] = useState(0);
+  const dismissedPropsRef = useRef<Set<string>>(new Set());
   const [proposalResponding, setProposalResponding] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
@@ -20321,6 +20462,7 @@ export default function App() {
         const data = await r.json().catch(() => []);
         if (!Array.isArray(data) || data.length === 0) return;
         const prop = data[0];
+        if (dismissedPropsRef.current.has(prop.id)) return;
         const myRole: "user1" | "user2" = prop.user1_id === auth.userId ? "user1" : "user2";
         const proposerId = myRole === "user1" ? prop.user2_id : prop.user1_id;
         // Charger le profil de l'autre personne
@@ -20337,7 +20479,8 @@ export default function App() {
           proposerPhoto: proposer.photo_url,
           proposerAge: proposer.age,
           proposerCity: proposer.city,
-          myRole
+          myRole,
+          source: prop.source
         });
       } catch {}
     };
@@ -20462,7 +20605,7 @@ export default function App() {
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
-      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
+      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} />}
       {tab === "admin" && <AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
@@ -20489,7 +20632,35 @@ export default function App() {
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
     {/* ── MODAL PROPOSITION DE MATCH ── */}
-    {pendingProposal && !pendingWarning && !pendingBroadcast && (
+    {/* Flux A : proposition suite à une demande de mise en relation */}
+    {pendingProposal && pendingProposal.source === "request" && !pendingWarning && !pendingBroadcast && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
+          <div style={{ background: `linear-gradient(135deg,${G.vert},#0f3d25)`, padding: "24px 20px 18px", textAlign: "center" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>Suite à votre demande de mise en relation</div>
+            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", marginTop: 4 }}>Nous avons une proposition pour vous</div>
+          </div>
+          <div style={{ padding: "24px 20px 8px", textAlign: "center" }}>
+            <div style={{ width: 90, height: 90, borderRadius: "50%", background: G.creme, margin: "0 auto 12px", overflow: "hidden", border: `3px solid ${G.vert}`, boxShadow: "0 4px 16px rgba(26,92,58,0.3)" }}>
+              {pendingProposal.proposerPhoto
+                ? <img src={pendingProposal.proposerPhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(150,150,150,0.7)" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+              }
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>{pendingProposal.proposerName}</div>
+            {pendingProposal.proposerAge ? <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 4 }}>{pendingProposal.proposerAge} ans</div> : null}
+          </div>
+          <div style={{ padding: "12px 20px 24px" }}>
+            <button onClick={() => { dismissedPropsRef.current.add(pendingProposal.id); setPendingProposal(null); setPropJump(n => n + 1); setTab("matches"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>Voir la proposition</button>
+          </div>
+        </div>
+      </div>
+    )}
+    {/* Flux B : suggestion spontanée Moyo (modal existant "On pense à toi") */}
+    {pendingProposal && pendingProposal.source !== "request" && !pendingWarning && !pendingBroadcast && (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
           {/* Header */}
