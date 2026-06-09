@@ -845,7 +845,12 @@ const GLOBAL_CSS = `
   .card-hover:active{transform:scale(.985)}
   @keyframes pageIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
   .page-anim{animation:pageIn .26s cubic-bezier(.22,.61,.36,1)}
-  @media(prefers-reduced-motion:reduce){.skeleton{animation:none}.page-anim{animation:none}button:active,.tap:active,.card-hover:active{transform:none}}
+  /* ── Transitions d'ouverture/fermeture des conversations (style WhatsApp/iMessage) ── */
+  @keyframes convSlideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+  @keyframes convSlideOut{from{transform:translateX(0)}to{transform:translateX(100%)}}
+  .conv-enter{animation:convSlideIn .26s cubic-bezier(.22,.61,.36,1)}
+  .conv-leave{animation:convSlideOut .24s cubic-bezier(.4,0,.7,.3) forwards}
+  @media(prefers-reduced-motion:reduce){.skeleton{animation:none}.page-anim{animation:none}.conv-enter,.conv-leave{animation:none}button:active,.tap:active,.card-hover:active{transform:none}}
   /* ── Chat textarea : comportement naturel iOS/Android ── */
   .chat-textarea {
     -webkit-appearance: none;
@@ -7741,6 +7746,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   useEffect(() => { onConvOpen?.(open !== null); }, [open]);
+  // ── Favoris de conversations (swipe vers la droite) — persistés par appareil ──
+  const FAV_KEY = `moyo_fav_convs_${auth.userId}`;
+  const [favConvs, setFavConvs] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(FAV_KEY) || "[]"); } catch { return []; } });
+  const toggleFav = (cid: string) => setFavConvs(prev => { const next = prev.includes(cid) ? prev.filter(x => x !== cid) : [...prev, cid]; try { localStorage.setItem(FAV_KEY, JSON.stringify(next)); } catch {} return next; });
+  const [swipe, setSwipe] = useState<{ id: string; dx: number } | null>(null);
+  const swipeStartX = useRef(0); const swipeStartY = useRef(0); const swipeMoved = useRef(false); const swipeLock = useRef(false);
+  // ── Fermeture animée de la discussion (glissement vers la droite) ──
+  const [chatClosing, setChatClosing] = useState(false);
+  const closeChat = () => { setChatClosing(true); setTimeout(() => { setChatClosing(false); setOpen(null); loadConvs(); }, 240); };
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
@@ -8786,17 +8800,43 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               // Support toujours tout en haut
               if (a.id === "__support__") return -1;
               if (b.id === "__support__") return 1;
+              // Favoris ensuite
+              const fa = favConvs.includes(a.id) ? 1 : 0, fb = favConvs.includes(b.id) ? 1 : 0;
+              if (fa !== fb) return fb - fa;
               return convTs(b) - convTs(a);
             });
             return sorted.map((c, idx) => {
               const nouveau = isNewMatch(c);
+              const isFav = favConvs.includes(c.id);
+              const dx = swipe?.id === c.id ? swipe.dx : 0;
+              const isSupport = c.id === "__support__";
               return (
-              <div key={c.id}>
-                <div onClick={() => {
-                  setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
-                  onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
-                  setOpen(c);
-                }} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 12px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : (nouveau ? "rgba(192,57,43,0.04)" : "transparent"), cursor: "pointer", transition: "background 0.12s" }}>
+              <div key={c.id} style={{ position: "relative", overflow: "hidden" }}>
+                {/* Fond révélé pendant le swipe (couleur Moyo + étoile) */}
+                {!isSupport && dx > 0 && (
+                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", paddingLeft: 22, background: `linear-gradient(90deg, ${isFav ? "#9aa0a6" : G.or}, ${isFav ? "#7c8085" : "#B8860B"})`, color: "#fff", zIndex: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: Math.min(dx / 64, 1), transform: `scale(${0.7 + Math.min(dx / 64, 1) * 0.3})` }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      <span style={{ fontWeight: 800, fontSize: "0.8rem" }}>{isFav ? "Retirer" : "Favori"}</span>
+                    </div>
+                  </div>
+                )}
+                <div
+                  onTouchStart={isSupport ? undefined : (e) => { swipeStartX.current = e.touches[0].clientX; swipeStartY.current = e.touches[0].clientY; swipeMoved.current = false; swipeLock.current = false; }}
+                  onTouchMove={isSupport ? undefined : (e) => {
+                    const mx = e.touches[0].clientX - swipeStartX.current;
+                    const my = e.touches[0].clientY - swipeStartY.current;
+                    if (!swipeLock.current && Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+                    if (!swipeLock.current) { swipeLock.current = true; if (Math.abs(my) > Math.abs(mx)) { swipeMoved.current = false; return; } }
+                    if (mx > 0 && Math.abs(mx) > Math.abs(my)) { swipeMoved.current = true; setSwipe({ id: c.id, dx: Math.min(mx, 96) }); }
+                  }}
+                  onTouchEnd={isSupport ? undefined : () => { if (swipe?.id === c.id && swipe.dx > 60) { toggleFav(c.id); } setSwipe(null); }}
+                  onClick={() => {
+                    if (swipeMoved.current) { swipeMoved.current = false; return; }
+                    setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
+                    onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
+                    setOpen(c);
+                }} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 12px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : (nouveau ? "rgba(192,57,43,0.04)" : G.blanc), cursor: "pointer", transition: swipe?.id === c.id ? "none" : "transform 0.22s cubic-bezier(.22,.61,.36,1), background 0.12s", transform: `translateX(${dx}px)`, position: "relative", zIndex: 1 }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <div style={{ borderRadius: "50%", padding: nouveau ? 2 : 0, background: nouveau ? `linear-gradient(135deg, ${G.rouge}, ${G.or})` : "transparent" }}>
                       <div style={{ borderRadius: "50%", padding: nouveau ? 2 : 0, background: nouveau ? "#fff" : "transparent" }}>
@@ -8813,7 +8853,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     {/* Ligne 1 : nom + point online à gauche, heure à droite */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
-                        <div style={{ fontWeight: (nouveau || (c.unreadCount || 0) > 0) ? 700 : 600, fontSize: "0.9rem", color: (nouveau || (c.unreadCount || 0) > 0) ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.partner?.name}</div>
+                        <div style={{ fontWeight: (nouveau || (c.unreadCount || 0) > 0) ? 700 : 600, fontSize: "0.9rem", color: (nouveau || (c.unreadCount || 0) > 0) ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 5 }}>{isFav && <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.partner?.name}</span></div>
                         {(() => { if (c.partner?.hide_online_status) return null; const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
                       </div>
                       <div style={{ fontSize: "0.72rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#aaa", fontWeight: (c.unreadCount || 0) > 0 ? 700 : 400, flexShrink: 0, marginLeft: 8 }}>
@@ -8872,7 +8912,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         </div>
       )}
       {/* Chat */}
-      <div data-chat-container style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
+      <div data-chat-container className={isWideMsg ? undefined : (chatClosing ? "conv-leave" : "conv-enter")} style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Arrière-plan fixe — ne scroll pas */}
@@ -8880,7 +8920,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       {/* Header fixe */}
       <div ref={headerRef} style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0, zIndex: 2 }}>
         {/* Bouton retour cercle rouge */}
-        <div onClick={() => { setOpen(null); loadConvs(); }} style={{ width: 38, height: 38, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 3px 10px rgba(192,57,43,0.35)", flexShrink: 0 }}>
+        <div onClick={() => { if (isWideMsg) { setOpen(null); loadConvs(); } else { closeChat(); } }} style={{ width: 38, height: 38, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 3px 10px rgba(192,57,43,0.35)", flexShrink: 0 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
