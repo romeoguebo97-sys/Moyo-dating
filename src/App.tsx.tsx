@@ -7444,7 +7444,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
         <p style={{ fontWeight: 700, marginBottom: 4 }}>Aucune demande pour l'instant</p>
-        <p style={{ fontSize: "0.82rem", color: "#999" }}>Faites une demande depuis votre profil avec « Demander une mise en relation ».</p>
+        <p style={{ fontSize: "0.82rem", color: "#999" }}>Faites une demande depuis votre profil avec « Demander une mise en relation personnalisée ».</p>
       </div>
     ) : (
       <div>
@@ -10528,7 +10528,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
           <svg width="22" height="22" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a", marginBottom: 3 }}>Demander une mise en relation</div>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a", marginBottom: 3 }}>Demander une mise en relation personnalisée</div>
           <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Notre équipe trouve la personne qui vous correspond</div>
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -10650,7 +10650,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                       }
                       // Récapitulatif lisible pour l'équipe (réutilise le profil relationnel)
                       const parts = [relProfile.project && `Projet: ${relProfile.project}`, relProfile.religion && `Religion: ${relProfile.religion}`, Array.isArray(relProfile.qualities) && relProfile.qualities.length && `Qualités: ${relProfile.qualities.join(", ")}`, Array.isArray(relProfile.interests) && relProfile.interests.length && `Centres: ${relProfile.interests.join(", ")}`, relProfile.note && `Note: ${relProfile.note}`].filter(Boolean).join(" · ");
-                      const fullMessage = [form.message.trim(), parts].filter(Boolean).join(" — ");
+                      const fullMessage = [form.message.trim(), parts].filter(Boolean).join(" - ");
                       await fetch(`${SUPABASE_URL}/rest/v1/match_requests`, {
                         method: "POST",
                         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
@@ -10694,6 +10694,34 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
           <button key={label} onClick={onClick} style={{ padding: "9px 13px", borderRadius: 50, border: `1.5px solid ${active ? G.rouge : G.gris}`, background: active ? "rgba(192,57,43,0.08)" : G.blanc, color: active ? G.rouge : (dim ? "#bbb" : "#555"), fontSize: "0.8rem", fontWeight: 700, cursor: dim ? "not-allowed" : "pointer" }}>{label}</button>
         );
         const fieldLabel = (txt: string, req?: boolean) => <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 8, marginTop: 18 }}>{txt}{req && <span style={{ color: G.rouge }}> *</span>}</label>;
+        const ic = (paths: React.ReactNode) => <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths}</svg>;
+        const ICONS: Record<string, React.ReactNode> = {
+          target: ic(<><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>),
+          faith: ic(<><line x1="12" y1="2" x2="12" y2="22"/><line x1="6" y1="8" x2="18" y2="8"/></>),
+          values: ic(<><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></>),
+          heart: ic(<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>),
+          kids: ic(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>),
+          cup: ic(<><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></>),
+          pin: ic(<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>),
+          cal: ic(<><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>),
+          msg: ic(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>),
+        };
+        const qBlock = (num: number, iconKey: string, title: string, subtitle: string, content: React.ReactNode, counter?: React.ReactNode) => (
+          <div style={{ borderTop: num === 1 ? "none" : `1px solid #eee`, paddingTop: num === 1 ? 14 : 16, marginTop: num === 1 ? 0 : 4 }}>
+            <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 11 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{ICONS[iconKey]}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#1a1a1a" }}>{num}. {title}</div>
+                  {counter}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 2 }}>{subtitle}</div>
+              </div>
+            </div>
+            {content}
+          </div>
+        );
+        const counterEl = (n: number) => <span style={{ fontSize: "0.72rem", color: n >= 5 ? G.rouge : "#999", fontWeight: 700, flexShrink: 0 }}>{n}/5</span>;
         const aMin = parseInt(rel.age_min), aMax = parseInt(rel.age_max);
         // Étape 1 « Qui je suis » : projet + religion obligatoires
         const step1ok = !!rel.project && !!rel.religion;
@@ -10712,53 +10740,52 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                 <div style={{ display: "flex", gap: 5, marginTop: 12 }}>
                   {[1, 2].map(s => <div key={s} style={{ flex: 1, height: 4, borderRadius: 4, background: s <= wStep ? "#fff" : "rgba(255,255,255,0.3)" }} />)}
                 </div>
-                <div style={{ fontSize: "0.8rem", color: "#fff", fontWeight: 700, marginTop: 8 }}>{wStep === 1 ? "Étape 1 — Parlez-nous d'abord de vous" : "Étape 2 — Ce que vous recherchez"}</div>
+                <div style={{ fontSize: "0.8rem", color: "#fff", fontWeight: 700, marginTop: 8 }}>{wStep === 1 ? "Étape 1 : Parlez-nous d'abord de vous" : "Étape 2 : Ce que vous recherchez"}</div>
               </div>
 
               <div style={{ flex: 1, overflowY: "auto", padding: "4px 20px 22px" }}>
                 {wStep === 1 ? (
                   <>
-                    <div style={{ fontSize: "0.74rem", color: "#888", background: G.creme, borderRadius: 10, padding: "9px 12px", lineHeight: 1.5, marginTop: 16 }}>Votre sexe, âge et localisation sont déjà repris de votre profil. Décrivez ici qui vous êtes.</div>
-                    {fieldLabel("Projet relationnel", true)}
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_PROJECTS.map(p => chip(p, rel.project === p, () => setRel(r => ({ ...r, project: r.project === p ? "" : p }))))}</div>
-                    {fieldLabel("Votre religion", true)}
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{RELIGIONS.map(p => chip(p, rel.religion === p, () => setRel(r => ({ ...r, religion: r.religion === p ? "" : p }))))}</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
-                      <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "#333" }}>Vos valeurs personnelles</label>
-                      <span style={{ fontSize: "0.72rem", color: rel.values.length >= 5 ? G.rouge : "#999", fontWeight: 700 }}>{rel.values.length}/5</span>
+                    <div style={{ fontSize: "0.74rem", color: "#888", background: G.creme, borderRadius: 10, padding: "9px 12px", lineHeight: 1.5, margin: "16px 0 6px", display: "flex", gap: 8, alignItems: "center" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      Votre sexe, âge et localisation sont déjà repris de votre profil. Décrivez ici qui vous êtes.
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>{REL_VALUES.map(p => chip(p, rel.values.includes(p), () => setRel(r => ({ ...r, values: toggleIn(r.values, p, 5) })), !rel.values.includes(p) && rel.values.length >= 5))}</div>
-                    {fieldLabel("Vos centres d'intérêt")}
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_INTERESTS.map(p => chip(p, rel.interests.includes(p), () => setRel(r => ({ ...r, interests: toggleIn(r.interests, p) }))))}</div>
-                    {fieldLabel("Désir d'enfants")}
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_CHILDREN.map(p => chip(p, rel.wants_children === p, () => setRel(r => ({ ...r, wants_children: r.wants_children === p ? "" : p }))))}</div>
-                    {fieldLabel("Habitudes de vie")}
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_LIFESTYLE.map(p => chip(p, rel.lifestyle.includes(p), () => setRel(r => ({ ...r, lifestyle: toggleIn(r.lifestyle, p) }))))}</div>
+                    {qBlock(1, "target", "Quel est votre projet relationnel ?", "Quel type de relation souhaitez-vous construire ?",
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_PROJECTS.map(p => chip(p, rel.project === p, () => setRel(r => ({ ...r, project: r.project === p ? "" : p }))))}</div>)}
+                    {qBlock(2, "faith", "Quelle est votre religion ?", "Indiquez votre appartenance religieuse ou conviction.",
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{RELIGIONS.map(p => chip(p, rel.religion === p, () => setRel(r => ({ ...r, religion: r.religion === p ? "" : p }))))}</div>)}
+                    {qBlock(3, "values", "Quelles sont vos valeurs personnelles ?", "Sélectionnez jusqu'à 5 valeurs qui vous représentent.",
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_VALUES.map(p => chip(p, rel.values.includes(p), () => setRel(r => ({ ...r, values: toggleIn(r.values, p, 5) })), !rel.values.includes(p) && rel.values.length >= 5))}</div>,
+                      counterEl(rel.values.length))}
+                    {qBlock(4, "heart", "Quels sont vos centres d'intérêt ?", "Sélectionnez vos centres d'intérêt principaux.",
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_INTERESTS.map(p => chip(p, rel.interests.includes(p), () => setRel(r => ({ ...r, interests: toggleIn(r.interests, p) }))))}</div>)}
+                    {qBlock(5, "kids", "Quel est votre désir concernant les enfants ?", "Quelle est votre position sur le sujet des enfants ?",
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_CHILDREN.map(p => chip(p, rel.wants_children === p, () => setRel(r => ({ ...r, wants_children: r.wants_children === p ? "" : p }))))}</div>)}
+                    {qBlock(6, "cup", "Quelles sont vos habitudes de vie ?", "Quelles habitudes de vie vous caractérisent ?",
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_LIFESTYLE.map(p => chip(p, rel.lifestyle.includes(p), () => setRel(r => ({ ...r, lifestyle: toggleIn(r.lifestyle, p) }))))}</div>)}
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: "0.74rem", color: "#888", background: "rgba(26,92,58,0.08)", borderRadius: 10, padding: "9px 12px", lineHeight: 1.5, marginTop: 16 }}>Moyo vous proposera des profils correspondant à <b>{oppGender}</b>. Précisez vos préférences.</div>
-                    {fieldLabel("Localisation recherchée", true)}
-                    <select value={rel.search_city} onChange={e => setRel(r => ({ ...r, search_city: e.target.value }))} style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", background: G.blanc }}>
-                      <option value="">Choisir…</option>
-                      {REL_SEARCH_CITIES.map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
-                    {fieldLabel("Tranche d'âge recherchée", true)}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <input type="number" placeholder="Âge min" value={rel.age_min} min={18} max={99} onChange={e => setRel(r => ({ ...r, age_min: e.target.value }))} style={{ padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box" }} />
-                      <input type="number" placeholder="Âge max" value={rel.age_max} min={18} max={99} onChange={e => setRel(r => ({ ...r, age_max: e.target.value }))} style={{ padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box" }} />
-                    </div>
-                    {fieldLabel("Religion souhaitée")}
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_SEARCH_RELIGIONS.map(p => chip(p, rel.search_religion === p, () => setRel(r => ({ ...r, search_religion: r.search_religion === p ? "" : p }))))}</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
-                      <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "#333" }}>Valeurs souhaitées</label>
-                      <span style={{ fontSize: "0.72rem", color: rel.search_values.length >= 5 ? G.rouge : "#999", fontWeight: 700 }}>{rel.search_values.length}/5</span>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>{REL_VALUES.map(p => chip(p, rel.search_values.includes(p), () => setRel(r => ({ ...r, search_values: toggleIn(r.search_values, p, 5) })), !rel.search_values.includes(p) && rel.search_values.length >= 5))}</div>
-                    {fieldLabel("Centres d'intérêt souhaités")}
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_INTERESTS.map(p => chip(p, rel.search_interests.includes(p), () => setRel(r => ({ ...r, search_interests: toggleIn(r.search_interests, p) }))))}</div>
-                    {fieldLabel("Message complémentaire (facultatif)")}
-                    <textarea value={rel.note} onChange={e => setRel(r => ({ ...r, note: e.target.value.slice(0, 300) }))} rows={3} placeholder="Précisez ce qui compte pour vous…" style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+                    <div style={{ fontSize: "0.74rem", color: "#888", background: "rgba(26,92,58,0.08)", borderRadius: 10, padding: "9px 12px", lineHeight: 1.5, margin: "16px 0 6px" }}>Moyo vous proposera des profils correspondant à <b>{oppGender}</b>. Précisez vos préférences.</div>
+                    {qBlock(1, "pin", "Localisation recherchée", "Où souhaitez-vous rencontrer quelqu'un ?",
+                      <select value={rel.search_city} onChange={e => setRel(r => ({ ...r, search_city: e.target.value }))} style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", background: G.blanc }}>
+                        <option value="">Choisir…</option>
+                        {REL_SEARCH_CITIES.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>)}
+                    {qBlock(2, "cal", "Tranche d'âge recherchée", "Entre quel âge et quel âge ?",
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <input type="number" placeholder="Âge min" value={rel.age_min} min={18} max={99} onChange={e => setRel(r => ({ ...r, age_min: e.target.value }))} style={{ padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box" }} />
+                        <input type="number" placeholder="Âge max" value={rel.age_max} min={18} max={99} onChange={e => setRel(r => ({ ...r, age_max: e.target.value }))} style={{ padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box" }} />
+                      </div>)}
+                    {qBlock(3, "faith", "Religion souhaitée", "Une préférence religieuse ? Choisissez « Indifférent » sinon.",
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_SEARCH_RELIGIONS.map(p => chip(p, rel.search_religion === p, () => setRel(r => ({ ...r, search_religion: r.search_religion === p ? "" : p }))))}</div>)}
+                    {qBlock(4, "values", "Valeurs souhaitées", "Sélectionnez jusqu'à 5 valeurs recherchées.",
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_VALUES.map(p => chip(p, rel.search_values.includes(p), () => setRel(r => ({ ...r, search_values: toggleIn(r.search_values, p, 5) })), !rel.search_values.includes(p) && rel.search_values.length >= 5))}</div>,
+                      counterEl(rel.search_values.length))}
+                    {qBlock(5, "heart", "Centres d'intérêt souhaités", "Quels centres d'intérêt aimeriez-vous partager ?",
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{REL_INTERESTS.map(p => chip(p, rel.search_interests.includes(p), () => setRel(r => ({ ...r, search_interests: toggleIn(r.search_interests, p) }))))}</div>)}
+                    {qBlock(6, "msg", "Message complémentaire", "Facultatif : précisez ce qui compte pour vous.",
+                      <textarea value={rel.note} onChange={e => setRel(r => ({ ...r, note: e.target.value.slice(0, 300) }))} rows={3} placeholder="Précisez ce qui compte pour vous…" style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />)}
                   </>
                 )}
               </div>
@@ -11489,7 +11516,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Demander une mise en relation</div>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Demander une mise en relation personnalisée</div>
                   <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span>Réservé aux membres Premium</span>
