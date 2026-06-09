@@ -7812,7 +7812,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const swipeStartX = useRef(0); const swipeStartY = useRef(0); const swipeMoved = useRef(false); const swipeLock = useRef(false);
   // ── Fermeture animée de la discussion (glissement vers la droite) ──
   const [chatClosing, setChatClosing] = useState(false);
-  const closeChat = () => { setChatClosing(true); setTimeout(() => { setChatClosing(false); setOpen(null); loadConvs(); }, 240); };
+  const closeChat = () => { setChatClosing(true); setDragX(0); setTimeout(() => { setChatClosing(false); setOpen(null); loadConvs(); }, 240); };
+  // ── Swipe-back (geste de retour natif, depuis le bord gauche) ──
+  const [dragX, setDragX] = useState(0);
+  const draggingRef = useRef(false);
+  const dragStartX = useRef<number | null>(null);
+  const dragStartY = useRef(0);
+  const finishSwipeClose = () => {
+    setDragX(typeof window !== "undefined" ? window.innerWidth : 500);
+    setTimeout(() => { setOpen(null); loadConvs(); setDragX(0); }, 230);
+  };
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
@@ -8969,8 +8978,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           {convList}
         </div>
       )}
+      {/* Mobile : la liste reste visible DERRIÈRE (effet "écran précédent" type WhatsApp) */}
+      {!isWideMsg && <div style={{ position: "fixed", inset: 0, zIndex: 99, background: G.creme, overflowY: "auto", maxWidth: 500, margin: "0 auto", padding: "12px 16px 16px" }}>{convList}</div>}
       {/* Chat */}
-      <div data-chat-container className={isWideMsg ? undefined : (chatClosing ? "conv-leave" : "conv-enter")} style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined }}>
+      <div data-chat-container
+        className={isWideMsg ? undefined : (chatClosing ? "conv-leave" : (dragX === 0 ? "conv-enter" : undefined))}
+        onTouchStart={isWideMsg ? undefined : (e) => { const x = e.touches[0].clientX; if (x <= 36) { dragStartX.current = x; dragStartY.current = e.touches[0].clientY; draggingRef.current = true; } else { dragStartX.current = null; draggingRef.current = false; } }}
+        onTouchMove={isWideMsg ? undefined : (e) => { if (!draggingRef.current || dragStartX.current == null) return; const dx = e.touches[0].clientX - dragStartX.current; const dy = e.touches[0].clientY - dragStartY.current; if (Math.abs(dy) > Math.abs(dx) + 12) { draggingRef.current = false; setDragX(0); return; } if (dx > 0) setDragX(dx); }}
+        onTouchEnd={isWideMsg ? undefined : () => { if (!draggingRef.current) return; draggingRef.current = false; const close = dragX > 80; dragStartX.current = null; if (close) finishSwipeClose(); else setDragX(0); }}
+        style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined, transform: (!isWideMsg && dragX > 0) ? `translateX(${dragX}px)` : undefined, transition: draggingRef.current ? "none" : "transform 0.23s cubic-bezier(.22,.61,.36,1)", boxShadow: (!isWideMsg && dragX > 0) ? "-12px 0 28px rgba(0,0,0,0.18)" : undefined }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Arrière-plan fixe — ne scroll pas */}
@@ -10533,19 +10549,6 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
-      {relProfile && (
-        <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "-4px 0 12px" }}>
-          <div onClick={() => { setShowWizard(true); setWStep(1); }} className="tap" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "8px 10px", color: G.rouge, fontSize: "0.78rem", fontWeight: 700 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
-            Modifier mon profil relationnel
-          </div>
-          <div style={{ width: 1, height: 16, background: G.gris }} />
-          <div onClick={() => setShowDeleteRel(true)} className="tap" style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "8px 10px", color: "#999", fontSize: "0.78rem", fontWeight: 700 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            Supprimer
-          </div>
-        </div>
-      )}
       {/* ── Modal confirmation suppression du profil relationnel ── */}
       {showDeleteRel && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10004, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !deletingRel && setShowDeleteRel(false)}>
@@ -10609,11 +10612,11 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                     Votre demande utilise votre <strong>profil relationnel</strong>. Notre équipe recherchera la personne qui vous correspond le mieux.
                   </div>
                   {(() => {
-                    const opp = myGender === "Homme" ? "Femme" : myGender === "Femme" ? "Homme" : "—";
+                    const opp = myGender === "Homme" ? "Femme" : myGender === "Femme" ? "Homme" : "-";
                     const rows: [string, string][] = [
-                      ["Recherche", `${opp !== "—" ? opp + " · " : ""}${relProfile?.city || "—"} · ${relProfile?.age_min || "?"}–${relProfile?.age_max || "?"} ans`],
-                      ["Projet", relProfile?.project || "—"],
-                      ["Religion", relProfile?.religion || "—"],
+                      ["Recherche", `${opp !== "-" ? opp + " · " : ""}${relProfile?.city || "-"} · ${relProfile?.age_min || "?"}-${relProfile?.age_max || "?"} ans`],
+                      ["Projet", relProfile?.project || "-"],
+                      ["Religion", relProfile?.religion || "-"],
                     ];
                     if (Array.isArray(relProfile?.qualities) && relProfile.qualities.length) rows.push(["Qualités", relProfile.qualities.join(", ")]);
                     if (Array.isArray(relProfile?.interests) && relProfile.interests.length) rows.push(["Centres d'intérêt", relProfile.interests.join(", ")]);
@@ -10625,7 +10628,16 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                             <span style={{ fontSize: "0.8rem", color: G.brun, fontWeight: 600, flex: 1 }}>{v}</span>
                           </div>
                         ))}
-                        <button onClick={() => { setShowModal(false); setShowWizard(true); setWStep(1); }} style={{ marginTop: 10, background: "transparent", border: "none", color: G.rouge, fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", padding: 0 }}>Modifier mon profil relationnel</button>
+                        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+                          <button onClick={() => { setShowModal(false); setShowWizard(true); setWStep(1); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "rgba(192,57,43,0.04)", border: `1.5px solid ${G.rouge}`, color: G.rouge, borderRadius: 12, padding: "11px", fontSize: "0.84rem", fontWeight: 800, cursor: "pointer" }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+                            Modifier
+                          </button>
+                          <button onClick={() => setShowDeleteRel(true)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.4)`, color: G.rouge, borderRadius: 12, padding: "11px", fontSize: "0.84rem", fontWeight: 800, cursor: "pointer" }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            Supprimer
+                          </button>
+                        </div>
                       </div>
                     );
                   })()}
@@ -12668,7 +12680,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const [proposals, setProposals] = useState<MatchProposal[]>([]);
   const [proposalsLoading, setProposalsLoading] = useState(false);
-  const [matchSubTab, setMatchSubTab] = useState<"create" | "propose" | "matchmaking" | "list" | "requests" | "archived">("propose");
+  const [matchSubTab, setMatchSubTab] = useState<"create" | "propose" | "matchmaking" | "list" | "requests" | "archived">("requests");
   const [showCreateMatch, setShowCreateMatch] = useState(false);
   const [showProposeMatch, setShowProposeMatch] = useState(false);
 
@@ -19056,12 +19068,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           {/* ── Sous-onglets Matchs ── */}
           <div className="match-subtabs" style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", flexWrap: "nowrap" }}>
             {([
-              ["create", "Créer un match", "#8e44ad"],
-              ["propose", "Propositions", "#e67e22"],
-              ["matchmaking", "Matchmaking intelligent", "#7c3aed"],
-              ["list", "Voir les matchs", "#2980b9"],
               ["requests", "Demandes", G.rouge],
+              ["matchmaking", "Matchmaking intelligent", "#7c3aed"],
+              ["propose", "Propositions", "#e67e22"],
+              ["list", "Voir les matchs", "#2980b9"],
               ["archived", "Archivés", "#555"],
+              ["create", "Créer un match", "#8e44ad"],
             ] as [string, string, string][]).map(([key, label, color]) => (
               <button key={key} onClick={() => {
                 setMatchSubTab(key as any);
