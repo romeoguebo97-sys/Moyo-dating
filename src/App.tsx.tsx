@@ -6347,24 +6347,26 @@ const fmtDate = (iso?: string) => {
 };
 
 // Switch interne réutilisable
-function InnerSwitch({ options, value, onChange }: {
+function InnerSwitch({ options, value, onChange, compact }: {
   options: { id: string; label: string; icon: React.ReactNode }[];
   value: string;
   onChange: (v: string) => void;
+  compact?: boolean;
 }) {
   return (
-    <div style={{ display: "flex", background: "#F0F0F0", borderRadius: 50, padding: 4, gap: 4, marginBottom: 16 }}>
+    <div style={{ display: "flex", background: "#F0F0F0", borderRadius: 50, padding: 4, gap: compact ? 2 : 4, marginBottom: 16 }}>
       {options.map(o => (
         <button key={o.id} onClick={() => onChange(o.id)}
-          style={{ flex: 1, border: "none", borderRadius: 50, padding: "8px 12px",
+          style={{ flex: 1, minWidth: 0, border: "none", borderRadius: 50, padding: compact ? "8px 6px" : "8px 12px",
             background: value === o.id ? G.blanc : "transparent",
             color: value === o.id ? G.rouge : "#666",
             fontWeight: value === o.id ? 700 : 500,
-            fontSize: "0.8rem", cursor: "pointer", display: "flex", alignItems: "center",
-            justifyContent: "center", gap: 5,
+            fontSize: compact ? "0.76rem" : "0.8rem", cursor: "pointer", display: "flex", alignItems: "center",
+            justifyContent: "center", gap: compact ? 4 : 5, whiteSpace: "nowrap",
             boxShadow: value === o.id ? "0 2px 8px rgba(0,0,0,0.1)" : "none",
             transition: "all 0.18s ease" }}>
-          {o.icon}{o.label}
+          <span style={{ flexShrink: 0, display: "flex" }}>{o.icon}</span>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{o.label}</span>
         </button>
       ))}
     </div>
@@ -7426,12 +7428,13 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
 
     {/* ── Switch : Mes demandes / Propositions / Matchs ── */}
     <InnerSwitch
+      compact
       value={matchSubTab}
       onChange={v => setMatchSubTab(v as "demandes" | "proposals" | "matches")}
       options={[
-        { id: "demandes", label: `Mes demandes${myRequests.length > 0 ? ` (${myRequests.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
-        { id: "proposals", label: `Propositions${proposals.length > 0 ? ` (${proposals.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
-        { id: "matches", label: `Matchs${matches.length > 0 ? ` (${matches.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
+        { id: "demandes", label: "Mes demandes", icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+        { id: "proposals", label: "Propositions", icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+        { id: "matches", label: "Matchs", icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
       ]}
     />
 
@@ -11722,11 +11725,15 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
             </div>
           </a>
         ) : (
-          <div style={{ background: "rgba(29,155,240,0.06)", borderRadius: 16, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, border: `1px solid rgba(29,155,240,0.2)` }}>
-            <VerifiedBadge size={22} />
-            <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1d9bf0", display: "flex", alignItems: "center", gap: 8 }}>Compte vérifié
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid #E8E8E8` }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(29,155,240,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <VerifiedBadge size={22} />
             </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Compte vérifié</div>
+              <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>Badge de confiance actif</div>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
           </div>
         ))}
 
@@ -12789,15 +12796,54 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     } catch { showToast("Erreur lors de la génération des suggestions.", "error"); }
     setMmLoading(false);
   };
-  const mmProposeCouple = async (s: any) => {
+  // ── Garde anti-doublon intelligente : vérifie l'historique d'un couple avant de proposer ──
+  // Retourne { kind: "block" | "warn" | "ok", message? }
+  const coupleGuard = async (id1: string, id2: string, name1: string, name2: string): Promise<{ kind: "block" | "warn" | "ok"; reason?: "match" | "pending" | "history"; message?: string }> => {
+    const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+    const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }); } catch { return ""; } };
+    const nameById = (uid: string | null) => uid === id1 ? name1 : uid === id2 ? name2 : "quelqu'un";
+    try {
+      // 1) Match déjà existant entre les deux ?
+      const mR = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${id1},user2.eq.${id2}),and(user1.eq.${id2},user2.eq.${id1}))&select=id&limit=1`, { headers: H });
+      const m = await mR.json().catch(() => []);
+      if (Array.isArray(m) && m.length > 0) return { kind: "block", reason: "match", message: `⛔ ${name1} et ${name2} sont déjà en relation (un match existe entre eux).` };
+      // 2) Propositions entre les deux (non archivées)
+      const pR = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(and(user1_id.eq.${id1},user2_id.eq.${id2}),and(user1_id.eq.${id2},user2_id.eq.${id1}))&order=created_at.desc&select=id,status,refused_by,user1_response,user2_response,expires_at,archived,created_at`, { headers: H });
+      const props = (await pR.json().catch(() => [])).filter((p: any) => !p.archived);
+      const now = Date.now();
+      const isRefused = (p: any) => p.status === "refused" || !!p.refused_by || p.user1_response === "refused" || p.user2_response === "refused";
+      const isExpired = (p: any) => !isRefused(p) && p.status !== "accepted" && p.status !== "matched" && p.expires_at && new Date(p.expires_at).getTime() < now;
+      const isPendingActive = (p: any) => !isRefused(p) && !isExpired(p) && p.status !== "accepted" && p.status !== "matched";
+      // En attente active → blocage ferme
+      if (props.some(isPendingActive)) return { kind: "block", reason: "pending", message: `⛔ Une proposition est déjà en cours pour ${name1} et ${name2}. Attendez leur réponse avant d'en créer une nouvelle.` };
+      // Historique refusé / expiré → avertissement (on peut forcer)
+      const refusedList = props.filter(isRefused), expiredList = props.filter(isExpired);
+      if (refusedList.length > 0 || expiredList.length > 0) {
+        const parts: string[] = [];
+        if (refusedList.length > 0) parts.push(`${refusedList.length} refus`);
+        if (expiredList.length > 0) parts.push(`${expiredList.length} proposition${expiredList.length > 1 ? "s" : ""} expirée${expiredList.length > 1 ? "s" : ""} sans réponse`);
+        const lines = [...refusedList, ...expiredList].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 6)
+          .map((p: any) => isRefused(p) ? `• Refusée par ${nameById(p.refused_by)} le ${fmtDate(p.created_at)}` : `• Expirée sans réponse le ${fmtDate(p.created_at)}`).join("\n");
+        return { kind: "warn", reason: "history", message: `⚠️ ${name1} et ${name2} ont déjà été proposés : ${parts.join(" et ")}.\n\n${lines}\n\nReproposer quand même ?` };
+      }
+      return { kind: "ok" };
+    } catch { return { kind: "ok" }; }
+  };
+  const mmDoPropose = async (s: any) => {
     try {
       const expiresAt = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
       await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId, source: "request" }) });
-      logAdminAction(auth.token, auth.userId, auth.name, `Couple proposé (matchmaking) : ${s.man.name} ↔ ${s.woman.name} — ${s.score}%`, s.man.id);
+      logAdminAction(auth.token, auth.userId, auth.name, `Couple proposé (matchmaking) : ${s.man.name} ↔ ${s.woman.name} - ${s.score}%`, s.man.id);
       showToast("Couple proposé !", "success");
       setMmSuggestions(prev => prev.filter(x => x.key !== s.key));
       setMmStats(st => ({ ...st, created: st.created + 1 }));
     } catch { showToast("Erreur lors de la proposition.", "error"); }
+  };
+  const mmProposeCouple = async (s: any) => {
+    const v = await coupleGuard(s.man.id, s.woman.id, s.man.name, s.woman.name);
+    if (v.kind === "block") { showToast(v.message!, "error"); return; }
+    if (v.kind === "warn") { setConfirmModal({ msg: v.message!, onConfirm: () => mmDoPropose(s) }); return; }
+    mmDoPropose(s);
   };
   const mmIgnore = (s: any) => { setMmIgnored(prev => new Set(prev).add(s.key)); setMmSuggestions(prev => prev.filter(x => x.key !== s.key)); };
 
@@ -13163,22 +13209,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     } catch { return { g1: "", g2: "" }; }
   };
 
-  const handleCreateMatch = async () => {
+  const doCreateMatchFinal = async () => {
     if (!createSelected1 || !createSelected2) return;
-    if (createSelected1.id === createSelected2.id) { showToast("❌ Impossible de matcher quelqu'un avec lui-même", "error"); return; }
-    // Vérifier même genre si toggle activé
-    const { g1, g2 } = await getGenders(createSelected1.id, createSelected2.id);
-    if (g1 && g2 && g1 === g2 && await isSameGenderBlocked()) {
-      showToast(`❌ Même genre (${g1}). Désactivez "Bloquer like même genre" dans Configuration pour créer ce match.`, "error");
-      return;
-    }
     setCreateLoading(true);
     try {
-      const existing = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${createSelected1.id},user2.eq.${createSelected2.id}),and(user1.eq.${createSelected2.id},user2.eq.${createSelected1.id}))&select=id&limit=1`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-      });
-      const exData = await existing.json().catch(() => []);
-      if (Array.isArray(exData) && exData.length > 0) { showToast("⚠️ Ces deux personnes ont déjà un match", "error"); setCreateLoading(false); return; }
       const r = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
         method: "POST",
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=representation" },
@@ -13194,6 +13228,30 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       setCreateSearch1(""); setCreateSearch2("");
     } catch { showToast("❌ Erreur lors de la création", "error"); }
     setCreateLoading(false);
+  };
+  const handleCreateMatch = async () => {
+    if (!createSelected1 || !createSelected2) return;
+    if (createSelected1.id === createSelected2.id) { showToast("❌ Impossible de matcher quelqu'un avec lui-même", "error"); return; }
+    // Vérifier même genre si toggle activé
+    const { g1, g2 } = await getGenders(createSelected1.id, createSelected2.id);
+    if (g1 && g2 && g1 === g2 && await isSameGenderBlocked()) {
+      showToast(`❌ Même genre (${g1}). Désactivez "Bloquer like même genre" dans Configuration pour créer ce match.`, "error");
+      return;
+    }
+    setCreateLoading(true);
+    const v = await coupleGuard(createSelected1.id, createSelected2.id, createSelected1.name, createSelected2.name);
+    setCreateLoading(false);
+    // Déjà en relation → blocage ferme
+    if (v.reason === "match") { showToast(v.message!, "error"); return; }
+    // Proposition en cours ou historique → on avertit mais on autorise la création directe (action manuelle volontaire)
+    if (v.kind === "block" || v.kind === "warn") {
+      const msg = v.reason === "pending"
+        ? `⚠️ Une proposition est déjà en cours pour ${createSelected1.name} et ${createSelected2.name}.\n\nCréer quand même le match directement ?`
+        : v.message!;
+      setConfirmModal({ msg, onConfirm: () => doCreateMatchFinal() });
+      return;
+    }
+    doCreateMatchFinal();
   };
 
   // Création effective de la proposition (appelée directement ou après confirmation)
@@ -13227,46 +13285,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       return;
     }
     setProposeLoading(true);
-    try {
-      // Vérifier si un match existe déjà entre ces deux personnes
-      const existingMatch = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${proposeSelected1.id},user2.eq.${proposeSelected2.id}),and(user1.eq.${proposeSelected2.id},user2.eq.${proposeSelected1.id}))&select=id&limit=1`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-      });
-      const exData = await existingMatch.json().catch(() => []);
-      if (Array.isArray(exData) && exData.length > 0) {
-        showToast(`⚠️ Ces deux personnes ont déjà un match`, "error");
-        setProposeLoading(false);
-        return;
-      }
-      // ── Vérifier l'historique de refus / expirations entre ces deux personnes ──
-      const id1 = proposeSelected1.id, id2 = proposeSelected2.id;
-      const histR = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(and(user1_id.eq.${id1},user2_id.eq.${id2}),and(user1_id.eq.${id2},user2_id.eq.${id1}))&status=in.(refused,expired)&order=created_at.desc&select=status,refused_by,created_at`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-      });
-      const hist = await histR.json().catch(() => []);
-      setProposeLoading(false);
-      if (Array.isArray(hist) && hist.length > 0) {
-        const nameById = (uid: string | null) => uid === id1 ? proposeSelected1!.name : uid === id2 ? proposeSelected2!.name : "quelqu'un";
-        const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }); } catch { return ""; } };
-        const refusedCount = hist.filter((h: any) => h.status === "refused").length;
-        const expiredCount = hist.filter((h: any) => h.status === "expired").length;
-        const parts: string[] = [];
-        if (refusedCount > 0) parts.push(`${refusedCount} refus`);
-        if (expiredCount > 0) parts.push(`${expiredCount} proposition${expiredCount > 1 ? "s" : ""} expirée${expiredCount > 1 ? "s" : ""} sans réponse`);
-        const summary = parts.join(" et ");
-        const lines = hist.slice(0, 6).map((h: any) => h.status === "refused"
-          ? `• Refusée par ${nameById(h.refused_by)} le ${fmtDate(h.created_at)}`
-          : `• Expirée sans réponse le ${fmtDate(h.created_at)}`).join("\n");
-        const more = hist.length > 6 ? `\n…et ${hist.length - 6} autre(s).` : "";
-        setConfirmModal({
-          msg: `⚠️ ${proposeSelected1.name} et ${proposeSelected2.name} ont déjà un historique : ${summary}.\n\n${lines}${more}\n\nVeux-tu quand même proposer ce match ?`,
-          onConfirm: () => { doCreateProposal(); },
-        });
-        return;
-      }
-      // Aucun historique → création directe
-      doCreateProposal();
-    } catch { showToast("❌ Erreur lors de la proposition", "error"); setProposeLoading(false); }
+    const v = await coupleGuard(proposeSelected1.id, proposeSelected2.id, proposeSelected1.name, proposeSelected2.name);
+    setProposeLoading(false);
+    if (v.kind === "block") { showToast(v.message!, "error"); return; }
+    if (v.kind === "warn") { setConfirmModal({ msg: v.message!, onConfirm: () => doCreateProposal() }); return; }
+    doCreateProposal();
   };
 
   // ── Supprimer une proposition (refusée/expirée/acceptée) ──
@@ -19782,7 +19805,7 @@ export default function App() {
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [userGender, setUserGender] = useState<string>("");
   const [selfBan, setSelfBan] = useState<{ until: string | null } | null>(null);
-  const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string } | null>(null);
+  const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string; pairKey?: string } | null>(null);
   const [propJump, setPropJump] = useState(0);
   const dismissedPropsRef = useRef<Set<string>>((() => { try { return new Set<string>(JSON.parse(localStorage.getItem(`moyo_seen_props_${auth.userId}`) || "[]")); } catch { return new Set<string>(); } })());
   const persistDismissedProp = (id: string) => { dismissedPropsRef.current.add(id); try { localStorage.setItem(`moyo_seen_props_${auth.userId}`, JSON.stringify([...dismissedPropsRef.current])); } catch {} };
@@ -20500,7 +20523,9 @@ export default function App() {
         const data = await r.json().catch(() => []);
         if (!Array.isArray(data) || data.length === 0) return;
         const prop = data[0];
-        if (dismissedPropsRef.current.has(prop.id)) return;
+        const pairKey = [prop.user1_id, prop.user2_id].sort().join("_");
+        // Déjà vu : soit cette proposition précise, soit une proposition pour le même couple (évite les doublons)
+        if (dismissedPropsRef.current.has(prop.id) || dismissedPropsRef.current.has(pairKey)) return;
         const myRole: "user1" | "user2" = prop.user1_id === auth.userId ? "user1" : "user2";
         const proposerId = myRole === "user1" ? prop.user2_id : prop.user1_id;
         // Charger le profil de l'autre personne
@@ -20518,7 +20543,8 @@ export default function App() {
           proposerAge: proposer.age,
           proposerCity: proposer.city,
           myRole,
-          source: prop.source
+          source: prop.source,
+          pairKey
         });
       } catch {}
     };
@@ -20692,7 +20718,7 @@ export default function App() {
             {pendingProposal.proposerAge ? <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 4 }}>{pendingProposal.proposerAge} ans</div> : null}
           </div>
           <div style={{ padding: "12px 20px 24px" }}>
-            <button onClick={() => { persistDismissedProp(pendingProposal.id); setPendingProposal(null); setPropJump(n => n + 1); setTab("matches"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>Voir la proposition</button>
+            <button onClick={() => { persistDismissedProp(pendingProposal.id); if (pendingProposal.pairKey) persistDismissedProp(pendingProposal.pairKey); setPendingProposal(null); setPropJump(n => n + 1); setTab("matches"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>Voir la proposition</button>
           </div>
         </div>
       </div>
