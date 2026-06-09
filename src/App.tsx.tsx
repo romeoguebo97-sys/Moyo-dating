@@ -8978,12 +8978,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           {convList}
         </div>
       )}
-      {/* Mobile : la liste reste visible DERRIÈRE (effet "écran précédent" type WhatsApp) */}
-      {!isWideMsg && <div style={{ position: "fixed", inset: 0, zIndex: 99, background: G.creme, overflowY: "auto", maxWidth: 500, margin: "0 auto", padding: "12px 16px 16px" }}>{convList}</div>}
       {/* Chat */}
       <div data-chat-container
         className={isWideMsg ? undefined : (chatClosing ? "conv-leave" : (dragX === 0 ? "conv-enter" : undefined))}
-        onTouchStart={isWideMsg ? undefined : (e) => { const x = e.touches[0].clientX; if (x <= 36) { dragStartX.current = x; dragStartY.current = e.touches[0].clientY; draggingRef.current = true; } else { dragStartX.current = null; draggingRef.current = false; } }}
+        onTouchStart={isWideMsg ? undefined : (e) => { const x = e.touches[0].clientX; if (x <= 28) { dragStartX.current = x; dragStartY.current = e.touches[0].clientY; draggingRef.current = true; } else { dragStartX.current = null; draggingRef.current = false; } }}
         onTouchMove={isWideMsg ? undefined : (e) => { if (!draggingRef.current || dragStartX.current == null) return; const dx = e.touches[0].clientX - dragStartX.current; const dy = e.touches[0].clientY - dragStartY.current; if (Math.abs(dy) > Math.abs(dx) + 12) { draggingRef.current = false; setDragX(0); return; } if (dx > 0) setDragX(dx); }}
         onTouchEnd={isWideMsg ? undefined : () => { if (!draggingRef.current) return; draggingRef.current = false; const close = dragX > 80; dragStartX.current = null; if (close) finishSwipeClose(); else setDragX(0); }}
         style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined, transform: (!isWideMsg && dragX > 0) ? `translateX(${dragX}px)` : undefined, transition: draggingRef.current ? "none" : "transform 0.23s cubic-bezier(.22,.61,.36,1)", boxShadow: (!isWideMsg && dragX > 0) ? "-12px 0 28px rgba(0,0,0,0.18)" : undefined }}>
@@ -19786,7 +19784,8 @@ export default function App() {
   const [selfBan, setSelfBan] = useState<{ until: string | null } | null>(null);
   const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string } | null>(null);
   const [propJump, setPropJump] = useState(0);
-  const dismissedPropsRef = useRef<Set<string>>(new Set());
+  const dismissedPropsRef = useRef<Set<string>>((() => { try { return new Set<string>(JSON.parse(localStorage.getItem(`moyo_seen_props_${auth.userId}`) || "[]")); } catch { return new Set<string>(); } })());
+  const persistDismissedProp = (id: string) => { dismissedPropsRef.current.add(id); try { localStorage.setItem(`moyo_seen_props_${auth.userId}`, JSON.stringify([...dismissedPropsRef.current])); } catch {} };
   const [proposalResponding, setProposalResponding] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
@@ -20693,7 +20692,7 @@ export default function App() {
             {pendingProposal.proposerAge ? <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 4 }}>{pendingProposal.proposerAge} ans</div> : null}
           </div>
           <div style={{ padding: "12px 20px 24px" }}>
-            <button onClick={() => { dismissedPropsRef.current.add(pendingProposal.id); setPendingProposal(null); setPropJump(n => n + 1); setTab("matches"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>Voir la proposition</button>
+            <button onClick={() => { persistDismissedProp(pendingProposal.id); setPendingProposal(null); setPropJump(n => n + 1); setTab("matches"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>Voir la proposition</button>
           </div>
         </div>
       </div>
