@@ -7233,8 +7233,9 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const [confirmUnmatch, setConfirmUnmatch] = useState<Match | null>(null);
   const [confirmBlockMatch, setConfirmBlockMatch] = useState<Match | null>(null);
   const isUnmatching = useRef(false);
-  // ── Sous-onglets : Matchs / Propositions ──
-  const [matchSubTab, setMatchSubTab] = useState<"matches" | "proposals">("matches");
+  // ── Sous-onglets : Propositions / Matchs ──
+  const [matchSubTab, setMatchSubTab] = useState<"proposals" | "matches">("proposals");
+  const isPremiumReal = auth.isPremium;
   const [proposals, setProposals] = useState<any[]>([]);
   const [propLoading, setPropLoading] = useState(false);
   const loadProposals = async () => {
@@ -7252,17 +7253,47 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     setPropLoading(false);
   };
   useEffect(() => { if (matchSubTab === "proposals") loadProposals(); }, [matchSubTab]);
+  const myRole = (pr: any) => pr.user1_id === auth.userId ? "user1" : "user2";
+  const myResp = (pr: any) => myRole(pr) === "user1" ? pr.user1_response : pr.user2_response;
+  const otherResp = (pr: any) => myRole(pr) === "user1" ? pr.user2_response : pr.user1_response;
+  // Statut RÉEL d'une mise en relation, basé sur les réponses des DEUX personnes
   const propStatus = (pr: any) => {
-    const s = pr.status;
-    if (["accepted", "matched"].includes(s)) return { label: "Acceptée", color: G.vert, bg: "rgba(26,92,58,0.1)" };
-    if (["refused", "declined", "rejected"].includes(s)) return { label: "Refusée", color: "#888", bg: "#F0F0F0" };
-    if ((pr.expires_at && new Date(pr.expires_at) < new Date()) || s === "expired") return { label: "Expirée", color: "#aaa", bg: "#F5F5F5" };
-    return { label: "En attente", color: "#B8860B", bg: "rgba(212,168,67,0.14)" };
+    const mine = myResp(pr), other = otherResp(pr);
+    if (pr.status === "refused" || mine === "refused" || other === "refused") return { key: "refused", label: "Refusé", color: "#e74c3c", bg: "rgba(231,76,60,0.08)" };
+    if (pr.status === "accepted" || pr.status === "matched" || (mine === "accepted" && other === "accepted")) return { key: "matched", label: "Match confirmé", color: G.vert, bg: "rgba(26,92,58,0.1)" };
+    if (mine === "accepted") return { key: "waiting", label: "En attente", color: "#B8860B", bg: "rgba(212,168,67,0.14)" };
+    if (pr.expires_at && new Date(pr.expires_at) < new Date()) return { key: "expired", label: "Expirée", color: "#aaa", bg: "#F5F5F5" };
+    return { key: "todo", label: "Nouvelle proposition", color: "#B8860B", bg: "rgba(212,168,67,0.14)" };
   };
-  const acceptProposal = async (pr: any) => { setProposals(prev => prev.map(x => x.id === pr.id ? { ...x, status: "accepted" } : x)); try { await sb.update(auth.token, "match_proposals", pr.id, { status: "accepted" }); } catch {} };
-  const refuseProposal = async (pr: any) => { setProposals(prev => prev.map(x => x.id === pr.id ? { ...x, status: "refused" } : x)); try { await sb.update(auth.token, "match_proposals", pr.id, { status: "refused" }); } catch {} };
+  // Origine de la proposition (badge) : Suggestion Moyo (algo/admin) vs Demande d'un membre
+  const propOrigin = (pr: any) => pr.source === "request"
+    ? { label: "Demande de mise en relation", color: "#2980b9", bg: "rgba(41,128,185,0.1)" }
+    : { label: "Suggestion Moyo", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" };
+  const acceptProposal = async (pr: any) => {
+    const role = myRole(pr); const field = role === "user1" ? "user1_response" : "user2_response";
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pr.id}&select=user1_response,user2_response,user1_id,user2_id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const prop = (await r.json().catch(() => []))[0];
+      const other = role === "user1" ? prop?.user2_response : prop?.user1_response;
+      const newStatus = other === "accepted" ? "accepted" : "pending";
+      await sb.update(auth.token, "match_proposals", pr.id, { [field]: "accepted", status: newStatus });
+      if (newStatus === "accepted" && prop) {
+        try {
+          const mr = await fetch(`${SUPABASE_URL}/rest/v1/matches`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ user1: prop.user1_id, user2: prop.user2_id }) });
+          const md = await mr.json().catch(() => null); const mid = Array.isArray(md) ? md[0]?.id : md?.id;
+          if (mid) await sendMatchWelcomeMessage(auth.token, mid, auth.name, pr.other?.name || "");
+        } catch {}
+      }
+      setProposals(prev => prev.map(x => x.id === pr.id ? { ...x, [field]: "accepted", status: newStatus } : x));
+    } catch {}
+  };
+  const refuseProposal = async (pr: any) => {
+    const field = myRole(pr) === "user1" ? "user1_response" : "user2_response";
+    setProposals(prev => prev.map(x => x.id === pr.id ? { ...x, [field]: "refused", status: "refused", refused_by: auth.userId } : x));
+    try { await sb.update(auth.token, "match_proposals", pr.id, { [field]: "refused", status: "refused", refused_by: auth.userId }); } catch {}
+  };
   const deleteProposal = async (pr: any) => { setProposals(prev => prev.filter(x => x.id !== pr.id)); try { await sb.update(auth.token, "match_proposals", pr.id, { archived: true }); } catch {} };
-  const propPending = proposals.filter(p => propStatus(p).label === "En attente").length;
+  const propPending = proposals.filter(p => propStatus(p).key === "todo").length;
 
   useEffect(() => { loadMatches(); }, []);
 
@@ -7350,12 +7381,12 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>
     </div>
 
-    {/* ── Bannière dynamique (s'adapte au sous-onglet) ── */}
-    <div style={{ background: matchSubTab === "proposals" ? "linear-gradient(135deg,#8e44ad,#7c3aed)" : `linear-gradient(135deg,${G.vert},#0f3d25)`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: G.blanc, display: "flex", alignItems: "center", gap: 12 }}>
-      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+    {/* ── Bannière dynamique : rouge (gratuit) / doré (Premium), même design ── */}
+    <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: isPremiumReal ? "#111" : G.blanc, display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ width: 36, height: 36, borderRadius: "50%", background: isPremiumReal ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         {matchSubTab === "proposals"
-          ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          : <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
+          ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isPremiumReal ? "#111" : "#fff"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          : <svg width="16" height="16" viewBox="0 0 24 24" fill={isPremiumReal ? "#111" : "#fff"} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
@@ -7368,17 +7399,17 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
         </div>
       </div>
       {matchSubTab === "proposals" && propPending > 0 && (
-        <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>{propPending > 9 ? "9+" : propPending}</div>
+        <div style={{ background: isPremiumReal ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>{propPending > 9 ? "9+" : propPending}</div>
       )}
     </div>
 
-    {/* ── Switch Matchs / Propositions ── */}
+    {/* ── Switch Propositions / Matchs ── */}
     <InnerSwitch
       value={matchSubTab}
-      onChange={v => setMatchSubTab(v as "matches" | "proposals")}
+      onChange={v => setMatchSubTab(v as "proposals" | "matches")}
       options={[
-        { id: "matches", label: `Matchs${matches.length > 0 ? ` (${matches.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
         { id: "proposals", label: `Propositions${proposals.length > 0 ? ` (${proposals.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+        { id: "matches", label: `Matchs${matches.length > 0 ? ` (${matches.length})` : ""}`, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
       ]}
     />
 
@@ -7514,9 +7545,15 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     ) : (
       <div>
         {proposals.map(pr => {
-          const st = propStatus(pr); const o = pr.other; const pending = st.label === "En attente";
+          const st = propStatus(pr); const o = pr.other; const org = propOrigin(pr);
           return (
             <div key={pr.id} className="card-hover" style={{ background: G.blanc, borderRadius: 16, padding: 12, marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}>
+              <div style={{ marginBottom: 10 }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: org.bg, color: org.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 800 }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill={org.color} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  {org.label}
+                </span>
+              </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <div onClick={() => o && setSelectedMatch({ id: pr.id, user1: auth.userId, user2: o.id, created_at: pr.created_at, partner: o } as any)} style={{ width: 58, height: 58, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", cursor: "pointer" }}>
                   {o?.photo_url ? <img src={o.photo_url} alt={o?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
@@ -7533,12 +7570,16 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                {pending && <>
+                {st.key === "todo" && <>
                   <button onClick={() => acceptProposal(pr)} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>✓ Accepter</button>
                   <button onClick={() => refuseProposal(pr)} style={{ flex: 1, background: G.blanc, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Refuser</button>
                 </>}
-                {st.label === "Acceptée" && o && <button onClick={() => { if (onGoMessages) onGoMessages(o.id); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Envoyer un message</button>}
-                <button onClick={() => deleteProposal(pr)} title="Retirer de ma liste" style={{ flex: pending || st.label === "Acceptée" ? "0 0 auto" : 1, background: G.blanc, color: "#c0392b", border: `1.5px solid rgba(192,57,43,0.3)`, borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Supprimer</button>
+                {st.key === "waiting" && <div style={{ flex: 1, background: "rgba(212,168,67,0.1)", color: "#8a6d2a", borderRadius: 10, padding: "10px", fontSize: "0.78rem", fontWeight: 700, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a6d2a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  En attente de la réponse de {o?.name?.split(" ")[0] || "votre match"}
+                </div>}
+                {st.key === "matched" && o && <button onClick={() => { if (onGoMessages) onGoMessages(o.id); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Envoyer un message</button>}
+                <button onClick={() => deleteProposal(pr)} title="Retirer de ma liste" style={{ flex: st.key === "refused" || st.key === "expired" ? 1 : "0 0 auto", background: G.blanc, color: "#c0392b", border: `1.5px solid rgba(192,57,43,0.3)`, borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Supprimer</button>
               </div>
             </div>
           );
@@ -12535,7 +12576,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const mmProposeCouple = async (s: any) => {
     try {
       const expiresAt = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
-      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId, source: "moyo" }) });
       logAdminAction(auth.token, auth.userId, auth.name, `Couple proposé (matchmaking) : ${s.man.name} ↔ ${s.woman.name} — ${s.score}%`, s.man.id);
       showToast("Couple proposé !", "success");
       setMmSuggestions(prev => prev.filter(x => x.key !== s.key));
@@ -12948,7 +12989,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, {
         method: "POST",
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-        body: JSON.stringify({ user1_id: proposeSelected1.id, user2_id: proposeSelected2.id, expires_at: expiresAt, created_by: auth.userId })
+        body: JSON.stringify({ user1_id: proposeSelected1.id, user2_id: proposeSelected2.id, expires_at: expiresAt, created_by: auth.userId, source: "moyo" })
       });
       showToast("✅ Proposition envoyée !", "success");
       logAdminAction(auth.token, auth.userId, auth.name, `Proposition de match envoyée : ${proposeSelected1.name} ↔ ${proposeSelected2.name} (expire dans ${proposeDuration}h)`, proposeSelected1.id);
