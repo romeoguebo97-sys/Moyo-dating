@@ -218,7 +218,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -267,6 +267,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["poll_stats_ms"]) POLL_STATS_MS = parseInt(map["poll_stats_ms"]) || 60000;
   if (map["poll_broadcast_ms"]) POLL_BROADCAST_MS = parseInt(map["poll_broadcast_ms"]) || 60000;
   if (map["poll_support_ms"]) POLL_SUPPORT_MS = parseInt(map["poll_support_ms"]) || 6000;
+  if (map["auto_mod_contact_reply"]) AUTO_MOD_CONTACT_REPLY = map["auto_mod_contact_reply"];
   if (map["maintenance_mode"] === "true") {
     // Bypass si admin
     const isAdminUrl = window.location.search.includes("admin=1");
@@ -286,8 +287,8 @@ const SUPPORT_TEAM_NAME = "Assistance Moyo";
 const SUPPORT_TEAM_PHOTO = "https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/assistant/Image%2031%20mai%202026,%2004_26_29.png";
 const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
 const SUPPORT_PREFIX_REPLY = "[SUPPORT_REPLY]";
-// Message envoyé automatiquement par l'Assistant Moyo lors d'une tentative de partage de contact (gratuit)
-const AUTO_MOD_CONTACT_REPLY = "Bonjour, notre système informatique a détecté une tentative d'échange de coordonnées personnelles. Cette action enfreint les Conditions Générales d'Utilisation de Moyo. Le partage de coordonnées étant réservé aux membres Premium, nous vous invitons à respecter les règles de la communauté afin d'éviter toute restriction ou suppression définitive de votre compte.";
+// Message envoyé automatiquement par l'Assistant Moyo lors d'une tentative de partage de contact (gratuit) — éditable depuis la config admin
+let AUTO_MOD_CONTACT_REPLY = "Bonjour, notre système informatique a détecté une tentative d'échange de coordonnées personnelles. Cette action enfreint les Conditions Générales d'Utilisation de Moyo. Le partage de coordonnées étant réservé aux membres Premium, nous vous invitons à respecter les règles de la communauté afin d'éviter toute restriction ou suppression définitive de votre compte.";
 // Demande de Premium (un non-Premium demande à son interlocuteur Premium de lui offrir)
 const GIFT_REQUEST_PREFIX = "[GIFTREQ]";
 const GIFT_REQUEST_TEXT = "💝 Et si tu m'offrais Premium ? On pourrait discuter sans aucune limite 🥰";
@@ -4661,14 +4662,14 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -4676,7 +4677,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -4757,6 +4758,20 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
             await patch("contact_banned_words", editingConfigValue);
             setAppConfig(c => ({ ...c, contactBannedWords: editingConfigValue }));
             buildContactBannedRegex(editingConfigValue);
+            setEditingConfig(null);
+          }} />
+        <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
+          <b>Message automatique de l'Assistant Moyo.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo.
+        </div>
+        <EditableRow label="Message auto (tentative de contact)" value={appConfig.autoModContactReply || "(par défaut)"} open={editingConfig === "auto_mod_contact_reply"}
+          onOpen={() => { setEditingConfig(editingConfig === "auto_mod_contact_reply" ? null : "auto_mod_contact_reply"); setEditingConfigValue(appConfig.autoModContactReply); }}
+          editValue={editingConfigValue} onEdit={setEditingConfigValue}
+          hint="Le message envoyé automatiquement à l'auteur"
+          onSave={async () => {
+            const v = editingConfigValue.trim();
+            await patch("auto_mod_contact_reply", v);
+            setAppConfig(c => ({ ...c, autoModContactReply: v }));
+            AUTO_MOD_CONTACT_REPLY = v || AUTO_MOD_CONTACT_REPLY;
             setEditingConfig(null);
           }} />
       </OffCanvasSection>
@@ -10418,7 +10433,7 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
 
   return (
     <>
-      <div onClick={() => { setSent(false); setShowModal(true); }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(230,126,34,0.2)", marginBottom: 10 }}>
+      <div onClick={() => { setSent(false); setShowModal(true); }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(230,126,34,0.2)" }}>
         <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
         </div>
@@ -10582,7 +10597,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
   };
   return (
     <>
-      <div onClick={() => { if (!relProfile) setShowRelPrompt(true); else setShowModal(true); }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(192,57,43,0.18)", marginBottom: 10 }}>
+      <div onClick={() => { if (!relProfile) setShowRelPrompt(true); else setShowModal(true); }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(192,57,43,0.18)" }}>
         <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </div>
@@ -11566,7 +11581,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
         {(!isWideProfile || ["main"].includes(activeSection)) && (
           auth.isPremium
             ? <MatchRequestButton auth={auth} />
-            : <div onClick={() => onShowPremium("Passez Premium pour accéder au service de mise en relation personnalisé par l'équipe Moyo !")} style={{ background: `linear-gradient(135deg,${G.rouge} 0%,${G.rougeDark} 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(192,57,43,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 10, opacity: 0.75 }}>
+            : <div onClick={() => onShowPremium("Passez Premium pour accéder au service de mise en relation personnalisé par l'équipe Moyo !")} style={{ background: `linear-gradient(135deg,${G.rouge} 0%,${G.rougeDark} 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(192,57,43,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", opacity: 0.75 }}>
                 <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </div>
@@ -11585,7 +11600,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
         {(!isWideProfile || ["main"].includes(activeSection)) && (
           auth.isPremium
             ? <FeatureRequestButton auth={auth} />
-            : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo !")} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 10, opacity: 0.75 }}>
+            : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo !")} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", opacity: 0.75 }}>
                 <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                 </div>
