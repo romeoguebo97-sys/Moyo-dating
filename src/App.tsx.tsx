@@ -7621,7 +7621,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                 </span>
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <div onClick={() => o && setSelectedMatch({ id: pr.id, user1: auth.userId, user2: o.id, created_at: pr.created_at, partner: o } as any)} style={{ width: 58, height: 58, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", cursor: "pointer" }}>
+                <div onClick={() => o && setSelectedMatch({ id: pr.id, user1: auth.userId, user2: o.id, created_at: pr.created_at, partner: o, _propStatus: st.key, _propLabel: st.label, _propColor: st.color, _propBg: st.bg } as any)} style={{ width: 58, height: 58, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", cursor: "pointer" }}>
                   {o?.photo_url ? <img src={o.photo_url} alt={o?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -7664,13 +7664,46 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
           </div>
         </div>
         <div style={{ padding: "20px 20px 32px" }}>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-            <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#27ae60" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Match !</span>
-            {p.is_premium && <span style={{ background: "rgba(212,168,67,0.12)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>⭐ Premium</span>}
-            {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: `1px solid rgba(212,168,67,0.3)`, color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{p.religion}</span>}
-          </div>
-          {p.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{p.bio}</p>}
-          <Btn variant="primary" onClick={() => { const pid = selectedMatch?.partner?.id; setSelectedMatch(null); if (onGoMessages) onGoMessages(pid); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>Envoyer un message</Btn>
+          {(() => {
+            const ps = (selectedMatch as any)?._propStatus;
+            const matched = !ps || ps === "matched";
+            const psLabel = (selectedMatch as any)?._propLabel;
+            const psColor = (selectedMatch as any)?._propColor || G.rouge;
+            const psBg = (selectedMatch as any)?._propBg || "rgba(192,57,43,0.08)";
+            return (<>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                {matched
+                  ? <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 700 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#27ae60" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Match !</span>
+                  : <span style={{ background: psBg, color: psColor, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 700 }}>{psLabel || "Proposition"}</span>}
+                {p.is_premium && <span style={{ background: "rgba(212,168,67,0.12)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>⭐ Premium</span>}
+                {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: `1px solid rgba(212,168,67,0.3)`, color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{p.religion}</span>}
+              </div>
+              {p.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{p.bio}</p>}
+              {matched ? (
+                <Btn variant="primary" onClick={() => { const pid = selectedMatch?.partner?.id; setSelectedMatch(null); if (onGoMessages) onGoMessages(pid); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>Envoyer un message</Btn>
+              ) : ps === "refused" ? (
+                <div>
+                  <button disabled style={{ width: "100%", background: "#f0f0f0", color: "#999", border: "none", borderRadius: 12, padding: "14px", fontSize: "1rem", fontWeight: 700, cursor: "not-allowed" }}>Proposition refusée</button>
+                  <p style={{ fontSize: "0.78rem", color: "#999", marginTop: 10, textAlign: "center", lineHeight: 1.5 }}>Cette proposition a été refusée. La messagerie n'est pas disponible.</p>
+                </div>
+              ) : ps === "waiting" ? (
+                <div>
+                  <button disabled style={{ width: "100%", background: "#f0f0f0", color: "#999", border: "none", borderRadius: 12, padding: "14px", fontSize: "1rem", fontWeight: 700, cursor: "not-allowed" }}>En attente de réponse</button>
+                  <p style={{ fontSize: "0.78rem", color: "#999", marginTop: 10, textAlign: "center", lineHeight: 1.5 }}>La messagerie sera disponible une fois que {p.name?.split(" ")[0] || "la personne"} aura accepté.</p>
+                </div>
+              ) : ps === "expired" ? (
+                <div>
+                  <button disabled style={{ width: "100%", background: "#f0f0f0", color: "#999", border: "none", borderRadius: 12, padding: "14px", fontSize: "1rem", fontWeight: 700, cursor: "not-allowed" }}>Proposition expirée</button>
+                  <p style={{ fontSize: "0.78rem", color: "#999", marginTop: 10, textAlign: "center", lineHeight: 1.5 }}>Cette proposition a expiré sans réponse.</p>
+                </div>
+              ) : (
+                <div>
+                  <button disabled style={{ width: "100%", background: "#f0f0f0", color: "#999", border: "none", borderRadius: 12, padding: "14px", fontSize: "1rem", fontWeight: 700, cursor: "not-allowed" }}>Messagerie indisponible</button>
+                  <p style={{ fontSize: "0.78rem", color: "#999", marginTop: 10, textAlign: "center", lineHeight: 1.5 }}>Acceptez la proposition pour pouvoir discuter une fois le match confirmé.</p>
+                </div>
+              )}
+            </>);
+          })()}
         </div>
       </div>
     </div>}
@@ -12667,6 +12700,71 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Onglet actif ──
   const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing">("stats");
+  const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage">("avis");
+  // ── SONDAGES ──
+  const DEFAULT_SURVEY_QUESTIONS = [
+    { id: "q1", text: "Êtes-vous satisfait(e) de votre expérience sur Moyo ?", type: "single", options: ["Très satisfait(e)", "Satisfait(e)", "Moyen", "Insatisfait(e)"] },
+    { id: "q2", text: "Quelles fonctionnalités utilisez-vous le plus ?", type: "multi", options: ["Découvrir", "Messagerie", "Statuts", "Mise en relation", "Premium"] },
+    { id: "q3", text: "Recommanderiez-vous Moyo à un ami ?", type: "single", options: ["Oui, sûrement", "Peut-être", "Non"] },
+  ];
+  const [surveys, setSurveys] = useState<any[]>([]);
+  const [surveysLoading, setSurveysLoading] = useState(false);
+  const [surveyCounts, setSurveyCounts] = useState<Record<string, number>>({});
+  const [surveyEditor, setSurveyEditor] = useState<any | null>(null);
+  const [surveyResults, setSurveyResults] = useState<any | null>(null);
+  const [savingSurvey, setSavingSurvey] = useState(false);
+  const loadSurveys = async () => {
+    setSurveysLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/surveys?order=created_at.desc&select=*`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      setSurveys(Array.isArray(data) ? data : []);
+      const rc = await fetch(`${SUPABASE_URL}/rest/v1/survey_responses?select=survey_id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const resp = await rc.json().catch(() => []);
+      const counts: Record<string, number> = {};
+      if (Array.isArray(resp)) resp.forEach((x: any) => { counts[x.survey_id] = (counts[x.survey_id] || 0) + 1; });
+      setSurveyCounts(counts);
+    } catch { showToast("Erreur de chargement des sondages.", "error"); }
+    setSurveysLoading(false);
+  };
+  const newSurveyDraft = () => setSurveyEditor({ title: "", intro_message: "Votre avis nous intéresse ! Aidez-nous à améliorer Moyo en répondant à quelques questions rapides.", target: "all|all", status: "active", questions: [] });
+  const loadDefaultSurvey = () => setSurveyEditor({ title: "Votre satisfaction Moyo", intro_message: "Votre avis nous intéresse ! Aidez-nous à améliorer Moyo en répondant à quelques questions rapides.", target: "all|all", status: "active", questions: JSON.parse(JSON.stringify(DEFAULT_SURVEY_QUESTIONS)) });
+  const saveSurvey = async () => {
+    if (!surveyEditor) return;
+    if (!surveyEditor.title.trim()) { showToast("Donnez un titre au sondage.", "error"); return; }
+    const valid = (surveyEditor.questions || []).filter((q: any) => q.text.trim() && q.options.filter((o: string) => o.trim()).length >= 2);
+    if (valid.length === 0) { showToast("Ajoutez au moins une question avec 2 options.", "error"); return; }
+    setSavingSurvey(true);
+    const payload = { title: surveyEditor.title.trim(), intro_message: surveyEditor.intro_message.trim(), target: surveyEditor.target, status: surveyEditor.status, questions: valid.map((q: any, i: number) => ({ id: q.id || `q${i + 1}`, text: q.text.trim(), type: q.type, options: q.options.filter((o: string) => o.trim()) })) };
+    try {
+      if (surveyEditor.id) {
+        await fetch(`${SUPABASE_URL}/rest/v1/surveys?id=eq.${surveyEditor.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify(payload) });
+      } else {
+        await fetch(`${SUPABASE_URL}/rest/v1/surveys`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ ...payload, created_by: auth.userId }) });
+      }
+      showToast("Sondage enregistré !", "success");
+      setSurveyEditor(null);
+      loadSurveys();
+    } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
+    setSavingSurvey(false);
+  };
+  const toggleSurveyStatus = async (s: any) => {
+    const ns = s.status === "active" ? "inactive" : "active";
+    setSurveys(prev => prev.map(x => x.id === s.id ? { ...x, status: ns } : x));
+    try { await fetch(`${SUPABASE_URL}/rest/v1/surveys?id=eq.${s.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ status: ns }) }); } catch {}
+  };
+  const deleteSurvey = async (s: any) => {
+    setSurveys(prev => prev.filter(x => x.id !== s.id));
+    try { await fetch(`${SUPABASE_URL}/rest/v1/surveys?id=eq.${s.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }); } catch {}
+  };
+  const loadSurveyResults = async (s: any) => {
+    setSurveyResults({ survey: s, loading: true, responses: [] });
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/survey_responses?survey_id=eq.${s.id}&select=answers,created_at`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const responses = await r.json().catch(() => []);
+      setSurveyResults({ survey: s, loading: false, responses: Array.isArray(responses) ? responses : [] });
+    } catch { setSurveyResults({ survey: s, loading: false, responses: [] }); }
+  };
 
   // ── Match Proposals ──
   type MatchProposal = {
@@ -12716,6 +12814,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [mmSuggestions, setMmSuggestions] = useState<any[]>([]);
   const [mmLastUpdate, setMmLastUpdate] = useState("");
   const [mmIgnored, setMmIgnored] = useState<Set<string>>(new Set());
+  const [mmArchived, setMmArchived] = useState<Set<string>>(() => { try { return new Set<string>(JSON.parse(localStorage.getItem("moyo_mm_archived") || "[]")); } catch { return new Set<string>(); } });
+  const [mmProposedKeys, setMmProposedKeys] = useState<Set<string>>(new Set());
+  const [showMmArchived, setShowMmArchived] = useState(false);
+  const persistMmArchived = (set: Set<string>) => { try { localStorage.setItem("moyo_mm_archived", JSON.stringify([...set])); } catch {} };
+  const mmArchive = (key: string) => setMmArchived(prev => { const n = new Set(prev).add(key); persistMmArchived(n); return n; });
+  const mmUnarchive = (key: string) => setMmArchived(prev => { const n = new Set(prev); n.delete(key); persistMmArchived(n); return n; });
   const [mmStats, setMmStats] = useState({ created: 0, pending: 0, avg: 0 });
   const [mmView, setMmView] = useState<any | null>(null);
   const [mmFilters, setMmFilters] = useState({ pastRefusals: true, existingMatches: true, reported: true, banned: true, teamRefused: true, activeOnly: false });
@@ -12835,7 +12939,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId, source: "request" }) });
       logAdminAction(auth.token, auth.userId, auth.name, `Couple proposé (matchmaking) : ${s.man.name} ↔ ${s.woman.name} - ${s.score}%`, s.man.id);
       showToast("Couple proposé !", "success");
-      setMmSuggestions(prev => prev.filter(x => x.key !== s.key));
+      setMmProposedKeys(prev => new Set(prev).add(s.key));
       setMmStats(st => ({ ...st, created: st.created + 1 }));
     } catch { showToast("Erreur lors de la proposition.", "error"); }
   };
@@ -12926,8 +13030,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 <title>Fiche de compatibilité - ${esc(man.name)} & ${esc(woman.name)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}
-  body{background:#eceef3;color:#1a1a1a;padding:18px}
-  .sheet{max-width:1040px;margin:0 auto;background:#fff;border:2px solid #1a1a1a;border-radius:14px;overflow:hidden}
+  body{background:#eceef3;color:#1a1a1a;padding:18px;overflow-x:auto}
+  .sheet{width:1040px;margin:0 auto;background:#fff;border:2px solid #1a1a1a;border-radius:14px;overflow:hidden}
   .top{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 26px 14px}
   .logo{font-size:1.8rem;font-weight:900;letter-spacing:-1px;display:flex;align-items:center;gap:7px}.logo small{display:block;font-size:.58rem;font-weight:600;color:#888;letter-spacing:0;margin-top:2px}
   .title{text-align:center;flex:1}.title h1{color:${R};font-size:1.5rem;font-weight:900;letter-spacing:1px}.title h2{color:#888;font-size:.9rem;font-weight:600;letter-spacing:3px}
@@ -13021,8 +13125,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     if(typeof html2pdf==='undefined'){ alert("Le module de téléchargement charge encore, réessayez dans 2 secondes (ou utilisez Imprimer)."); return; }
     var el=document.getElementById('sheet');
     var prev=btn.textContent; btn.textContent='⏳ Génération du PDF...'; btn.disabled=true;
-    var w=el.offsetWidth, h=el.offsetHeight;
-    html2pdf().set({margin:0, filename:'Fiche_compatibilite_${safeName}.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'}, jsPDF:{unit:'px',format:[w,h],orientation:(w>h?'l':'p')}}).from(el).save().then(function(){ btn.textContent=prev; btn.disabled=false; }).catch(function(){ btn.textContent=prev; btn.disabled=false; alert("Échec du téléchargement. Utilisez le bouton Imprimer puis « Enregistrer en PDF »."); });
+    var w=1040, h=el.offsetHeight;
+    html2pdf().set({margin:0, filename:'Fiche_compatibilite_${safeName}.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:1040,width:1040,scrollX:0,scrollY:0}, jsPDF:{unit:'px',format:[w,h],orientation:'p'}}).from(el).save().then(function(){ btn.textContent=prev; btn.disabled=false; }).catch(function(){ btn.textContent=prev; btn.disabled=false; alert("Échec du téléchargement. Utilisez le bouton Imprimer puis « Enregistrer en PDF »."); });
   }
 </script>
 </body></html>`;
@@ -16664,7 +16768,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
             ["messagerie", "Messagerie", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "messagerie" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
             ["marketing", "Marketing", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "marketing" ? "#E67E22" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>],
-            ["reviews", "Avis", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
+            ["reviews", "Réputation", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["payments", "Paiements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
@@ -18619,7 +18723,52 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* ═══════════════════════════════════════════ ONGLET AVIS */}
       {activeTab === "reviews" && (
         <div style={{ padding: "16px" }}>
-          {reviewsLoading ? (
+          {/* ── Sous-onglets Réputation ── */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <button onClick={() => setReviewsSubTab("avis")} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${reviewsSubTab === "avis" ? "#B8860B" : G.gris}`, background: reviewsSubTab === "avis" ? "#B8860B" : "#fff", color: reviewsSubTab === "avis" ? "#fff" : "#666", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Avis
+            </button>
+            <button onClick={() => { setReviewsSubTab("sondage"); loadSurveys(); }} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${reviewsSubTab === "sondage" ? "#2980b9" : G.gris}`, background: reviewsSubTab === "sondage" ? "#2980b9" : "#fff", color: reviewsSubTab === "sondage" ? "#fff" : "#666", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Sondage
+            </button>
+          </div>
+          {reviewsSubTab === "sondage" ? (
+            <div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                <button onClick={newSurveyDraft} style={{ flex: 1, background: "#2980b9", color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>+ Créer un sondage</button>
+                <button onClick={loadDefaultSurvey} style={{ flex: "0 0 auto", background: "#fff", color: "#2980b9", border: `1.5px solid #2980b9`, borderRadius: 10, padding: "11px 14px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Sondage par défaut</button>
+              </div>
+              {surveysLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.85rem" }}>Chargement…</div>
+              ) : surveys.length === 0 ? (
+                <div style={{ background: G.blanc, borderRadius: 14, padding: 32, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <p style={{ color: "#999", fontSize: "0.86rem" }}>Aucun sondage pour l'instant.</p>
+                  <p style={{ color: "#bbb", fontSize: "0.78rem", marginTop: 4 }}>Créez-en un ou partez du sondage par défaut.</p>
+                </div>
+              ) : surveys.map(s => {
+                const tgt = (() => { const [g, p] = (s.target || "all|all").split("|"); const gl = g === "femmes" ? "Femmes" : g === "hommes" ? "Hommes" : "Tous"; const pl = p === "premium" ? "Premium" : p === "gratuit" ? "Gratuits" : "Tous"; return `${gl} · ${pl}`; })();
+                return (
+                  <div key={s.id} style={{ background: G.blanc, borderRadius: 14, padding: 16, marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>{s.title}</div>
+                        <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 3 }}>{(s.questions || []).length} question{(s.questions || []).length > 1 ? "s" : ""} · Cible : {tgt} · {surveyCounts[s.id] || 0} réponse{(surveyCounts[s.id] || 0) > 1 ? "s" : ""}</div>
+                      </div>
+                      <span style={{ flexShrink: 0, background: s.status === "active" ? "rgba(39,174,96,0.12)" : "#f0f0f0", color: s.status === "active" ? "#27ae60" : "#999", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 800 }}>{s.status === "active" ? "Actif" : "Inactif"}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 7, marginTop: 12, flexWrap: "wrap" }}>
+                      <button onClick={() => loadSurveyResults(s)} style={{ flex: "1 1 auto", background: "#2980b9", color: "#fff", border: "none", borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>📊 Résultats</button>
+                      <button onClick={() => toggleSurveyStatus(s)} style={{ flex: "1 1 auto", background: "#fff", color: "#555", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>{s.status === "active" ? "Désactiver" : "Activer"}</button>
+                      <button onClick={() => setSurveyEditor({ ...s, questions: JSON.parse(JSON.stringify(s.questions || [])) })} style={{ flex: "1 1 auto", background: "#fff", color: "#555", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>
+                      <button onClick={() => deleteSurvey(s)} style={{ flex: "0 0 auto", background: "#fff", color: "#c0392b", border: `1px solid rgba(192,57,43,0.3)`, borderRadius: 9, padding: "8px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Suppr.</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : reviewsLoading ? (
             <div style={{ textAlign: "center", padding: 60 }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
             </div>
@@ -18756,6 +18905,97 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </Btn>
             </>
           )}
+        </div>
+      )}
+
+      {/* ── Éditeur de sondage ── */}
+      {surveyEditor && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setSurveyEditor(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 540, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "#2980b9", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: "0.98rem" }}>{surveyEditor.id ? "Modifier le sondage" : "Nouveau sondage"}</div>
+              <button onClick={() => setSurveyEditor(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff" }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Titre du sondage</label>
+              <input value={surveyEditor.title} onChange={e => setSurveyEditor((s: any) => ({ ...s, title: e.target.value }))} placeholder="Ex : Votre satisfaction Moyo" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box", marginBottom: 14 }} />
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Message d'invitation (affiché au membre)</label>
+              <textarea value={surveyEditor.intro_message} onChange={e => setSurveyEditor((s: any) => ({ ...s, intro_message: e.target.value }))} rows={2} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", marginBottom: 14 }} />
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Destinataires</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                <select value={(surveyEditor.target || "all|all").split("|")[0]} onChange={e => setSurveyEditor((s: any) => ({ ...s, target: `${e.target.value}|${(s.target || "all|all").split("|")[1]}` }))} style={{ padding: "10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: "#fff" }}>
+                  <option value="all">Tous les genres</option><option value="hommes">Hommes</option><option value="femmes">Femmes</option>
+                </select>
+                <select value={(surveyEditor.target || "all|all").split("|")[1]} onChange={e => setSurveyEditor((s: any) => ({ ...s, target: `${(s.target || "all|all").split("|")[0]}|${e.target.value}` }))} style={{ padding: "10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: "#fff" }}>
+                  <option value="all">Tous les comptes</option><option value="premium">Premium</option><option value="gratuit">Gratuits</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "#333" }}>Questions</label>
+                <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: [...(s.questions || []), { id: `q${Date.now()}`, text: "", type: "single", options: ["", ""] }] }))} style={{ background: "rgba(41,128,185,0.1)", color: "#2980b9", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}>+ Question</button>
+              </div>
+              {(surveyEditor.questions || []).map((q: any, qi: number) => (
+                <div key={qi} style={{ border: `1px solid ${G.gris}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontWeight: 800, color: "#2980b9", fontSize: "0.82rem" }}>{qi + 1}.</span>
+                    <input value={q.text} onChange={e => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, text: e.target.value } : x) }))} placeholder="Texte de la question" style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
+                    <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.filter((_: any, i: number) => i !== qi) }))} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: "1rem" }}>🗑</button>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    {["single", "multi"].map(t => (
+                      <button key={t} onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, type: t } : x) }))} style={{ flex: 1, padding: "6px", borderRadius: 8, border: `1.5px solid ${q.type === t ? "#2980b9" : G.gris}`, background: q.type === t ? "rgba(41,128,185,0.08)" : "#fff", color: q.type === t ? "#2980b9" : "#888", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{t === "single" ? "Choix unique" : "Choix multiple"}</button>
+                    ))}
+                  </div>
+                  {q.options.map((opt: string, oi: number) => (
+                    <div key={oi} style={{ display: "flex", gap: 6, marginBottom: 5, alignItems: "center" }}>
+                      <span style={{ color: "#bbb", fontSize: "0.8rem" }}>{q.type === "single" ? "○" : "☐"}</span>
+                      <input value={opt} onChange={e => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, options: x.options.map((o: string, j: number) => j === oi ? e.target.value : o) } : x) }))} placeholder={`Option ${oi + 1}`} style={{ flex: 1, padding: "7px 9px", borderRadius: 7, border: `1px solid ${G.gris}`, fontSize: "0.8rem", outline: "none" }} />
+                      {q.options.length > 2 && <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, options: x.options.filter((_: string, j: number) => j !== oi) } : x) }))} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer" }}>✕</button>}
+                    </div>
+                  ))}
+                  <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, options: [...x.options, ""] } : x) }))} style={{ background: "none", border: "none", color: "#2980b9", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", marginTop: 2 }}>+ Ajouter une option</button>
+                </div>
+              ))}
+              {(surveyEditor.questions || []).length === 0 && <div style={{ textAlign: "center", color: "#bbb", fontSize: "0.8rem", padding: 16 }}>Aucune question. Cliquez sur « + Question ».</div>}
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: `1px solid ${G.gris}`, display: "flex", gap: 10, flexShrink: 0 }}>
+              <button onClick={() => setSurveyEditor(null)} style={{ flex: "0 0 auto", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 18px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+              <button onClick={saveSurvey} disabled={savingSurvey} style={{ flex: 1, background: savingSurvey ? "rgba(41,128,185,0.5)" : "#2980b9", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 800, cursor: savingSurvey ? "not-allowed" : "pointer" }}>{savingSurvey ? "Enregistrement…" : "Enregistrer le sondage"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Résultats du sondage ── */}
+      {surveyResults && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setSurveyResults(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 540, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "#2980b9", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ color: "#fff", minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: "0.95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{surveyResults.survey.title}</div><div style={{ fontSize: "0.74rem", opacity: 0.9 }}>{surveyResults.responses.length} réponse{surveyResults.responses.length > 1 ? "s" : ""}</div></div>
+              <button onClick={() => setSurveyResults(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff", flexShrink: 0 }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+              {surveyResults.loading ? <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement…</div>
+                : surveyResults.responses.length === 0 ? <div style={{ textAlign: "center", padding: 40, color: "#999", fontSize: "0.85rem" }}>Aucune réponse pour l'instant.</div>
+                : (surveyResults.survey.questions || []).map((q: any, qi: number) => {
+                  const counts: Record<string, number> = {};
+                  q.options.forEach((o: string) => counts[o] = 0);
+                  surveyResults.responses.forEach((r: any) => { const a = r.answers?.[q.id]; (Array.isArray(a) ? a : a ? [a] : []).forEach((v: string) => { if (counts[v] !== undefined) counts[v]++; }); });
+                  const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+                  return (
+                    <div key={qi} style={{ marginBottom: 20 }}>
+                      <div style={{ fontWeight: 800, fontSize: "0.86rem", color: "#1a1a1a", marginBottom: 10 }}>{qi + 1}. {q.text}</div>
+                      {q.options.map((o: string) => { const c = counts[o]; const pct = Math.round(c / total * 100); return (
+                        <div key={o} style={{ marginBottom: 8 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "#444", marginBottom: 3 }}><span>{o}</span><span style={{ fontWeight: 700 }}>{c} ({pct}%)</span></div>
+                          <div style={{ height: 8, background: "#eee", borderRadius: 5, overflow: "hidden" }}><div style={{ width: `${pct}%`, height: "100%", background: "#2980b9" }} /></div>
+                        </div>
+                      ); })}
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -19340,6 +19580,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
 
                   {/* Suggestions */}
+                  {!mmLoading && mmSuggestions.length > 0 && (() => {
+                    const nArch = mmSuggestions.filter(x => mmArchived.has(x.key)).length;
+                    const nActive = mmSuggestions.length - nArch;
+                    return (
+                      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                        <button onClick={() => setShowMmArchived(false)} style={{ flex: 1, padding: "8px", borderRadius: 9, border: `1.5px solid ${!showMmArchived ? "#7c3aed" : G.gris}`, background: !showMmArchived ? "#7c3aed" : "#fff", color: !showMmArchived ? "#fff" : "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>Actives ({nActive})</button>
+                        <button onClick={() => setShowMmArchived(true)} style={{ flex: 1, padding: "8px", borderRadius: 9, border: `1.5px solid ${showMmArchived ? "#7c3aed" : G.gris}`, background: showMmArchived ? "#7c3aed" : "#fff", color: showMmArchived ? "#fff" : "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>📦 Archivées ({nArch})</button>
+                      </div>
+                    );
+                  })()}
                   {mmLoading ? (
                     <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.85rem" }}>Analyse des profils relationnels en cours…</div>
                   ) : mmSuggestions.length === 0 ? (
@@ -19347,7 +19597,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <p style={{ color: "#999", fontSize: "0.86rem", marginBottom: 6 }}>Aucune suggestion pour le moment.</p>
                       <p style={{ color: "#bbb", fontSize: "0.78rem" }}>Les suggestions apparaîtront quand des membres auront complété leur profil relationnel.</p>
                     </div>
-                  ) : mmSuggestions.map(s => {
+                  ) : mmSuggestions.filter(s => showMmArchived ? mmArchived.has(s.key) : !mmArchived.has(s.key)).length === 0 ? (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: 30, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                      <p style={{ color: "#999", fontSize: "0.84rem" }}>{showMmArchived ? "Aucune suggestion archivée." : "Aucune suggestion active. Consultez les archivées."}</p>
+                    </div>
+                  ) : mmSuggestions.filter(s => showMmArchived ? mmArchived.has(s.key) : !mmArchived.has(s.key)).map(s => {
                     const lvl = mmLevel(s.score);
                     const expired = s.prop && s.prop.expires_at && new Date(s.prop.expires_at) < new Date();
                     const Person = ({ p }: { p: any }) => (
@@ -19396,8 +19650,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
                           <button onClick={() => setMmView(s.man)} style={{ flex: "1 1 auto", border: `1px solid ${G.gris}`, background: "#fff", color: "#555", borderRadius: 9, padding: "9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Voir profil homme</button>
                           <button onClick={() => setMmView(s.woman)} style={{ flex: "1 1 auto", border: `1px solid ${G.gris}`, background: "#fff", color: "#555", borderRadius: 9, padding: "9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Voir profil femme</button>
-                          <button onClick={() => mmIgnore(s)} style={{ flex: "0 0 auto", border: `1px solid ${G.gris}`, background: "#fff", color: "#888", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>✕ Ignorer</button>
-                          <button onClick={() => mmProposeCouple(s)} style={{ flex: "1 1 auto", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>❤ Proposer ce couple</button>
+                          {mmArchived.has(s.key)
+                            ? <button onClick={() => mmUnarchive(s.key)} style={{ flex: "0 0 auto", border: `1px solid #7c3aed`, background: "#fff", color: "#7c3aed", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>↩ Désarchiver</button>
+                            : <button onClick={() => mmArchive(s.key)} style={{ flex: "0 0 auto", border: `1px solid ${G.gris}`, background: "#fff", color: "#888", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>📦 Archiver</button>}
+                          <button onClick={() => mmProposeCouple(s)} style={{ flex: "1 1 auto", background: mmProposedKeys.has(s.key) ? "#27ae60" : "#7c3aed", color: "#fff", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>{mmProposedKeys.has(s.key) ? "✓ Proposé (reproposer)" : "❤ Proposer ce couple"}</button>
                           <button onClick={() => generateFiche(s)} style={{ flex: "1 1 100%", background: "#fff", color: G.rouge, border: `1.5px solid ${G.rouge}`, borderRadius: 9, padding: "10px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                             Générer la fiche de compatibilité relationnelle
@@ -19994,6 +20250,14 @@ export default function App() {
   const [userGender, setUserGender] = useState<string>("");
   const [selfBan, setSelfBan] = useState<{ until: string | null } | null>(null);
   const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string; pairKey?: string } | null>(null);
+  // ── Sondages (côté membre) ──
+  const [activeSurvey, setActiveSurvey] = useState<any | null>(null);
+  const [showSurveyInvite, setShowSurveyInvite] = useState(false);
+  const [surveyStep, setSurveyStep] = useState(0);
+  const [surveyAnswers, setSurveyAnswers] = useState<Record<string, string[]>>({});
+  const [surveySubmitting, setSurveySubmitting] = useState(false);
+  const surveyAnsweredRef = useRef<Set<string>>((() => { try { return new Set<string>(JSON.parse(localStorage.getItem(`moyo_surveys_answered_${auth.userId}`) || "[]")); } catch { return new Set<string>(); } })());
+  const surveyDismissRef = useRef<Set<string>>(new Set());
   const [propJump, setPropJump] = useState(0);
   const dismissedPropsRef = useRef<Set<string>>((() => { try { return new Set<string>(JSON.parse(localStorage.getItem(`moyo_seen_props_${auth.userId}`) || "[]")); } catch { return new Set<string>(); } })());
   const persistDismissedProp = (id: string) => { dismissedPropsRef.current.add(id); try { localStorage.setItem(`moyo_seen_props_${auth.userId}`, JSON.stringify([...dismissedPropsRef.current])); } catch {} };
@@ -20340,7 +20604,21 @@ export default function App() {
     };
     checkBroadcast();
     const interval = setInterval(checkBroadcast, POLL_BROADCAST_MS);
-    return () => clearInterval(interval);
+    // ── Vérifier un sondage actif ciblant ce membre, non encore répondu ──
+    const checkSurvey = async () => {
+      if (!auth?.userId) return;
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/surveys?status=eq.active&order=created_at.desc&select=*`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        if (!r.ok) return;
+        const data = await r.json().catch(() => []);
+        if (!Array.isArray(data)) return;
+        const s = data.find((sv: any) => (sv.questions || []).length > 0 && broadcastTargetsUser(sv.target, !!auth.isPremium, userGender) && !surveyAnsweredRef.current.has(sv.id) && !surveyDismissRef.current.has(sv.id));
+        if (s) setActiveSurvey((prev: any) => prev?.id === s.id ? prev : s);
+      } catch {}
+    };
+    checkSurvey();
+    const surveyInt = setInterval(checkSurvey, 60000);
+    return () => { clearInterval(interval); clearInterval(surveyInt); };
   }, [auth?.userId, userGender]);
 
   // ── Éjection en direct : déconnecte immédiatement une session active si le compte est banni ──
@@ -20883,6 +21161,86 @@ export default function App() {
     )}
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
+
+    {/* ── SONDAGE : invitation ── */}
+    {activeSurvey && !showSurveyInvite && !pendingWarning && !pendingBroadcast && !pendingProposal && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+          <div style={{ background: "linear-gradient(135deg,#2980b9,#1c5e8c)", padding: "26px 22px", textAlign: "center" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.1rem" }}>Votre avis nous intéresse</div>
+          </div>
+          <div style={{ padding: "20px 22px 24px" }}>
+            <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.55, textAlign: "center", marginBottom: 20 }}>{activeSurvey.intro_message || "Aidez-nous à améliorer Moyo en répondant à quelques questions rapides."}</p>
+            <button onClick={() => { setSurveyAnswers({}); setSurveyStep(0); setShowSurveyInvite(true); }} style={{ width: "100%", background: "#2980b9", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: "pointer", marginBottom: 8 }}>J'aide Moyo ({(activeSurvey.questions || []).length} questions)</button>
+            <button onClick={() => { surveyDismissRef.current.add(activeSurvey.id); setActiveSurvey(null); }} style={{ width: "100%", background: "transparent", color: "#999", border: "none", padding: "8px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>Plus tard</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── SONDAGE : wizard ── */}
+    {activeSurvey && showSurveyInvite && (() => {
+      const qs = activeSurvey.questions || [];
+      const q = qs[surveyStep];
+      if (!q) return null;
+      const sel = surveyAnswers[q.id] || [];
+      const toggle = (opt: string) => {
+        setSurveyAnswers(prev => {
+          const cur = prev[q.id] || [];
+          if (q.type === "single") return { ...prev, [q.id]: [opt] };
+          return { ...prev, [q.id]: cur.includes(opt) ? cur.filter(x => x !== opt) : [...cur, opt] };
+        });
+      };
+      const last = surveyStep === qs.length - 1;
+      const canNext = sel.length > 0;
+      const submit = async () => {
+        setSurveySubmitting(true);
+        try {
+          await fetch(`${SUPABASE_URL}/rest/v1/survey_responses`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ survey_id: activeSurvey.id, user_id: auth!.userId, answers: surveyAnswers }) });
+          surveyAnsweredRef.current.add(activeSurvey.id);
+          try { localStorage.setItem(`moyo_surveys_answered_${auth!.userId}`, JSON.stringify([...surveyAnsweredRef.current])); } catch {}
+          setShowSurveyInvite(false); setActiveSurvey(null);
+        } catch {}
+        setSurveySubmitting(false);
+      };
+      const progress = Math.round(((surveyStep + 1) / qs.length) * 100);
+      return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ padding: "18px 22px 14px", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888" }}>Question {surveyStep + 1} / {qs.length}</span>
+                <button onClick={() => { surveyDismissRef.current.add(activeSurvey.id); setShowSurveyInvite(false); setActiveSurvey(null); }} style={{ background: "#f0f0f0", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#888" }}>✕</button>
+              </div>
+              <div style={{ height: 6, background: "#eee", borderRadius: 5, overflow: "hidden" }}><div style={{ width: `${progress}%`, height: "100%", background: "#2980b9", transition: "width 0.3s ease" }} /></div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px 22px 16px" }}>
+              <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1a1a1a", marginBottom: 6 }}>{q.text}</div>
+              <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 16 }}>{q.type === "multi" ? "Plusieurs réponses possibles" : "Une seule réponse"}</div>
+              {q.options.map((opt: string) => {
+                const active = sel.includes(opt);
+                return (
+                  <button key={opt} onClick={() => toggle(opt)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "14px 16px", marginBottom: 10, borderRadius: 14, border: `2px solid ${active ? "#2980b9" : G.gris}`, background: active ? "rgba(41,128,185,0.07)" : "#fff", cursor: "pointer" }}>
+                    <span style={{ width: 22, height: 22, borderRadius: q.type === "single" ? "50%" : 6, border: `2px solid ${active ? "#2980b9" : "#ccc"}`, background: active ? "#2980b9" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{active && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}</span>
+                    <span style={{ fontSize: "0.9rem", fontWeight: active ? 700 : 500, color: active ? "#2980b9" : "#333" }}>{opt}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ padding: "14px 22px", borderTop: `1px solid ${G.gris}`, display: "flex", gap: 10, flexShrink: 0 }}>
+              {surveyStep > 0 && <button onClick={() => setSurveyStep(s => s - 1)} style={{ flex: "0 0 auto", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "13px 18px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Précédent</button>}
+              {last
+                ? <button onClick={submit} disabled={!canNext || surveySubmitting} style={{ flex: 1, background: (canNext && !surveySubmitting) ? "linear-gradient(135deg,#27ae60,#1e8449)" : "rgba(39,174,96,0.5)", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: (canNext && !surveySubmitting) ? "pointer" : "not-allowed" }}>{surveySubmitting ? "Envoi…" : "Envoyer mes réponses"}</button>
+                : <button onClick={() => canNext && setSurveyStep(s => s + 1)} disabled={!canNext} style={{ flex: 1, background: canNext ? "#2980b9" : "rgba(41,128,185,0.4)", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: canNext ? "pointer" : "not-allowed" }}>Suivant</button>}
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+
     {/* ── MODAL PROPOSITION DE MATCH ── */}
     {/* Flux A : proposition suite à une demande de mise en relation */}
     {pendingProposal && pendingProposal.source === "request" && !pendingWarning && !pendingBroadcast && (
