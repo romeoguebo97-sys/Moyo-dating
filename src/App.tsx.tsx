@@ -286,6 +286,8 @@ const SUPPORT_TEAM_NAME = "Assistance Moyo";
 const SUPPORT_TEAM_PHOTO = "https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/assistant/Image%2031%20mai%202026,%2004_26_29.png";
 const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
 const SUPPORT_PREFIX_REPLY = "[SUPPORT_REPLY]";
+// Message envoyé automatiquement par l'Assistant Moyo lors d'une tentative de partage de contact (gratuit)
+const AUTO_MOD_CONTACT_REPLY = "Bonjour, notre système informatique a détecté une tentative d'échange de coordonnées personnelles. Cette action enfreint les Conditions Générales d'Utilisation de Moyo. Le partage de coordonnées étant réservé aux membres Premium, nous vous invitons à respecter les règles de la communauté afin d'éviter toute restriction ou suppression définitive de votre compte.";
 // Demande de Premium (un non-Premium demande à son interlocuteur Premium de lui offrir)
 const GIFT_REQUEST_PREFIX = "[GIFTREQ]";
 const GIFT_REQUEST_TEXT = "💝 Et si tu m'offrais Premium ? On pourrait discuter sans aucune limite 🥰";
@@ -8699,8 +8701,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         await sb.insert(auth.token, "reports", {
           reporter_id: auth.userId,
           reported_id: null,
-          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim().substring(0, 120)}`,
+          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim().substring(0, 120)} · Réponse auto envoyée`,
           status: "pending",
+        });
+        // ── Réponse automatique de l'Assistant Moyo à l'auteur (apparaît dans SA messagerie support) ──
+        await sb.insert(auth.token, "reports", {
+          reporter_id: auth.userId,
+          reported_id: auth.userId,
+          reason: `${SUPPORT_PREFIX_REPLY} ${AUTO_MOD_CONTACT_REPLY}`,
+          status: "reviewed",
         });
       } catch {}
       onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !");
@@ -12732,7 +12741,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const saveSurvey = async () => {
     if (!surveyEditor) return;
     if (!surveyEditor.title.trim()) { showToast("Donnez un titre au sondage.", "error"); return; }
-    const valid = (surveyEditor.questions || []).filter((q: any) => q.text.trim() && q.options.filter((o: string) => o.trim()).length >= 2);
+    const valid = (surveyEditor.questions || []).filter((q: any) => q.text.trim() && (q.type === "text" || q.options.filter((o: string) => o.trim()).length >= 2));
     if (valid.length === 0) { showToast("Ajoutez au moins une question avec 2 options.", "error"); return; }
     setSavingSurvey(true);
     const payload = { title: surveyEditor.title.trim(), intro_message: surveyEditor.intro_message.trim(), target: surveyEditor.target, status: surveyEditor.status, questions: valid.map((q: any, i: number) => ({ id: q.id || `q${i + 1}`, text: q.text.trim(), type: q.type, options: q.options.filter((o: string) => o.trim()) })) };
@@ -18740,6 +18749,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <button onClick={newSurveyDraft} style={{ flex: 1, background: "#2980b9", color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>+ Créer un sondage</button>
                 <button onClick={loadDefaultSurvey} style={{ flex: "0 0 auto", background: "#fff", color: "#2980b9", border: `1.5px solid #2980b9`, borderRadius: 10, padding: "11px 14px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Sondage par défaut</button>
               </div>
+              <div style={{ fontSize: "0.74rem", color: "#888", background: G.creme, borderRadius: 10, padding: "9px 12px", marginBottom: 14, lineHeight: 1.5 }}>💡 Un sondage <b>Publié</b> est automatiquement envoyé aux membres ciblés (ils reçoivent l'invitation). Mettez-le en <b>Brouillon</b> pour arrêter de le diffuser.</div>
               {surveysLoading ? (
                 <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.85rem" }}>Chargement…</div>
               ) : surveys.length === 0 ? (
@@ -18756,11 +18766,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>{s.title}</div>
                         <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 3 }}>{(s.questions || []).length} question{(s.questions || []).length > 1 ? "s" : ""} · Cible : {tgt} · {surveyCounts[s.id] || 0} réponse{(surveyCounts[s.id] || 0) > 1 ? "s" : ""}</div>
                       </div>
-                      <span style={{ flexShrink: 0, background: s.status === "active" ? "rgba(39,174,96,0.12)" : "#f0f0f0", color: s.status === "active" ? "#27ae60" : "#999", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 800 }}>{s.status === "active" ? "Actif" : "Inactif"}</span>
+                      <span style={{ flexShrink: 0, background: s.status === "active" ? "rgba(39,174,96,0.12)" : "#f0f0f0", color: s.status === "active" ? "#27ae60" : "#999", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 800 }}>{s.status === "active" ? "● Publié" : "Brouillon"}</span>
                     </div>
                     <div style={{ display: "flex", gap: 7, marginTop: 12, flexWrap: "wrap" }}>
                       <button onClick={() => loadSurveyResults(s)} style={{ flex: "1 1 auto", background: "#2980b9", color: "#fff", border: "none", borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>📊 Résultats</button>
-                      <button onClick={() => toggleSurveyStatus(s)} style={{ flex: "1 1 auto", background: "#fff", color: "#555", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>{s.status === "active" ? "Désactiver" : "Activer"}</button>
+                      <button onClick={() => toggleSurveyStatus(s)} style={{ flex: "1 1 auto", background: s.status === "active" ? "#fff" : "#27ae60", color: s.status === "active" ? "#555" : "#fff", border: s.status === "active" ? `1px solid ${G.gris}` : "none", borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>{s.status === "active" ? "Dépublier" : "📢 Publier"}</button>
                       <button onClick={() => setSurveyEditor({ ...s, questions: JSON.parse(JSON.stringify(s.questions || [])) })} style={{ flex: "1 1 auto", background: "#fff", color: "#555", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>
                       <button onClick={() => deleteSurvey(s)} style={{ flex: "0 0 auto", background: "#fff", color: "#c0392b", border: `1px solid rgba(192,57,43,0.3)`, borderRadius: 9, padding: "8px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Suppr.</button>
                     </div>
@@ -18942,10 +18952,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.filter((_: any, i: number) => i !== qi) }))} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: "1rem" }}>🗑</button>
                   </div>
                   <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                    {["single", "multi"].map(t => (
-                      <button key={t} onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, type: t } : x) }))} style={{ flex: 1, padding: "6px", borderRadius: 8, border: `1.5px solid ${q.type === t ? "#2980b9" : G.gris}`, background: q.type === t ? "rgba(41,128,185,0.08)" : "#fff", color: q.type === t ? "#2980b9" : "#888", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{t === "single" ? "Choix unique" : "Choix multiple"}</button>
+                    {[["single", "Choix unique"], ["multi", "Choix multiple"], ["text", "Réponse libre"]].map(([t, lbl]) => (
+                      <button key={t} onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, type: t } : x) }))} style={{ flex: 1, padding: "6px", borderRadius: 8, border: `1.5px solid ${q.type === t ? "#2980b9" : G.gris}`, background: q.type === t ? "rgba(41,128,185,0.08)" : "#fff", color: q.type === t ? "#2980b9" : "#888", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
                     ))}
                   </div>
+                  {q.type === "text" ? (
+                    <div style={{ fontSize: "0.74rem", color: "#999", background: G.creme, borderRadius: 8, padding: "8px 10px", fontStyle: "italic" }}>Le membre répondra dans un champ texte libre.</div>
+                  ) : (<>
                   {q.options.map((opt: string, oi: number) => (
                     <div key={oi} style={{ display: "flex", gap: 6, marginBottom: 5, alignItems: "center" }}>
                       <span style={{ color: "#bbb", fontSize: "0.8rem" }}>{q.type === "single" ? "○" : "☐"}</span>
@@ -18954,6 +18967,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   ))}
                   <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, options: [...x.options, ""] } : x) }))} style={{ background: "none", border: "none", color: "#2980b9", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", marginTop: 2 }}>+ Ajouter une option</button>
+                  </>)}
                 </div>
               ))}
               {(surveyEditor.questions || []).length === 0 && <div style={{ textAlign: "center", color: "#bbb", fontSize: "0.8rem", padding: 16 }}>Aucune question. Cliquez sur « + Question ».</div>}
@@ -18978,6 +18992,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {surveyResults.loading ? <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement…</div>
                 : surveyResults.responses.length === 0 ? <div style={{ textAlign: "center", padding: 40, color: "#999", fontSize: "0.85rem" }}>Aucune réponse pour l'instant.</div>
                 : (surveyResults.survey.questions || []).map((q: any, qi: number) => {
+                  if (q.type === "text") {
+                    const texts = surveyResults.responses.map((r: any) => (r.answers?.[q.id] || [])[0]).filter((t: string) => t && t.trim());
+                    return (
+                      <div key={qi} style={{ marginBottom: 20 }}>
+                        <div style={{ fontWeight: 800, fontSize: "0.86rem", color: "#1a1a1a", marginBottom: 10 }}>{qi + 1}. {q.text} <span style={{ fontWeight: 600, color: "#999", fontSize: "0.76rem" }}>({texts.length} réponse{texts.length > 1 ? "s" : ""})</span></div>
+                        {texts.length === 0 ? <div style={{ fontSize: "0.78rem", color: "#bbb", fontStyle: "italic" }}>Aucune réponse écrite.</div>
+                          : texts.map((t: string, i: number) => <div key={i} style={{ background: G.creme, borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#333", marginBottom: 6, lineHeight: 1.4 }}>« {t} »</div>)}
+                      </div>
+                    );
+                  }
                   const counts: Record<string, number> = {};
                   q.options.forEach((o: string) => counts[o] = 0);
                   surveyResults.responses.forEach((r: any) => { const a = r.answers?.[q.id]; (Array.isArray(a) ? a : a ? [a] : []).forEach((v: string) => { if (counts[v] !== undefined) counts[v]++; }); });
@@ -21195,7 +21219,7 @@ export default function App() {
         });
       };
       const last = surveyStep === qs.length - 1;
-      const canNext = sel.length > 0;
+      const canNext = q.type === "text" ? true : sel.length > 0;
       const submit = async () => {
         setSurveySubmitting(true);
         try {
@@ -21219,8 +21243,10 @@ export default function App() {
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "8px 22px 16px" }}>
               <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1a1a1a", marginBottom: 6 }}>{q.text}</div>
-              <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 16 }}>{q.type === "multi" ? "Plusieurs réponses possibles" : "Une seule réponse"}</div>
-              {q.options.map((opt: string) => {
+              <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 16 }}>{q.type === "multi" ? "Plusieurs réponses possibles" : q.type === "text" ? "Votre réponse" : "Une seule réponse"}</div>
+              {q.type === "text" ? (
+                <textarea value={sel[0] || ""} onChange={e => setSurveyAnswers(prev => ({ ...prev, [q.id]: e.target.value.trim() ? [e.target.value] : [] }))} rows={5} placeholder="Écrivez votre réponse ici…" style={{ width: "100%", padding: "14px 16px", borderRadius: 14, border: `2px solid ${G.gris}`, fontSize: "0.9rem", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+              ) : q.options.map((opt: string) => {
                 const active = sel.includes(opt);
                 return (
                   <button key={opt} onClick={() => toggle(opt)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "14px 16px", marginBottom: 10, borderRadius: 14, border: `2px solid ${active ? "#2980b9" : G.gris}`, background: active ? "rgba(41,128,185,0.07)" : "#fff", cursor: "pointer" }}>
