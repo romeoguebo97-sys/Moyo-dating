@@ -3750,6 +3750,7 @@ function AdminDesktopPage() {
     maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧",
     customBannedWords: "",
     contactBannedWords: "",
+    autoModContactReply: AUTO_MOD_CONTACT_REPLY,
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
@@ -3768,6 +3769,7 @@ function AdminDesktopPage() {
       "maintenance_mode","maintenance_message",
       "custom_banned_words",
       "contact_banned_words",
+      "auto_mod_contact_reply",
     ];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
@@ -3805,6 +3807,7 @@ function AdminDesktopPage() {
         maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage,
         customBannedWords: map["custom_banned_words"] || c.customBannedWords,
         contactBannedWords: map["contact_banned_words"] || c.contactBannedWords,
+        autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply,
       }));
     }).catch(() => {});
   }, [auth]);
@@ -4134,6 +4137,21 @@ function AdminDesktopPage() {
                   await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.contact_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
                   setAppConfig(c => ({ ...c, contactBannedWords: editingConfigValue }));
                   buildContactBannedRegex(editingConfigValue);
+                  setEditingConfig(null);
+                }} />
+              <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
+                <b>Message automatique de l'Assistant Moyo.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo.
+              </div>
+              <EditableRow label="Message auto (tentative de contact)" value={appConfig.autoModContactReply || "(par défaut)"} open={editingConfig === "auto_mod_contact_reply"}
+                onOpen={() => { setEditingConfig(editingConfig === "auto_mod_contact_reply" ? null : "auto_mod_contact_reply"); setEditingConfigValue(appConfig.autoModContactReply); }}
+                editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                hint="Le message envoyé automatiquement à l'auteur"
+                onSave={async () => {
+                  if (!auth) return;
+                  const v = editingConfigValue.trim();
+                  await saveSetting("auto_mod_contact_reply", v, auth.token);
+                  setAppConfig(c => ({ ...c, autoModContactReply: v }));
+                  AUTO_MOD_CONTACT_REPLY = v || AUTO_MOD_CONTACT_REPLY;
                   setEditingConfig(null);
                 }} />
             </OffCanvasSection>}
@@ -6553,8 +6571,8 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       }
     } catch (e) { console.error("LikesPage likes reçus error:", e); }
 
-    // ── LIKES ENVOYÉS ──
-    if (isPrem) {
+    // ── LIKES ENVOYÉS ── (visible pour tous : ce sont tes propres likes)
+    {
       try {
         const sent = await sb.query<LikeRecord>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user,created_at&order=created_at.desc&limit=50`);
         if (Array.isArray(sent) && sent.length > 0) {
@@ -6607,8 +6625,8 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       }
     } catch {}
 
-    // ── PROFILS VUS PAR MOI ──
-    if (isPrem) {
+    // ── PROFILS VUS PAR MOI ── (visible pour tous : ce sont tes propres visites)
+    {
       try {
         const myVisits = await sb.query<VisitRecord>(auth.token, "profile_visits", `?visitor_id=eq.${auth.userId}&select=visited_id,created_at&order=created_at.desc&limit=50`);
         if (Array.isArray(myVisits) && myVisits.length > 0) {
@@ -6826,6 +6844,17 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       {mode === "likes" && (
         <>
           {/* 1. Bandeau compteur — toujours visible (affiche 0 si aucun like en attente) */}
+          {likesSubTab === "sent" ? (
+            <div style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: "#111", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#111" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{visibleSentLikes.length > 0 ? `Tu as liké ${visibleSentLikes.length} profil${visibleSentLikes.length > 1 ? "s" : ""}` : "Tu n'as encore liké personne"}</div>
+                <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>Historique de tes likes envoyés</div>
+              </div>
+            </div>
+          ) : (
           <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
             borderRadius: 14, padding: "13px 16px", marginBottom: 14,
             color: isPremiumReal ? "#111" : G.blanc,
@@ -6855,6 +6884,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
               </div>
             )}
           </div>
+          )}
 
           {/* 2. Switch Reçus / Envoyés */}
           <InnerSwitch
@@ -6863,7 +6893,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
             options={[
               { id: "received", label: `Reçus${receivedCount > 0 ? ` (${receivedCount})` : ""}`,
                 icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
-              { id: "sent", label: "Envoyés",
+              { id: "sent", label: `Envoyés${visibleSentLikes.length > 0 ? ` (${visibleSentLikes.length})` : ""}`,
                 icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> },
             ]}
           />
@@ -6930,7 +6960,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
           {/* ── Likes envoyés ── */}
           {likesSubTab === "sent" && (
             <>
-              {isPremiumReal ? (
+              {(
                 loading ? <Spinner /> :
                 visibleSentLikes.length === 0 ? (
                   <EmptyState
@@ -6978,12 +7008,6 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
                     })}
                   </div>
                 )
-              ) : (
-                <PremiumBlur
-                  count={0}
-                  label="Vois les profils que tu as likés"
-                  onShowPremium={() => onShowPremium("Accède à l'historique de tes likes en passant Premium !")}
-                />
               )}
             </>
           )}
@@ -6996,6 +7020,17 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       {mode === "visitors" && (
         <>
           {/* 1. Bandeau compteur */}
+          {visitorsSubTab === "visited" ? (
+            <div style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: "#111", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{visitedProfiles.length > 0 ? `Tu as consulté ${visitedProfiles.length} profil${visitedProfiles.length > 1 ? "s" : ""}` : "Tu n'as encore consulté aucun profil"}</div>
+                <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>Historique de tes visites</div>
+              </div>
+            </div>
+          ) : (
           <div style={{ background: isPremiumReal ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`,
             borderRadius: 14, padding: "13px 16px", marginBottom: 14,
             color: isPremiumReal ? "#111" : G.blanc,
@@ -7027,6 +7062,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
               </div>
             )}
           </div>
+          )}
 
           {/* 2. Switch Visiteurs / Profils vus */}
           <InnerSwitch
@@ -7035,7 +7071,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
             options={[
               { id: "visitors", label: `Vues${viewsCount > 0 ? ` (${viewsCount})` : ""}`,
                 icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
-              { id: "visited", label: "Profils vus",
+              { id: "visited", label: `Profils vus${visitedProfiles.length > 0 ? ` (${visitedProfiles.length})` : ""}`,
                 icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
             ]}
           />
@@ -7102,7 +7138,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
           {/* ── Profils vus par moi ── */}
           {visitorsSubTab === "visited" && (
             <>
-              {isPremiumReal ? (
+              {(
                 loading ? <Spinner /> :
                 visitedProfiles.length === 0 ? (
                   <EmptyState
@@ -7140,12 +7176,6 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
                     ))}
                   </div>
                 )
-              ) : (
-                <PremiumBlur
-                  count={0}
-                  label="Vois les profils que tu as consultés"
-                  onShowPremium={() => onShowPremium("Accède à l'historique de tes visites en passant Premium !")}
-                />
               )}
             </>
           )}
@@ -10435,20 +10465,20 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
     <>
       <div onClick={() => { setSent(false); setShowModal(true); }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(230,126,34,0.2)" }}>
         <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a", marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
           <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Boostez votre visibilité pendant 24h</div>
         </div>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
 
       {errorModal && (
         <div onClick={() => setErrorModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, padding: "26px 24px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <p style={{ fontSize: "0.9rem", color: "#444", lineHeight: 1.7, marginBottom: 20 }}>{errorModal}</p>
-            <button onClick={() => setErrorModal(null)} style={{ width: "100%", background: "linear-gradient(135deg,#E67E22,#D35400)", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
+            <button onClick={() => setErrorModal(null)} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
           </div>
         </div>
       )}
@@ -10456,7 +10486,7 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
       {showModal && (
         <div onClick={() => { setShowModal(false); setSent(false); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 400, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
-            <div style={{ background: "linear-gradient(135deg,#E67E22,#D35400)", padding: "22px 20px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "22px 20px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#fff" }}>🚀 Passer sur les Statuts Moyo</div>
               <button onClick={() => { setShowModal(false); setSent(false); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -10481,14 +10511,14 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
                       "Validation par l'équipe Moyo",
                     ].map((c, i) => (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.84rem", color: "#555", padding: "4px 0" }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
                         <span>{c}</span>
                       </div>
                     ))}
                   </div>
                   <div style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => { setShowModal(false); setSent(false); }} style={{ flex: 1, padding: "13px", borderRadius: 50, border: `1.5px solid ${G.gris}`, background: G.creme, fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>Annuler</button>
-                    <button onClick={submit} disabled={loading} style={{ flex: 1.4, padding: "13px", borderRadius: 50, border: "none", background: "linear-gradient(135deg,#E67E22,#D35400)", color: "#fff", fontSize: "0.88rem", fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: loading ? 0.7 : 1 }}>{loading ? "Envoi…" : "Envoyer ma demande"}</button>
+                    <button onClick={submit} disabled={loading} style={{ flex: 1.4, padding: "13px", borderRadius: 50, border: "none", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", fontSize: "0.88rem", fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: loading ? 0.7 : 1 }}>{loading ? "Envoi…" : "Envoyer ma demande"}</button>
                   </div>
                 </>
               )}
