@@ -20326,7 +20326,8 @@ export default function App() {
   const [surveyAnswers, setSurveyAnswers] = useState<Record<string, string[]>>({});
   const [surveySubmitting, setSurveySubmitting] = useState(false);
   const surveyAnsweredRef = useRef<Set<string>>((() => { try { return new Set<string>(JSON.parse(localStorage.getItem(`moyo_surveys_answered_${auth.userId}`) || "[]")); } catch { return new Set<string>(); } })());
-  const surveyDismissRef = useRef<Set<string>>(new Set());
+  const surveyDismissRef = useRef<Set<string>>((() => { try { return new Set<string>(JSON.parse(localStorage.getItem(`moyo_surveys_dismissed_${auth.userId}`) || "[]")); } catch { return new Set<string>(); } })());
+  const persistDismissedSurvey = (id: string) => { surveyDismissRef.current.add(id); try { localStorage.setItem(`moyo_surveys_dismissed_${auth.userId}`, JSON.stringify([...surveyDismissRef.current])); } catch {} };
   const [propJump, setPropJump] = useState(0);
   const dismissedPropsRef = useRef<Set<string>>((() => { try { return new Set<string>(JSON.parse(localStorage.getItem(`moyo_seen_props_${auth.userId}`) || "[]")); } catch { return new Set<string>(); } })());
   const persistDismissedProp = (id: string) => { dismissedPropsRef.current.add(id); try { localStorage.setItem(`moyo_seen_props_${auth.userId}`, JSON.stringify([...dismissedPropsRef.current])); } catch {} };
@@ -20681,6 +20682,18 @@ export default function App() {
         if (!r.ok) return;
         const data = await r.json().catch(() => []);
         if (!Array.isArray(data)) return;
+        // Source de vérité serveur : récupérer les sondages déjà répondus par ce membre,
+        // pour ne pas réafficher un sondage rempli même si le localStorage a été vidé / autre appareil.
+        try {
+          const rr = await fetch(`${SUPABASE_URL}/rest/v1/survey_responses?user_id=eq.${auth.userId}&select=survey_id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          if (rr.ok) {
+            const resp = await rr.json().catch(() => []);
+            if (Array.isArray(resp) && resp.length) {
+              resp.forEach((x: any) => { if (x?.survey_id) surveyAnsweredRef.current.add(x.survey_id); });
+              try { localStorage.setItem(`moyo_surveys_answered_${auth.userId}`, JSON.stringify([...surveyAnsweredRef.current])); } catch {}
+            }
+          }
+        } catch {}
         const s = data.find((sv: any) => (sv.questions || []).length > 0 && broadcastTargetsUser(sv.target, !!auth.isPremium, userGender) && !surveyAnsweredRef.current.has(sv.id) && !surveyDismissRef.current.has(sv.id));
         if (s) setActiveSurvey((prev: any) => prev?.id === s.id ? prev : s);
       } catch {}
@@ -21244,7 +21257,7 @@ export default function App() {
           <div style={{ padding: "20px 22px 24px" }}>
             <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.55, textAlign: "center", marginBottom: 20 }}>{activeSurvey.intro_message || "Aidez-nous à améliorer Moyo en répondant à quelques questions rapides."}</p>
             <button onClick={() => { setSurveyAnswers({}); setSurveyStep(0); setShowSurveyInvite(true); }} style={{ width: "100%", background: "#2980b9", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: "pointer", marginBottom: 8 }}>J'aide Moyo ({(activeSurvey.questions || []).length} questions)</button>
-            <button onClick={() => { surveyDismissRef.current.add(activeSurvey.id); setActiveSurvey(null); }} style={{ width: "100%", background: "transparent", color: "#999", border: "none", padding: "8px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>Plus tard</button>
+            <button onClick={() => { persistDismissedSurvey(activeSurvey.id); setActiveSurvey(null); }} style={{ width: "100%", background: "transparent", color: "#999", border: "none", padding: "8px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>Plus tard</button>
           </div>
         </div>
       </div>
@@ -21282,7 +21295,7 @@ export default function App() {
             <div style={{ padding: "18px 22px 14px", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                 <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888" }}>Question {surveyStep + 1} / {qs.length}</span>
-                <button onClick={() => { surveyDismissRef.current.add(activeSurvey.id); setShowSurveyInvite(false); setActiveSurvey(null); }} style={{ background: "#f0f0f0", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#888" }}>✕</button>
+                <button onClick={() => { persistDismissedSurvey(activeSurvey.id); setShowSurveyInvite(false); setActiveSurvey(null); }} style={{ background: "#f0f0f0", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#888" }}>✕</button>
               </div>
               <div style={{ height: 6, background: "#eee", borderRadius: 5, overflow: "hidden" }}><div style={{ width: `${progress}%`, height: "100%", background: "#2980b9", transition: "width 0.3s ease" }} /></div>
             </div>
