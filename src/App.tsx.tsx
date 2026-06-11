@@ -3843,7 +3843,7 @@ function AdminDesktopPage() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F0F1F5" }}>
+    <div style={{ height: "100vh", overflowY: "auto", overflowX: "hidden", background: "#F0F1F5" }}>
       <style>{`
         /* ── Desktop Admin overrides ── */
         .adm-wrap { --adm-bg: #F0F1F5; }
@@ -7892,7 +7892,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const swipeStartX = useRef(0); const swipeStartY = useRef(0); const swipeMoved = useRef(false); const swipeLock = useRef(false);
   // ── Fermeture animée de la discussion (glissement vers la droite) ──
   const [chatClosing, setChatClosing] = useState(false);
+  const [chatOpening, setChatOpening] = useState(false);
   const closeChat = () => { setChatClosing(true); setDragX(0); setTimeout(() => { setChatClosing(false); setOpen(null); loadConvs(); }, 240); };
+  // ── Ouverture animée : rejoue l'entrée (glissement depuis la droite) à CHAQUE ouverture ──
+  const openChat = (c: Match) => { setDragX(0); setChatClosing(false); setChatOpening(true); setOpen(c); setTimeout(() => setChatOpening(false), 260); };
   // ── Swipe-back (geste de retour natif, depuis le bord gauche) ──
   const [dragX, setDragX] = useState(0);
   const draggingRef = useRef(false);
@@ -7995,7 +7998,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       // Si on arrive depuis un match, ouvrir directement la bonne conversation
       if (initialPartnerId && convList) {
         const target = convList.find(c => c.partner?.id === initialPartnerId);
-        if (target) setOpen(target);
+        if (target) openChat(target);
       }
     });
   }, []);
@@ -8618,7 +8621,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     } else {
       await sb.delete(auth.token, "messages", `?match_id=eq.${open.id}`);
     }
-    setShowDeleteConv(false); setOpen(null); loadConvs();
+    setShowDeleteConv(false); closeChat();
   };
 
   const blockPartnerNow = async () => {
@@ -8628,7 +8631,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: open.partner.id });
       setToast({ msg: `${open.partner.name} a été bloqué(e).`, type: "success" });
       setPartnerMenuOpen(false); setShowPartnerProfile(false);
-      setOpen(null); loadConvs();
+      closeChat();
     } catch { setToast({ msg: "Impossible de bloquer pour le moment.", type: "error" }); }
     setPartnerActionLoading(false);
   };
@@ -8688,7 +8691,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       setToast({ msg: "Match annulé.", type: "success" });
     } catch { setToast({ msg: "Impossible d'annuler le match.", type: "error" }); }
     setConfirmUnmatchPartner(false); setPartnerMenuOpen(false); setShowPartnerProfile(false);
-    setOpen(null); loadConvs();
+    closeChat();
     setPartnerActionLoading(false);
   };
 
@@ -8989,7 +8992,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     if (swipeMoved.current) { swipeMoved.current = false; return; }
                     setConvs(prev => prev.map(x => x.id === c.id ? { ...x, unreadCount: 0 } : x));
                     onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
-                    setOpen(c);
+                    openChat(c);
                 }} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 12px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : (nouveau ? "rgba(192,57,43,0.04)" : G.blanc), cursor: "pointer", transition: swipe?.id === c.id ? "none" : "transform 0.22s cubic-bezier(.22,.61,.36,1), background 0.12s", transform: `translateX(${dx}px)`, position: "relative", zIndex: 1 }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <div style={{ borderRadius: "50%", padding: nouveau ? 2 : 0, background: nouveau ? `linear-gradient(135deg, ${G.rouge}, ${G.or})` : "transparent" }}>
@@ -9067,7 +9070,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       )}
       {/* Chat */}
       <div data-chat-container
-        className={isWideMsg ? undefined : (chatClosing ? "conv-leave" : (dragX === 0 ? "conv-enter" : undefined))}
+        className={isWideMsg ? undefined : (chatClosing ? "conv-leave" : (chatOpening ? "conv-enter" : undefined))}
         onTouchStart={isWideMsg ? undefined : (e) => { const x = e.touches[0].clientX; if (x <= 28) { dragStartX.current = x; dragStartY.current = e.touches[0].clientY; draggingRef.current = true; } else { dragStartX.current = null; draggingRef.current = false; } }}
         onTouchMove={isWideMsg ? undefined : (e) => { if (!draggingRef.current || dragStartX.current == null) return; const dx = e.touches[0].clientX - dragStartX.current; const dy = e.touches[0].clientY - dragStartY.current; if (Math.abs(dy) > Math.abs(dx) + 12) { draggingRef.current = false; setDragX(0); return; } if (dx > 0) setDragX(dx); }}
         onTouchEnd={isWideMsg ? undefined : () => { if (!draggingRef.current) return; draggingRef.current = false; const close = dragX > 80; dragStartX.current = null; if (close) finishSwipeClose(); else setDragX(0); }}
@@ -9948,7 +9951,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     </div>
   );
 
-  return <div style={{ padding: isWideMsg ? 0 : "12px 16px 16px", display: isWideMsg ? "flex" : "block", height: isWideMsg ? "100%" : "auto" }}>
+  return <div style={{ padding: isWideMsg ? 0 : "12px 0 16px", display: isWideMsg ? "flex" : "block", height: isWideMsg ? "100%" : "auto" }}>
     {isWideMsg ? (
       <>
         {/* ── COLONNE GAUCHE : liste conversations ── */}
@@ -10005,7 +10008,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
             {featureProfileView.bio && <p style={{ fontSize: "0.9rem", color: "#555", lineHeight: 1.6, marginBottom: 18 }}>{featureProfileView.bio}</p>}
             {featureProfileView.id !== auth.userId && (
               getMatchWithUser(featureProfileView.id) ? (
-                <Btn variant="primary" onClick={() => { const m = getMatchWithUser(featureProfileView.id); setFeatureProfileView(null); closeStatusViewer(); if (m) setOpen(m); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>💬 Envoyer un message</Btn>
+                <Btn variant="primary" onClick={() => { const m = getMatchWithUser(featureProfileView.id); setFeatureProfileView(null); closeStatusViewer(); if (m) openChat(m); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>💬 Envoyer un message</Btn>
               ) : (
                 <Btn variant="primary" onClick={() => { const id = featureProfileView.id; setFeatureProfileView(null); likeFeatureProfile({ feature_user_id: id } as StatusPost); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>❤️ Liker ce profil</Btn>
               )
@@ -10110,7 +10113,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               {statusPreview.caption && <div style={{ fontSize: "0.92rem", lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-line", textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}>{statusPreview.caption}</div>}
               {statusPreview.feature_user_id !== auth.userId && (
                 getMatchWithUser(statusPreview.feature_user_id) ? (
-                  <button onClick={(e) => { e.stopPropagation(); const m = getMatchWithUser(statusPreview.feature_user_id); closeStatusViewer(); if (m) setOpen(m); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: G.rouge, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.45)" }}>
+                  <button onClick={(e) => { e.stopPropagation(); const m = getMatchWithUser(statusPreview.feature_user_id); closeStatusViewer(); if (m) openChat(m); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: G.rouge, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.45)" }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     Envoyer un message
                   </button>
