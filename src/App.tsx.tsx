@@ -7987,6 +7987,19 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  // ── Chargement par fenêtre : on ne charge que les N derniers messages à l'ouverture (rapide),
+  //    et on charge les plus anciens à la demande en remontant. ──
+  const MSG_WINDOW = 80;
+  const [hasMoreOlder, setHasMoreOlder] = useState(false);
+  const loadingOlderRef = useRef(false);
+  // Conserve les anciens messages déjà chargés et remplace la fenêtre récente par les données fraîches.
+  const mergeWindow = (prev: Message[], windowAsc: Message[]): Message[] => {
+    if (!windowAsc.length) return prev;
+    const oldest = windowAsc[0].created_at || "";
+    const ids = new Set(windowAsc.map(w => w.id));
+    const older = prev.filter(m => (m.created_at || "") < oldest && !ids.has(m.id));
+    return [...older, ...windowAsc];
+  };
   const imgRef = useRef<HTMLInputElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -8180,8 +8193,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       return () => clearInterval(supportInterval);
     }
     const ws = sb.subscribeRealtime(auth.token, "messages", `match_id=eq.${open.id}`, async () => {
-      const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
-      setMsgs(res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)).map(m => (m.id && destroyedIdsRef.current.has(m.id)) ? { ...m, is_destroyed: true } : m));
+      const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.desc&limit=${MSG_WINDOW}`);
+      const win = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)).reverse().map(m => (m.id && destroyedIdsRef.current.has(m.id)) ? { ...m, is_destroyed: true } : m);
+      setMsgs(prev => mergeWindow(prev, win));
     });
     return () => { try { ws?.close(); } catch {} };
   }, [open?.id]);
@@ -8192,11 +8206,12 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     if (open.id === "__support__") return; // le support a son propre polling optimisé (voir plus bas)
     const readInterval = setInterval(async () => {
       try {
-        const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.asc`);
-        const filtered = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)).map(m => (m.id && destroyedIdsRef.current.has(m.id)) ? { ...m, is_destroyed: true } : m);
+        const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&order=created_at.desc&limit=${MSG_WINDOW}`);
+        const win = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)).reverse().map(m => (m.id && destroyedIdsRef.current.has(m.id)) ? { ...m, is_destroyed: true } : m);
         setMsgs(prev => {
-          const hasChange = filtered.some((m, i) => prev[i]?.is_read !== m.is_read || prev[i]?.id !== m.id || prev[i]?.reactions !== m.reactions);
-          return hasChange ? filtered : prev;
+          const merged = mergeWindow(prev, win);
+          const changed = merged.length !== prev.length || merged.some((m, i) => prev[i]?.id !== m.id || prev[i]?.is_read !== m.is_read || prev[i]?.reactions !== m.reactions || prev[i]?.content !== m.content);
+          return changed ? merged : prev;
         });
       } catch {}
     }, 2000);
@@ -8598,14 +8613,35 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       loadConvs();
       return;
     }
-    const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
-    const visible = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId));
+    const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.desc&limit=${MSG_WINDOW}`);
+    const visible = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)).reverse();
+    setHasMoreOlder(res.length >= MSG_WINDOW);
     setMsgs(visible);
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     setMsgCount(visible.filter(m => m.sender_id === auth.userId && (m.created_at || "") >= since24h).length);
     // Marquer comme lu en arrière-plan, puis rafraîchir la liste (badges non lus).
     // On ne refait PAS de setMsgs ici : évite le double rendu (scintillement) et la latence à l'ouverture.
     sb.markMessagesRead(auth.token, conv.id, auth.userId).then(() => loadConvs()).catch(() => {});
+  };
+
+  // ── Charger les messages plus anciens en remontant (préserve la position de lecture). ──
+  const loadOlder = async () => {
+    if (loadingOlderRef.current || !hasMoreOlder || !open || open.id === "__support__") return;
+    const oldest = msgs[0]?.created_at;
+    if (!oldest) return;
+    loadingOlderRef.current = true;
+    try {
+      const res = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${open.id}&created_at=lt.${encodeURIComponent(oldest)}&order=created_at.desc&limit=${MSG_WINDOW}`);
+      const older = res.filter(m => !((m as any).deleted_for || []).includes(auth.userId)).reverse().map(m => (m.id && destroyedIdsRef.current.has(m.id)) ? { ...m, is_destroyed: true } : m);
+      setHasMoreOlder(res.length >= MSG_WINDOW);
+      if (older.length) {
+        const el = scrollContainerRef.current;
+        const prevHeight = el ? el.scrollHeight : 0;
+        const prevTop = el ? el.scrollTop : 0;
+        setMsgs(prev => { const ids = new Set(prev.map(p => p.id)); return [...older.filter(o => !ids.has(o.id)), ...prev]; });
+        requestAnimationFrame(() => { const e2 = scrollContainerRef.current; if (e2) e2.scrollTop = prevTop + (e2.scrollHeight - prevHeight); });
+      }
+    } catch {} finally { loadingOlderRef.current = false; }
   };
 
   const deleteConv = async () => {
@@ -9305,6 +9341,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         const el = e.currentTarget;
         const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
         setShowScrollDown(dist > 250);
+        if (el.scrollTop < 80) loadOlder();
       }} style={{ flex: 1, minHeight: 0, overflowY: "scroll", overflowX: "hidden", padding: "14px", display: "flex", flexDirection: "column", position: "relative", overscrollBehavior: "contain", zIndex: 1 }}>
         <div style={{ flex: 1 }} />{/* spacer pour pousser les messages vers le bas */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8, minHeight: "100%" }}>
