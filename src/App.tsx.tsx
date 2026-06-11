@@ -21216,8 +21216,8 @@ export default function App() {
   if (!auth) return <Landing onNav={setPage} />;
   return <div style={darkMode ? { filter: "invert(100%) hue-rotate(180deg)", minHeight: "100vh", background: "#fff" } : {}}>
     {darkMode && <style>{`
-      img, video, [style*="background-image"] { filter: invert(100%) hue-rotate(180deg) !important; }
-      .no-invert { filter: invert(100%) hue-rotate(180deg) !important; }
+      img, video, [style*="background-image"], [style*="url("] { filter: hue-rotate(180deg) invert(100%) !important; }
+      .no-invert { filter: hue-rotate(180deg) invert(100%) !important; }
       /* Dans un îlot non-inversé (viewer Statuts...), les descendants ne sont pas re-filtrés */
       .no-invert [style], .no-invert img, .no-invert video, .no-invert svg { filter: none !important; }
       /* ── Couleurs de marque INCHANGÉES en mode sombre (rouge, doré, vert, orange, violet) ── */
@@ -21233,7 +21233,7 @@ export default function App() {
       [style*="#E67E22"], [style*="rgb(230, 126, 34)"], [style*="rgb(230,126,34)"],
       /* Violet matchmaking #7c3aed / #8e44ad */
       [style*="#7c3aed"], [style*="#7C3AED"], [style*="rgb(124, 58, 237)"], [style*="#8e44ad"], [style*="#8E44AD"], [style*="rgb(142, 68, 173)"] {
-        filter: invert(100%) hue-rotate(180deg) !important;
+        filter: hue-rotate(180deg) invert(100%) !important;
       }
       /* Les médias à l'intérieur d'un bloc de marque ne doivent pas être ré-inversés deux fois */
       [style*="#C0392B"] img, [style*="rgb(192, 57, 43)"] img, [style*="#922B21"] img,
