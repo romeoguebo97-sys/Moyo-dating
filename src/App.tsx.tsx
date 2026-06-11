@@ -7892,10 +7892,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const swipeStartX = useRef(0); const swipeStartY = useRef(0); const swipeMoved = useRef(false); const swipeLock = useRef(false);
   // ── Fermeture animée de la discussion (glissement vers la droite) ──
   const [chatClosing, setChatClosing] = useState(false);
-  const [chatOpening, setChatOpening] = useState(false);
   const closeChat = () => { setChatClosing(true); setDragX(0); setTimeout(() => { setChatClosing(false); setOpen(null); loadConvs(); }, 240); };
-  // ── Ouverture animée : rejoue l'entrée (glissement depuis la droite) à CHAQUE ouverture ──
-  const openChat = (c: Match) => { setDragX(0); setChatClosing(false); setChatOpening(true); setOpen(c); setTimeout(() => setChatOpening(false), 260); };
+  // ── Ouverture : on vide les messages (évite l'affichage de l'ancienne conv) ; l'animation d'entrée
+  //    est rejouée à chaque fois grâce au key={open.id} sur le conteneur (re-montage propre). ──
+  const openChat = (c: Match) => { setDragX(0); setChatClosing(false); setMsgs([]); setOpen(c); };
   // ── Swipe-back (geste de retour natif, depuis le bord gauche) ──
   const [dragX, setDragX] = useState(0);
   const draggingRef = useRef(false);
@@ -8911,7 +8911,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         <span>Statuts visibles uniquement par vos matchs</span>
       </div>
     </div>
-    <div style={{ flex: 1, overflowY: "auto", padding: "0" }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0" }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
         : (() => {
@@ -9067,7 +9067,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       )}
       {/* Chat */}
       <div data-chat-container
-        className={isWideMsg ? undefined : (chatClosing ? "conv-leave" : (chatOpening ? "conv-enter" : undefined))}
+        key={open.id}
+        className={isWideMsg ? undefined : (chatClosing ? "conv-leave" : "conv-enter")}
         onTouchStart={isWideMsg ? undefined : (e) => { const x = e.touches[0].clientX; if (x <= 28) { dragStartX.current = x; dragStartY.current = e.touches[0].clientY; draggingRef.current = true; } else { dragStartX.current = null; draggingRef.current = false; } }}
         onTouchMove={isWideMsg ? undefined : (e) => { if (!draggingRef.current || dragStartX.current == null) return; const dx = e.touches[0].clientX - dragStartX.current; const dy = e.touches[0].clientY - dragStartY.current; if (Math.abs(dy) > Math.abs(dx) + 12) { draggingRef.current = false; setDragX(0); return; } if (dx > 0) setDragX(dx); }}
         onTouchEnd={isWideMsg ? undefined : () => { if (!draggingRef.current) return; draggingRef.current = false; const close = dragX > 80; dragStartX.current = null; if (close) finishSwipeClose(); else setDragX(0); }}
@@ -9948,7 +9949,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     </div>
   );
 
-  return <div style={{ padding: isWideMsg ? 0 : "12px 0 16px", display: isWideMsg ? "flex" : "block", height: isWideMsg ? "100%" : "auto" }}>
+  return <div style={{ padding: 0, display: "flex", flexDirection: isWideMsg ? "row" : "column", height: isWideMsg ? "100%" : "calc(100dvh - 116px)", overflow: isWideMsg ? undefined : "hidden" }}>
     {isWideMsg ? (
       <>
         {/* ── COLONNE GAUCHE : liste conversations ── */}
