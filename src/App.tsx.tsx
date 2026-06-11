@@ -950,11 +950,11 @@ function Btn({ children, variant = "primary", onClick, style = {}, disabled = fa
     transition: "all 0.18s ease", ...style,
   };
   const v: Record<string, React.CSSProperties> = {
-    primary: { background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.3)" },
+    primary: { background: G.rouge, color: "#fff", boxShadow: "0 4px 18px rgba(192,57,43,0.3)" },
     gold: { background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111" },
     outline: { background: "transparent", color: "#111", border: `2px solid ${G.brun}` },
     ghost: { background: "rgba(44,26,14,0.06)", color: "#111" },
-    danger: { background: "#e74c3c", color: G.blanc },
+    danger: { background: "#e74c3c", color: "#fff" },
     white: { background: G.blanc, color: G.rouge },
   };
   return <button style={{ ...base, ...v[variant] }} onClick={onClick} disabled={disabled || loading}>{loading ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : children}</button>;
@@ -1105,7 +1105,7 @@ function ModerationModal({ type, onClose }: { type: "insult" | "scam" | "sexual"
           </p>
           <button
             onClick={onClose}
-            style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: G.blanc, border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.04em", boxShadow: "0 4px 14px rgba(192,57,43,0.3)" }}
+            style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.04em", boxShadow: "0 4px 14px rgba(192,57,43,0.3)" }}
           >
             OK, J'AI COMPRIS
           </button>
@@ -1794,7 +1794,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           <div style={{ width: "85%", maxWidth: 360, background: G.blanc, height: "100%", overflowY: "auto", boxShadow: "-8px 0 32px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column" }}>
             {/* Header vert */}
             <div style={{ background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, padding: "24px 20px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-              <div style={{ color: G.blanc, fontSize: "1.1rem", fontWeight: 700 }}>Menu</div>
+              <div style={{ color: "#fff", fontSize: "1.1rem", fontWeight: 700 }}>Menu</div>
               <div onClick={() => setShowLandingMenu(false)} style={{ color: "rgba(255,255,255,0.7)", fontSize: "1.5rem", cursor: "pointer", lineHeight: 1 }}>✕</div>
             </div>
             <div style={{ padding: "8px 0", flex: 1 }}>
@@ -1862,7 +1862,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                                   rows={3}
                                   style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid #ddd`, fontSize: "0.82rem", resize: "none", outline: "none", boxSizing: "border-box", marginBottom: 10 }}
                                 />
-                                <button onClick={() => setRatingSubmitted(true)} style={{ width: "100%", background: G.rouge, color: G.blanc, border: "none", borderRadius: 50, padding: "11px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
+                                <button onClick={() => setRatingSubmitted(true)} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "11px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>
                                   Envoyer mon avis
                                 </button>
                               </>}
@@ -1873,7 +1873,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                         s.items.map((item, i) => (
                           <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${G.gris}` }}>
                             <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
-                              <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>Q</div>
+                              <div style={{ background: G.rouge, color: "#fff", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>Q</div>
                               <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#111" }}>{item.titre}</div>
                             </div>
                             <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -1971,7 +1971,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               {LANDING_SLOGAN}
             </p>
             <div className="fu4 landing-hero-btns" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 4 }}>
-              <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>
+              <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: "#fff", boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>
                 Créer mon compte gratuit
               </button>
               <button className="btn-o" onClick={() => onNav("login")} style={{ border: "2px solid #1a1a1a", borderRadius: 50, padding: "13px 28px", fontWeight: 700, fontSize: "0.95rem", background: G.blanc, color: G.brun, cursor: "pointer", marginTop: 6 }}>
@@ -1985,7 +1985,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 {/* Téléphone gauche */}
                 <div style={{ width: 90, height: 180, borderRadius: 16, background: "linear-gradient(160deg,#2C1A0E,#5C3A1E)", border: "3px solid rgba(255,255,255,0.15)", overflow: "hidden", boxShadow: "0 12px 32px rgba(44,26,14,0.25)", flexShrink: 0, transform: "rotate(-8deg) translateY(20px)" }}>
                   <div style={{ background: G.rouge, padding: "4px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: G.blanc, fontWeight: 700, fontSize: "0.45rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.45rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
                   </div>
                   <div style={{ height: 100, overflow: "hidden", position: "relative" }}>
                     <img src="/phone-femme.webp" alt="Sandrine" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
@@ -1993,21 +1993,21 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <div style={{ padding: "4px 6px" }}>
                     <div style={{ fontSize: "0.42rem", fontWeight: 700, color: "#111" }}>Sandrine, 27</div>
                     <div style={{ fontSize: "0.35rem", color: "#555", display: "flex", alignItems: "center", gap: 2 }}><svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Brazzaville</div>
-                    <div style={{ marginTop: 4, background: G.rouge, borderRadius: 50, padding: "2px 6px", textAlign: "center", fontSize: "0.38rem", color: G.blanc, fontWeight: 700 }}>Liker</div>
+                    <div style={{ marginTop: 4, background: G.rouge, borderRadius: 50, padding: "2px 6px", textAlign: "center", fontSize: "0.38rem", color: "#fff", fontWeight: 700 }}>Liker</div>
                   </div>
                 </div>
                 {/* Téléphone central */}
                 <div style={{ width: 112, height: 220, borderRadius: 18, background: "linear-gradient(160deg,#1a1a2e,#16213e)", border: "3px solid rgba(255,255,255,0.2)", overflow: "hidden", boxShadow: "0 20px 50px rgba(0,0,0,0.35)", flexShrink: 0, zIndex: 2 }}>
                   <div style={{ background: `linear-gradient(135deg,${G.vert},#0D4020)`, padding: "5px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: G.blanc, fontWeight: 700, fontSize: "0.55rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
-                    <div style={{ width: 16, height: 16, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: G.blanc }}>CG</div>
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.55rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
+                    <div style={{ width: 16, height: 16, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: "#fff" }}>CG</div>
                   </div>
                   <div style={{ height: 128, overflow: "hidden", position: "relative" }}>
                     <img src="/phone-homme.webp" alt="Romaric" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
-                    <div style={{ position: "absolute", top: 6, right: 6, background: G.rouge, borderRadius: 50, padding: "2px 6px", fontSize: "0.35rem", color: G.blanc, fontWeight: 700 }}>Premium</div>
+                    <div style={{ position: "absolute", top: 6, right: 6, background: G.rouge, borderRadius: 50, padding: "2px 6px", fontSize: "0.35rem", color: "#fff", fontWeight: 700 }}>Premium</div>
                   </div>
                   <div style={{ padding: "5px 8px" }}>
-                    <div style={{ fontSize: "0.52rem", fontWeight: 700, color: G.blanc }}>Romaric, 30</div>
+                    <div style={{ fontSize: "0.52rem", fontWeight: 700, color: "#fff" }}>Romaric, 30</div>
                     <div style={{ fontSize: "0.4rem", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 2 }}><svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Pointe-Noire</div>
                     <div style={{ display: "flex", gap: 4, marginTop: 5, justifyContent: "center" }}>
                       <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem" }}>✕</div>
@@ -2019,18 +2019,18 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 {/* Téléphone droit */}
                 <div style={{ width: 90, height: 180, borderRadius: 16, background: "linear-gradient(160deg,#1a1a2e,#2d2d44)", border: "3px solid rgba(255,255,255,0.15)", overflow: "hidden", boxShadow: "0 12px 32px rgba(0,0,0,0.25)", flexShrink: 0, transform: "rotate(8deg) translateY(20px)" }}>
                   <div style={{ background: G.brun, padding: "4px 6px" }}>
-                    <span style={{ color: G.blanc, fontWeight: 700, fontSize: "0.45rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.45rem" }}>Mo<span style={{ color: G.or }}>yo</span></span>
                   </div>
                   <div style={{ padding: "4px 6px", background: "rgba(255,255,255,0.05)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 3 }}>
                       <div style={{ width: 14, height: 14, borderRadius: "50%", background: "linear-gradient(160deg,#C47A4A,#8B4513)" }} />
                       <div>
-                        <div style={{ fontSize: "0.38rem", fontWeight: 700, color: G.blanc }}>Nouveau match !</div>
+                        <div style={{ fontSize: "0.38rem", fontWeight: 700, color: "#fff" }}>Nouveau match !</div>
                         <div style={{ fontSize: "0.32rem", color: "rgba(255,255,255,0.5)" }}>Junior t'a liké aussi</div>
                       </div>
                     </div>
                     <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 6, padding: "3px 5px", fontSize: "0.32rem", color: "rgba(255,255,255,0.7)" }}>Bonsoir Lionel...</div>
-                    <div style={{ marginTop: 2, background: G.rouge, borderRadius: 6, padding: "2px 5px", fontSize: "0.32rem", color: G.blanc, textAlign: "right" }}>Bonsoir ! Comment tu vas ?</div>
+                    <div style={{ marginTop: 2, background: G.rouge, borderRadius: 6, padding: "2px 5px", fontSize: "0.32rem", color: "#fff", textAlign: "right" }}>Bonsoir ! Comment tu vas ?</div>
                     <div style={{ marginTop: 1, background: "rgba(255,255,255,0.08)", borderRadius: 6, padding: "2px 5px", fontSize: "0.32rem", color: "rgba(255,255,255,0.7)" }}>Très bien merci !</div>
                     <div style={{ marginTop: 3, background: "rgba(212,168,67,0.2)", border: `1px solid ${G.or}`, borderRadius: 6, padding: "2px 5px", display: "flex", alignItems: "center", gap: 2 }}>
                       <svg width="6" height="6" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -2088,7 +2088,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <div style={{ background: G.creme, borderRadius: 20, overflow: "hidden", height: 310 }}>
                     {/* Header app */}
                     <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "14px 12px 10px", display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{  fontSize: "0.9rem", color: G.blanc, fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+                      <div style={{  fontSize: "0.9rem", color: "#fff", fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
                       <div style={{ marginLeft: "auto", width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
                     </div>
                     {/* Profil card */}
@@ -2100,7 +2100,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                       <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#111", marginBottom: 2 }}>Sandrine, 27</div>
                       <div style={{ fontSize: "0.6rem", color: "#555", marginBottom: 8, display: "flex", alignItems: "center", gap: 3 }}><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Brazzaville</div>
                       {/* Like button */}
-                      <div style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 20, padding: "6px", textAlign: "center", fontSize: "0.6rem", color: G.blanc, fontWeight: 600 }}>❤️ Liker</div>
+                      <div style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 20, padding: "6px", textAlign: "center", fontSize: "0.6rem", color: "#fff", fontWeight: 600 }}>❤️ Liker</div>
                     </div>
                   </div>
                 </div>
@@ -2119,7 +2119,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <div style={{ background: G.blanc, borderRadius: 22, overflow: "hidden", height: 310 }}>
                     {/* Header */}
                     <div style={{ background: `linear-gradient(135deg,${G.vert},#0D4020)`, padding: "14px 14px 10px", display: "flex", alignItems: "center" }}>
-                      <div style={{  fontSize: "1rem", color: G.blanc, fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+                      <div style={{  fontSize: "1rem", color: "#fff", fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
                       <div style={{ marginLeft: "auto", fontSize: "0.7rem", color: "rgba(255,255,255,0.7)" }}>🇨🇬</div>
                     </div>
                     {/* Match notification */}
@@ -2137,14 +2137,14 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                       <div style={{ width: "100%", height: 120, borderRadius: 14, overflow: "hidden", position: "relative" }}>
                         <img src="/phone-homme.webp" alt="Romaric" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.6))", padding: "8px 8px 6px" }}>
-                          <div style={{ fontWeight: 700, fontSize: "0.68rem", color: G.blanc }}>Romaric, 30</div>
+                          <div style={{ fontWeight: 700, fontSize: "0.68rem", color: "#fff" }}>Romaric, 30</div>
                           <div style={{ fontSize: "0.56rem", color: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", gap: 2 }}><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Pointe-Noire</div>
                         </div>
                       </div>
                       {/* Actions */}
                       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                         <div style={{ flex: 1, background: G.gris, borderRadius: 16, padding: "5px", textAlign: "center", fontSize: "0.55rem", color: "#555" }}>✕</div>
-                        <div style={{ flex: 2, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "5px", textAlign: "center", fontSize: "0.58rem", color: G.blanc, fontWeight: 600 }}>❤️ Liker</div>
+                        <div style={{ flex: 2, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "5px", textAlign: "center", fontSize: "0.58rem", color: "#fff", fontWeight: 600 }}>❤️ Liker</div>
                         <div style={{ flex: 1, background: `rgba(212,168,67,0.15)`, border: `1px solid ${G.or}`, borderRadius: 16, padding: "5px", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="#B8860B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
                       </div>
                     </div>
@@ -2164,18 +2164,18 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <div style={{ width: 38, height: 8, background: "#0D0B1A", borderRadius: 8, margin: "0 auto 10px" }} />
                   <div style={{ background: G.creme, borderRadius: 20, overflow: "hidden", height: 270 }}>
                     <div style={{ background: `linear-gradient(135deg,${G.brun},#5C3A1E)`, padding: "12px 10px 8px", display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{  fontSize: "0.85rem", color: G.blanc, fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+                      <div style={{  fontSize: "0.85rem", color: "#fff", fontWeight: 700 }}>Mo<span style={{ color: G.or }}>yo</span></div>
                     </div>
                     {/* Conversation */}
                     <div style={{ padding: "8px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
                       <div style={{ alignSelf: "flex-start", background: G.blanc, borderRadius: "10px 10px 10px 2px", padding: "5px 8px", fontSize: "0.55rem", color: "#111", maxWidth: "80%", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>Bonsoir Lionel 😊</div>
-                      <div style={{ alignSelf: "flex-end", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: "10px 10px 2px 10px", padding: "5px 8px", fontSize: "0.55rem", color: G.blanc, maxWidth: "80%" }}>Bonsoir ! Comment tu vas ?</div>
+                      <div style={{ alignSelf: "flex-end", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: "10px 10px 2px 10px", padding: "5px 8px", fontSize: "0.55rem", color: "#fff", maxWidth: "80%" }}>Bonsoir ! Comment tu vas ?</div>
                       <div style={{ alignSelf: "flex-start", background: G.blanc, borderRadius: "10px 10px 10px 2px", padding: "5px 8px", fontSize: "0.55rem", color: "#111", maxWidth: "80%", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>Très bien merci ❤️</div>
                       <div style={{ fontSize: "0.5rem", color: "#555", textAlign: "center", marginTop: 4 }}>Match depuis 2 jours</div>
                       {/* Input message */}
                       <div style={{ background: G.blanc, borderRadius: 14, padding: "5px 8px", display: "flex", alignItems: "center", gap: 4, border: `1px solid ${G.gris}`, marginTop: 4 }}>
                         <div style={{ flex: 1, fontSize: "0.5rem", color: "#ccc" }}>Un message...</div>
-                        <div style={{ width: 16, height: 16, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: G.blanc }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+                        <div style={{ width: 16, height: 16, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: "#fff" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
                       </div>
                     </div>
                   </div>
@@ -2409,7 +2409,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           {/* CTA sous les témoignages */}
           <div style={{ textAlign: "center", marginTop: 40 }}>
             <p style={{ color: "#555", fontSize: "0.82rem", marginBottom: 16 }}>Rejoins des milliers de Congolais qui ont trouvé l'amour</p>
-            <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 40px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 8px 28px rgba(192,57,43,0.4)", cursor: "pointer" }}>
+            <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 40px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: "#fff", boxShadow: "0 8px 28px rgba(192,57,43,0.4)", cursor: "pointer" }}>
               Créer mon profil, c'est gratuit
             </button>
           </div>
@@ -2435,7 +2435,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 </div>
                 <div style={{ flex: 1, paddingTop: 6 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                    <div style={{ width: 24, height: 24, borderRadius: "50%", background: G.brun, display: "flex", alignItems: "center", justifyContent: "center", color: G.blanc, fontSize: "0.75rem", fontWeight: 700 }}>{s.num}</div>
+                    <div style={{ width: 24, height: 24, borderRadius: "50%", background: G.brun, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.75rem", fontWeight: 700 }}>{s.num}</div>
                     <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111" }}>{s.titre}</div>
                   </div>
                   <p style={{ fontSize: "0.84rem", color: "#555", lineHeight: 1.6 }}>{s.desc}</p>
@@ -2450,24 +2450,24 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <div style={{ background: `linear-gradient(135deg,${G.vert},#0D2E1C)`, padding: "48px 24px", textAlign: "center" }}>
         <div className="landing-sections" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <p style={{ fontSize: "0.88rem", color: "rgba(255,255,255,0.7)", marginBottom: 6, fontWeight: 500 }}>L'amour n'attend pas.</p>
-          <h2 style={{  fontSize: "clamp(1.6rem,5vw,2.4rem)", fontWeight: 700, color: G.blanc, marginBottom: 28 }}>
+          <h2 style={{  fontSize: "clamp(1.6rem,5vw,2.4rem)", fontWeight: 700, color: "#fff", marginBottom: 28 }}>
             Rejoins <span style={{ color: G.or }}>Moyo</span> aujourd'hui.
           </h2>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 32 }}>
-            <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.4)", cursor: "pointer" }}>
+            <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: "#fff", boxShadow: "0 4px 18px rgba(192,57,43,0.4)", cursor: "pointer" }}>
               Créer mon compte gratuit
             </button>
-            <button className="btn-o" onClick={() => onNav("login")} style={{ border: `2px solid rgba(255,255,255,0.6)`, borderRadius: 50, padding: "13px 28px", fontWeight: 600, fontSize: "0.95rem", background: "transparent", color: G.blanc, cursor: "pointer" }}>
+            <button className="btn-o" onClick={() => onNav("login")} style={{ border: `2px solid rgba(255,255,255,0.6)`, borderRadius: 50, padding: "13px 28px", fontWeight: 600, fontSize: "0.95rem", background: "transparent", color: "#fff", cursor: "pointer" }}>
               Se connecter
             </button>
           </div>
           <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.6)", marginBottom: 16, fontWeight: 600 }}>Installe l'application en un clic</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <div className="store" onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
+            <div className="store" onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
               <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Disponible sur</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>Google Play</div></div>
             </div>
-            <div className="store" onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: G.blanc, borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
+            <div className="store" onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
               <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Télécharger dans</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>App Store</div></div>
             </div>
@@ -2579,7 +2579,7 @@ function About({ onBack }: { onBack: () => void }) {
           </div>
         </div>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "2.5rem", color: G.blanc, fontWeight: 700, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+          <div style={{ fontSize: "2.5rem", color: "#fff", fontWeight: 700, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
           <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.9rem" }}>Le premier site de rencontres congolais</p>
         </div>
       </div>
@@ -3134,7 +3134,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Mo</span><span style={{ color: G.or }}>yo</span></div>
         <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 16px" }}>
-          <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: G.blanc }}>{step}</div>
+          <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "#fff" }}>{step}</div>
           <span style={{ fontSize: "0.88rem", fontWeight: 700, color: G.rouge }}>
             {step === 1 && "Identifiant et mot de passe"}
             {step === 2 && "Photo de profil"}
@@ -3472,7 +3472,7 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
             </svg>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.blanc }}>{mode === "report" ? "Assistance Moyo" : "Assistant Moyo"}</div>
+            <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#fff" }}>{mode === "report" ? "Assistance Moyo" : "Assistant Moyo"}</div>
             <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.75)" }}>{mode === "chat" ? "Répond instantanément" : mode === "report" ? "Répond sous 24h" : "Équipe officielle"}</div>
           </div>
           <div onClick={onClose} style={{ cursor: "pointer", opacity: 0.7 }}>
@@ -3511,7 +3511,7 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
             <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 10 }}>
               {msgs.map((m, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start" }}>
-                  <div style={{ maxWidth: "78%", padding: "10px 14px", borderRadius: m.from === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: m.from === "user" ? G.vert : "#F2F2F2", color: m.from === "user" ? G.blanc : "#1a1a1a", fontSize: "0.83rem", lineHeight: 1.5 }}>
+                  <div style={{ maxWidth: "78%", padding: "10px 14px", borderRadius: m.from === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: m.from === "user" ? G.vert : "#F2F2F2", color: m.from === "user" ? "#fff" : "#1a1a1a", fontSize: "0.83rem", lineHeight: 1.5 }}>
                     {m.text}
                   </div>
                 </div>
@@ -3840,7 +3840,7 @@ function AdminDesktopPage() {
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: "1.5rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Accès refusé</div>
         <div style={{ fontSize: "0.9rem", color: "#777", marginBottom: 24 }}>Connectez-vous en tant qu'administrateur.</div>
-        <button onClick={() => window.close()} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: G.blanc, border: "none", borderRadius: 50, padding: "12px 32px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+        <button onClick={() => window.close()} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "12px 32px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
       </div>
     </div>
   );
@@ -4231,7 +4231,7 @@ function AdminDesktopPage() {
               <button
                 disabled={!adminActionEmail.trim()}
                 onClick={() => { (window as any).__adminActionResolve?.(adminActionEmail.trim()); setAdminActionModal(null); }}
-                style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: adminActionEmail.trim() ? adminActionModal.color : "#ccc", color: G.blanc, fontSize: "0.85rem", fontWeight: 700, cursor: adminActionEmail.trim() ? "pointer" : "not-allowed" }}>
+                style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: adminActionEmail.trim() ? adminActionModal.color : "#ccc", color: "#fff", fontSize: "0.85rem", fontWeight: 700, cursor: adminActionEmail.trim() ? "pointer" : "not-allowed" }}>
                 Confirmer
               </button>
             </div>
@@ -5003,7 +5003,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           </div>
         )}
         <div className="moyo-sidebar-bottom">
-          <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${G.or},#8B6914)`, display: "flex", alignItems: "center", justifyContent: "center", color: G.blanc, fontSize: "0.65rem", fontWeight: 800, flexShrink: 0, border: `2px solid ${G.or}` }}>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${G.or},#8B6914)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.65rem", fontWeight: 800, flexShrink: 0, border: `2px solid ${G.or}` }}>
             {auth.name?.slice(0, 2).toUpperCase() || "MO"}
           </div>
           <div>
@@ -5038,11 +5038,11 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "5px 8px", borderRadius: 12, background: active ? "rgba(192,57,43,0.1)" : "transparent", transition: "background 0.2s", minWidth: 48 }}>
                   <div style={{ position: "relative" }}>
                     {t.icon(active)}
-                    {t.id === "messages" && unreadCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{unreadCount > 99 ? "99+" : unreadCount}</div>}
-                    {t.id === "likes" && likesReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{likesReceived > 99 ? "99+" : likesReceived}</div>}
+                    {t.id === "messages" && unreadCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: "#fff", borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{unreadCount > 99 ? "99+" : unreadCount}</div>}
+                    {t.id === "likes" && likesReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: "#fff", borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{likesReceived > 99 ? "99+" : likesReceived}</div>}
                     {t.id === "visitors" && viewsReceived > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.or, color: "#111", borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{viewsReceived > 99 ? "99+" : viewsReceived}</div>}
-                    {t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{notifCount > 99 ? "99+" : notifCount}</div>}
-                    {t.id === "profile" && auth.isAdmin && adminBadgeCount && adminBadgeCount > 0 ? <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: G.blanc, borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</div> : null}
+                    {t.id === "matches" && notifCount > 0 && <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: "#fff", borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{notifCount > 99 ? "99+" : notifCount}</div>}
+                    {t.id === "profile" && auth.isAdmin && adminBadgeCount && adminBadgeCount > 0 ? <div style={{ position: "absolute", top: -4, right: -6, background: G.rouge, color: "#fff", borderRadius: 50, minWidth: 15, height: 15, padding: "0 4px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.48rem", fontWeight: 700 }}>{adminBadgeCount > 99 ? "99+" : adminBadgeCount}</div> : null}
                   </div>
                   <div style={{ fontSize: "0.56rem", fontWeight: 700, color: active ? G.rouge : "#bbb", whiteSpace: "nowrap" }}>{t.label}</div>
                 </div>
@@ -5067,7 +5067,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           <div onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 14, right: 16, cursor: "pointer", opacity: 0.8 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </div>
-          <div style={{ fontSize: "1.6rem", color: G.blanc, fontWeight: 800 }}>Guide <span style={{ color: G.or }}>Moyo</span></div>
+          <div style={{ fontSize: "1.6rem", color: "#fff", fontWeight: 800 }}>Guide <span style={{ color: G.or }}>Moyo</span></div>
           <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem", marginTop: 4 }}>Tout ce que vous devez savoir</div>
         </div>
         {/* Accordéon */}
@@ -5157,7 +5157,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             <div key={i} style={{ borderBottom: `1px solid ${G.gris}` }}>
               <div onClick={() => setOpenGuideSection(openGuideSection === i ? null : i)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", cursor: "pointer", background: openGuideSection === i ? "rgba(192,57,43,0.03)" : "transparent" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: openGuideSection === i ? G.rouge : G.gris, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: openGuideSection === i ? G.blanc : "#555" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: openGuideSection === i ? G.rouge : G.gris, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: openGuideSection === i ? "#fff" : "#555" }}>
                     {s.icon}
                   </div>
                   <span style={{ fontWeight: 600, fontSize: "0.92rem", color: openGuideSection === i ? G.rouge : G.brun }}>{s.title}</span>
@@ -5182,7 +5182,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           <div style={{ background: "#f8f8f8", borderRadius: 14, padding: "16px", textAlign: "center", margin: "12px 16px 16px" }}>
             <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun, marginBottom: 4 }}>Un problème ou une question ?</div>
             <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, lineHeight: 1.5 }}>Notre équipe est disponible pour vous aider.</p>
-            <button onClick={() => { setShowGuide(false); setShowBot(true); }} style={{ display: "inline-block", background: G.rouge, color: G.blanc, borderRadius: 50, padding: "10px 24px", fontSize: "0.85rem", fontWeight: 700, border: "none", cursor: "pointer" }}>Contacter notre équipe</button>
+            <button onClick={() => { setShowGuide(false); setShowBot(true); }} style={{ display: "inline-block", background: G.rouge, color: "#fff", borderRadius: 50, padding: "10px 24px", fontSize: "0.85rem", fontWeight: 700, border: "none", cursor: "pointer" }}>Contacter notre équipe</button>
           </div>
         </div>
       </div>
@@ -5489,7 +5489,7 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
           {/* Bouton compact */}
           <button onClick={handleAction} style={{
             background: `linear-gradient(135deg,${slide.accent},${slide.accent}cc)`,
-            color: G.blanc, border: "none", borderRadius: 50,
+            color: "#fff", border: "none", borderRadius: 50,
             padding: "5px 9px", fontSize: "0.60rem", fontWeight: 700,
             cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
             boxShadow: `0 2px 8px ${slide.accent}44`,
@@ -5968,7 +5968,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     {/* Boutons vue/filtres mobile - masqués sur desktop (panneau droit) */}
     {!isWide && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
       {/* Filtres à gauche */}
-      <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? "#333" : G.blanc, color: showFilters ? G.blanc : "#333", border: `1.5px solid ${showFilters ? "#333" : "#ddd"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, lineHeight: 1, whiteSpace: "nowrap" }}>
+      <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? "#333" : G.blanc, color: showFilters ? "#fff" : "#333", border: `1.5px solid ${showFilters ? "#333" : "#ddd"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, lineHeight: 1, whiteSpace: "nowrap" }}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={showFilters ? G.blanc : "#333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="4" y1="6" x2="20" y2="6"/>
           <line x1="4" y1="12" x2="20" y2="12"/>
@@ -6049,35 +6049,35 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       {prof.photo_url ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
       {/* ✕ haut droite - sur chaque carte */}
-      <button onClick={() => { setViewMode("card"); window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } })); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
+      <button onClick={() => { setViewMode("card"); window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } })); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
       {/* Indicateur "En ligne" - haut gauche, en face de la croix. Rien si hors ligne ou statut masqué. */}
       {!prof.hide_online_status && getOnlineStatus(prof.last_seen).label === "En ligne" && (
-        <div style={{ position: "absolute", top: 16, left: 16, display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "9px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: G.blanc, fontSize: "0.8rem", fontWeight: 700 }}>
+        <div style={{ position: "absolute", top: 16, left: 16, display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "9px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: "#fff", fontSize: "0.8rem", fontWeight: 700 }}>
           <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#27ae60", boxShadow: "0 0 0 3px rgba(39,174,96,0.35)", flexShrink: 0 }} />
           En ligne
         </div>
       )}
-      <div style={{ position: "absolute", left: 18, right: 18, bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)", color: G.blanc }}>
+      <div style={{ position: "absolute", left: 18, right: 18, bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)", color: "#fff" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
           <div style={{ fontSize: "1.85rem", fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{prof.name}, {prof.age} ans</div>
           {prof.is_premium && <PremiumBadge size={20} />}
           {prof.is_verified && <VerifiedBadge size={20} />}
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-          {prof.gender && <span style={{ background: "rgba(255,255,255,0.18)", color: G.blanc, borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)" }}>{prof.gender}</span>}
-          {prof.city && <span style={{ background: "rgba(255,255,255,0.18)", color: G.blanc, borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prof.city}</span>}
-          {prof.religion && <span style={{ background: "rgba(212,168,67,0.28)", color: G.blanc, border: "1px solid rgba(212,168,67,0.55)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prof.religion}</span>}
-          {prof.profession && <span style={{ background: "rgba(255,255,255,0.16)", color: G.blanc, borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prof.profession}</span>}
-          {prof.hobbies && <span style={{ background: "rgba(26,92,58,0.38)", color: G.blanc, border: "1px solid rgba(255,255,255,0.18)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prof.hobbies}</span>}
+          {prof.gender && <span style={{ background: "rgba(255,255,255,0.18)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)" }}>{prof.gender}</span>}
+          {prof.city && <span style={{ background: "rgba(255,255,255,0.18)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prof.city}</span>}
+          {prof.religion && <span style={{ background: "rgba(212,168,67,0.28)", color: "#fff", border: "1px solid rgba(212,168,67,0.55)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prof.religion}</span>}
+          {prof.profession && <span style={{ background: "rgba(255,255,255,0.16)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prof.profession}</span>}
+          {prof.hobbies && <span style={{ background: "rgba(26,92,58,0.38)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prof.hobbies}</span>}
         </div>
         <div style={{ fontSize: "0.86rem", lineHeight: 1.45, opacity: 0.92, textShadow: "0 1px 8px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", minHeight: 38 }}>{prof.bio || ""}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
-          <button onClick={() => handleLike(prof)} style={{ width: 68, height: 68, minWidth: 68, minHeight: 68, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? G.blanc : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", padding: 0, flexShrink: 0 }}><svg width="32" height="32" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <button onClick={() => handleLike(prof)} style={{ width: 68, height: 68, minWidth: 68, minHeight: 68, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? "#fff" : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", padding: 0, flexShrink: 0 }}><svg width="32" height="32" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
           <button
             onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); openBottomSheet(prof); }}
-            style={{ width: 68, height: 68, minWidth: 68, minHeight: 68, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.55)", color: G.blanc, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0, WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
+            style={{ width: 68, height: 68, minWidth: 68, minHeight: 68, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.55)", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0, WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
           >
             {[0,1,2].map(i => <div key={i} style={{ width: 22, height: 2.5, borderRadius: 2, background: "white" }} />)}
           </button>
@@ -6104,9 +6104,9 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       navigate("prev");
     }
   }}
-  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : "min(65vw, 320px)", maxHeight: isWide ? "calc(100vh - 280px)" : "min(65vw, 320px)", flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : 200, position: "relative" }}>{!p.hide_online_status && getOnlineStatus(p.last_seen).label === "En ligne" && (<div style={{ position: "absolute", top: 12, left: 12, zIndex: 3, display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "6px 11px", boxShadow: "0 4px 14px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: G.blanc, fontSize: "0.72rem", fontWeight: 700 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", boxShadow: "0 0 0 3px rgba(39,174,96,0.35)", flexShrink: 0 }} />En ligne</div>)}{p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
+  style={{ background: G.blanc, borderRadius: isWide ? 22 : 22, boxShadow: "0 8px 36px rgba(44,26,14,0.12)", overflow: "hidden", marginBottom: (viewMode as string) === "full" && isWide ? 0 : 6, position: "relative", touchAction: "pan-y", flex: isWide ? 1 : "none", display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: (viewMode as string) === "full" && isWide ? "100%" : undefined }}><div style={{ height: isWide ? undefined : "min(65vw, 320px)", maxHeight: isWide ? "calc(100vh - 280px)" : "min(65vw, 320px)", flex: isWide ? 1 : "none", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: isWide ? 200 : 200, position: "relative" }}>{!p.hide_online_status && getOnlineStatus(p.last_seen).label === "En ligne" && (<div style={{ position: "absolute", top: 12, left: 12, zIndex: 3, display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "6px 11px", boxShadow: "0 4px 14px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: "#fff", fontSize: "0.72rem", fontWeight: 700 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", boxShadow: "0 0 0 3px rgba(39,174,96,0.35)", flexShrink: 0 }} />En ligne</div>)}{p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span style={{ fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}{isWide && (viewMode as string) === "full" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)", padding: "40px 16px 16px" }}><div style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div><div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", marginTop: 4 }}>{p.city}</div></div>}</div><div style={{ padding: "10px 14px", flexShrink: 0, display: (viewMode as string) === "full" ? "none" : "block" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111" }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div>
+    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: G.brun }}>{p.name}, {p.age} ans {p.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 4 }}><PremiumBadge size={16} /></span>} {p.is_verified && <VerifiedBadge size={16} />}</div>
     {/* 3 traits menu - single tap/click → bottom sheet */}
     <div style={{ position: "relative" }}>
       <div
@@ -6127,14 +6127,14 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     {p.profession && p.profession.trim() && <span style={{ background: "rgba(44,26,14,0.05)", border: "1px solid rgba(44,26,14,0.14)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#555", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", flexShrink: 1, minWidth: 0, maxWidth: "48%" }}>{p.profession.trim()}</span>}
     {p.hobbies && p.hobbies.trim() && <span style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.18)", borderRadius: 50, padding: "2px 8px", fontSize: "0.72rem", color: "#2a5a3a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", flexShrink: 1, minWidth: 0, maxWidth: "48%" }}>{p.hobbies.trim()}</span>}
   </div>
-  <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, marginTop: 2, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", minHeight: "1.23rem" }}>{p.bio || ""}</p>
+  <p style={{ fontSize: "0.82rem", color: G.brunLight, lineHeight: 1.5, marginTop: 2, marginBottom: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", minHeight: "1.23rem" }}>{p.bio || ""}</p>
 </div>
 </div></div>
 {/* Boutons ← ❤️ → */}
 <div style={{ display: (viewMode as string) === "full" && isWide ? "none" : "flex", justifyContent: "center", gap: 12, alignItems: "center", marginTop: isWide ? "auto" : 8, marginBottom: 6, paddingTop: isWide ? 12 : 0, flexShrink: 0 }}>
-  <div onClick={() => navigate("prev")} style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem", boxShadow: "0 2px 8px rgba(44,26,14,0.08)" }}>←</div>
+  <div onClick={() => navigate("prev")} style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem", color: G.brun, boxShadow: "0 2px 8px rgba(44,26,14,0.08)" }}>←</div>
   <div onClick={() => handleLike(p)} style={{ width: 54, height: 54, borderRadius: "50%", background: likedIds.has(p.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : G.blanc, border: likedIds.has(p.id) ? "none" : `2px solid ${G.gris}`, boxShadow: likedIds.has(p.id) ? "0 6px 20px rgba(192,57,43,0.4)" : "0 2px 8px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", cursor: "pointer" }}>{likedIds.has(p.id) ? "❤️" : "🤍"}</div>
-  <div onClick={() => navigate("next")} style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem", boxShadow: "0 2px 8px rgba(44,26,14,0.08)" }}>→</div>
+  <div onClick={() => navigate("next")} style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem", color: G.brun, boxShadow: "0 2px 8px rgba(44,26,14,0.08)" }}>→</div>
 </div>
 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, marginTop: 4, marginBottom: 6 }}>
   {profiles.slice(Math.max(0, current - 2), Math.min(profiles.length, current + 3)).map((_, i) => {
@@ -6149,9 +6149,9 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       <div style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
           {viewedProfile.photo_url ? <img src={viewedProfile.photo_url ?? undefined} alt={viewedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
-          <div onClick={() => setViewedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
+          <div onClick={() => setViewedProfile(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontWeight: 700 }}>✕</div>
           <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{viewedProfile.name}, {viewedProfile.age} ans {viewedProfile.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>}{viewedProfile.is_verified && <VerifiedBadge size={14} />}</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{viewedProfile.name}, {viewedProfile.age} ans {viewedProfile.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>}{viewedProfile.is_verified && <VerifiedBadge size={14} />}</div>
             <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{viewedProfile.city}</div>
           </div>
         </div>
@@ -6213,7 +6213,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       )}
     </div>
   </div>
-</div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: G.blanc }}><div style={{ marginBottom: 16 }}><svg width="64" height="64" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>{modalTexts.matchTitle}</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>{modalTexts.matchSubtitle.replace("{name}", matchPop.name)}</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
+</div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: "#fff" }}><div style={{ marginBottom: 16 }}><svg width="64" height="64" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>{modalTexts.matchTitle}</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>{modalTexts.matchSubtitle.replace("{name}", matchPop.name)}</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
     {/* ── Modal confirmation delike (vue Découvrir) ── */}
     {confirmUnlike && (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -6302,11 +6302,11 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
 
         {/* 4. Guide + Assistant Moyo */}
         <div style={{ display: "flex", gap: 8 }}>
-          <div onClick={() => { const evt = new CustomEvent("moyo-show-guide"); window.dispatchEvent(evt); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.rouge}`, background: G.rouge, color: G.blanc, cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
+          <div onClick={() => { const evt = new CustomEvent("moyo-show-guide"); window.dispatchEvent(evt); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.rouge}`, background: G.rouge, color: "#fff", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Guide
           </div>
-          <div onClick={() => { const evt = new CustomEvent("moyo-show-bot"); window.dispatchEvent(evt); }} style={{ flex: 1, display: FEATURE_ASSISTANT ? "flex" : "none", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.vert}`, background: G.vert, color: G.blanc, cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
+          <div onClick={() => { const evt = new CustomEvent("moyo-show-bot"); window.dispatchEvent(evt); }} style={{ flex: 1, display: FEATURE_ASSISTANT ? "flex" : "none", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.vert}`, background: G.vert, color: "#fff", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
             Assistant
           </div>
@@ -6317,7 +6317,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
           <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "16px", cursor: "pointer", boxShadow: "0 6px 20px rgba(192,57,43,0.3)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span style={{ fontSize: "0.88rem", fontWeight: 800, color: G.blanc }}>Passer à Moyo Premium</span>
+              <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#fff" }}>Passer à Moyo Premium</span>
             </div>
             <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.78)", lineHeight: 1.5, marginBottom: 10 }}>Messages illimités · Likes illimités · Voir qui vous like</div>
             <div style={{ fontSize: "1rem", fontWeight: 900, color: G.or }}>{PREMIUM_PRICE_FCFA.toLocaleString()} <span style={{ fontSize: "0.62rem", fontWeight: 600, opacity: 0.85 }}>FCFA/mois</span></div>
@@ -6338,8 +6338,8 @@ function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClos
         {/* Photo */}
         <div style={{ height: 220, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
           {p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
-          <div onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-          <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
+          <div onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1rem", fontWeight: 700 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+          <div style={{ position: "absolute", bottom: 14, left: 16, color: "#fff" }}>
             <div style={{  fontSize: "1.6rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age} ans</div>
             <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{p.city}</div>
           </div>
@@ -7198,11 +7198,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
                 style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)",
                   borderRadius: "50%", width: 34, height: 34, display: "flex",
                   alignItems: "center", justifyContent: "center", cursor: "pointer",
-                  color: G.blanc, fontWeight: 700, fontSize: "1rem" }}>
+                  color: "#fff", fontWeight: 700, fontSize: "1rem" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </div>
               <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: G.blanc, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
                   {selectedProfile.name}, {selectedProfile.age} ans
                   {selectedProfile.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>}
                   {selectedProfile.is_verified && <VerifiedBadge size={14} />}
@@ -7704,8 +7704,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 220, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
           {p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
-          <div onClick={() => setSelectedMatch(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontSize: "1rem", fontWeight: 700 }}>✕</div>
-          <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
+          <div onClick={() => setSelectedMatch(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1rem", fontWeight: 700 }}>✕</div>
+          <div style={{ position: "absolute", bottom: 14, left: 16, color: "#fff" }}>
             <div style={{  fontSize: "1.5rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age} ans</div>
             <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{p.city}</div>
           </div>
@@ -9081,7 +9081,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                       </div>
                       )}
                       {(c.unreadCount || 0) > 0 && (
-                        <div style={{ background: G.rouge, color: G.blanc, borderRadius: "50%", minWidth: 20, height: 20, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>
+                        <div style={{ background: G.rouge, color: "#fff", borderRadius: "50%", minWidth: 20, height: 20, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>
                           {(c.unreadCount || 0) > 9 ? "9+" : c.unreadCount}
                         </div>
                       )}
@@ -9176,10 +9176,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     </div>
                     <div>
                       <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.72rem", fontWeight: 600 }}>Offrir à</div>
-                      <div style={{ color: G.blanc, fontSize: "1.2rem", fontWeight: 800 }}>{open.partner?.name}</div>
+                      <div style={{ color: "#fff", fontSize: "1.2rem", fontWeight: 800 }}>{open.partner?.name}</div>
                     </div>
                     <div style={{ marginLeft: "auto", textAlign: "right" }}>
-                      <div style={{ color: G.blanc, fontSize: "1.4rem", fontWeight: 800 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}</div>
+                      <div style={{ color: "#fff", fontSize: "1.4rem", fontWeight: 800 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}</div>
                       <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>1 mois Premium</div>
                     </div>
                   </div>
@@ -9278,7 +9278,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                       <div style={{ fontSize: "2rem", marginBottom: 8 }}>✅</div>
                       <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>Preuve envoyée !</div>
                       <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier et activer le Premium de {open.partner?.name} rapidement.</div>
-                      <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ marginTop: 14, background: "#27ae60", color: G.blanc, border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
+                      <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ marginTop: 14, background: "#27ae60", color: "#fff", border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
                     </div>
                   )}
                 </div>
@@ -9291,14 +9291,14 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     <div onClick={() => setGiftStep("operator")} style={{ cursor: "pointer", background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                     </div>
-                    <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.blanc }}>Cadeau Airtel Money pour {open.partner?.name}</div>
+                    <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#fff" }}>Cadeau Airtel Money pour {open.partner?.name}</div>
                   </div>
                   <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", marginLeft: 42 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA - 1 mois Premium`}</div>
                 </div>
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : {PAY_AIRTEL_RESPONSABLE}</div>
-                    <a href={`tel:*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
+                    <a href={`tel:*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
                     </a>
@@ -9321,7 +9321,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         setGiftTxSent(true);
                       } catch { setGiftTxSent(true); }
                       setGiftTxLoading(false);
-                    }} style={{ width: "100%", background: !giftTxRef.trim() || giftTxLoading ? "#ccc" : "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !giftTxRef.trim() ? "not-allowed" : "pointer" }}>
+                    }} style={{ width: "100%", background: !giftTxRef.trim() || giftTxLoading ? "#ccc" : "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !giftTxRef.trim() ? "not-allowed" : "pointer" }}>
                       {giftTxLoading ? "Envoi en cours…" : "J'ai payé - Envoyer la preuve"}
                     </button>
                   ) : (
@@ -9329,7 +9329,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                       <div style={{ fontSize: "2rem", marginBottom: 8 }}>✅</div>
                       <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>Preuve envoyée !</div>
                       <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier et activer le Premium de {open.partner?.name} rapidement.</div>
-                      <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ marginTop: 14, background: "#27ae60", color: G.blanc, border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
+                      <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ marginTop: 14, background: "#27ae60", color: "#fff", border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
                     </div>
                   )}
                 </div>
@@ -9476,7 +9476,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", width: "100%", justifyContent: isMine ? "flex-start" : "flex-start" }}>
                   <div style={{ position: "relative", maxWidth: "72%" }}>
                     <div
-                      style={{ position: "relative", background: isMine ? G.rouge : G.blanc, color: isMine ? G.blanc : G.brun, padding: "22px 14px 10px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", overflowWrap: "anywhere", wordBreak: "break-word" }}
+                      style={{ position: "relative", background: isMine ? G.rouge : G.blanc, color: isMine ? "#fff" : G.brun, padding: "22px 14px 10px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", overflowWrap: "anywhere", wordBreak: "break-word" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
                       <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 5, right: 6, zIndex: 3, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: isMine ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -9689,6 +9689,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               fontSize: "16px",
               outline: "none",
               background: G.creme,
+              color: G.brun,
               resize: "none",
               fontFamily: "inherit",
               lineHeight: "1.4",
@@ -9701,7 +9702,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               WebkitOverflowScrolling: "touch",
             }}
           />
-          <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, flexShrink: 0, marginBottom: 2 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+          <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0, marginBottom: 2 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
         </div>
       </div>
 
@@ -9906,9 +9907,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 ? <img src={open.partner.photo_url} alt={open.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               }
-              <div onClick={() => setShowPartnerProfile(false)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc, fontWeight: 700 }}>✕</div>
+              <div onClick={() => setShowPartnerProfile(false)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontWeight: 700 }}>✕</div>
               {open.partner.id !== SUPPORT_TEAM_ID && (
-                <div onClick={() => setPartnerMenuOpen(v => !v)} style={{ position: "absolute", top: 14, right: 58, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: G.blanc }} title="Options">
+                <div onClick={() => setPartnerMenuOpen(v => !v)} style={{ position: "absolute", top: 14, right: 58, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff" }} title="Options">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
                 </div>
               )}
@@ -9928,7 +9929,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                   </div>
                 </>
               )}
-              <div style={{ position: "absolute", bottom: 14, left: 16, color: G.blanc }}>
+              <div style={{ position: "absolute", bottom: 14, left: 16, color: "#fff" }}>
                 <div style={{ fontSize: "1.5rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{open.partner.name}{open.partner.id === SUPPORT_TEAM_ID ? "" : `, ${open.partner.age} ans`}</div>
                 <div style={{ fontSize: "0.82rem", opacity: 0.9 }}>{open.partner.id === SUPPORT_TEAM_ID ? "Équipe officielle" : open.partner.city}</div>
               </div>
@@ -11348,7 +11349,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                 {item.icon}
               </div>
               <span style={{ flex: 1, fontSize: "0.9rem", fontWeight: activeSection === item.id ? 700 : 500, color: (item as any).danger ? G.rouge : activeSection === item.id ? G.rouge : "#333" }}>{item.label}</span>
-              {(item as any).badge && <span style={{ fontSize: "0.62rem", background: G.vert, color: G.blanc, borderRadius: 50, padding: "2px 7px", fontWeight: 700 }}>{(item as any).badge}</span>}
+              {(item as any).badge && <span style={{ fontSize: "0.62rem", background: G.vert, color: "#fff", borderRadius: 50, padding: "2px 7px", fontWeight: 700 }}>{(item as any).badge}</span>}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </div>
           ))}
@@ -11356,7 +11357,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
       </div>
 
       {/* ── COLONNE DROITE : CONTENU 50% ── */}
-      <div style={{ width: isWideProfile ? "50%" : "100%", overflowY: "auto", height: isWideProfile ? "100%" : "auto", background: "#EEEEF2" }}>
+      <div style={{ width: isWideProfile ? "50%" : "100%", overflowY: "auto", height: isWideProfile ? "100%" : "auto", background: G.cremeDark }}>
 
       {/* ── ZONE BLANCHE : photo + nom + boutons - visible si section main ou mobile ── */}
       {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 8 }}>
@@ -11371,7 +11372,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           {profile?.is_premium ? (
             <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>Premium</div>
           ) : (
-            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: G.blanc, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(192,57,43,0.35)" }}>Gratuit</div>
+            <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#fff", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(192,57,43,0.35)" }}>Gratuit</div>
           )}
         </div>
 
@@ -11434,7 +11435,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   </svg>
                 )}
                 {blockedUsers.length > 0 && (
-                  <div style={{ position: "absolute", top: -2, right: -2, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.55rem", fontWeight: 700, border: `2px solid ${G.blanc}` }}>+</div>
+                  <div style={{ position: "absolute", top: -2, right: -2, background: G.rouge, color: "#fff", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.55rem", fontWeight: 700, border: `2px solid ${G.blanc}` }}>+</div>
                 )}
               </div>
               <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.brun, textAlign: "center", lineHeight: 1.3 }}>Modifier ma<br/>photo</div>
@@ -11449,7 +11450,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <line x1="1" y1="1" x2="23" y2="23"/>
                 </svg>
                 {blockedUsers.length > 0 && (
-                  <div style={{ position: "absolute", top: -2, right: -2, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", fontWeight: 700, border: `2px solid ${G.blanc}` }}>{blockedUsers.length}</div>
+                  <div style={{ position: "absolute", top: -2, right: -2, background: G.rouge, color: "#fff", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", fontWeight: 700, border: `2px solid ${G.blanc}` }}>{blockedUsers.length}</div>
                 )}
               </div>
               <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.brun, textAlign: "center", lineHeight: 1.3 }}>Liste<br/>noire</div>
@@ -11572,7 +11573,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
               </div>
               {adminBadgeCount && adminBadgeCount > 0 ? (
-                <div style={{ position: "absolute", top: -4, right: -4, background: G.rouge, color: G.blanc, borderRadius: "50px", minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 800, padding: "0 4px", boxShadow: "0 2px 6px rgba(192,57,43,0.5)", border: `2px solid ${G.blanc}` }}>
+                <div style={{ position: "absolute", top: -4, right: -4, background: G.rouge, color: "#fff", borderRadius: "50px", minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 800, padding: "0 4px", boxShadow: "0 2px 6px rgba(192,57,43,0.5)", border: `2px solid ${G.blanc}` }}>
                   {adminBadgeCount > 99 ? "99+" : adminBadgeCount}
                 </div>
               ) : null}
@@ -11599,23 +11600,23 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
                 <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <div style={{ fontSize: "1rem", fontWeight: 900, color: G.blanc, lineHeight: 1.3 }}>Abonnement<br/>Premium actif</div>
+                  <div style={{ fontSize: "1rem", fontWeight: 900, color: "#fff", lineHeight: 1.3 }}>Abonnement<br/>Premium actif</div>
                 </div>
                 <div style={{ width: 1, height: 44, background: "rgba(255,255,255,0.3)", marginLeft: 18, marginRight: 18, flexShrink: 0 }} />
                 <div style={{ textAlign: "center", flexShrink: 0 }}>
                   {isLifetime ? (
                     <>
-                      <div style={{ fontSize: "1.4rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>∞</div>
+                      <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "#fff", lineHeight: 1 }}>∞</div>
                       <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>À vie</div>
                     </>
                   ) : daysLeft >= 0 ? (
                     <>
-                      <div style={{ fontSize: "1.75rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>{daysLeft}</div>
+                      <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#fff", lineHeight: 1 }}>{daysLeft}</div>
                       <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>jours</div>
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize: "1.2rem", fontWeight: 900, color: G.blanc, lineHeight: 1 }}>✓</div>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#fff", lineHeight: 1 }}>✓</div>
                       <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>Actif</div>
                     </>
                   )}
@@ -11629,10 +11630,10 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   {isExpired
-                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.blanc }} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: "#fff" }} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     : <svg width="16" height="16" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   }
-                  <span style={{ fontSize: "1rem", fontWeight: 700, color: G.blanc }}>
+                  <span style={{ fontSize: "1rem", fontWeight: 700, color: "#fff" }}>
                     {isExpired ? "Votre Premium a expiré - Renouveler" : "Passer à Moyo Premium"}
                   </span>
                 </div>
@@ -11656,7 +11657,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Demander une mise en relation personnalisée</div>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff", marginBottom: 3 }}>Demander une mise en relation personnalisée</div>
                   <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span>Réservé aux membres Premium</span>
@@ -11675,7 +11676,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.blanc, marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff", marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
                   <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span>Réservé aux membres Premium</span>
@@ -11746,7 +11747,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   setShowVerifyModal(true);
                 } catch (e: any) { setVerifyError("Erreur: " + (e?.message || String(e))); setVerifyLoading(false); return; }
                 setVerifyLoading(false);
-              }} disabled={verifyLoading} style={{ background: verifyLoading ? "#ddd" : `linear-gradient(135deg,${G.rouge} 0%,#e74c3c 100%)`, color: G.blanc, border: "none", borderRadius: 50, padding: "9px 16px", fontWeight: 800, fontSize: "0.75rem", cursor: verifyLoading ? "not-allowed" : "pointer", flexShrink: 0, boxShadow: verifyLoading ? "none" : "0 3px 10px rgba(192,57,43,0.3)", whiteSpace: "nowrap" }}>
+              }} disabled={verifyLoading} style={{ background: verifyLoading ? "#ddd" : `linear-gradient(135deg,${G.rouge} 0%,#e74c3c 100%)`, color: "#fff", border: "none", borderRadius: 50, padding: "9px 16px", fontWeight: 800, fontSize: "0.75rem", cursor: verifyLoading ? "not-allowed" : "pointer", flexShrink: 0, boxShadow: verifyLoading ? "none" : "0 3px 10px rgba(192,57,43,0.3)", whiteSpace: "nowrap" }}>
                 {verifyLoading ? "Envoi..." : "✉ Vérifier mon email"}
               </button>
             )}
@@ -11768,7 +11769,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                     </div>
                     <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Email vérifié !</h3>
                     <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Ton adresse email est maintenant vérifiée.</p>
-                    <button onClick={() => { setShowVerifyModal(false); setVerifySuccess(false); }} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: "#27ae60", color: G.blanc, fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>Fermer</button>
+                    <button onClick={() => { setShowVerifyModal(false); setVerifySuccess(false); }} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: "#27ae60", color: "#fff", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>Fermer</button>
                   </>
                 ) : (
                   <>
@@ -11803,7 +11804,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                           setVerifySuccess(true);
                         } catch { setVerifyError("Erreur technique. Réessaie."); }
                         setVerifyLoading(false);
-                      }} style={{ flex: 2, padding: "12px", borderRadius: 50, border: "none", background: verifyCode.length === 6 ? G.rouge : "#ccc", color: G.blanc, fontWeight: 700, fontSize: "0.85rem", cursor: verifyCode.length === 6 ? "pointer" : "not-allowed" }}>
+                      }} style={{ flex: 2, padding: "12px", borderRadius: 50, border: "none", background: verifyCode.length === 6 ? G.rouge : "#ccc", color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: verifyCode.length === 6 ? "pointer" : "not-allowed" }}>
                         {verifyLoading ? "Vérification..." : "Confirmer"}
                       </button>
                     </div>
@@ -12294,7 +12295,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
             ))}
           </svg>
           <div style={{ marginBottom: 10, display: "flex", justifyContent: "center" }}><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
-          <div style={{ color: G.blanc, fontWeight: 900, fontSize: "1.3rem", letterSpacing: "0.01em", textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>Vous avez un cadeau !</div>
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: "1.3rem", letterSpacing: "0.01em", textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>Vous avez un cadeau !</div>
           <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.78rem", marginTop: 6 }}>Quelqu'un pense à vous sur Moyo 💛</div>
         </div>
         {/* Body */}
@@ -12305,7 +12306,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
           <div style={{ fontSize: "0.78rem", color: "#aaa", marginBottom: 18, lineHeight: 1.6 }}>
             Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟
           </div>
-          <button onClick={onAcknowledge} style={{ width: "100%", background: "linear-gradient(135deg,#D4A843,#B8922E)", color: G.blanc, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 6px 20px rgba(212,168,67,0.45)", letterSpacing: "0.02em" }}>
+          <button onClick={onAcknowledge} style={{ width: "100%", background: "linear-gradient(135deg,#D4A843,#B8922E)", color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 6px 20px rgba(212,168,67,0.45)", letterSpacing: "0.02em" }}>
             🎉 Merci ! J'en profite
           </button>
         </div>
@@ -12341,7 +12342,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
               <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.65, marginBottom: 20 }}>Merci d'adopter un comportement respectueux et sécurisé dans vos échanges. En cas de récidive, votre compte pourra être temporairement suspendu ou supprimé.</p>
             </>
           )}
-          <button onClick={onAcknowledge} style={{ width: "100%", background: isInfo ? "linear-gradient(135deg,#2980b9,#1a6091)" : "linear-gradient(135deg,#f39c12,#e67e22)", color: G.blanc, border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.03em", boxShadow: isInfo ? "0 4px 16px rgba(41,128,185,0.35)" : "0 4px 16px rgba(243,156,18,0.35)" }}>
+          <button onClick={onAcknowledge} style={{ width: "100%", background: isInfo ? "linear-gradient(135deg,#2980b9,#1a6091)" : "linear-gradient(135deg,#f39c12,#e67e22)", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.03em", boxShadow: isInfo ? "0 4px 16px rgba(41,128,185,0.35)" : "0 4px 16px rgba(243,156,18,0.35)" }}>
             OK, J'AI COMPRIS
           </button>
         </div>
@@ -12411,8 +12412,8 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
       {verified === "mismatch" && <div style={{ background: "rgba(231,76,60,0.07)", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#e74c3c" }}>❌ Les références ne correspondent pas</div>}
       {isPending && (
         <div style={{ display: "flex", gap: 8 }}>
-          {verified === null && <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim()} style={{ flex: 1, background: adminRef.trim() ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: adminRef.trim() ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: adminRef.trim() ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>}
-          {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: G.blanc, border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✓ Activer Premium</button>}
+          {verified === null && <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim()} style={{ flex: 1, background: adminRef.trim() ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: adminRef.trim() ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: adminRef.trim() ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>}
+          {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✓ Activer Premium</button>}
           {verified === "mismatch" && <button onClick={() => onReject(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter & notifier</button>}
           {verified !== null && <button onClick={() => { setVerified(null); setAdminRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>}
         </div>
@@ -12441,7 +12442,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-                <button onClick={() => { setConfirmDelete(false); onDelete(p); }} style={{ flex: 1, background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: G.blanc, border: "none", borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={() => { setConfirmDelete(false); onDelete(p); }} style={{ flex: 1, background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>
                   Archiver
                 </button>
               </div>
@@ -12599,13 +12600,13 @@ function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () =
           <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </div>
-          <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1.05rem" }}>Accès Admin</div>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>Accès Admin</div>
           <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.75rem", marginTop: 4 }}>Entrez votre PIN à 4 chiffres</div>
         </div>
         <div style={{ padding: "20px 20px 24px" }}>
           <input value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4)); setPinError(""); }} onKeyDown={e => e.key === "Enter" && verifyPin()} type="password" inputMode="numeric" maxLength={4} placeholder="• • • •" style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "14px", borderRadius: 12, border: `2px solid ${pinError ? "#e74c3c" : pinInput.length === 4 ? G.rouge : G.gris}`, fontSize: "1.4rem", letterSpacing: 8, outline: "none", fontFamily: "inherit" }} autoFocus />
           {pinError && <div style={{ color: "#e74c3c", fontSize: "0.78rem", fontWeight: 600, textAlign: "center", marginTop: 8 }}>{pinError}</div>}
-          <button onClick={verifyPin} disabled={pinInput.length < 4 || pinLoading} style={{ width: "100%", marginTop: 14, background: pinInput.length === 4 ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "#ddd", color: pinInput.length === 4 ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: pinInput.length === 4 ? "pointer" : "not-allowed" }}>
+          <button onClick={verifyPin} disabled={pinInput.length < 4 || pinLoading} style={{ width: "100%", marginTop: 14, background: pinInput.length === 4 ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "#ddd", color: pinInput.length === 4 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: pinInput.length === 4 ? "pointer" : "not-allowed" }}>
             {pinLoading ? "Vérification…" : "Accéder au panel"}
           </button>
           <button onClick={onBack} style={{ width: "100%", marginTop: 8, background: "transparent", color: "#888", border: "none", fontSize: "0.82rem", cursor: "pointer", padding: "8px" }}>Annuler</button>
@@ -12664,7 +12665,7 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
       {msgText && <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 4, textAlign: "right" }}>{msgText.length} caractères</div>}
       <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
         <button onClick={onClose} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-        <button onClick={onSend} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>Envoyer le message</button>
+        <button onClick={onSend} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>Envoyer le message</button>
       </div>
     </div>
   );
@@ -15595,7 +15596,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ height: 240, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden", borderRadius: "24px 24px 0 0" }}>
               {viewPaymentProfile.photo_url ? <img src={viewPaymentProfile.photo_url} alt={viewPaymentProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }} />
-              <div style={{ position: "absolute", bottom: 16, left: 18, right: 18, color: G.blanc }}>
+              <div style={{ position: "absolute", bottom: 16, left: 18, right: 18, color: "#fff" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: "1.4rem", fontWeight: 800 }}>{viewPaymentProfile.name}, {viewPaymentProfile.age} ans</span>
                   {viewPaymentProfile.is_premium && <PremiumBadge size={16} />}
@@ -15603,7 +15604,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ fontSize: "0.82rem", opacity: 0.85, marginTop: 2 }}>{viewPaymentProfile.city}</div>
               </div>
-              <button onClick={() => setViewPaymentProfile(null)} style={{ position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.45)", color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <button onClick={() => setViewPaymentProfile(null)} style={{ position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.45)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -15628,7 +15629,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               </div>
-              <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1.05rem" }}>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>
                 {premiumEventActive ? "Désactiver l'événement Premium ?" : "Activer l'événement Premium ?"}
               </div>
             </div>
@@ -15653,7 +15654,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <button onClick={() => { setPremiumEventConfirm(false); setPremiumEventExpiresAt(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
                   Annuler
                 </button>
-                <button disabled={!premiumEventActive && !premiumEventExpiresAt} onClick={() => { setPremiumEventConfirm(false); togglePremiumEvent(); }} style={{ flex: 1, background: !premiumEventActive && !premiumEventExpiresAt ? "#aaa" : premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: !premiumEventActive && !premiumEventExpiresAt ? "not-allowed" : "pointer" }}>
+                <button disabled={!premiumEventActive && !premiumEventExpiresAt} onClick={() => { setPremiumEventConfirm(false); togglePremiumEvent(); }} style={{ flex: 1, background: !premiumEventActive && !premiumEventExpiresAt ? "#aaa" : premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: !premiumEventActive && !premiumEventExpiresAt ? "not-allowed" : "pointer" }}>
                   Confirmer
                 </button>
               </div>
@@ -15743,7 +15744,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     setBroadcastLoading(false);
                     setBroadcastResult({ ok: false, message: "Impossible de joindre le serveur. Vérifie ta connexion internet et réessaie." });
                   }
-                }} style={{ flex: 1, background: broadcastLoading || !broadcastExpiresAt ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading || !broadcastExpiresAt ? "not-allowed" : "pointer" }}>
+                }} style={{ flex: 1, background: broadcastLoading || !broadcastExpiresAt ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading || !broadcastExpiresAt ? "not-allowed" : "pointer" }}>
                   {broadcastLoading ? "Envoi…" : broadcastTarget === "all" ? "Envoyer à tous" : "Envoyer (ciblé)"}
                 </button>
               </div>
@@ -15797,7 +15798,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 </>
               )}
-              <button onClick={() => { setBroadcastResult(null); }} style={{ width: "100%", background: broadcastResult.ok ? `linear-gradient(135deg,${G.vert},#134029)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: G.blanc, border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.03em" }}>
+              <button onClick={() => { setBroadcastResult(null); }} style={{ width: "100%", background: broadcastResult.ok ? `linear-gradient(135deg,${G.vert},#134029)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.03em" }}>
                 {broadcastResult.ok ? "Parfait" : "Réessayer"}
               </button>
             </div>
@@ -16032,7 +16033,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               </div>
-              <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1rem" }}>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: "1rem" }}>
                 {pinModal.mode === "set" ? `Définir le PIN de ${pinModal.user.name}` : `Réinitialiser le PIN de ${pinModal.user.name}`}
               </div>
               <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.72rem", marginTop: 4 }}>PIN à 4 chiffres - communiquez-le par WhatsApp</div>
@@ -16044,7 +16045,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (pinModal.mode === "set") adminAction(pinModal.user.id, { is_admin: true, admin_pin: pinModalInput }, `${pinModal.user.name} est maintenant admin.`);
                 else adminAction(pinModal.user.id, { admin_pin: pinModalInput }, `PIN de ${pinModal.user.name} réinitialisé.`);
                 setPinModal(null); setPinModalInput("");
-              }} disabled={pinModalInput.length < 4} style={{ width: "100%", marginTop: 12, background: pinModalInput.length === 4 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ddd", color: pinModalInput.length === 4 ? G.blanc : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: pinModalInput.length === 4 ? "pointer" : "not-allowed" }}>
+              }} disabled={pinModalInput.length < 4} style={{ width: "100%", marginTop: 12, background: pinModalInput.length === 4 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ddd", color: pinModalInput.length === 4 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: pinModalInput.length === 4 ? "pointer" : "not-allowed" }}>
                 {pinModal.mode === "set" ? "Rendre admin avec ce PIN" : "Mettre à jour le PIN"}
               </button>
               <button onClick={() => { setPinModal(null); setPinModalInput(""); }} style={{ width: "100%", marginTop: 8, background: "transparent", color: "#888", border: "none", fontSize: "0.82rem", cursor: "pointer", padding: "8px" }}>Annuler</button>
@@ -16195,7 +16196,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <button
                   onClick={() => sendWarning(warnModal.user)}
                   disabled={warnLoading || (warnReason === "Autre motif" && !warnCustom.trim())}
-                  style={{ flex: 1, background: warnLoading ? "#f9e4a0" : "linear-gradient(135deg,#f39c12,#e67e22)", color: G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: warnLoading ? "not-allowed" : "pointer", opacity: warnLoading ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                  style={{ flex: 1, background: warnLoading ? "#f9e4a0" : "linear-gradient(135deg,#f39c12,#e67e22)", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: warnLoading ? "not-allowed" : "pointer", opacity: warnLoading ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                 >
                   {warnLoading
                     ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
@@ -16230,7 +16231,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
-              <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.blanc }}>{reportProfilePreview.name}</div>
+              <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>{reportProfilePreview.name}</div>
               <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
                 {reportProfilePreview.age} ans · {reportProfilePreview.city}
               </div>
@@ -17003,7 +17004,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Top villes</h3>
                   {stats.topCities.map(({ city, count }, i) => (
                     <div key={city} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                      <span style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
+                      <span style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                           <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{city}</span>
@@ -17119,7 +17120,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
                   }
                   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "40px 16px 14px", background: "linear-gradient(transparent, rgba(0,0,0,0.75))" }}>
-                    <div style={{ color: G.blanc, fontWeight: 800, fontSize: "1.3rem" }}>{adminViewedProfile.name}, {adminViewedProfile.age} ans</div>
+                    <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.3rem" }}>{adminViewedProfile.name}, {adminViewedProfile.age} ans</div>
                     <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.8rem", marginTop: 3 }}>{adminViewedProfile.city} · {adminViewedProfile.gender}</div>
                   </div>
                   <div onClick={() => setAdminViewedProfile(null)} style={{ position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
@@ -17240,7 +17241,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <button
                       onClick={() => confirm(`⚠️ Supprimer définitivement les ${selectedUsers.size} profil(s) sélectionné(s) ? Cette action est irréversible.`, () => bulkDelete())}
                       disabled={bulkDeleting}
-                      style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: G.blanc, border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                      style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
                     >
                       {bulkDeleting ? "Suppression..." : `Supprimer (${selectedUsers.size})`}
                     </button>
@@ -17294,7 +17295,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                         {/* Badges statuts */}
                         <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
-                          {isLifetimePremium(u) && <span style={{ background: "linear-gradient(135deg,#8B6914,#D4A843)", color: G.blanc, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>♾️ À vie</span>}
+                          {isLifetimePremium(u) && <span style={{ background: "linear-gradient(135deg,#8B6914,#D4A843)", color: "#fff", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>♾️ À vie</span>}
                           {u.is_premium && !isLifetimePremium(u) && <span style={{ background: "rgba(212,168,67,0.15)", color: "#D4A843", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>★ Prem</span>}
                           {u.is_verified && <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>✓ Vérifié</span>}
                           {u.is_admin && <span style={{ background: "rgba(231,76,60,0.1)", color: G.rouge, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⚙ Admin</span>}
@@ -17363,7 +17364,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {u.name}
                           {isSelf && <span style={{ fontSize: "0.65rem", background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Vous</span>}
                           {u.name === "..." && <span style={{ fontSize: "0.65rem", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Incomplet</span>}
-                          {isLifetimePremium(u) && <span style={{ fontSize: "0.65rem", background: "linear-gradient(135deg,#8B6914,#D4A843)", color: G.blanc, borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>♾️ À vie</span>}
+                          {isLifetimePremium(u) && <span style={{ fontSize: "0.65rem", background: "linear-gradient(135deg,#8B6914,#D4A843)", color: "#fff", borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>♾️ À vie</span>}
                           {/* Indicateur connexion */}
                           {(() => {
                             if (!u.last_seen) return null;
@@ -17715,7 +17716,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     background: isActive
                       ? isArchived ? "#6c757d" : G.rouge
                       : G.blanc,
-                    color: isActive ? G.blanc : isArchived ? "#6c757d" : "#555",
+                    color: isActive ? "#fff" : isArchived ? "#6c757d" : "#555",
                     boxShadow: isActive ? `0 2px 8px ${isArchived ? "rgba(108,117,125,0.3)" : "rgba(192,57,43,0.25)"}` : "none",
                     border: `1px solid ${isActive ? (isArchived ? "#6c757d" : G.rouge) : G.gris}`,
                   }}
@@ -17729,7 +17730,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   {count !== null && count > 0 && (
                     <span style={{
                       background: isActive ? "rgba(255,255,255,0.25)" : isArchived ? "rgba(108,117,125,0.12)" : "rgba(192,57,43,0.12)",
-                      color: isActive ? G.blanc : isArchived ? "#6c757d" : G.rouge,
+                      color: isActive ? "#fff" : isArchived ? "#6c757d" : G.rouge,
                       borderRadius: 50, padding: "1px 6px", fontSize: "0.65rem", fontWeight: 700, minWidth: 18, textAlign: "center",
                     }}>
                       {count}
@@ -21181,7 +21182,7 @@ export default function App() {
       <div style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
         {/* Header */}
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "28px 24px 22px", textAlign: "center" }}>
-          <div style={{ fontSize: "2rem", color: G.blanc, fontWeight: 800, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
+          <div style={{ fontSize: "2rem", color: "#fff", fontWeight: 800, marginBottom: 4 }}>Mo<span style={{ color: G.or }}>yo</span></div>
           <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "10px auto 0" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
           </div>
@@ -21199,7 +21200,7 @@ export default function App() {
             </p>
           )}
           {!isIos && (
-            <button onClick={handleInstall} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: G.blanc, border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>
+            <button onClick={handleInstall} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>
               Installer l'app
             </button>
           )}
