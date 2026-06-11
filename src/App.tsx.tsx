@@ -7890,12 +7890,15 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const toggleFav = (cid: string) => setFavConvs(prev => { const next = prev.includes(cid) ? prev.filter(x => x !== cid) : [...prev, cid]; try { localStorage.setItem(FAV_KEY, JSON.stringify(next)); } catch {} return next; });
   const [swipe, setSwipe] = useState<{ id: string; dx: number } | null>(null);
   const swipeStartX = useRef(0); const swipeStartY = useRef(0); const swipeMoved = useRef(false); const swipeLock = useRef(false);
-  // ── Fermeture animée de la discussion (glissement vers la droite) ──
+  // ── Animations d'ouverture/fermeture pilotées par transform inline (fiable, comme le swipe). ──
   const [chatClosing, setChatClosing] = useState(false);
-  const closeChat = () => { setChatClosing(true); setDragX(0); setTimeout(() => { setChatClosing(false); setOpen(null); loadConvs(); }, 240); };
-  // ── Ouverture : on vide les messages (évite l'affichage de l'ancienne conv) ; l'animation d'entrée
-  //    est rejouée à chaque fois grâce au key={open.id} sur le conteneur (re-montage propre). ──
-  const openChat = (c: Match) => { setDragX(0); setChatClosing(false); setMsgs([]); setOpen(c); };
+  const [entering, setEntering] = useState(false);
+  const closeChat = () => { setEntering(false); setChatClosing(true); setDragX(0); setTimeout(() => { setChatClosing(false); setOpen(null); loadConvs(); }, 280); };
+  // ── Ouverture : conteneur placé hors écran à droite (entering=true), puis glissé vers 0 à la frame suivante. ──
+  const openChat = (c: Match) => {
+    setDragX(0); setChatClosing(false); setMsgs([]); setEntering(true); setOpen(c);
+    requestAnimationFrame(() => requestAnimationFrame(() => setEntering(false)));
+  };
   // ── Swipe-back (geste de retour natif, depuis le bord gauche) ──
   const [dragX, setDragX] = useState(0);
   const draggingRef = useRef(false);
@@ -9068,11 +9071,10 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       {/* Chat */}
       <div data-chat-container
         key={open.id}
-        className={isWideMsg ? undefined : (chatClosing ? "conv-leave" : "conv-enter")}
         onTouchStart={isWideMsg ? undefined : (e) => { const x = e.touches[0].clientX; if (x <= 28) { dragStartX.current = x; dragStartY.current = e.touches[0].clientY; draggingRef.current = true; } else { dragStartX.current = null; draggingRef.current = false; } }}
         onTouchMove={isWideMsg ? undefined : (e) => { if (!draggingRef.current || dragStartX.current == null) return; const dx = e.touches[0].clientX - dragStartX.current; const dy = e.touches[0].clientY - dragStartY.current; if (Math.abs(dy) > Math.abs(dx) + 12) { draggingRef.current = false; setDragX(0); return; } if (dx > 0) setDragX(dx); }}
         onTouchEnd={isWideMsg ? undefined : () => { if (!draggingRef.current) return; draggingRef.current = false; const close = dragX > 80; dragStartX.current = null; if (close) finishSwipeClose(); else setDragX(0); }}
-        style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined, transform: (!isWideMsg && dragX > 0) ? `translateX(${dragX}px)` : undefined, transition: draggingRef.current ? "none" : "transform 0.23s cubic-bezier(.22,.61,.36,1)", boxShadow: (!isWideMsg && dragX > 0) ? "-12px 0 28px rgba(0,0,0,0.18)" : undefined }}>
+        style={{ position: isWideMsg ? "relative" : "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", background: G.creme, zIndex: isWideMsg ? 1 : 100, maxWidth: isWideMsg ? "none" : 500, margin: isWideMsg ? 0 : "0 auto", overflow: "hidden", flex: isWideMsg ? 1 : undefined, transform: isWideMsg ? undefined : ((chatClosing || entering) ? "translateX(100%)" : (dragX > 0 ? `translateX(${dragX}px)` : undefined)), transition: draggingRef.current ? "none" : "transform 0.26s cubic-bezier(.22,.61,.36,1)", boxShadow: (!isWideMsg && dragX > 0) ? "-12px 0 28px rgba(0,0,0,0.18)" : undefined }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* Arrière-plan fixe — ne scroll pas */}
