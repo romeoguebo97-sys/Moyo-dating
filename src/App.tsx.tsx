@@ -297,8 +297,9 @@ const cleanSupportReason = (reason?: string) => (reason || "").replace(SUPPORT_P
 
 const G = {
   rouge: "#C0392B", rougeDark: "#922B21", or: "#D4A843",
-  vert: "#1A5C3A", creme: "#F0F1F5", cremeDark: "#E4E6ED",
-  brun: "#2C1A0E", brunLight: "#5C3D2A", blanc: "#FFFFFF", gris: "#E8DDD0",
+  vert: "#1A5C3A",
+  creme: "var(--c-creme)", cremeDark: "var(--c-cremeDark)",
+  brun: "var(--c-brun)", brunLight: "var(--c-brunLight)", blanc: "var(--c-blanc)", gris: "var(--c-gris)",
 };
 
 // Affiche une notification locale de façon compatible Android + ordinateur + PWA.
@@ -815,13 +816,15 @@ const sb = {
 };
 
 const GLOBAL_CSS = `
+  :root{ --c-creme:#F0F1F5; --c-cremeDark:#E4E6ED; --c-blanc:#FFFFFF; --c-gris:#E8DDD0; --c-brun:#2C1A0E; --c-brunLight:#5C3D2A; }
+  :root[data-theme="dark"], [data-theme="dark"]{ --c-creme:#0D0E12; --c-cremeDark:#171920; --c-blanc:#000000; --c-gris:#2A1F12; --c-brun:#F1DFD3; --c-brunLight:#D7B8A5; }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
-  html{overflow-x:hidden;width:100%;max-width:100vw;background-color:#FFFFFF;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:#FFFFFF}
+  html{overflow-x:hidden;width:100%;max-width:100vw;background-color:var(--c-creme);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:var(--c-creme)}
   /* PWA iOS 18 : forcer touch-action:auto sur les champs pour que le clavier natif apparaisse */
   input,textarea,select{touch-action:auto !important}
-  html{background-color:#FFFFFF}
-  #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;background-color:#FFFFFF}
+  html{background-color:var(--c-creme)}
+  #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;background-color:var(--c-creme)}
   /* Fix clavier iOS - la barre reste fixe au-dessus du clavier */
   [data-chat-container]{height:100%;height:-webkit-fill-available;}
   @supports(height:100dvh){[data-chat-container]{height:100dvh;}}
@@ -1279,7 +1282,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{manualStats.members.trim() ? manualStats.members : fmt(stats.premium)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
           </div>
         </div>
-        <div style={{ background: "#fff", borderRadius: 18, padding: "3px 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 14 }}>
+        <div style={{ background: G.blanc, borderRadius: 18, padding: "3px 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 14 }}>
           {(showAllAdv ? avantages : highlights).map((a: any, i: number) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "7px 0", borderBottom: i < (showAllAdv ? avantages.length : highlights.length) - 1 ? "1px solid #f0ede6" : "none" }}>
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -1297,10 +1300,10 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           </div>
         </div>
         <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>CONGO — PAYEZ AVEC</div>
-        <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: "#1a1a1a", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+        <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
           {mtnLogo(18)} MTN MoMo{!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
         </button>
-        <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: "#fff", color: "#E40000", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#E40000" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
+        <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: G.blanc, color: "#E40000", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#E40000" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
           {airtelLogo(20)} Airtel Money{!PAY_AIRTEL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
         </button>
         <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>DIASPORA — PAYER PAR CARTE</div>
@@ -1358,7 +1361,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
         <div style={{ flex: 1, overflowY: "auto", padding: "16px", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
           {/* Étape 1 */}
-          <div style={{ background: "#fff", borderRadius: 16, padding: 18, marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <div style={{ background: G.blanc, borderRadius: 16, padding: 18, marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("1")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Effectuez votre paiement</div></div>
             <div style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.55, marginBottom: 16 }}>Votre paiement {OP.name} sera reçu et traité par notre responsable des finances.<br /><span style={{ fontWeight: 700, color: "#444" }}>{OP.responsable}</span></div>
             <a href={tel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", background: OP.main, color: OP.onColor, borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, textDecoration: "none", boxSizing: "border-box" as any }}>
@@ -1372,7 +1375,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           </div>
 
           {/* Étape 2 */}
-          <div style={{ background: "#fff", borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <div style={{ background: G.blanc, borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("2")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Entrez le numéro ID ci-dessous</div></div>
             <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.55, marginBottom: 14 }}>Après validation du paiement {OP.operator}, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
@@ -1395,7 +1398,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
         </div>
 
         {!txSent && (
-          <div style={{ padding: "14px 16px", background: "#fff", borderTop: "1px solid #eee", flexShrink: 0 }}>
+          <div style={{ padding: "14px 16px", background: G.blanc, borderTop: "1px solid #eee", flexShrink: 0 }}>
             <button disabled={!txRef.trim() || txLoading} onClick={submit} style={{ width: "100%", background: !txRef.trim() || txLoading ? "#d2d2d2" : OP.main, color: !txRef.trim() || txLoading ? "#888" : OP.onColor, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !txRef.trim() ? "not-allowed" : "pointer" }}>
               {txLoading ? "Envoi en cours…" : "✓ J'ai payé - Envoyer mon numéro ID"}
             </button>
@@ -1689,7 +1692,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           `}</style>
 
           {/* Nav blanche */}
-          <div style={{ background: "#fff", padding: "10px 20px 10px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
+          <div style={{ background: G.blanc, padding: "10px 20px 10px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
             <div style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-1px" }}>
               <span style={{ color: "#C0392B" }}>Mo</span><span style={{ color: "#D4A843" }}>yo</span>
             </div>
@@ -1725,7 +1728,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 <button onClick={() => onNav("signup")} style={{ background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "2px solid rgba(255,255,255,0.7)", borderRadius: 50, padding: "15px 0", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 5px 18px rgba(192,57,43,0.4)" }}>
                   Créer mon compte gratuit
                 </button>
-                <button onClick={() => onNav("login")} style={{ background: "#fff", color: "#1a1a1a", border: "2px solid #1a1a1a", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={() => onNav("login")} style={{ background: G.blanc, color: G.brun, border: "2px solid #1a1a1a", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
                   Se connecter
                 </button>
               </div>
@@ -1971,7 +1974,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: G.blanc, boxShadow: "0 4px 18px rgba(192,57,43,0.35)", cursor: "pointer" }}>
                 Créer mon compte gratuit
               </button>
-              <button className="btn-o" onClick={() => onNav("login")} style={{ border: "2px solid #1a1a1a", borderRadius: 50, padding: "13px 28px", fontWeight: 700, fontSize: "0.95rem", background: G.blanc, color: "#1a1a1a", cursor: "pointer", marginTop: 6 }}>
+              <button className="btn-o" onClick={() => onNav("login")} style={{ border: "2px solid #1a1a1a", borderRadius: 50, padding: "13px 28px", fontWeight: 700, fontSize: "0.95rem", background: G.blanc, color: G.brun, cursor: "pointer", marginTop: 6 }}>
                 Me connecter
               </button>
             </div>
@@ -2501,7 +2504,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       {installModal && (
         <div onClick={() => setInstallModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           {installModal === "android" ? (
-            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 340, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", overflow: "hidden" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", overflow: "hidden" }}>
               <div style={{ background: `linear-gradient(150deg,${G.rouge},${G.rougeDark})`, padding: "26px 22px 30px", textAlign: "center" }}>
                 <div style={{ fontWeight: 800, fontSize: "1.6rem", color: "#fff", letterSpacing: "0.02em" }}>Mo<span style={{ color: G.or }}>yo</span></div>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "12px auto 0" }}>
@@ -2512,15 +2515,15 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo !</div>
                 <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
                 <button onClick={launchAndroidPrompt} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>Installer l'app</button>
-                <button onClick={() => setInstallModal(null)} style={{ width: "100%", background: "#fff", color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
+                <button onClick={() => setInstallModal(null)} style={{ width: "100%", background: G.blanc, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
               </div>
             </div>
           ) : (
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 360, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", textAlign: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 360, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", textAlign: "center" }}>
             {installModal === "ios" ? (
               <>
                 <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
-                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Installer Moyo sur iPhone</div>
+                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Installer Moyo sur iPhone</div>
                 <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Pour installer Moyo comme une application :</p>
                 <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -2540,13 +2543,13 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             ) : installModal === "done" ? (
               <>
                 <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>✅</div>
-                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Déjà installée !</div>
+                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Déjà installée !</div>
                 <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Moyo est déjà installée sur ton appareil. Tu peux la lancer depuis ton écran d'accueil.</p>
               </>
             ) : (
               <>
                 <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
-                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Installer Moyo</div>
+                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Installer Moyo</div>
                 <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Pour installer Moyo, ouvre ce site dans <b>Chrome</b> (Android) ou <b>Safari</b> (iPhone), puis utilise le menu du navigateur → « Ajouter à l'écran d'accueil ».</p>
               </>
             )}
@@ -2723,7 +2726,7 @@ function BanScreen({ until, onExpire, onBack }: { until?: string | null; onExpir
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: `linear-gradient(160deg, ${G.rouge}, ${G.rougeDark})` }}>
-      <div style={{ background: "#fff", borderRadius: 24, maxWidth: 420, width: "100%", padding: "32px 26px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+      <div style={{ background: G.blanc, borderRadius: 24, maxWidth: 420, width: "100%", padding: "32px 26px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
         <div style={{ width: 70, height: 70, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         </div>
@@ -3486,7 +3489,7 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>Besoin d'aide</div>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Besoin d'aide</div>
                 <div style={{ fontSize: "0.75rem", color: "#888" }}>Pose ta question, je réponds instantanément</div>
               </div>
             </div>
@@ -3495,7 +3498,7 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>Contacter notre équipe</div>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Contacter notre équipe</div>
                 <div style={{ fontSize: "0.75rem", color: "#888" }}>Écrire directement à l’assistance Moyo</div>
               </div>
             </div>
@@ -3532,7 +3535,7 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
                 <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <div style={{ fontWeight: 700, color: "#1a1a1a", marginBottom: 6 }}>Message envoyé</div>
+                <div style={{ fontWeight: 700, color: G.brun, marginBottom: 6 }}>Message envoyé</div>
                 <div style={{ fontSize: "0.82rem", color: "#555" }}>L’assistance Moyo vous répondra directement dans votre messagerie.</div>
               </div>
             ) : (
@@ -3622,7 +3625,7 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
       {modal && (
         <div onClick={() => setModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           {modal === "android" ? (
-            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 340, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", overflow: "hidden" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", overflow: "hidden" }}>
               <div style={{ background: `linear-gradient(150deg,${G.rouge},${G.rougeDark})`, padding: "26px 22px 30px", textAlign: "center" }}>
                 <div style={{ fontWeight: 800, fontSize: "1.6rem", color: "#fff" }}>Mo<span style={{ color: G.or }}>yo</span></div>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "12px auto 0" }}>
@@ -3633,15 +3636,15 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
                 <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo !</div>
                 <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
                 <button onClick={launchAndroidPrompt} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>Installer l'app</button>
-                <button onClick={() => setModal(null)} style={{ width: "100%", background: "#fff", color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
+                <button onClick={() => setModal(null)} style={{ width: "100%", background: G.blanc, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
               </div>
             </div>
           ) : (
-            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 360, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", textAlign: "center" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 360, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", textAlign: "center" }}>
               {modal === "ios" ? (
                 <>
                   <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
-                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Installer Moyo sur iPhone</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Installer Moyo sur iPhone</div>
                   <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 12, margin: "14px 0 20px" }}>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>1</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>Partager</b> en bas de Safari</div></div>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>2</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Choisis <b>« Sur l'écran d'accueil »</b></div></div>
@@ -3651,13 +3654,13 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
               ) : modal === "done" ? (
                 <>
                   <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>✅</div>
-                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Déjà installée !</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Déjà installée !</div>
                   <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Moyo est déjà sur ton appareil. Lance-la depuis ton écran d'accueil.</p>
                 </>
               ) : (
                 <>
                   <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
-                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Installer Moyo</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Installer Moyo</div>
                   <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ouvre ce site dans <b>Chrome</b> (Android) ou <b>Safari</b> (iPhone), puis « Ajouter à l'écran d'accueil ».</p>
                 </>
               )}
@@ -3672,7 +3675,7 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
 function SwitchBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button onClick={onToggle} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: on ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
-      <div style={{ position: "absolute", top: 3, left: on ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+      <div style={{ position: "absolute", top: 3, left: on ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
     </button>
   );
 }
@@ -3692,7 +3695,7 @@ function EditableRow({ label, value, open, onOpen, editValue, onEdit, onSave, hi
     <div>
       <div onClick={onOpen} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: open ? "rgba(192,57,43,0.06)" : G2.creme, cursor: "pointer", border: `1px solid ${open ? G2.rouge : "transparent"}` }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
+          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: G.brun }}>{label}</div>
           <div style={{ fontSize: "0.7rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
         </div>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G2.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -3909,7 +3912,7 @@ function AdminDesktopPage() {
         {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div onClick={e => e.stopPropagation()} style={{ width: "min(97vw, 1340px)", height: "min(94vh, 980px)", background: G.blanc, borderRadius: 18, zIndex: 9999, boxShadow: "0 24px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>⚙️ Configuration</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>⚙️ Configuration</div>
             <button onClick={() => setRulesMenuOpen(false)} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -3936,7 +3939,7 @@ function AdminDesktopPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderTop: `1px solid ${G.gris}`, marginTop: 8 }}>
                 <div style={{ width: 34, height: 34, borderRadius: "50%", background: G.rouge, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.85rem", flexShrink: 0 }}>{(auth?.name || "A").charAt(0)}</div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{auth?.name || "Admin"}</div>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{auth?.name || "Admin"}</div>
                   <div style={{ fontSize: "0.66rem", color: "#999" }}>Super Admin</div>
                 </div>
               </div>
@@ -4055,7 +4058,7 @@ function AdminDesktopPage() {
                 ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
               ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
-                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#1a1a1a" }}>{label}</div>
+                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>{label}</div>
                   <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => {
                     if (!auth) return;
                     const v = appConfig[ck] !== "true" ? "true" : "false";
@@ -4205,7 +4208,7 @@ function AdminDesktopPage() {
       {adminActionModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 380, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 6 }}>{adminActionModal.label}</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 6 }}>{adminActionModal.label}</div>
             <div style={{ fontSize: "0.83rem", color: "#888", marginBottom: 18, lineHeight: 1.5 }}>Entrez l'adresse email de l'utilisateur à qui vous souhaitez attribuer ce rôle.</div>
             <input
               type="email"
@@ -4305,7 +4308,7 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
         const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false };
         return (
           <div key={a.id} style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-            <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>{a.name}{a.id === auth.userId ? " (vous)" : ""}</div>
+            <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{a.name}{a.id === auth.userId ? " (vous)" : ""}</div>
             {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["paiements", "💳 Paiements"]] as [keyof Prefs, string][]).map(([k, label]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0" }}>
                 <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#444" }}>{label}</div>
@@ -4434,7 +4437,7 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
                       {coords[field]}
                     </div>
                     <button onClick={() => setEditingField(key)} style={{ flexShrink: 0, background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "0 12px", height: 38, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       Modifier
                     </button>
                   </div>
@@ -4516,7 +4519,7 @@ function AdminPinConfig({ auth }: { auth: Auth }) {
             • • • •
           </div>
           <button onClick={() => { setEditing(true); setMsg(null); }} style={{ flexShrink: 0, background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "0 12px", height: 38, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Modifier
           </button>
         </div>
@@ -5177,7 +5180,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           ))}
           {/* Contact */}
           <div style={{ background: "#f8f8f8", borderRadius: 14, padding: "16px", textAlign: "center", margin: "12px 16px 16px" }}>
-            <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a1a", marginBottom: 4 }}>Un problème ou une question ?</div>
+            <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun, marginBottom: 4 }}>Un problème ou une question ?</div>
             <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, lineHeight: 1.5 }}>Notre équipe est disponible pour vous aider.</p>
             <button onClick={() => { setShowGuide(false); setShowBot(true); }} style={{ display: "inline-block", background: G.rouge, color: G.blanc, borderRadius: 50, padding: "10px 24px", fontSize: "0.85rem", fontWeight: 700, border: "none", cursor: "pointer" }}>Contacter notre équipe</button>
           </div>
@@ -5229,7 +5232,7 @@ const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onB
             <div style={{ position: "fixed", inset: 0, zIndex: 49 }} onClick={() => setShowMenu(false)} />
             <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.15)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
               {onView && <div onClick={() => { setShowMenu(false); onView(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Voir le profil</div>}
-              <div onClick={() => { setShowMenu(false); onBlock(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Bloquer</div>
+              <div onClick={() => { setShowMenu(false); onBlock(); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Bloquer</div>
               <div onClick={() => { setShowMenu(false); setShowSignalerMenu(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Signaler</div>
             </div>
           </>
@@ -5240,12 +5243,12 @@ const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onB
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom)" }}>
             <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#1a1a1a" }}>Signaler ce profil</h3>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: G.brun }}>Signaler ce profil</h3>
               <div onClick={() => setShowSignalerMenu(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
             </div>
             <div style={{ padding: "12px 16px 24px" }}>
               {["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => (
-                <div key={r} onClick={() => { onReport(r); setShowSignalerMenu(false); }} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500, color: "#1a1a1a" }}>{r}</div>
+                <div key={r} onClick={() => { onReport(r); setShowSignalerMenu(false); }} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500, color: G.brun }}>{r}</div>
               ))}
             </div>
           </div>
@@ -5921,7 +5924,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {bottomSheetProfile.photo_url && <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}><img src={bottomSheetProfile.photo_url ?? undefined} alt={bottomSheetProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>}
               <div>
-                <div style={{ fontSize: "0.97rem", fontWeight: 700, color: "#1a1a1a", lineHeight: 1.2 }}>{bottomSheetProfile.name}, {bottomSheetProfile.age} ans</div>
+                <div style={{ fontSize: "0.97rem", fontWeight: 700, color: G.brun, lineHeight: 1.2 }}>{bottomSheetProfile.name}, {bottomSheetProfile.age} ans</div>
                 {bottomSheetProfile.city && <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 1 }}>{bottomSheetProfile.city}</div>}
               </div>
             </div>
@@ -5938,7 +5941,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
               <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(26,92,58,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               </div>
-              <div style={{ fontWeight: 700, fontSize: "0.93rem", color: "#1a1a1a" }}>Voir le profil</div>
+              <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Voir le profil</div>
             </div>
             <div
               onPointerDown={() => { closeBottomSheet(); setTimeout(() => setShowBlockConfirm(true), 50); }}
@@ -5947,7 +5950,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
               <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
               </div>
-              <div style={{ fontWeight: 700, fontSize: "0.93rem", color: "#1a1a1a" }}>Bloquer</div>
+              <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Bloquer</div>
             </div>
             <div
               onPointerDown={() => { closeBottomSheet(); setTimeout(() => setShowSignaler(true), 50); }}
@@ -6171,7 +6174,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
     <div style={{ background: G.blanc, borderRadius: 20, padding: "32px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
       <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGender === "Homme" ? "🕺" : "💃"}</div>
-      <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>
+      <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>
         {myGender === "Homme" ? modalTexts.sameGenderHomme : modalTexts.sameGenderFemme}
       </h3>
       <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20, lineHeight: 1.5 }}>
@@ -6184,7 +6187,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
 {showBlockConfirm && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
   <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
     <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
-    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Bloquer {p?.name} ?</h3>
+    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Bloquer {p?.name} ?</h3>
     <p style={{ fontSize: "0.88rem", color: "#666", marginBottom: 24, lineHeight: 1.6 }}>Ce profil disparaîtra de Découvrir. Vous pourrez débloquer depuis votre profil.</p>
     <div style={{ display: "flex", gap: 10 }}>
       <Btn variant="ghost" onClick={() => setShowBlockConfirm(false)} style={{ flex: 1 }}>Annuler</Btn>
@@ -6195,7 +6198,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
 {showSignaler && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
   <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom)" }}>
     <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
-      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#1a1a1a" }}>Signaler ce profil</h3>
+      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: G.brun }}>Signaler ce profil</h3>
       <div onClick={() => !isReporting && setShowSignaler(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
     </div>
     <div style={{ padding: "12px 16px 24px" }}>
@@ -6205,7 +6208,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
         </div>
       ) : (
         ["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => (
-          <div key={r} onClick={() => { handleReport(r); setShowSignaler(false); }} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500, color: "#1a1a1a" }}>{r}</div>
+          <div key={r} onClick={() => { handleReport(r); setShowSignaler(false); }} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: "pointer", fontSize: "0.9rem", fontWeight: 500, color: G.brun }}>{r}</div>
         ))
       )}
     </div>
@@ -7547,7 +7550,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
               </div>
               {menuMatchId === m.id && (
                 <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
-                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     Voir le profil
                   </div>
@@ -7555,7 +7558,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     Envoyer un message
                   </div>
-                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                     Bloquer
                   </div>
@@ -7606,7 +7609,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                   (window as any).__matchMenuRect = rect;
                   setMenuMatchId(m.id);
                 }} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, cursor: "pointer" }}>
-                  {[0,1,2].map(i => <div key={i} style={{ width: 13, height: 1.5, borderRadius: 2, background: "#fff" }} />)}
+                  {[0,1,2].map(i => <div key={i} style={{ width: 13, height: 1.5, borderRadius: 2, background: G.blanc }} />)}
                 </div>
               </div>
             </div>
@@ -7622,7 +7625,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
           const top = rect ? (rect.top > window.innerHeight / 2 ? rect.top - 8 - 176 : rect.bottom + 8) : window.innerHeight / 2;
           return (
             <div style={{ position: "fixed", left, top, background: G.blanc, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.25)", zIndex: 500, minWidth: menuWidth, transform: "translateY(0)" }}>
-              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Voir le profil
               </div>
@@ -7630,7 +7633,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 Envoyer un message
               </div>
-              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                 Bloquer
               </div>
@@ -7757,7 +7760,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="2" y1="2" x2="22" y2="22"/></svg></div>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Annuler le match avec {confirmUnmatch.partner?.name} ?</h3>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Annuler le match avec {confirmUnmatch.partner?.name} ?</h3>
           <p style={{ fontSize: "0.85rem", color: "#666", marginBottom: 24, lineHeight: 1.6 }}>La conversation et les messages seront supprimés. L'autre personne ne sera pas notifiée.</p>
           <div style={{ display: "flex", gap: 10 }}>
             <Btn variant="ghost" onClick={() => setConfirmUnmatch(null)} style={{ flex: 1 }}>Annuler</Btn>
@@ -9046,7 +9049,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     {/* Ligne 1 : nom + point online à gauche, heure à droite */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
-                        <div style={{ fontWeight: (nouveau || (c.unreadCount || 0) > 0) ? 700 : 600, fontSize: "0.9rem", color: (nouveau || (c.unreadCount || 0) > 0) ? "#1a1a1a" : G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 5 }}>{isFav && <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.partner?.name}</span></div>
+                        <div style={{ fontWeight: (nouveau || (c.unreadCount || 0) > 0) ? 700 : 600, fontSize: "0.9rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 5 }}>{isFav && <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.partner?.name}</span></div>
                         {(() => { if (c.partner?.hide_online_status) return null; const s = getOnlineStatus(c.partner?.last_seen); return s.label === "En ligne" ? <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#27ae60", flexShrink: 0 }} /> : null; })()}
                       </div>
                       <div style={{ fontSize: "0.72rem", color: (c.unreadCount || 0) > 0 ? G.rouge : "#aaa", fontWeight: (c.unreadCount || 0) > 0 ? 700 : 400, flexShrink: 0, marginLeft: 8 }}>
@@ -9234,7 +9237,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     <div onClick={() => setGiftStep("operator")} style={{ cursor: "pointer", background: "rgba(0,0,0,0.1)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                     </div>
-                    <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, display: "flex", alignItems: "center", gap: 8 }}>
                       <svg viewBox="0 0 120 60" width="42" height="21" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
                       Cadeau Premium pour {open.partner?.name}
                     </div>
@@ -9244,7 +9247,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : {PAY_MTN_RESPONSABLE}</div>
-                    <a href={`tel:*105*2*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
+                    <a href={`tel:*105*2*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: G.brun, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
                     </a>
@@ -9267,7 +9270,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         setGiftTxSent(true);
                       } catch { setGiftTxSent(true); }
                       setGiftTxLoading(false);
-                    }} style={{ width: "100%", background: !giftTxRef.trim() || giftTxLoading ? "#ccc" : "linear-gradient(135deg,#FFCC00,#F5A623)", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !giftTxRef.trim() ? "not-allowed" : "pointer" }}>
+                    }} style={{ width: "100%", background: !giftTxRef.trim() || giftTxLoading ? "#ccc" : "linear-gradient(135deg,#FFCC00,#F5A623)", color: G.brun, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !giftTxRef.trim() ? "not-allowed" : "pointer" }}>
                       {giftTxLoading ? "Envoi en cours…" : "J'ai payé - Envoyer la preuve"}
                     </button>
                   ) : (
@@ -9753,13 +9756,13 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     setText(body);
                   }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
                     <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Modifier</span>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </div>
                 );
               })()}
               <div onClick={() => { const msg = contextMenu!.msg; setContextMenu(null); setTimeout(() => setReplyTo(msg), 0); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
               </div>
               <div onClick={async () => {
                 const contentToCopy = contextMenu.msg.content.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/^\[img\](.*)\[\/img\]$/, "$1");
@@ -9772,7 +9775,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 }
               }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Copier</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </div>
               <div onClick={async () => {
                 const msgId = contextMenu.msg.id;
@@ -9859,7 +9862,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 <div style={{ color: "#aaa", fontSize: "0.76rem" }}>La photo sera détruite après ouverture.</div>
               </div>
               <div style={{ width: 46, height: 27, borderRadius: 50, background: pendingViewOnce ? G.rouge : "rgba(255,255,255,0.25)", position: "relative", flexShrink: 0, transition: "background 0.15s" }}>
-                <div style={{ position: "absolute", top: 3, left: pendingViewOnce ? 22 : 3, width: 21, height: 21, borderRadius: "50%", background: "#fff", transition: "left 0.15s" }} />
+                <div style={{ position: "absolute", top: 3, left: pendingViewOnce ? 22 : 3, width: 21, height: 21, borderRadius: "50%", background: G.blanc, transition: "left 0.15s" }} />
               </div>
             </div>
             <Btn variant="primary" onClick={confirmSendImage} style={{ width: "100%" }}>Envoyer</Btn>
@@ -9885,7 +9888,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       {showDeleteConv && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
           <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 8, color: "#1a1a1a" }}>Supprimer la conversation ?</h3>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 8, color: G.brun }}>Supprimer la conversation ?</h3>
           <p style={{ fontSize: "0.88rem", color: "#666", marginBottom: 20, lineHeight: 1.6 }}>Tous les messages seront supprimés. Cette action est irréversible.</p>
           <div style={{ display: "flex", gap: 10 }}>
             <Btn variant="ghost" onClick={() => setShowDeleteConv(false)} style={{ flex: 1 }}>Annuler</Btn>
@@ -9919,8 +9922,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         Offrir Premium
                       </div>
                     )}
-                    <div onClick={() => { setPartnerMenuOpen(false); setConfirmUnmatchPartner(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Annuler le match</div>
-                    <div onClick={blockPartnerNow} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#1a1a1a", cursor: partnerActionLoading ? "wait" : "pointer", borderBottom: "1px solid #F5F5F5" }}>Bloquer</div>
+                    <div onClick={() => { setPartnerMenuOpen(false); setConfirmUnmatchPartner(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Annuler le match</div>
+                    <div onClick={blockPartnerNow} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: partnerActionLoading ? "wait" : "pointer", borderBottom: "1px solid #F5F5F5" }}>Bloquer</div>
                     <div onClick={() => { setPartnerMenuOpen(false); setPartnerReportOpen(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Signaler</div>
                   </div>
                 </>
@@ -9946,11 +9949,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 510, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => !partnerActionLoading && setPartnerReportOpen(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "20px 20px 32px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#1a1a1a" }}>Signaler {open.partner.name}</h3>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: G.brun }}>Signaler {open.partner.name}</h3>
               <div onClick={() => !partnerActionLoading && setPartnerReportOpen(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
             </div>
             {["Faux profil / Arnaque", "Photos inappropriées", "Harcèlement", "Profil mineur", "Autre"].map(r => (
-              <div key={r} onClick={() => !partnerActionLoading && reportPartnerNow(r)} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: partnerActionLoading ? "wait" : "pointer", fontSize: "0.9rem", fontWeight: 500, color: "#1a1a1a" }}>{r}</div>
+              <div key={r} onClick={() => !partnerActionLoading && reportPartnerNow(r)} style={{ padding: "14px 16px", background: "#F8F8F8", borderRadius: 12, marginBottom: 8, cursor: partnerActionLoading ? "wait" : "pointer", fontSize: "0.9rem", fontWeight: 500, color: G.brun }}>{r}</div>
             ))}
           </div>
         </div>
@@ -9959,7 +9962,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       {confirmUnmatchPartner && open.partner && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 520, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => !partnerActionLoading && setConfirmUnmatchPartner(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 340, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>Annuler le match avec {open.partner.name} ?</h3>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Annuler le match avec {open.partner.name} ?</h3>
             <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 22 }}>La conversation, les messages et les likes mutuels seront supprimés. Cette action est irréversible et la personne n'est pas notifiée.</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setConfirmUnmatchPartner(false)} disabled={partnerActionLoading} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, color: "#555", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Retour</button>
@@ -9975,7 +9978,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
             <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: "1.7rem" }}>
               💝
             </div>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a1a", marginBottom: 8 }}>Demander Premium à {open.partner.name} ?</h3>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Demander Premium à {open.partner.name} ?</h3>
             <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 22 }}>{open.partner.name} recevra un message lui proposant de t'offrir l'abonnement Premium. Tu peux faire 2 demandes par mois.</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setConfirmGiftRequest(false)} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, color: "#555", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Annuler</button>
@@ -10081,7 +10084,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
         <div style={{ position: "absolute", top: 10, left: 12, right: 12, display: "flex", gap: 4, zIndex: 3 }}>
           {(statusPreviewList.length ? statusPreviewList : [statusPreview]).map((st, i) => (
             <div key={st.id || st.image_url || i} style={{ flex: 1, height: 3, borderRadius: 999, background: "rgba(255,255,255,0.35)", overflow: "hidden" }}>
-              <div style={{ width: `${i < statusPreviewIndex ? 100 : i === statusPreviewIndex ? statusProgress : 0}%`, height: "100%", background: "#fff", borderRadius: 999, transition: "width 100ms linear" }} />
+              <div style={{ width: `${i < statusPreviewIndex ? 100 : i === statusPreviewIndex ? statusProgress : 0}%`, height: "100%", background: G.blanc, borderRadius: 999, transition: "width 100ms linear" }} />
             </div>
           ))}
         </div>
@@ -10201,7 +10204,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                 : <svg width="18" height="18" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
               }
-              <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "#1a1a1a" }}>
+              <span style={{ fontWeight: 700, fontSize: "0.92rem", color: G.brun }}>
                 {statusPeopleModal.type === "views" ? "Vues par" : "Aimé par"} ({statusPeopleModal.people.length})
               </span>
             </div>
@@ -10218,7 +10221,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               <div key={person.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: `1px solid ${G.gris}` }}>
                 <Avatar url={person.photo_url} gender={person.gender} size={42} premium={person.is_premium} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ fontWeight: 600, fontSize: "0.9rem", color: G.brun, display: "flex", alignItems: "center", gap: 6 }}>
                     {person.name}
                     {person.is_verified && <VerifiedBadge size={13} />}
                   </div>
@@ -10505,7 +10508,7 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a", marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
           <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Boostez votre visibilité pendant 24h</div>
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -10535,7 +10538,7 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
                   <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                   </div>
-                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Demande envoyée !</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Demande envoyée !</div>
                   <div style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6 }}>L'équipe Moyo va valider votre mise en avant. Une fois acceptée, votre profil apparaîtra dans les Statuts Moyo pendant 24h.</div>
                 </div>
               ) : (
@@ -10669,7 +10672,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
           <svg width="22" height="22" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a", marginBottom: 3 }}>Demander une mise en relation personnalisée</div>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Demander une mise en relation personnalisée</div>
           <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Notre équipe trouve la personne qui vous correspond</div>
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -10681,7 +10684,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </div>
-            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1a1a1a", marginBottom: 6 }}>Supprimer votre profil relationnel ?</div>
+            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 6 }}>Supprimer votre profil relationnel ?</div>
             <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 20 }}>Vos critères (qui vous êtes et ce que vous recherchez) seront effacés. Vous pourrez en recréer un à tout moment. Vos matchs et conversations ne sont pas affectés.</div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setShowDeleteRel(false)} disabled={deletingRel} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
@@ -10728,7 +10731,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                   <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                   </div>
-                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Demande envoyée !</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Demande envoyée !</div>
                   <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6 }}>Notre équipe va étudier votre demande et vous proposer une rencontre dans les meilleurs délais. Restez connecté !</div>
                 </div>
               ) : (
@@ -10849,7 +10852,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
               <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{ICONS[iconKey]}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#1a1a1a" }}>{num}. {title}</div>
+                  <div style={{ fontWeight: 800, fontSize: "0.88rem", color: G.brun }}>{num}. {title}</div>
                   {counter}
                 </div>
                 <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 2 }}>{subtitle}</div>
@@ -11284,7 +11287,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
       {/* ── MODALE MODIFIER MOT DE PASSE ── */}
       {showChangePassword && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "#fff", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 360 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 360 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#111" }}>Modifier mon mot de passe</div>
               <div onClick={() => { setShowChangePassword(false); setPwError(""); setPwForm({ newPw: "", confirmPw: "" }); setPwSuccess(false); }} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -11374,7 +11377,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
         {/* Nom + infos */}
         <div style={{ marginTop: 16, paddingBottom: 20, paddingLeft: 16, paddingRight: 16, textAlign: "center" }}>
-          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#1a1a1a", letterSpacing: "-0.02em", marginBottom: 10 }}>
+          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.brun, letterSpacing: "-0.02em", marginBottom: 10 }}>
             {profile?.name}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6, marginBottom: 12 }}>
@@ -11416,7 +11419,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
               </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier mon<br/>profil</div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.brun, textAlign: "center", lineHeight: 1.3 }}>Modifier mon<br/>profil</div>
             </div>
 
             {/* Modifier ma photo - descend sur la vague */}
@@ -11434,7 +11437,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <div style={{ position: "absolute", top: -2, right: -2, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.55rem", fontWeight: 700, border: `2px solid ${G.blanc}` }}>+</div>
                 )}
               </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Modifier ma<br/>photo</div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.brun, textAlign: "center", lineHeight: 1.3 }}>Modifier ma<br/>photo</div>
             </div>
 
             {/* Liste noire - descend sur la vague */}
@@ -11449,7 +11452,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <div style={{ position: "absolute", top: -2, right: -2, background: G.rouge, color: G.blanc, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", fontWeight: 700, border: `2px solid ${G.blanc}` }}>{blockedUsers.length}</div>
                 )}
               </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Liste<br/>noire</div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.brun, textAlign: "center", lineHeight: 1.3 }}>Liste<br/>noire</div>
             </div>
 
             {/* Voir mon profil - niveau normal */}
@@ -11460,7 +11463,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
               </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1a1a1a", textAlign: "center", lineHeight: 1.3 }}>Voir mon<br/>profil</div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.brun, textAlign: "center", lineHeight: 1.3 }}>Voir mon<br/>profil</div>
             </div>
         </div>
       </div>}{/* fin ZONE BLANCHE */}
@@ -11471,7 +11474,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           <div style={{ background: "#EEEEF2", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "82vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             {/* Header */}
             <div style={{ background: G.blanc, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#1a1a1a" }}>Aperçu de mon profil</div>
+              <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.brun }}>Aperçu de mon profil</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <div style={{ display: "flex", background: G.gris, borderRadius: 50, padding: 3, gap: 2 }}>
                   {(["card","list"] as const).map(m => (
@@ -11556,7 +11559,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
         </div>
       )}
       {(!isWideProfile || ["main","premium","parrainage","verification","visibility","blocklist","darkmode","rating","logout","delete"].includes(activeSection)) && <div style={{ background: "#EEEEF2", position: "relative" }}>
-        {(!isWideProfile || activeSection === "main") && <svg viewBox="0 0 500 40" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 40, marginTop: -1 }}><path d="M0,0 Q125,40 250,40 Q375,40 500,0 L500,0 L0,0 Z" fill={G.blanc}/></svg>}
+        {(!isWideProfile || activeSection === "main") && <svg viewBox="0 0 500 40" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 40, marginTop: -1 }}><path d="M0,0 Q125,40 250,40 Q375,40 500,0 L500,0 L0,0 Z" style={{ fill: G.blanc }}/></svg>}
 
         {/* ── ACTIONS (cartes empilées) ── */}
         <div style={{ padding: "20px 16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -11626,7 +11629,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   {isExpired
-                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.blanc} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.blanc }} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     : <svg width="16" height="16" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   }
                   <span style={{ fontSize: "1rem", fontWeight: 700, color: G.blanc }}>
@@ -11695,7 +11698,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a", marginBottom: 3 }}>Parrainer un ami</div>
+            <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Parrainer un ami</div>
             <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.vert }}>7 jours Premium offerts</span> pour chaque ami qui s'abonne</div>
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -11763,7 +11766,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                     <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
                       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     </div>
-                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Email vérifié !</h3>
+                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Email vérifié !</h3>
                     <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Ton adresse email est maintenant vérifiée.</p>
                     <button onClick={() => { setShowVerifyModal(false); setVerifySuccess(false); }} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: "#27ae60", color: G.blanc, fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>Fermer</button>
                   </>
@@ -11772,7 +11775,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                     <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
                       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     </div>
-                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a", marginBottom: 8 }}>Code envoyé !</h3>
+                    <h3 style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Code envoyé !</h3>
                     <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Entre le code à 6 chiffres reçu sur <strong>{auth.email}</strong>. Valable 15 minutes.</p>
                     <input
                       type="number"
@@ -11842,7 +11845,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                 <VerifiedBadge size={22} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Faire vérifier mon compte</div>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Faire vérifier mon compte</div>
                 <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Obtenir le badge de confiance</div>
               </div>
               <div style={{ color: "#ccc", fontSize: "1rem" }}>›</div>
@@ -11854,7 +11857,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               <VerifiedBadge size={22} />
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Compte vérifié</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Compte vérifié</div>
               <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>Badge de confiance actif</div>
             </div>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
@@ -11875,7 +11878,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               }
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Profil {isVisible ? "visible" : "invisible"}</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Profil {isVisible ? "visible" : "invisible"}</div>
               <div style={{ fontSize: "0.82rem", color: "#888", fontWeight: 400, marginTop: 2 }}>{isVisible ? "Tu apparais dans Découvrir" : "Tu n'apparais plus dans Découvrir"}</div>
             </div>
           </div>
@@ -11899,7 +11902,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={!hidden ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill={!hidden ? "#27ae60" : "#999"}/></svg>
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Statut en ligne</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Statut en ligne</div>
                   <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{!hidden ? "Visible par les autres" : "Masqué — personne ne le voit"}</div>
                 </div>
               </div>
@@ -11928,7 +11931,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               </svg>
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Mode {darkMode ? "sombre" : "clair"}</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Mode {darkMode ? "sombre" : "clair"}</div>
               <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{darkMode ? "Thème sombre activé" : "Thème clair activé"}</div>
             </div>
           </div>
@@ -11951,7 +11954,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Activer les notifications</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Activer les notifications</div>
                   <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>Sur iPhone, une étape est nécessaire</div>
                 </div>
               </div>
@@ -11976,7 +11979,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={on ? "#27ae60" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>Notifications</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Notifications</div>
                   <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{on ? "Activées" : "Likes, matchs et messages"}</div>
                 </div>
               </div>
@@ -12003,7 +12006,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
             <svg width="20" height="20" viewBox="0 0 24 24" fill={showRating ? G.or : "none"} stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a" }}>
+            <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>
               {ratingSubmitted ? "Ton avis Moyo" : "Noter Moyo"}
             </div>
             <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>
@@ -12197,7 +12200,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "70vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid #F5F5F5` }}>
-              <div style={{ fontSize: "1rem", fontWeight: 700, color: "#1a1a1a" }}>Liste noire</div>
+              <div style={{ fontSize: "1rem", fontWeight: 700, color: G.brun }}>Liste noire</div>
               <div onClick={() => setShowBlocked(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.2rem" }}>✕</div>
             </div>
             <div style={{ overflowY: "auto", flex: 1, padding: "12px 0 20px" }}>
@@ -12226,7 +12229,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Se déconnecter ?</h3>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Se déconnecter ?</h3>
             <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 24, lineHeight: 1.6 }}>Tu seras redirigé vers la page d'accueil. À bientôt sur Moyo !</p>
             <div style={{ display: "flex", gap: 10 }}>
               <Btn variant="ghost" onClick={() => setShowLogout(false)} style={{ flex: 1 }}>Annuler</Btn>
@@ -12240,8 +12243,8 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>⚠️</div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Supprimer mon compte ?</h3>
-            <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 6, lineHeight: 1.6 }}>Ton profil, tes likes, tes matchs et tes messages seront <strong style={{ color: "#1a1a1a" }}>définitivement supprimés</strong>.</p>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Supprimer mon compte ?</h3>
+            <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 6, lineHeight: 1.6 }}>Ton profil, tes likes, tes matchs et tes messages seront <strong style={{ color: G.brun }}>définitivement supprimés</strong>.</p>
             <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#e74c3c", marginBottom: deleteError ? 10 : 24 }}>Cette action est irréversible.</p>
             {deleteError && (
               <div style={{ background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: "0.78rem", color: "#e74c3c", lineHeight: 1.5, textAlign: "left" }}>
@@ -12320,7 +12323,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
               : <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             }
           </div>
-          <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a1a", letterSpacing: "0.01em" }}>{isInfo ? "Information Moyo" : "Avertissement de modération"}</div>
+          <div style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, letterSpacing: "0.01em" }}>{isInfo ? "Information Moyo" : "Avertissement de modération"}</div>
           {!isInfo && <div style={{ fontSize: "0.72rem", color: "#e67e22", fontWeight: 600, marginTop: 5, background: "rgba(243,156,18,0.15)", borderRadius: 50, padding: "3px 12px", display: "inline-block" }}>Avertissement n°{warning.warning_number}</div>}
         </div>
         <div style={{ padding: "20px 22px 24px" }}>
@@ -12372,7 +12375,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, display: "flex", alignItems: "center", gap: 6 }}>
               {p.operator === "MTN"
                 ? <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
                 : (p.operator === "Carte" || p.operator === "Stripe")
@@ -12400,7 +12403,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
         {!isApproved && !isRejected && (
           <div style={{ flex: 1, background: verified === "match" ? "rgba(39,174,96,0.07)" : verified === "mismatch" ? "rgba(231,76,60,0.07)" : G.creme, borderRadius: 8, padding: "10px 12px", border: `1.5px solid ${verified === "match" ? "rgba(39,174,96,0.3)" : verified === "mismatch" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
             <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>{p.operator === "Carte" || p.operator === "Stripe" ? "Réf. transaction Stripe" : `Réf. ${p.operator} reçue`}</div>
-            <input value={adminRef} onChange={e => { setAdminRef(e.target.value); setVerified(null); }} placeholder="Entrez ici…" style={{ width: "100%", border: "none", background: "transparent", fontSize: "0.95rem", fontWeight: 700, outline: "none", color: "#1a1a1a", letterSpacing: 0.5, fontFamily: "inherit", padding: window.innerWidth < 768 ? "4px 0" : 0 }} />
+            <input value={adminRef} onChange={e => { setAdminRef(e.target.value); setVerified(null); }} placeholder="Entrez ici…" style={{ width: "100%", border: "none", background: "transparent", fontSize: "0.95rem", fontWeight: 700, outline: "none", color: G.brun, letterSpacing: 0.5, fontFamily: "inherit", padding: window.innerWidth < 768 ? "4px 0" : 0 }} />
           </div>
         )}
       </div>
@@ -12544,7 +12547,7 @@ function AdminNotes({ auth, targetType, targetId }: { auth: Auth; targetType: "u
               {notes.map(n => (
                 <div key={n.id} style={{ background: G.blanc, border: "1px solid rgba(142,68,173,0.18)", borderRadius: 10, padding: "9px 11px" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-                    <span style={{ fontWeight: 700, fontSize: "0.74rem", color: "#1a1a1a" }}>{n.author_name}</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.74rem", color: G.brun }}>{n.author_name}</span>
                     <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: "0.64rem", color: "#aaa" }}>{fmt(n.created_at)}</span>
                       <button onClick={() => delNote(n.id)} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: "0.66rem", fontWeight: 600 }}>supprimer</button>
@@ -12709,7 +12712,7 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Message à {user.name}</div>
+                <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Message à {user.name}</div>
                 <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un modèle ou écris un message personnalisé</div>
               </div>
             </div>
@@ -15665,7 +15668,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               </div>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a" }}>📢 Diffusion générale</div>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun }}>📢 Diffusion générale</div>
               <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>Destinataires : {broadcastTarget === "all" ? "tous les utilisateurs" : broadcastTarget === "femmes" ? "les femmes" : broadcastTarget === "hommes" ? "les hommes" : broadcastTarget === "premium" ? "les membres Premium" : "les membres gratuits"}</div>
             </div>
             <div style={{ padding: "16px 20px 20px" }}>
@@ -15774,7 +15777,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   : <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                 }
               </div>
-              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a1a" }}>{broadcastResult.ok ? "Diffusion envoyée ✓" : "Échec de la diffusion"}</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun }}>{broadcastResult.ok ? "Diffusion envoyée ✓" : "Échec de la diffusion"}</div>
             </div>
             <div style={{ padding: "20px 22px 24px" }}>
               {broadcastResult.ok ? (
@@ -15848,7 +15851,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Email à {mailModal.user.name}</div>
+                    <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Email à {mailModal.user.name}</div>
                     <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un email à envoyer</div>
                   </div>
                 </div>
@@ -16052,7 +16055,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {templateModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setTemplateModal(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 22, width: "100%", maxWidth: 460, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 460, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{templateModal.id ? "Modifier le modèle" : "Créer un modèle"}</div>
               <button onClick={() => setTemplateModal(null)} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
@@ -16064,7 +16067,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
               <div>
                 <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888", marginBottom: 6 }}>Catégorie</div>
-                <select value={templateModal.category} onChange={e => setTemplateModal(m => m ? { ...m, category: e.target.value } : m)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", background: "#fff", cursor: "pointer" }}>
+                <select value={templateModal.category} onChange={e => setTemplateModal(m => m ? { ...m, category: e.target.value } : m)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", background: G.blanc, cursor: "pointer" }}>
                   {TEMPLATE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
@@ -16087,14 +16090,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const hours = Math.max(1, parseInt(banHours) || 0);
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 22, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" }}>
               <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Bannir {u.name}</div>
                 <button onClick={close} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
               </div>
               <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
                 {/* Option 1 : définitif */}
-                <button onClick={() => doBan({ is_banned: true, is_visible: false }, `${u.name} a été banni(e) définitivement.`)} style={{ textAlign: "left", border: `1.5px solid ${G.gris}`, background: "#fff", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <button onClick={() => doBan({ is_banned: true, is_visible: false }, `${u.name} a été banni(e) définitivement.`)} style={{ textAlign: "left", border: `1.5px solid ${G.gris}`, background: G.blanc, borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <span style={{ fontSize: "1.3rem" }}>🚫</span>
                   <span><span style={{ fontWeight: 800, color: G.brun, fontSize: "0.92rem" }}>Bannissement définitif</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>Accès bloqué jusqu'à ce qu'un admin le débannisse. Le compte est conservé.</span></span>
                 </button>
@@ -16133,7 +16136,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(243,156,18,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1a1a1a" }}>Avertir {warnModal.user.name}</div>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun }}>Avertir {warnModal.user.name}</div>
               <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>
                 Avertissement {(warnModal.user.warning_count || 0) + 1}/3
               </div>
@@ -16267,11 +16270,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
                     <span style={{ color: "#888" }}>Genre</span>
-                    <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{reportProfilePreview.gender}</span>
+                    <span style={{ fontWeight: 600, color: G.brun }}>{reportProfilePreview.gender}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
                     <span style={{ color: "#888" }}>Ville</span>
-                    <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{reportProfilePreview.city}</span>
+                    <span style={{ fontWeight: 600, color: G.brun }}>{reportProfilePreview.city}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
                     <span style={{ color: "#888" }}>ID</span>
@@ -16280,7 +16283,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   {reportProfilePreview.created_at && (
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
                       <span style={{ color: "#888" }}>Inscrit le</span>
-                      <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{formatDate(reportProfilePreview.created_at)}</span>
+                      <span style={{ fontWeight: 600, color: G.brun }}>{formatDate(reportProfilePreview.created_at)}</span>
                     </div>
                   )}
                 </div>
@@ -16318,7 +16321,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
               <div onClick={() => setShowHelp(false)} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </div>
             </div>
             {/* Contenu scrollable */}
@@ -16361,7 +16364,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* Section 3 - Utilisateurs */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Utilisateurs</span>
                 </div>
                 <div style={{ background: "#FFF8F0", borderRadius: 10, padding: "9px 12px", marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -16419,7 +16422,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* Section 5 - Statuts */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                   <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Traitement des signalements</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -17674,7 +17677,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.rouge, fontWeight: 700, fontSize: "0.74rem", whiteSpace: "nowrap" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Expire {expiresInLabel(b.expires_at)}</div>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(39,174,96,0.1)", color: "#1e8449", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#27ae60" }} />En ligne</div>
-                        <button onClick={() => setBroadcastPreview(b.message)} style={{ display: "flex", alignItems: "center", gap: 5, background: "#fff", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</button>
+                        <button onClick={() => setBroadcastPreview(b.message)} style={{ display: "flex", alignItems: "center", gap: 5, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</button>
                         <button onClick={() => deleteBroadcast(b.id)} disabled={broadcastDeleting === b.id} style={{ flexShrink: 0, border: `1px solid rgba(231,76,60,0.3)`, background: "rgba(231,76,60,0.08)", color: "#e74c3c", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
                       </div>
                     );
@@ -17682,7 +17685,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 {broadcastList.length > 5 && (
                   <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-                    <button onClick={() => setBroadcastShowAll(v => !v)} style={{ display: "flex", alignItems: "center", gap: 7, background: "#fff", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>{broadcastShowAll ? "Voir moins" : "Voir toutes les diffusions"}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: broadcastShowAll ? "rotate(180deg)" : "none" }}><polyline points="6 9 12 15 18 9"/></svg></button>
+                    <button onClick={() => setBroadcastShowAll(v => !v)} style={{ display: "flex", alignItems: "center", gap: 7, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>{broadcastShowAll ? "Voir moins" : "Voir toutes les diffusions"}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: broadcastShowAll ? "rotate(180deg)" : "none" }}><polyline points="6 9 12 15 18 9"/></svg></button>
                   </div>
                 )}
               </>
@@ -17778,13 +17781,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <IcoSearch />
                     <input value={archiveSearch} onChange={e => { setArchiveSearch(e.target.value); setArchivePage(1); }} placeholder="Rechercher dans les archives…" style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: "0.82rem", color: G.brun }} />
                   </div>
-                  <select value={archiveTypeFilter} onChange={e => { setArchiveTypeFilter(e.target.value as any); setArchivePage(1); }} style={{ border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px", fontSize: "0.8rem", color: G.brun, background: "#fff", cursor: "pointer", fontWeight: 600 }}>
+                  <select value={archiveTypeFilter} onChange={e => { setArchiveTypeFilter(e.target.value as any); setArchivePage(1); }} style={{ border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px", fontSize: "0.8rem", color: G.brun, background: G.blanc, cursor: "pointer", fontWeight: 600 }}>
                     <option value="all">Tous les types</option>
                     <option value="messaging">Messagerie</option>
                     <option value="system">Auto-modération</option>
                     <option value="profile">Signalement</option>
                   </select>
-                  <select value={archiveActionFilter} onChange={e => { setArchiveActionFilter(e.target.value as any); setArchivePage(1); }} style={{ border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px", fontSize: "0.8rem", color: G.brun, background: "#fff", cursor: "pointer", fontWeight: 600 }}>
+                  <select value={archiveActionFilter} onChange={e => { setArchiveActionFilter(e.target.value as any); setArchivePage(1); }} style={{ border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px", fontSize: "0.8rem", color: G.brun, background: G.blanc, cursor: "pointer", fontWeight: 600 }}>
                     <option value="all">Toutes les actions</option>
                     <option value="reviewed">Traité</option>
                     <option value="rejected">Rejeté</option>
@@ -17825,7 +17828,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                                 <div><div style={{ fontSize: "0.74rem", fontWeight: 700, color: "#666" }}>{m.actor}</div><div style={{ fontSize: "0.66rem", color: "#aaa" }}>{time}</div></div>
                               </div>
                               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                                <button onClick={() => toggleArchived(r.id || "")} style={{ display: "flex", alignItems: "center", gap: 5, border: `1px solid ${G.gris}`, background: "#fff", color: G.brun, borderRadius: 9, padding: "7px 11px", fontSize: "0.73rem", fontWeight: 700, cursor: "pointer" }}><IcoEye />Voir{expanded ? " moins" : " les détails"}</button>
+                                <button onClick={() => toggleArchived(r.id || "")} style={{ display: "flex", alignItems: "center", gap: 5, border: `1px solid ${G.gris}`, background: G.blanc, color: G.brun, borderRadius: 9, padding: "7px 11px", fontSize: "0.73rem", fontWeight: 700, cursor: "pointer" }}><IcoEye />Voir{expanded ? " moins" : " les détails"}</button>
                                 <button onClick={() => deleteOneArchivedReport(r.id)} title="Supprimer" style={{ border: `1px solid rgba(231,76,60,0.3)`, background: "rgba(231,76,60,0.06)", color: "#e74c3c", borderRadius: 9, padding: "7px 9px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
                               </div>
                             </div>
@@ -17849,14 +17852,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <div style={{ fontSize: "0.76rem", color: "#999" }}>Affichage de {(page - 1) * PER + 1} à {Math.min(page * PER, list.length)} sur {list.length} archive{list.length > 1 ? "s" : ""}</div>
                     {totalPages > 1 && (
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <button onClick={() => setArchivePage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ border: `1px solid ${G.gris}`, background: "#fff", borderRadius: 9, padding: "7px 11px", cursor: page <= 1 ? "not-allowed" : "pointer", opacity: page <= 1 ? 0.5 : 1, color: G.brun }}>‹</button>
+                        <button onClick={() => setArchivePage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ border: `1px solid ${G.gris}`, background: G.blanc, borderRadius: 9, padding: "7px 11px", cursor: page <= 1 ? "not-allowed" : "pointer", opacity: page <= 1 ? 0.5 : 1, color: G.brun }}>‹</button>
                         {Array.from({ length: totalPages }, (_, i) => i + 1).filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1).map((n, idx, arr) => (
                           <React.Fragment key={n}>
                             {idx > 0 && n - arr[idx - 1] > 1 && <span style={{ color: "#bbb" }}>…</span>}
                             <button onClick={() => setArchivePage(n)} style={{ border: `1px solid ${n === page ? G.rouge : G.gris}`, background: n === page ? G.rouge : "#fff", color: n === page ? "#fff" : G.brun, borderRadius: 9, padding: "7px 12px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", minWidth: 34 }}>{n}</button>
                           </React.Fragment>
                         ))}
-                        <button onClick={() => setArchivePage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ border: `1px solid ${G.gris}`, background: "#fff", borderRadius: 9, padding: "7px 11px", cursor: page >= totalPages ? "not-allowed" : "pointer", opacity: page >= totalPages ? 0.5 : 1, color: G.brun }}>›</button>
+                        <button onClick={() => setArchivePage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ border: `1px solid ${G.gris}`, background: G.blanc, borderRadius: 9, padding: "7px 11px", cursor: page >= totalPages ? "not-allowed" : "pointer", opacity: page >= totalPages ? 0.5 : 1, color: G.brun }}>›</button>
                       </div>
                     )}
                   </div>
@@ -17937,7 +17940,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a" }}>
+                            <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
                               {userProfile ? `${userProfile.name}, ${userProfile.age} ans` : conv.userId.slice(0, 10) + "…"}
                             </span>
                             {unread > 0 && <span style={{ background: G.rouge, color: "#fff", borderRadius: 50, padding: "1px 7px", fontSize: "0.62rem", fontWeight: 800 }}>{unread}</span>}
@@ -18028,7 +18031,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
 
                     {/* Ligne 2 : raison */}
-                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1a1a1a", marginBottom: 5, lineHeight: 1.4 }}>{isSupport ? cleanSupportReason(r.reason) : r.reason}</div>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: G.brun, marginBottom: 5, lineHeight: 1.4 }}>{isSupport ? cleanSupportReason(r.reason) : r.reason}</div>
 
                     {/* Ligne 3 : Profils reporter + reported avec noms */}
                     {(() => {
@@ -18046,7 +18049,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: "0.65rem", color: "#2980b9", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Signalé par</div>
-                              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                 {reporterP ? `${reporterP.name}, ${reporterP.age} ans · ${reporterP.city}` : `${r.reporter_id?.slice(0, 14)}…`}
                               </div>
                             </div>
@@ -18067,7 +18070,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: "0.65rem", color: G.rouge, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Profil signalé</div>
-                                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                   {reportedP ? `${reportedP.name}, ${reportedP.age} ans · ${reportedP.city}` : `${r.reported_id?.slice(0, 14)}…`}
                                 </div>
                               </div>
@@ -18414,13 +18417,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             <button onClick={() => setTplMenu(tplMenu === t.id ? null : t.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#999", fontSize: "1.1rem", lineHeight: 1, padding: "0 4px", flexShrink: 0 }}>⋮</button>
                           </div>
                           {tplMenu === t.id && (
-                            <div style={{ position: "absolute", top: 36, right: 12, background: "#fff", borderRadius: 10, boxShadow: "0 6px 20px rgba(0,0,0,0.15)", border: `1px solid ${G.gris}`, zIndex: 5, overflow: "hidden", minWidth: 130 }}>
-                              <button onClick={() => { setTemplateModal({ id: t.id, title: t.title, content: t.content, category: t.category }); setTplMenu(null); }} style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "#fff", padding: "10px 14px", fontSize: "0.78rem", color: G.brun, cursor: "pointer" }}>✏️ Modifier</button>
-                              <button onClick={() => deleteTemplate(t.id)} style={{ display: "block", width: "100%", textAlign: "left", border: "none", borderTop: `1px solid ${G.gris}`, background: "#fff", padding: "10px 14px", fontSize: "0.78rem", color: "#e74c3c", cursor: "pointer" }}>🗑 Supprimer</button>
+                            <div style={{ position: "absolute", top: 36, right: 12, background: G.blanc, borderRadius: 10, boxShadow: "0 6px 20px rgba(0,0,0,0.15)", border: `1px solid ${G.gris}`, zIndex: 5, overflow: "hidden", minWidth: 130 }}>
+                              <button onClick={() => { setTemplateModal({ id: t.id, title: t.title, content: t.content, category: t.category }); setTplMenu(null); }} style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: G.blanc, padding: "10px 14px", fontSize: "0.78rem", color: G.brun, cursor: "pointer" }}>✏️ Modifier</button>
+                              <button onClick={() => deleteTemplate(t.id)} style={{ display: "block", width: "100%", textAlign: "left", border: "none", borderTop: `1px solid ${G.gris}`, background: G.blanc, padding: "10px 14px", fontSize: "0.78rem", color: "#e74c3c", cursor: "pointer" }}>🗑 Supprimer</button>
                             </div>
                           )}
                           <div style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, margin: "6px 0 12px", whiteSpace: "pre-wrap" }}>{t.content}</div>
-                          <button onClick={() => copyTemplate(t.content)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${G.gris}`, background: "#fff", color: G.brun, borderRadius: 9, padding: "7px 13px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copier</button>
+                          <button onClick={() => copyTemplate(t.content)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${G.gris}`, background: G.blanc, color: G.brun, borderRadius: 9, padding: "7px 13px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copier</button>
                         </div>
                       ))}
                     </div>
@@ -18505,7 +18508,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               <div style={{ fontSize: "0.62rem", color: "#aaa" }}>Réponses</div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.rouge, fontWeight: 700, fontSize: "0.72rem", whiteSpace: "nowrap" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Expire {expiresInLabel(s.expires_at)}</div>
-                            <button onClick={() => s.image_url && window.open(s.image_url, "_blank")} style={{ display: "flex", alignItems: "center", gap: 5, background: "#fff", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</button>
+                            <button onClick={() => s.image_url && window.open(s.image_url, "_blank")} style={{ display: "flex", alignItems: "center", gap: 5, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</button>
                             <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ flexShrink: 0, border: "none", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
                           </div>
                         </div>
@@ -18513,7 +18516,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                     {officialStatuses.length > 4 && (
                       <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
-                        <button onClick={() => setMktShowAll(v => !v)} style={{ display: "flex", alignItems: "center", gap: 7, background: "#fff", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>
+                        <button onClick={() => setMktShowAll(v => !v)} style={{ display: "flex", alignItems: "center", gap: 7, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>
                           {mktShowAll ? "Voir moins" : "Voir plus de statuts"}
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: mktShowAll ? "rotate(180deg)" : "none" }}><polyline points="6 9 12 15 18 9"/></svg>
                         </button>
@@ -18612,7 +18615,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               </div>
                               <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
                                 <button onClick={() => acceptFeatureRequest(req)} disabled={frProcessing === req.id} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: "none", background: "#27ae60", color: "#fff", borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", opacity: frProcessing === req.id ? 0.6 : 1 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{frProcessing === req.id ? "…" : "Accepter"}</button>
-                                <button onClick={() => refuseFeatureRequest(req)} disabled={frProcessing === req.id} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1.5px solid rgba(231,76,60,0.4)`, background: "#fff", color: "#e74c3c", borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>Refuser</button>
+                                <button onClick={() => refuseFeatureRequest(req)} disabled={frProcessing === req.id} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1.5px solid rgba(231,76,60,0.4)`, background: G.blanc, color: "#e74c3c", borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>Refuser</button>
                               </div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, background: G.creme, borderRadius: 10, padding: "8px 12px", fontSize: "0.76rem", color: "#666", fontWeight: 600, marginTop: 12 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Visible par les {vis} uniquement</div>
@@ -18653,8 +18656,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             </div>
                           </div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-                            <button onClick={() => (s.profile?.photo_url || s.image_url) && window.open(s.profile?.photo_url || s.image_url || "", "_blank")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1px solid ${G.gris}`, background: "#fff", color: G.brun, borderRadius: 10, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Aperçu</button>
-                            <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1.5px solid rgba(231,76,60,0.4)`, background: "#fff", color: "#e74c3c", borderRadius: 10, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Retirer</button>
+                            <button onClick={() => (s.profile?.photo_url || s.image_url) && window.open(s.profile?.photo_url || s.image_url || "", "_blank")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1px solid ${G.gris}`, background: G.blanc, color: G.brun, borderRadius: 10, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Aperçu</button>
+                            <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1.5px solid rgba(231,76,60,0.4)`, background: G.blanc, color: "#e74c3c", borderRadius: 10, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Retirer</button>
                           </div>
                         </div>
                       ))}
@@ -18679,7 +18682,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {premiumEventActive && (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.3)", borderRadius: 14, padding: "12px 16px", marginBottom: 14 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", fontWeight: 700, color: "#1e8449" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60" }} />Une campagne Premium est actuellement active.</div>
-                    <button onClick={() => setPremiumEventConfirm(true)} disabled={premiumEventLoading} style={{ background: "#fff", color: "#c0392b", border: "1px solid rgba(192,57,43,0.3)", borderRadius: 9, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}>{premiumEventLoading ? "…" : "Arrêter la campagne"}</button>
+                    <button onClick={() => setPremiumEventConfirm(true)} disabled={premiumEventLoading} style={{ background: G.blanc, color: "#c0392b", border: "1px solid rgba(192,57,43,0.3)", borderRadius: 9, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}>{premiumEventLoading ? "…" : "Arrêter la campagne"}</button>
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -18829,7 +18832,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div>
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                 <button onClick={newSurveyDraft} style={{ flex: 1, background: "#2980b9", color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>+ Créer un sondage</button>
-                <button onClick={loadDefaultSurvey} style={{ flex: "0 0 auto", background: "#fff", color: "#2980b9", border: `1.5px solid #2980b9`, borderRadius: 10, padding: "11px 14px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Sondage par défaut</button>
+                <button onClick={loadDefaultSurvey} style={{ flex: "0 0 auto", background: G.blanc, color: "#2980b9", border: `1.5px solid #2980b9`, borderRadius: 10, padding: "11px 14px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Sondage par défaut</button>
               </div>
               <div style={{ fontSize: "0.74rem", color: "#888", background: G.creme, borderRadius: 10, padding: "9px 12px", marginBottom: 14, lineHeight: 1.5 }}>💡 Un sondage <b>Publié</b> est automatiquement envoyé aux membres ciblés (ils reçoivent l'invitation). Mettez-le en <b>Brouillon</b> pour arrêter de le diffuser.</div>
               {surveysLoading ? (
@@ -18845,7 +18848,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div key={s.id} style={{ background: G.blanc, borderRadius: 14, padding: 16, marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>{s.title}</div>
+                        <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>{s.title}</div>
                         <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 3 }}>{(s.questions || []).length} question{(s.questions || []).length > 1 ? "s" : ""} · Cible : {tgt} · {surveyCounts[s.id] || 0} réponse{(surveyCounts[s.id] || 0) > 1 ? "s" : ""}</div>
                       </div>
                       <span style={{ flexShrink: 0, background: s.status === "active" ? "rgba(39,174,96,0.12)" : "#f0f0f0", color: s.status === "active" ? "#27ae60" : "#999", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 800 }}>{s.status === "active" ? "● Publié" : "Brouillon"}</span>
@@ -18853,8 +18856,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <div style={{ display: "flex", gap: 7, marginTop: 12, flexWrap: "wrap" }}>
                       <button onClick={() => loadSurveyResults(s)} style={{ flex: "1 1 auto", background: "#2980b9", color: "#fff", border: "none", borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>📊 Résultats</button>
                       <button onClick={() => toggleSurveyStatus(s)} style={{ flex: "1 1 auto", background: s.status === "active" ? "#fff" : "#27ae60", color: s.status === "active" ? "#555" : "#fff", border: s.status === "active" ? `1px solid ${G.gris}` : "none", borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>{s.status === "active" ? "Dépublier" : "📢 Publier"}</button>
-                      <button onClick={() => setSurveyEditor({ ...s, questions: JSON.parse(JSON.stringify(s.questions || [])) })} style={{ flex: "1 1 auto", background: "#fff", color: "#555", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>
-                      <button onClick={() => deleteSurvey(s)} style={{ flex: "0 0 auto", background: "#fff", color: "#c0392b", border: `1px solid rgba(192,57,43,0.3)`, borderRadius: 9, padding: "8px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Suppr.</button>
+                      <button onClick={() => setSurveyEditor({ ...s, questions: JSON.parse(JSON.stringify(s.questions || [])) })} style={{ flex: "1 1 auto", background: G.blanc, color: "#555", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>
+                      <button onClick={() => deleteSurvey(s)} style={{ flex: "0 0 auto", background: G.blanc, color: "#c0392b", border: `1px solid rgba(192,57,43,0.3)`, borderRadius: 9, padding: "8px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Suppr.</button>
                     </div>
                   </div>
                 );
@@ -18929,7 +18932,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             </div>
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: "0.83rem", color: "#1a1a1a" }}>{r.profile?.name || "Utilisateur"}</div>
+                              <div style={{ fontWeight: 700, fontSize: "0.83rem", color: G.brun }}>{r.profile?.name || "Utilisateur"}</div>
                               <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{r.profile?.city || "-"} · {new Date(r.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
                             </div>
                           </div>
@@ -19015,10 +19018,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <textarea value={surveyEditor.intro_message} onChange={e => setSurveyEditor((s: any) => ({ ...s, intro_message: e.target.value }))} rows={2} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", marginBottom: 14 }} />
               <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Destinataires</label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-                <select value={(surveyEditor.target || "all|all").split("|")[0]} onChange={e => setSurveyEditor((s: any) => ({ ...s, target: `${e.target.value}|${(s.target || "all|all").split("|")[1]}` }))} style={{ padding: "10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: "#fff" }}>
+                <select value={(surveyEditor.target || "all|all").split("|")[0]} onChange={e => setSurveyEditor((s: any) => ({ ...s, target: `${e.target.value}|${(s.target || "all|all").split("|")[1]}` }))} style={{ padding: "10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: G.blanc }}>
                   <option value="all">Tous les genres</option><option value="hommes">Hommes</option><option value="femmes">Femmes</option>
                 </select>
-                <select value={(surveyEditor.target || "all|all").split("|")[1]} onChange={e => setSurveyEditor((s: any) => ({ ...s, target: `${(s.target || "all|all").split("|")[0]}|${e.target.value}` }))} style={{ padding: "10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: "#fff" }}>
+                <select value={(surveyEditor.target || "all|all").split("|")[1]} onChange={e => setSurveyEditor((s: any) => ({ ...s, target: `${(s.target || "all|all").split("|")[0]}|${e.target.value}` }))} style={{ padding: "10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: G.blanc }}>
                   <option value="all">Tous les comptes</option><option value="premium">Premium</option><option value="gratuit">Gratuits</option>
                 </select>
               </div>
@@ -19078,7 +19081,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     const texts = surveyResults.responses.map((r: any) => (r.answers?.[q.id] || [])[0]).filter((t: string) => t && t.trim());
                     return (
                       <div key={qi} style={{ marginBottom: 20 }}>
-                        <div style={{ fontWeight: 800, fontSize: "0.86rem", color: "#1a1a1a", marginBottom: 10 }}>{qi + 1}. {q.text} <span style={{ fontWeight: 600, color: "#999", fontSize: "0.76rem" }}>({texts.length} réponse{texts.length > 1 ? "s" : ""})</span></div>
+                        <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 10 }}>{qi + 1}. {q.text} <span style={{ fontWeight: 600, color: "#999", fontSize: "0.76rem" }}>({texts.length} réponse{texts.length > 1 ? "s" : ""})</span></div>
                         {texts.length === 0 ? <div style={{ fontSize: "0.78rem", color: "#bbb", fontStyle: "italic" }}>Aucune réponse écrite.</div>
                           : texts.map((t: string, i: number) => <div key={i} style={{ background: G.creme, borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#333", marginBottom: 6, lineHeight: 1.4 }}>« {t} »</div>)}
                       </div>
@@ -19090,7 +19093,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
                   return (
                     <div key={qi} style={{ marginBottom: 20 }}>
-                      <div style={{ fontWeight: 800, fontSize: "0.86rem", color: "#1a1a1a", marginBottom: 10 }}>{qi + 1}. {q.text}</div>
+                      <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 10 }}>{qi + 1}. {q.text}</div>
                       {q.options.map((o: string) => { const c = counts[o]; const pct = Math.round(c / total * 100); return (
                         <div key={o} style={{ marginBottom: 8 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "#444", marginBottom: 3 }}><span>{o}</span><span style={{ fontWeight: 700 }}>{c} ({pct}%)</span></div>
@@ -19112,14 +19115,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>Accès restreint</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>Accès restreint</div>
             <div style={{ fontSize: "0.85rem", color: "#888", maxWidth: 280, lineHeight: 1.6 }}>Vous n'avez pas les autorisations nécessaires pour accéder à cette section. Contactez le Super Admin.</div>
           </div>
         ) : (
         <div style={{ padding: "16px" }}>
           {/* En-tête */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>💳 Paiements</div>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>💳 Paiements</div>
             <Btn variant="ghost" onClick={() => { loadPayments(); if (paymentSubTab === "archive") loadArchived(); if (paymentSubTab === "finance") loadFinance(); }} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
           </div>
 
@@ -19229,7 +19232,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
                   {/* Détail par moyen de paiement (devises réelles) */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
-                    <div style={{ background: "linear-gradient(135deg,#FFCC00,#E0A800)", borderRadius: 14, padding: "12px 13px", color: "#1a1a1a" }}>
+                    <div style={{ background: "linear-gradient(135deg,#FFCC00,#E0A800)", borderRadius: 14, padding: "12px 13px", color: G.brun }}>
                       <div style={{ fontSize: "0.64rem", opacity: 0.8, fontWeight: 700 }}>CA MTN</div>
                       <div style={{ fontSize: "1.05rem", fontWeight: 900, marginTop: 3 }}>{totalMTN.toLocaleString()} FCFA</div>
                       <div style={{ fontSize: "0.6rem", opacity: 0.75, marginTop: 2 }}>{countMTN} paiement{countMTN > 1 ? "s" : ""}</div>
@@ -19285,7 +19288,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ width: 40, height: 40, borderRadius: "50%", background: last.gift_for ? "rgba(212,168,67,0.15)" : "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.1rem" }}>{last.gift_for ? "🎁" : "⭐"}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Dernier paiement</div>
-                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[last.user_id] || "Utilisateur"}{last.gift_for ? ` → cadeau pour ${last.gift_for_name || "un membre"}` : ""}</div>
+                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[last.user_id] || "Utilisateur"}{last.gift_for ? ` → cadeau pour ${last.gift_for_name || "un membre"}` : ""}</div>
                         <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{new Date(last.approved_at || last.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>
                       </div>
                       <div style={{ fontWeight: 800, fontSize: "1rem", color: "#8e44ad", flexShrink: 0 }}>{formatMoney(last.amount || 0, paymentCurrency(last))}</div>
@@ -19311,7 +19314,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                                   <stop offset="100%" stopColor="#8e44ad" />
                                 </linearGradient>
                               </defs>
-                              <line x1={padL} y1={baseY + 0.5} x2={w - padR} y2={baseY + 0.5} stroke={G.gris} strokeWidth="1" />
+                              <line x1={padL} y1={baseY + 0.5} x2={w - padR} y2={baseY + 0.5} style={{ stroke: G.gris }} strokeWidth="1" />
                               {data.map(([k, v], i) => {
                                 const barH = Math.max(3, (v.sum / maxMonth) * chartH);
                                 const cx = padL + i * slot + slot / 2;
@@ -19377,7 +19380,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div key={uid} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < topUsers.length - 1 ? `1px solid ${G.gris}` : "none" }}>
                           <div style={{ width: 26, height: 26, borderRadius: "50%", background: i === 0 ? "#FFD700" : i === 1 ? "#C0C0C0" : i === 2 ? "#CD7F32" : G.creme, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.72rem", color: i < 3 ? "#333" : "#888", flexShrink: 0 }}>{i + 1}</div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[uid] || "Utilisateur"}</div>
+                            <div style={{ fontWeight: 700, fontSize: "0.82rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[uid] || "Utilisateur"}</div>
                             <div style={{ fontSize: "0.68rem", color: "#999" }}>{v.count} achat{v.count > 1 ? "s" : ""}</div>
                           </div>
                           <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "#8e44ad", flexShrink: 0 }}>{formatMoney(v.sum, cur)}</div>
@@ -19396,7 +19399,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div key={k} style={{ background: G.blanc, borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
                           <div onClick={() => setFinanceOpenMonth(financeOpenMonth === k ? "" : k)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a", textTransform: "capitalize" }}>{fmtMonth(k)}</div>
+                              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, textTransform: "capitalize" }}>{fmtMonth(k)}</div>
                               <div style={{ fontSize: "0.7rem", color: "#999" }}>{v.count} paiement{v.count > 1 ? "s" : ""}{v.items.length > v.count ? ` · ${v.items.length - v.count} exclu${v.items.length - v.count > 1 ? "s" : ""}` : ""}</div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -19497,7 +19500,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "logs" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Historique des actions</div>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Historique des actions</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
               {!logSelectMode && <Btn variant="ghost" onClick={loadAdminLogs} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>}
               {auth.userId === SUPER_ADMIN_ID && adminLogs.length > 0 && !logSelectMode && (
@@ -19558,7 +19561,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     {employees.map(([name, stats]) => (
                       <div key={name} style={{ background: G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                          <span style={{ fontWeight: 800, fontSize: "0.86rem", color: "#1a1a1a" }}>{name}</span>
+                          <span style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun }}>{name}</span>
                           <span style={{ background: "rgba(142,68,173,0.1)", color: "#8e44ad", borderRadius: 50, padding: "2px 10px", fontSize: "0.74rem", fontWeight: 800 }}>{stats.total} action{stats.total > 1 ? "s" : ""}</span>
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -19593,7 +19596,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 3 }}>
-                      <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#1a1a1a" }}>{log.admin_name}</span>
+                      <span style={{ fontWeight: 700, fontSize: "0.82rem", color: G.brun }}>{log.admin_name}</span>
                       <span style={{ fontSize: "0.68rem", color: "#aaa" }}>{new Date(log.created_at).toLocaleString("fr-FR")}</span>
                     </div>
                     <div style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.4 }}>{log.action}</div>
@@ -19754,13 +19757,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         )}
 
                         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                          <button onClick={() => setMmView(s.man)} style={{ flex: "1 1 auto", border: `1px solid ${G.gris}`, background: "#fff", color: "#555", borderRadius: 9, padding: "9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Voir profil homme</button>
-                          <button onClick={() => setMmView(s.woman)} style={{ flex: "1 1 auto", border: `1px solid ${G.gris}`, background: "#fff", color: "#555", borderRadius: 9, padding: "9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Voir profil femme</button>
+                          <button onClick={() => setMmView(s.man)} style={{ flex: "1 1 auto", border: `1px solid ${G.gris}`, background: G.blanc, color: "#555", borderRadius: 9, padding: "9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Voir profil homme</button>
+                          <button onClick={() => setMmView(s.woman)} style={{ flex: "1 1 auto", border: `1px solid ${G.gris}`, background: G.blanc, color: "#555", borderRadius: 9, padding: "9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Voir profil femme</button>
                           {mmArchived.has(s.key)
-                            ? <button onClick={() => mmUnarchive(s.key)} style={{ flex: "0 0 auto", border: `1px solid #7c3aed`, background: "#fff", color: "#7c3aed", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>↩ Désarchiver</button>
-                            : <button onClick={() => mmArchive(s.key)} style={{ flex: "0 0 auto", border: `1px solid ${G.gris}`, background: "#fff", color: "#888", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>📦 Archiver</button>}
+                            ? <button onClick={() => mmUnarchive(s.key)} style={{ flex: "0 0 auto", border: `1px solid #7c3aed`, background: G.blanc, color: "#7c3aed", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>↩ Désarchiver</button>
+                            : <button onClick={() => mmArchive(s.key)} style={{ flex: "0 0 auto", border: `1px solid ${G.gris}`, background: G.blanc, color: "#888", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>📦 Archiver</button>}
                           <button onClick={() => mmProposeCouple(s)} style={{ flex: "1 1 auto", background: mmProposedKeys.has(s.key) ? "#27ae60" : "#7c3aed", color: "#fff", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>{mmProposedKeys.has(s.key) ? "✓ Proposé (reproposer)" : "❤ Proposer ce couple"}</button>
-                          <button onClick={() => generateFiche(s)} style={{ flex: "1 1 100%", background: "#fff", color: G.rouge, border: `1.5px solid ${G.rouge}`, borderRadius: 9, padding: "10px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                          <button onClick={() => generateFiche(s)} style={{ flex: "1 1 100%", background: G.blanc, color: G.rouge, border: `1.5px solid ${G.rouge}`, borderRadius: 9, padding: "10px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                             Générer la fiche de compatibilité relationnelle
                           </button>
@@ -19796,7 +19799,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* Modal profil rapide */}
               {mmView && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setMmView(null)}>
-                  <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+                  <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
                     <div style={{ padding: 18, display: "flex", gap: 12, alignItems: "center", borderBottom: `1px solid ${G.gris}` }}>
                       <Avatar url={mmView.photo_url} gender={mmView.gender} size={56} />
                       <div><div style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 800, color: G.brun }}>{mmView.name}{mmView.is_verified && <VerifiedBadge size={14} />}</div><div style={{ fontSize: "0.78rem", color: "#888" }}>{mmView.gender} · {mmView.age} ans · {mmView.city}</div></div>
@@ -20342,6 +20345,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 export default function App() {
   const [page, setPage] = useState("landing");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("moyo_dark") === "1");
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    if (!document.getElementById("moyo-theme-vars")) {
+      const s = document.createElement("style");
+      s.id = "moyo-theme-vars";
+      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
+      document.head.appendChild(s);
+    }
+  }, [darkMode]);
   const [tab, setTab] = useState("discover");
   const [auth, setAuth] = useState<Auth | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -21214,31 +21226,7 @@ export default function App() {
   if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
   if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
-  return <div style={darkMode ? { filter: "invert(100%) hue-rotate(180deg)", minHeight: "100vh", background: "#fff" } : {}}>
-    {darkMode && <style>{`
-      img, video, [style*="background-image"], [style*="url("] { filter: hue-rotate(180deg) invert(100%) !important; }
-      .no-invert { filter: hue-rotate(180deg) invert(100%) !important; }
-      /* Dans un îlot non-inversé (viewer Statuts...), les descendants ne sont pas re-filtrés */
-      .no-invert [style], .no-invert img, .no-invert video, .no-invert svg { filter: none !important; }
-      /* ── Couleurs de marque INCHANGÉES en mode sombre (rouge, doré, vert, orange, violet) ── */
-      /* Rouge Moyo #C0392B */
-      [style*="#C0392B"], [style*="rgb(192, 57, 43)"], [style*="rgb(192,57,43)"],
-      /* Rouge foncé #922B21 */
-      [style*="#922B21"], [style*="rgb(146, 43, 33)"], [style*="rgb(146,43,33)"],
-      /* Doré Moyo #D4A843 + #B8860B */
-      [style*="#D4A843"], [style*="rgb(212, 168, 67)"], [style*="rgb(212,168,67)"], [style*="#B8860B"], [style*="rgb(184, 134, 11)"],
-      /* Vert Moyo #1A5C3A */
-      [style*="#1A5C3A"], [style*="rgb(26, 92, 58)"], [style*="rgb(26,92,58)"],
-      /* Orange marketing #E67E22 */
-      [style*="#E67E22"], [style*="rgb(230, 126, 34)"], [style*="rgb(230,126,34)"],
-      /* Violet matchmaking #7c3aed / #8e44ad */
-      [style*="#7c3aed"], [style*="#7C3AED"], [style*="rgb(124, 58, 237)"], [style*="#8e44ad"], [style*="#8E44AD"], [style*="rgb(142, 68, 173)"] {
-        filter: hue-rotate(180deg) invert(100%) !important;
-      }
-      /* Les médias à l'intérieur d'un bloc de marque ne doivent pas être ré-inversés deux fois */
-      [style*="#C0392B"] img, [style*="rgb(192, 57, 43)"] img, [style*="#922B21"] img,
-      [style*="#D4A843"] img, [style*="#1A5C3A"] img, [style*="#E67E22"] img, [style*="#7c3aed"] img, [style*="#8e44ad"] img { filter: none !important; }
-    `}</style>}
+  return <div data-theme={darkMode ? "dark" : undefined}>
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);
       if (t === "messages") { setUnreadCount(0); try { localStorage.setItem(`moyo_messages_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
@@ -21268,7 +21256,7 @@ export default function App() {
           <div style={{ position: "relative", width: 72, height: 72, margin: "0 auto 16px", borderRadius: "50%", background: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 18px rgba(0,0,0,0.15)" }}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D4A843" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg>
           </div>
-          <div style={{ fontWeight: 900, fontSize: "1.25rem", color: "#1a1a1a", marginBottom: 8 }}>Paiement réussi 🎉</div>
+          <div style={{ fontWeight: 900, fontSize: "1.25rem", color: G.brun, marginBottom: 8 }}>Paiement réussi 🎉</div>
           <div style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.55, marginBottom: 22 }}>
             Ton abonnement <strong style={{ color: "#B8860B" }}>Premium</strong> est désormais actif ! Tu peux profiter des likes et messages illimités, voir qui t'a liké, et bien plus encore.
           </div>
@@ -21337,7 +21325,7 @@ export default function App() {
               <div style={{ height: 6, background: "#eee", borderRadius: 5, overflow: "hidden" }}><div style={{ width: `${progress}%`, height: "100%", background: "#2980b9", transition: "width 0.3s ease" }} /></div>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "8px 22px 16px" }}>
-              <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1a1a1a", marginBottom: 6 }}>{q.text}</div>
+              <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 6 }}>{q.text}</div>
               <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 16 }}>{q.type === "multi" ? "Plusieurs réponses possibles" : q.type === "text" ? "Votre réponse" : "Une seule réponse"}</div>
               {q.type === "text" ? (
                 <textarea value={sel[0] || ""} onChange={e => setSurveyAnswers(prev => ({ ...prev, [q.id]: e.target.value.trim() ? [e.target.value] : [] }))} rows={5} placeholder="Écrivez votre réponse ici…" style={{ width: "100%", padding: "14px 16px", borderRadius: 14, border: `2px solid ${G.gris}`, fontSize: "0.9rem", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
@@ -21381,7 +21369,7 @@ export default function App() {
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(150,150,150,0.7)" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               }
             </div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>{pendingProposal.proposerName}</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>{pendingProposal.proposerName}</div>
             {pendingProposal.proposerAge ? <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 4 }}>{pendingProposal.proposerAge} ans</div> : null}
           </div>
           <div style={{ padding: "12px 20px 24px" }}>
@@ -21410,7 +21398,7 @@ export default function App() {
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               }
             </div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>{pendingProposal.proposerName}</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>{pendingProposal.proposerName}</div>
             {(pendingProposal.proposerAge || pendingProposal.proposerCity) && (
               <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 4 }}>
                 {pendingProposal.proposerAge ? `${pendingProposal.proposerAge} ans` : ""}{pendingProposal.proposerAge && pendingProposal.proposerCity ? " · " : ""}{pendingProposal.proposerCity || ""}
@@ -21503,7 +21491,7 @@ export default function App() {
               <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
                 <div onClick={e => e.stopPropagation()} style={{ width: "min(97vw, 1340px)", height: "min(94vh, 980px)", background: G.blanc, borderRadius: 18, zIndex: 9999, boxShadow: "0 24px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 26px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>⚙️ Configuration</div>
+                    <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>⚙️ Configuration</div>
                     <button onClick={() => setShowAdminConfig(false)} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
@@ -21523,7 +21511,7 @@ export default function App() {
           {showAdminConfig && <div onClick={() => setShowAdminConfig(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
           <div style={{ position: "fixed", top: 0, right: showAdminConfig ? 0 : "-110vw", width: "min(95vw, 480px)", height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#1a1a1a" }}>Configuration</div>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Configuration</div>
               <button onClick={() => setShowAdminConfig(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
