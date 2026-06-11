@@ -8600,12 +8600,9 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     setMsgs(visible);
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     setMsgCount(visible.filter(m => m.sender_id === auth.userId && (m.created_at || "") >= since24h).length);
-    // Marquer comme lu ET livré
-    await sb.markMessagesRead(auth.token, conv.id, auth.userId);
-    // Recharger après marquage lu
-    const res2 = await sb.query<Message>(auth.token, "messages", `?match_id=eq.${conv.id}&order=created_at.asc`);
-    setMsgs(res2.filter(m => !((m as any).deleted_for || []).includes(auth.userId)));
-    loadConvs();
+    // Marquer comme lu en arrière-plan, puis rafraîchir la liste (badges non lus).
+    // On ne refait PAS de setMsgs ici : évite le double rendu (scintillement) et la latence à l'ouverture.
+    sb.markMessagesRead(auth.token, conv.id, auth.userId).then(() => loadConvs()).catch(() => {});
   };
 
   const deleteConv = async () => {
