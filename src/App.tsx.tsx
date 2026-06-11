@@ -1250,8 +1250,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
   // ════════ ÉCRAN 1 : OFFRE ════════
   if (step === "offer") return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 14, overscrollBehavior: "contain", touchAction: "none" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#FCFBF8", borderRadius: 24, width: "100%", maxWidth: 400, maxHeight: "96vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "18px 20px 16px" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "18px 20px 16px" }}>
         <div onClick={onClose} style={{ position: "absolute", top: 16, right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </div>
@@ -3851,11 +3851,8 @@ function AdminDesktopPage() {
         /* Header mobile de Admin caché - remplacé par la topbar ci-dessus */
         .adm-wrap [data-admhdr] { display: none !important; }
 
-        /* Sur desktop, les onglets sticky se collent sous la topbar (60px) */
-        @media (min-width: 900px) {
-          .adm-wrap [data-admhdr] + div,
-          .adm-wrap [data-admtabs] { top: 0 !important; }
-        }
+        /* Le bandeau d'onglets reste fixe, collé juste sous la topbar desktop (60px) */
+        .adm-wrap [data-admtabs] { position: sticky !important; top: 60px !important; z-index: 150 !important; }
 
         /* Stats grille principale : 4 colonnes */
         @media (min-width: 900px) {
@@ -16786,7 +16783,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
 
       {/* Header */}
-      <div style={{ background: G.blanc, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
+      <div data-admtabs="" style={{ background: G.blanc, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         {/* Ligne titre - cachée sur desktop (remplacée par la topbar) */}
         <div data-admhdr="" style={{ padding: "14px 16px 0 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
           <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><IcoArrowLeft /></div>
