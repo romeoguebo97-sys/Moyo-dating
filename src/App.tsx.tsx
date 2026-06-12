@@ -1633,7 +1633,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     ]},
     { id: "services", title: "Nos services", emoji: "🌟", items: [
       { icon: "hearts", titre: "Rencontres en ligne", desc: "Trouve ton âme sœur parmi des profils vérifiés.", badge: "Gratuit" },
-      { icon: "star2", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké.", badge: `${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois` },
+      { icon: "star2", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké.", badge: `Dès ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA` },
       { icon: "ring", titre: "Accompagnement mariage", desc: "Nous t'accompagnons dans l'organisation de ta cérémonie congolaise.", badge: "Sur demande" },
       { icon: "vip", titre: "Mise en relation VIP", desc: "Service personnalisé et discret dans ta recherche de l'âme sœur.", badge: "Premium" },
     ]},
@@ -1649,7 +1649,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 { icon: "thumbup", titre: "Patrick - Pointe-Noire", desc: "Simple, propre, efficace. Exactement ce qu'il fallait pour la diaspora congolaise." },
     ]},
     { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
-      { icon: "Q", titre: "Moyo est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium à ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois.` },
+      { icon: "Q", titre: "Moyo est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium en 3 formules : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA (1 sem.), ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA (1 mois) ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA (2 mois).` },
       { icon: "Q", titre: "Comment naviguer entre les profils ?", desc: "3 modes disponibles : Vue carte (swipe gauche/droite ou boutons ←→), Vue liste (défilement vertical), Plein écran (immersion totale, footer masqué). Passez d'un mode à l'autre via les boutons en haut de l'écran Découvrir." },
       { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
       { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: `${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché.` },
@@ -3339,10 +3339,10 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
 // ── FAQ pour le bot ──
 const BOT_FAQ = [
-  { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium coûte ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA/mois. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money ou Airtel Money. Activation sous 15 minutes.` },
+  { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium est disponible en 3 formules : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA pour 1 semaine, ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA pour 1 mois, ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA pour 2 mois (la formule 2 mois est la plus avantageuse). Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money, Airtel Money ou carte Visa/Mastercard. Activation sous 15 minutes.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: "Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez automatiquement 7 jours Premium offerts. Pas de limite !" },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
-  { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo propose un service de mise en relation personnalisé réservé aux membres Premium. Depuis votre page Profil, appuyez sur le bouton rouge 'Demander une mise en relation', précisez vos critères (genre recherché, ville, tranche d'âge) et ajoutez un message optionnel. Notre équipe analyse votre demande et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
+  { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo propose un service de mise en relation personnalisé. Tout le monde peut créer et enregistrer sa carte relationnelle depuis la page Profil (bouton rouge 'Demander une mise en relation') en décrivant qui vous êtes et ce que vous recherchez. L'envoi de la demande à notre équipe est réservé aux membres Premium : au moment d'appuyer sur 'Envoyer ma demande', si vous n'êtes pas Premium, l'option de passer Premium s'affiche. Une fois la demande envoyée, notre équipe analyse votre profil et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
   { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand l'équipe Moyo vous propose une rencontre, un modal s'affiche automatiquement avec la photo, le nom, l'âge et la ville de la personne. Deux choix : 'Accepter' ou 'Refuser'. Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée pour les deux. La proposition expire si vous ne répondez pas dans le délai fixé par l'équipe." },
   { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: `Compte gratuit : ${FREE_LIMITS.likes} likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément.` },
   { q: ["message", "envoyer", "écrire", "conversation"], r: `Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message.` },
@@ -5131,7 +5131,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Le menu fonctionne sur chaque profil indépendamment en mode carte, liste et plein écran.",
             ]},
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
-            { title: "Mise en relation Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Ce service est réservé aux membres Premium. Notre équipe recherche personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : passez Premium → allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → précisez vos critères (genre recherché, ville, tranche d'âge) → ajoutez un message optionnel → envoyez.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
+            { title: "Mise en relation Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Tout le monde peut créer et enregistrer sa carte relationnelle (qui vous êtes, ce que vous recherchez). Notre équipe recherche ensuite personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → remplissez votre carte relationnelle et enregistrez → appuyez sur 'Envoyer ma demande'. L'envoi est réservé aux membres Premium : si vous ne l'êtes pas encore, l'option de passer Premium s'affiche à ce moment-là.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe.", "Partage de contacts : pour ta sécurité, le partage d'un numéro, d'un réseau social ou d'un lien n'est pas autorisé dans les messages ni dans ton profil (bio, nom…) en compte gratuit. Passe les premiers échanges sur Moyo ; l'abonnement Premium débloque le partage de coordonnées en conversation privée.", "Sanctions : en cas de non-respect des règles, un compte peut être averti, suspendu temporairement (avec un décompte avant reconnexion automatique) ou banni définitivement."] },
@@ -5169,7 +5169,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             ]},
             { title: "Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: [
               "Sur ordinateur et tablette, votre page Profil s'affiche en deux colonnes 50/50 : le menu à gauche, le contenu à droite. Cliquez sur un item du menu pour afficher son contenu à droite sans quitter la page.",
-              "Menu disponible : Mon profil, Modifier mon profil, Modifier ma photo, Premium, Demander une mise en relation (Premium - service de matchmaking personnalisé par l'équipe), Parrainer un ami, Vérification, Profil visible/invisible, Liste noire, Mode sombre, Noter l'application, Voir mon profil, Inviter un ami, Se déconnecter, Supprimer mon compte.",
+              "Menu disponible : Mon profil, Modifier mon profil, Modifier ma photo, Premium, Demander une mise en relation (création de la carte ouverte à tous, envoi réservé aux membres Premium), Parrainer un ami, Vérification, Profil visible/invisible, Liste noire, Mode sombre, Noter l'application, Voir mon profil, Inviter un ami, Se déconnecter, Supprimer mon compte.",
               "Sur mobile, tout s'affiche verticalement dans une seule colonne, comme avant.",
             ]},
             { title: "Likes", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: [
@@ -7353,8 +7353,14 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const loadMyRequests = async () => {
     setReqLoading(true);
     try {
-      const res = await sb.query<any>(auth.token, "match_requests", `?user_id=eq.${auth.userId}&order=created_at.desc`);
-      setMyRequests(Array.isArray(res) ? res : []);
+      const [res, boosts] = await Promise.all([
+        sb.query<any>(auth.token, "match_requests", `?user_id=eq.${auth.userId}&order=created_at.desc`).catch(() => [] as any[]),
+        sb.query<any>(auth.token, "feature_requests", `?user_id=eq.${auth.userId}&order=created_at.desc`).catch(() => [] as any[]),
+      ]);
+      const matchItems = (Array.isArray(res) ? res : []).map((r: any) => ({ ...r, _kind: "match" }));
+      const boostItems = (Array.isArray(boosts) ? boosts : []).map((b: any) => ({ ...b, _kind: "boost" }));
+      const merged = [...matchItems, ...boostItems].sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+      setMyRequests(merged);
     } catch { setMyRequests([]); }
     setReqLoading(false);
   };
@@ -7539,6 +7545,27 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     ) : (
       <div>
         {myRequests.map(rq => {
+          if (rq._kind === "boost") {
+            const bs = rq.status || "en_attente";
+            const bCfg = (bs === "approved" || bs === "active" || bs === "done" || bs === "accepted" || bs === "validee" || bs === "validée")
+              ? { label: "Mise en avant active", color: G.vert, bg: "rgba(26,92,58,0.1)" }
+              : (bs === "rejected" || bs === "refused" || bs === "expired" || bs === "closed" || bs === "refusee" || bs === "refusée")
+              ? { label: "Clôturée", color: "#888", bg: "#F0F0F0" }
+              : { label: "En attente de validation", color: "#B8860B", bg: "rgba(212,168,67,0.14)" };
+            return (
+              <div key={`boost-${rq.id}`} style={{ background: G.blanc, borderRadius: 16, padding: 14, marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun, display: "flex", alignItems: "center", gap: 6 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                    Mise en avant — Statut Moyo
+                  </span>
+                  <Badge label={bCfg.label} color={bCfg.color} bg={bCfg.bg} />
+                </div>
+                <div style={{ fontSize: "0.78rem", color: G.brunLight, lineHeight: 1.5 }}>Boost de visibilité de votre profil pendant 24h auprès de la communauté Moyo.</div>
+                {rq.created_at && <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 8 }}>Envoyée le {new Date(rq.created_at).toLocaleDateString("fr-FR")}</div>}
+              </div>
+            );
+          }
           const s = rq.status || "pending";
           const stCfg = s === "completed" || s === "matched" || s === "done"
             ? { label: "Proposition envoyée", color: G.vert, bg: "rgba(26,92,58,0.1)" }
@@ -10535,6 +10562,186 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   );
 }
 
+function RelationalProfilesCard({ auth }: { auth: Auth }) {
+  const [list, setList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [view, setView] = useState<any>(null);
+  const [tab, setTab] = useState<"with" | "without">("with");
+  const [counts, setCounts] = useState<{ total: number; withRel: number } | null>(null);
+  const [nudgeOn, setNudgeOn] = useState(false);
+  const [nudgeBusy, setNudgeBusy] = useState(false);
+  const H: Record<string, string> = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+  const countOf = async (extra: string) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id${extra}`, { headers: { ...H, "Prefer": "count=exact", "Range": "0-0" } });
+      const t = parseInt(((r.headers.get("content-range") || "").split("/")[1]) || "");
+      return isNaN(t) ? 0 : t;
+    } catch { return 0; }
+  };
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [withList, total, withRel, nudge] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?relational_profile=not.is.null&select=id,name,age,city,gender,photo_url,is_premium,relational_profile&order=name.asc&limit=300`, { headers: H }).then(r => r.json()).catch(() => []),
+        countOf(""),
+        countOf("&relational_profile=not.is.null"),
+        fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.relational_nudge&select=value`, { headers: H }).then(r => r.json()).catch(() => []),
+      ]);
+      setList(Array.isArray(withList) ? withList : []);
+      setCounts({ total, withRel });
+      setNudgeOn(Array.isArray(nudge) && nudge[0]?.value === "true");
+    } catch { setList([]); }
+    setLoading(false); setLoaded(true);
+  };
+  const toggleNudge = async () => {
+    setNudgeBusy(true);
+    const next = !nudgeOn;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "relational_nudge", value: next ? "true" : "false" }) });
+      setNudgeOn(next);
+    } catch {}
+    setNudgeBusy(false);
+  };
+  const arr = (v: any) => Array.isArray(v) ? v.filter(Boolean) : [];
+  const withoutCount = counts ? Math.max(0, counts.total - counts.withRel) : 0;
+  return (
+    <div style={{ background: G.blanc, borderRadius: 16, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun }}>Profils relationnels</div>
+            <div style={{ fontSize: "0.78rem", color: "#888" }}>{loaded ? "Vivier pour le matchmaking" : "Voir qui a rempli sa carte relationnelle"}</div>
+          </div>
+        </div>
+        <button onClick={load} disabled={loading} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "9px 15px", fontSize: "0.78rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer" }}>{loading ? "Chargement…" : loaded ? "Actualiser" : "Charger"}</button>
+      </div>
+
+      {loaded && counts && (
+        <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+          {([["Avec carte", counts.withRel, G.vert], ["Sans carte", withoutCount, "#e67e22"], ["Total membres", counts.total, "#7c3aed"]] as [string, number, string][]).map(([l, n, c]) => (
+            <div key={l} style={{ flex: "1 1 110px", background: G.creme, borderRadius: 12, padding: "12px 14px", borderLeft: `3px solid ${c}` }}>
+              <div style={{ fontSize: "1.4rem", fontWeight: 900, color: c }}>{n.toLocaleString("fr-FR")}</div>
+              <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 600 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {loaded && counts && (
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          {([["with", "Avec carte"], ["without", "Sans carte"]] as [string, string][]).map(([k, l]) => (
+            <button key={k} onClick={() => setTab(k as "with" | "without")} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${tab === k ? G.rouge : G.gris}`, background: tab === k ? "rgba(192,57,43,0.08)" : G.blanc, color: tab === k ? G.rouge : "#888", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>{l}</button>
+          ))}
+        </div>
+      )}
+
+      {tab === "without" && loaded && (
+        <div style={{ marginTop: 14, background: G.creme, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: "0.9rem", color: G.brun, fontWeight: 800, marginBottom: 4 }}>{withoutCount.toLocaleString("fr-FR")} membre{withoutCount > 1 ? "s" : ""} sans carte relationnelle</div>
+          <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.55, marginBottom: 12 }}>Activez l'invitation : à leur prochaine ouverture de l'app, ces membres verront un message les incitant à remplir leur carte, avec deux boutons « Remplir maintenant » et « Plus tard ».</div>
+          <button onClick={toggleNudge} disabled={nudgeBusy} style={{ width: "100%", background: nudgeOn ? G.vert : G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "12px", fontSize: "0.83rem", fontWeight: 800, cursor: nudgeBusy ? "not-allowed" : "pointer" }}>{nudgeBusy ? "…" : nudgeOn ? "✓ Invitation active — Appuyez pour désactiver" : "Activer l'invitation"}</button>
+        </div>
+      )}
+
+      {tab === "with" && loaded && list.length === 0 && !loading && <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 14, textAlign: "center", padding: "10px 0" }}>Aucun profil relationnel pour le moment.</div>}
+
+      {tab === "with" && list.length > 0 && (
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 10 }}>
+          {list.map(u => (
+            <div key={u.id} style={{ border: `1px solid ${G.gris}`, borderRadius: 12, padding: 10, display: "flex", alignItems: "center", gap: 10 }}>
+              <Avatar url={u.photo_url} gender={u.gender} size={40} premium={u.is_premium} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.name}{u.age ? `, ${u.age}` : ""}</div>
+                <div style={{ fontSize: "0.72rem", color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{[u.gender, u.city].filter(Boolean).join(" · ") || "—"}</div>
+              </div>
+              <button onClick={() => setView(u)} style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, border: `1px solid ${G.rouge}`, borderRadius: 8, padding: "6px 10px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Voir</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view && (() => {
+        const rp = view.relational_profile || {};
+        const self = rp.self || rp; const search = rp.search || rp;
+        const rows: [string, string][] = [];
+        if (self.project || rp.project) rows.push(["Projet de vie", self.project || rp.project]);
+        if (self.religion || rp.religion) rows.push(["Religion", self.religion || rp.religion]);
+        if (self.wants_children) rows.push(["Veut des enfants", self.wants_children]);
+        if (arr(self.values || rp.qualities).length) rows.push(["Valeurs / qualités", arr(self.values || rp.qualities).join(", ")]);
+        if (arr(self.interests || rp.interests).length) rows.push(["Centres d'intérêt", arr(self.interests || rp.interests).join(", ")]);
+        if (arr(self.lifestyle).length) rows.push(["Style de vie", arr(self.lifestyle).join(", ")]);
+        const srows: [string, string][] = [];
+        if (search.gender) srows.push(["Genre recherché", search.gender]);
+        if (search.city || rp.city) srows.push(["Ville", search.city || rp.city]);
+        if ((search.age_min ?? rp.age_min) || (search.age_max ?? rp.age_max)) srows.push(["Âge", `${search.age_min ?? rp.age_min ?? "?"} – ${search.age_max ?? rp.age_max ?? "?"} ans`]);
+        if (search.religion) srows.push(["Religion souhaitée", search.religion]);
+        if (arr(search.values).length) srows.push(["Valeurs recherchées", arr(search.values).join(", ")]);
+        if (arr(search.interests).length) srows.push(["Intérêts recherchés", arr(search.interests).join(", ")]);
+        return (
+          <div onClick={() => setView(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+              <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "18px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+                <Avatar url={view.photo_url} gender={view.gender} size={46} premium={view.is_premium} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#fff" }}>{view.name}{view.age ? `, ${view.age} ans` : ""}</div>
+                  <div style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.85)" }}>{[view.gender, view.city].filter(Boolean).join(" · ") || "—"}</div>
+                </div>
+                <button onClick={() => setView(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff", flexShrink: 0, fontSize: "1rem" }}>✕</button>
+              </div>
+              <div style={{ padding: "16px 20px 22px" }}>
+                <div style={{ fontWeight: 800, fontSize: "0.82rem", color: G.rouge, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>Qui je suis</div>
+                {rows.length ? rows.map(([k, v]) => <div key={k} style={{ fontSize: "0.83rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 3 }}>{k} : <b style={{ color: G.brun }}>{v}</b></div>) : <div style={{ fontSize: "0.8rem", color: "#999" }}>Non renseigné</div>}
+                <div style={{ fontWeight: 800, fontSize: "0.82rem", color: G.rouge, margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>Ce que je recherche</div>
+                {srows.length ? srows.map(([k, v]) => <div key={k} style={{ fontSize: "0.83rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 3 }}>{k} : <b style={{ color: G.brun }}>{v}</b></div>) : <div style={{ fontSize: "0.8rem", color: "#999" }}>Non renseigné</div>}
+                {rp.note && <><div style={{ fontWeight: 800, fontSize: "0.82rem", color: G.rouge, margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>Note</div><div style={{ fontSize: "0.83rem", color: G.brun, lineHeight: 1.6, fontStyle: "italic" }}>{rp.note}</div></>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+function RelationalNudge({ auth, onGoProfile }: { auth: Auth; onGoProfile: () => void }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (sessionStorage.getItem("moyo_rel_nudge_dismissed") === "1") return;
+        const H: Record<string, string> = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+        const [sd, pd] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.relational_nudge&select=value`, { headers: H }).then(r => r.json()).catch(() => []),
+          fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=relational_profile&limit=1`, { headers: H }).then(r => r.json()).catch(() => []),
+        ]);
+        const on = Array.isArray(sd) && sd[0]?.value === "true";
+        const hasProfile = Array.isArray(pd) && pd[0] && pd[0].relational_profile;
+        if (!cancelled && on && !hasProfile) setShow(true);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  if (!show) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10050, display: "flex", alignItems: "center", justifyContent: "center", padding: 22 }}>
+      <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "26px 22px 20px", textAlign: "center" }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <div style={{ fontWeight: 800, fontSize: "1.15rem", color: "#fff" }}>Trouvez votre âme sœur 💛</div>
+        </div>
+        <div style={{ padding: "20px 22px 24px", textAlign: "center" }}>
+          <p style={{ fontSize: "0.9rem", color: G.brun, lineHeight: 1.6, marginBottom: 20 }}>Remplissez votre <b>profil relationnel</b> pour que notre équipe vous propose des profils vraiment compatibles. Ça ne prend qu'une minute !</p>
+          <button onClick={() => { try { sessionStorage.setItem("moyo_open_rel_wizard", "1"); } catch {} setShow(false); onGoProfile(); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: "pointer", marginBottom: 10 }}>Remplir mon profil relationnel maintenant</button>
+          <button onClick={() => { try { sessionStorage.setItem("moyo_rel_nudge_dismissed", "1"); } catch {} setShow(false); }} style={{ width: "100%", background: "transparent", color: "#888", border: "none", borderRadius: 50, padding: "8px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Plus tard</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FeatureRequestButton({ auth }: { auth: Auth }) {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -10656,6 +10863,14 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
   const [showRelPrompt, setShowRelPrompt] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [wStep, setWStep] = useState(1);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("moyo_open_rel_wizard") === "1") {
+        sessionStorage.removeItem("moyo_open_rel_wizard");
+        setShowWizard(true); setWStep(1);
+      }
+    } catch {}
+  }, []);
   const [savingRel, setSavingRel] = useState(false);
   const [rel, setRel] = useState({
     // Bloc « Qui je suis »
@@ -12184,7 +12399,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111" }}>Modifier mon mot de passe</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Modifier mon mot de passe</div>
               <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Changer ton mot de passe de connexion</div>
             </div>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -16522,6 +16737,28 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              {/* Section Matchs */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Matchs</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  {([
+                    ["Demandes de mise en relation", "Liste des demandes envoyées par les membres (genre, ville, âge recherchés). La création de la carte relationnelle est ouverte à tous ; l'envoi de la demande est réservé aux membres Premium."],
+                    ["Matchmaking intelligent", "Suggestions de couples générées automatiquement selon les critères et la compatibilité. Filtres pour exclure refus, matchs existants, comptes signalés/bannis, etc."],
+                    ["Profils relationnels créés", "Carte en haut du Matchmaking : compteur (membres ayant rempli leur carte sur le total) et liste consultable. Bouton 'Voir' pour afficher la fiche détaillée (Qui je suis / Ce que je recherche / Note) de chaque membre."],
+                    ["Inviter à remplir la carte", "Depuis la carte, filtrez les membres SANS profil relationnel et activez l'invitation : ils verront un message les incitant à remplir leur carte ('Remplir maintenant' / 'Plus tard') à leur prochaine ouverture de l'app."],
+                    ["Créer / Proposer un match", "Créez un match direct entre deux membres, ou proposez-leur une mise en relation qu'ils peuvent accepter ou refuser."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Section Messagerie */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -19711,6 +19948,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              <RelationalProfilesCard auth={auth} />
+
               <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
                 <div style={{ flex: "1 1 560px", minWidth: 0 }}>
                   {/* Filtres */}
@@ -21296,6 +21535,7 @@ export default function App() {
       {tab === "admin" && <AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
       </div>
     </AppShell>
+    {auth && <RelationalNudge auth={auth} onGoProfile={() => setTab("profile")} />}
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} />}
     {premiumSuccess && (
       <div onClick={() => setPremiumSuccess(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100000, padding: 20, backdropFilter: "blur(3px)" }}>
