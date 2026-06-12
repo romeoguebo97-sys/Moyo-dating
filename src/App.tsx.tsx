@@ -150,6 +150,19 @@ const STATUS_LIMIT = 2;
 const LIFETIME_PREMIUM_UNTIL = "2099-12-31T23:59:59.000Z";
 let PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000; // valeur par défaut, écrasée par app_settings
 let PREMIUM_PRICE_FCFA = 3500;
+let PREMIUM_PRICE_WEEK_FCFA = 1200;
+let PREMIUM_PRICE_2MONTH_FCFA = 5900;
+let PREMIUM_DAYS_WEEK = 7;
+let PREMIUM_DAYS_2MONTH = 62;
+// Déduit la durée (en jours) du Premium à partir du montant payé, selon la formule choisie.
+// Le mois (et tout montant non reconnu : Stripe, cadeau…) retombe sur premium_duration_days.
+function premiumDaysForAmount(amount: number): number {
+  const monthDays = Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31;
+  if (amount === PREMIUM_PRICE_WEEK_FCFA) return PREMIUM_DAYS_WEEK;
+  if (amount === PREMIUM_PRICE_2MONTH_FCFA) return PREMIUM_DAYS_2MONTH;
+  return monthDays;
+}
+function premiumMsForAmount(amount: number): number { return premiumDaysForAmount(amount) * 86400000; }
 let PREMIUM_PRICE_EUR = 10;
 let EUR_TO_FCFA = 655.957; // taux de conversion EUR→FCFA (configurable dans Tarifs & Paiements)
 // Devises : Mobile Money = FCFA (XAF), Carte/Stripe = EUR. Helpers de classification et d'affichage.
@@ -218,7 +231,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -260,6 +273,10 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["limit_status_boosts"]) FREE_LIMITS.statusBoosts = parseInt(map["limit_status_boosts"]) || 2;
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
   if (map["premium_price_fcfa"]) PREMIUM_PRICE_FCFA = parseInt(map["premium_price_fcfa"]) || 3500;
+  if (map["premium_price_week_fcfa"]) PREMIUM_PRICE_WEEK_FCFA = parseInt(map["premium_price_week_fcfa"]) || 1200;
+  if (map["premium_price_2month_fcfa"]) PREMIUM_PRICE_2MONTH_FCFA = parseInt(map["premium_price_2month_fcfa"]) || 5900;
+  if (map["premium_days_week"]) PREMIUM_DAYS_WEEK = parseInt(map["premium_days_week"]) || 7;
+  if (map["premium_days_2month"]) PREMIUM_DAYS_2MONTH = parseInt(map["premium_days_2month"]) || 62;
   if (map["premium_price_eur"]) PREMIUM_PRICE_EUR = parseFloat(map["premium_price_eur"]) || 10;
   if (map["eur_to_fcfa_rate"]) EUR_TO_FCFA = parseFloat(map["eur_to_fcfa_rate"]) || 655.957;
   if (map["poll_badges_ms"]) POLL_BADGES_MS = parseInt(map["poll_badges_ms"]) || 8000;
@@ -1161,6 +1178,14 @@ const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, pr
 
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel">("offer");
+  const PREMIUM_PLANS = [
+    { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA, days: PREMIUM_DAYS_WEEK },
+    { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: true },
+    { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, days: PREMIUM_DAYS_2MONTH },
+  ];
+  const [planId, setPlanId] = useState("1mois");
+  const selectedPlan = PREMIUM_PLANS.find(p => p.id === planId) || PREMIUM_PLANS[1];
+  const planAmount = selectedPlan.amount;
   const [txRef, setTxRef] = useState("");
   const [txSent, setTxSent] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
@@ -1267,11 +1292,6 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
         </div>
         <div style={{ textAlign: "center", fontSize: "1.1rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.18, marginBottom: 6, padding: "0 6px" }}>{title}</div>
         <div style={{ textAlign: "center", fontSize: "0.84rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 10, padding: "0 10px" }}>Cette fonctionnalité est réservée aux membres Premium.</div>
-        <div style={{ textAlign: "center", marginBottom: 12 }}>
-          <span style={{ fontSize: "1.9rem", fontWeight: 800, color: gold }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")}</span>
-          <span style={{ fontSize: "1rem", fontWeight: 800, color: gold, marginLeft: 6 }}>FCFA</span>
-          <span style={{ fontSize: "0.9rem", color: "#9a9a9a", marginLeft: 6 }}>/ mois</span>
-        </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
           <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
@@ -1299,6 +1319,21 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAllAdv ? "rotate(-90deg)" : "rotate(0)" }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
         </div>
+        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 9 }}>CHOISISSEZ VOTRE FORMULE</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          {PREMIUM_PLANS.map(pl => {
+            const sel = pl.id === planId;
+            return (
+              <div key={pl.id} onClick={() => setPlanId(pl.id)} style={{ flex: 1, position: "relative", cursor: "pointer", background: sel ? "#FBF1D8" : G.blanc, border: `2px solid ${sel ? gold : "#ece9e2"}`, borderRadius: 14, padding: "14px 6px 11px", textAlign: "center", boxShadow: sel ? "0 4px 14px rgba(212,168,67,0.28)" : "0 1px 4px rgba(0,0,0,0.04)", transition: "all 0.15s" }}>
+                {pl.popular && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: gold, color: "#fff", fontSize: "0.55rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 9px", borderRadius: 50, whiteSpace: "nowrap", boxShadow: "0 2px 6px rgba(212,168,67,0.4)" }}>POPULAIRE</div>}
+                <div style={{ fontSize: "0.73rem", fontWeight: 700, color: sel ? "#7a5a10" : "#8a8a8a", marginBottom: 6 }}>{pl.label}</div>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: sel ? "#3a2e10" : "#1a1a2e", lineHeight: 1.05 }}>{pl.amount.toLocaleString("fr-FR")}</div>
+                <div style={{ fontSize: "0.6rem", fontWeight: 700, color: sel ? "#7a5a10" : "#9a9a9a", marginTop: 1 }}>FCFA</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#7a6a3a", fontWeight: 600, marginBottom: 14 }}>Formule sélectionnée : <span style={{ fontWeight: 800, color: "#3a2e10" }}>{selectedPlan.label}</span> — <span style={{ fontWeight: 800, color: gold }}>{planAmount.toLocaleString("fr-FR")} FCFA</span></div>
         <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>CONGO — PAYEZ AVEC</div>
         <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
           {mtnLogo(18)} MTN MoMo{!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
@@ -1329,13 +1364,13 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
   // ════════ ÉCRANS 2 & 3 : PAIEMENT (MTN / AIRTEL) ════════
   const OP = step === "mtn"
-    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}#`, placeholder: "Ex : 7753031542", operator: "MTN", tint: "#fff8e6", tintBorder: "rgba(245,166,35,0.4)", tintText: "#9a6a00", logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)" }
-    : { name: "Airtel Money", main: "#E40000", onColor: "#fff", numBg: "#E40000", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", tint: "#fff0f0", tintBorder: "rgba(228,0,0,0.3)", tintText: "#c0392b", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
+    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", tint: "#fff8e6", tintBorder: "rgba(245,166,35,0.4)", tintText: "#9a6a00", logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)" }
+    : { name: "Airtel Money", main: "#E40000", onColor: "#fff", numBg: "#E40000", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", tint: "#fff0f0", tintBorder: "rgba(228,0,0,0.3)", tintText: "#c0392b", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
   const tel = `tel:${OP.ussd.replace(/#/g, "%23")}`;
   const submit = async () => {
     setTxLoading(true);
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: txRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: txRef.trim(), amount: planAmount, status: "pending" }) });
       setTxSent(true);
     } catch { setTxSent(true); }
     setTxLoading(false);
@@ -1355,7 +1390,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, marginLeft: 4, fontSize: "0.82rem", color: OP.subColor, fontWeight: 600 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-            Paiement sécurisé • {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA / mois
+            Paiement sécurisé • {planAmount.toLocaleString("fr-FR")} FCFA / {selectedPlan.per}
           </div>
         </div>
 
@@ -1366,7 +1401,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <div style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.55, marginBottom: 16 }}>Votre paiement {OP.name} sera reçu et traité par notre responsable des finances.<br /><span style={{ fontWeight: 700, color: "#444" }}>{OP.responsable}</span></div>
             <a href={tel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", background: OP.main, color: OP.onColor, borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, textDecoration: "none", boxSizing: "border-box" as any }}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-              Appuyer pour payer - {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
+              Appuyer pour payer - {planAmount.toLocaleString("fr-FR")} FCFA
             </a>
             <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "12px", marginTop: 12, textAlign: "center" }}>
               <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>ou composez ce code depuis votre mobile</div>
@@ -3745,7 +3780,7 @@ function AdminDesktopPage() {
     premiumPriceEur: "10",
     eurToFcfaRate: "655.957",
     likesNotifDelayHours: "24",
-    premiumDurationDays: "31",
+    premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62",
     featureStatuses: "true",
     featureGiftPremium: "true",
     featureAssistant: "true",
@@ -3767,7 +3802,7 @@ function AdminDesktopPage() {
       "rule_block_same_gender_like",
       "modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises",
       "limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
-      "premium_price_fcfa","premium_duration_days",
+      "premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days",
       "feature_statuses","feature_gift_premium","feature_assistant",
       "maintenance_mode","maintenance_message",
       "custom_banned_words",
@@ -3798,7 +3833,7 @@ function AdminDesktopPage() {
         limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts,
         limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb,
         matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage,
-        premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa,
+        premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month,
         premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur,
         eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate,
         premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays,
@@ -4030,10 +4065,14 @@ function AdminDesktopPage() {
             </OffCanvasSection>}
             {configTab === "tarifs" && <OffCanvasSection title="Prix & Abonnement">
               {([
-                ["premium_price_fcfa", "premiumPriceFcfa" as keyof typeof appConfig, "Prix Premium (FCFA)", appConfig.premiumPriceFcfa],
+                ["premium_price_fcfa", "premiumPriceFcfa" as keyof typeof appConfig, "Prix 1 mois (FCFA)", appConfig.premiumPriceFcfa],
+                ["premium_price_week_fcfa", "premiumPriceWeekFcfa" as keyof typeof appConfig, "Prix 1 semaine (FCFA)", appConfig.premiumPriceWeekFcfa],
+                ["premium_price_2month_fcfa", "premiumPrice2monthFcfa" as keyof typeof appConfig, "Prix 2 mois (FCFA)", appConfig.premiumPrice2monthFcfa],
                 ["premium_price_eur", "premiumPriceEur" as keyof typeof appConfig, "Prix Premium Diaspora (€)", appConfig.premiumPriceEur],
                 ["eur_to_fcfa_rate", "eurToFcfaRate" as keyof typeof appConfig, "Taux 1 € en FCFA", appConfig.eurToFcfaRate],
-                ["premium_duration_days", "premiumDurationDays" as keyof typeof appConfig, "Durée abonnement (jours)", appConfig.premiumDurationDays],
+                ["premium_duration_days", "premiumDurationDays" as keyof typeof appConfig, "Durée 1 mois (jours)", appConfig.premiumDurationDays],
+                ["premium_days_week", "premiumDaysWeek" as keyof typeof appConfig, "Durée 1 semaine (jours)", appConfig.premiumDaysWeek],
+                ["premium_days_2month", "premiumDays2month" as keyof typeof appConfig, "Durée 2 mois (jours)", appConfig.premiumDays2month],
                 ["likes_notification_delay_hours", "likesNotifDelayHours" as keyof typeof appConfig, "Notif likes après (heures)", appConfig.likesNotifDelayHours],
               ] as [string, keyof typeof appConfig, string, string][]).map(([key, ck, label, value]) => (
                 <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} open={editingConfig === key} type="number"
@@ -4043,7 +4082,7 @@ function AdminDesktopPage() {
                     if (!auth) return;
                     await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
                     setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
-                    if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500;
+                    if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_price_week_fcfa") PREMIUM_PRICE_WEEK_FCFA = parseInt(editingConfigValue) || 1200; if (key === "premium_price_2month_fcfa") PREMIUM_PRICE_2MONTH_FCFA = parseInt(editingConfigValue) || 5900; if (key === "premium_days_week") PREMIUM_DAYS_WEEK = parseInt(editingConfigValue) || 7; if (key === "premium_days_2month") PREMIUM_DAYS_2MONTH = parseInt(editingConfigValue) || 62;
                     if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10;
                     if (key === "eur_to_fcfa_rate") EUR_TO_FCFA = parseFloat(editingConfigValue) || 655.957;
                     if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000;
@@ -4680,14 +4719,14 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -4695,7 +4734,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -4736,8 +4775,8 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Prix & Abonnement">
-        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix Premium (FCFA)",appConfig.premiumPriceFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["eur_to_fcfa_rate","eurToFcfaRate" as keyof typeof appConfig,"Taux 1 € en FCFA",appConfig.eurToFcfaRate],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée abonnement (jours)",appConfig.premiumDurationDays],["likes_notification_delay_hours","likesNotifDelayHours" as keyof typeof appConfig,"Notif likes après (heures)",appConfig.likesNotifDelayHours]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
-          <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10; if (key === "eur_to_fcfa_rate") EUR_TO_FCFA = parseFloat(editingConfigValue) || 655.957; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; setEditingConfig(null); }} />
+        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix 1 mois (FCFA)",appConfig.premiumPriceFcfa],["premium_price_week_fcfa","premiumPriceWeekFcfa" as keyof typeof appConfig,"Prix 1 semaine (FCFA)",appConfig.premiumPriceWeekFcfa],["premium_price_2month_fcfa","premiumPrice2monthFcfa" as keyof typeof appConfig,"Prix 2 mois (FCFA)",appConfig.premiumPrice2monthFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["eur_to_fcfa_rate","eurToFcfaRate" as keyof typeof appConfig,"Taux 1 € en FCFA",appConfig.eurToFcfaRate],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée 1 mois (jours)",appConfig.premiumDurationDays],["premium_days_week","premiumDaysWeek" as keyof typeof appConfig,"Durée 1 semaine (jours)",appConfig.premiumDaysWeek],["premium_days_2month","premiumDays2month" as keyof typeof appConfig,"Durée 2 mois (jours)",appConfig.premiumDays2month],["likes_notification_delay_hours","likesNotifDelayHours" as keyof typeof appConfig,"Notif likes après (heures)",appConfig.likesNotifDelayHours]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
+          <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_price_week_fcfa") PREMIUM_PRICE_WEEK_FCFA = parseInt(editingConfigValue) || 1200; if (key === "premium_price_2month_fcfa") PREMIUM_PRICE_2MONTH_FCFA = parseInt(editingConfigValue) || 5900; if (key === "premium_days_week") PREMIUM_DAYS_WEEK = parseInt(editingConfigValue) || 7; if (key === "premium_days_2month") PREMIUM_DAYS_2MONTH = parseInt(editingConfigValue) || 62; if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10; if (key === "eur_to_fcfa_rate") EUR_TO_FCFA = parseFloat(editingConfigValue) || 655.957; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; setEditingConfig(null); }} />
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
@@ -5207,7 +5246,7 @@ const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onB
         )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>} {prof.is_verified && <VerifiedBadge size={15} />}</div>
+        <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, display: "flex", alignItems: "center", gap: 5 }}>{prof.name}, {prof.age} ans {prof.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>} {prof.is_verified && <VerifiedBadge size={15} />}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
           <span style={{ background: prof.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: prof.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 600 }}>{prof.gender === "Femme" ? "Femme" : "Homme"}</span>
           <span style={{ fontSize: "0.78rem", color: "#555" }}>{prof.city}</span>
@@ -11280,7 +11319,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   };
 
   return (
-    <div style={{ background: "#EEEEF2", minHeight: "100%", display: isWideProfile ? "flex" : "block", height: isWideProfile ? "100%" : "auto", paddingBottom: isWideProfile ? 0 : 30 }}>
+    <div style={{ background: G.cremeDark, minHeight: "100%", display: isWideProfile ? "flex" : "block", height: isWideProfile ? "100%" : "auto", paddingBottom: isWideProfile ? 0 : 30 }}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
@@ -11290,9 +11329,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 360 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#111" }}>Modifier mon mot de passe</div>
-              <div onClick={() => { setShowChangePassword(false); setPwError(""); setPwForm({ newPw: "", confirmPw: "" }); setPwSuccess(false); }} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>Modifier mon mot de passe</div>
+              <div onClick={() => { setShowChangePassword(false); setPwError(""); setPwForm({ newPw: "", confirmPw: "" }); setPwSuccess(false); }} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: G.gris, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </div>
             </div>
             {pwSuccess ? (
@@ -11312,7 +11351,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                     value={pwForm.newPw}
                     onChange={e => setPwForm(f => ({ ...f, newPw: e.target.value }))}
                     placeholder="Minimum 6 caractères"
-                    style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", fontFamily: "inherit" }}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", background: G.creme, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", fontFamily: "inherit" }}
                   />
                 </div>
                 <div style={{ marginBottom: 20 }}>
@@ -11322,7 +11361,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                     value={pwForm.confirmPw}
                     onChange={e => setPwForm(f => ({ ...f, confirmPw: e.target.value }))}
                     placeholder="Répète ton mot de passe"
-                    style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", fontFamily: "inherit" }}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", background: G.creme, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", fontFamily: "inherit" }}
                   />
                 </div>
                 {pwError && <div style={{ background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: "0.85rem", color: G.rouge, fontWeight: 500 }}>{pwError}</div>}
@@ -12352,9 +12391,10 @@ function UserWarningModal({ warning, onAcknowledge }: {
 }
 
 type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
-function getPremiumCountdown(approvedAt?: string): { label: string; color: string; expired: boolean } {
+function getPremiumCountdown(approvedAt?: string, amount?: number): { label: string; color: string; expired: boolean } {
   if (!approvedAt) return { label: "", color: "#888", expired: false };
-  const expiry = new Date(new Date(approvedAt).getTime() + PREMIUM_30_DAYS_MS);
+  const ms = typeof amount === "number" ? premiumMsForAmount(amount) : PREMIUM_30_DAYS_MS;
+  const expiry = new Date(new Date(approvedAt).getTime() + ms);
   const diffMs = expiry.getTime() - Date.now();
   if (diffMs <= 0) return { label: "Expiré", color: "#e74c3c", expired: true };
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -12366,7 +12406,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
   const [verified, setVerified] = useState<null | "match" | "mismatch">(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const match = adminRef.trim().toLowerCase() === p.tx_ref.trim().toLowerCase();
-  const countdown = getPremiumCountdown(p.approved_at);
+  const countdown = getPremiumCountdown(p.approved_at, p.amount);
   const isExpired = isApproved && countdown.expired;
   return (
     <div style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", boxShadow: isPending ? "0 2px 10px rgba(39,174,96,0.12)" : "0 1px 6px rgba(0,0,0,0.05)", border: `1.5px solid ${isPending ? "rgba(39,174,96,0.3)" : isExpired ? "rgba(231,76,60,0.3)" : isApproved ? "rgba(39,174,96,0.15)" : "rgba(231,76,60,0.15)"}` }}>
@@ -13848,7 +13888,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setPaymentsLoading(false);
   };
   const activatePayment = async (p: PaymentRequest) => {
-    const premiumUntil = new Date(Date.now() + PREMIUM_30_DAYS_MS).toISOString();
+    const premiumUntil = new Date(Date.now() + premiumMsForAmount(p.amount)).toISOString();
     const targetId = p.gift_for || p.user_id;
     await adminAction(targetId, { is_premium: true, premium_until: premiumUntil }, `Premium activé.`);
     logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} - payé par ${p.user_id}` : `Premium activé - réf: ${p.tx_ref}`, targetId);
