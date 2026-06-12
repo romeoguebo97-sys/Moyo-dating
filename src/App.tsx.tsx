@@ -9566,7 +9566,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", width: "100%", justifyContent: isMine ? "flex-start" : "flex-start" }}>
                   <div style={{ position: "relative", maxWidth: "72%" }}>
                     <div
-                      style={{ position: "relative", background: isMine ? G.rouge : G.blanc, color: isMine ? "#fff" : G.brun, padding: "22px 14px 10px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", overflowWrap: "anywhere", wordBreak: "break-word" }}
+                      style={{ position: "relative", background: isMine ? G.rouge : G.blanc, color: isMine ? "#fff" : G.brun, padding: "22px 14px 10px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: "0.88rem", lineHeight: 1.5, userSelect: "none", WebkitUserSelect: "none", overflowWrap: "anywhere", wordBreak: "break-word", whiteSpace: "pre-wrap" }}
                       onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                     >
                       <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 5, right: 6, zIndex: 3, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", background: isMine ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
