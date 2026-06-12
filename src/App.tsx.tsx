@@ -6008,14 +6008,14 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     {/* Boutons vue/filtres mobile - masqués sur desktop (panneau droit) */}
     {!isWide && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
       {/* Filtres à gauche */}
-      <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? "#333" : G.blanc, color: showFilters ? "#fff" : "#333", border: `1.5px solid ${showFilters ? "#333" : "#ddd"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, lineHeight: 1, whiteSpace: "nowrap" }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={showFilters ? G.blanc : "#333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? "#333" : G.blanc, color: showFilters ? "#fff" : "var(--c-pill-fg)", border: `1.5px solid ${showFilters ? "#333" : "var(--c-pill-bd)"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, lineHeight: 1, whiteSpace: "nowrap" }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={showFilters ? G.blanc : "var(--c-pill-fg)"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="4" y1="6" x2="20" y2="6"/>
           <line x1="4" y1="12" x2="20" y2="12"/>
           <line x1="4" y1="18" x2="20" y2="18"/>
-          <circle cx="8" cy="6" r="2" fill={showFilters ? G.blanc : "#333"} stroke="none"/>
-          <circle cx="15" cy="12" r="2" fill={showFilters ? G.blanc : "#333"} stroke="none"/>
-          <circle cx="10" cy="18" r="2" fill={showFilters ? G.blanc : "#333"} stroke="none"/>
+          <circle cx="8" cy="6" r="2" fill={showFilters ? G.blanc : "var(--c-pill-fg)"} stroke="none"/>
+          <circle cx="15" cy="12" r="2" fill={showFilters ? G.blanc : "var(--c-pill-fg)"} stroke="none"/>
+          <circle cx="10" cy="18" r="2" fill={showFilters ? G.blanc : "var(--c-pill-fg)"} stroke="none"/>
         </svg>
         Filtres
       </div>
@@ -6034,13 +6034,13 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
           const next = viewMode === "list" ? "card" : "list";
           setViewMode(next);
           window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } }));
-        }} style={{ background: G.blanc, color: "#333", border: `1.5px solid ${viewMode === "list" ? "#333" : "#ddd"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+        }} style={{ background: G.blanc, color: "var(--c-pill-fg)", border: `1.5px solid ${viewMode === "list" ? "var(--c-pill-fg)" : "var(--c-pill-bd)"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           {viewMode === "list" ? "≡ Liste" : "≡ Liste"}
         </div>
         <div onClick={() => {
           setViewMode("full");
           window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: true } }));
-        }} style={{ background: G.blanc, color: "#333", border: `1.5px solid ${viewMode === "full" ? "#333" : "#ddd"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+        }} style={{ background: G.blanc, color: "var(--c-pill-fg)", border: `1.5px solid ${viewMode === "full" ? "var(--c-pill-fg)" : "var(--c-pill-bd)"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           ⛶ Plein écran
         </div>
       </div>
@@ -6870,7 +6870,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")}
-            style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`,
+            style={{ background: G.blanc, color: "var(--c-pill-fg)", border: `2px solid ${G.gris}`,
               borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
             {viewMode === "card" ? "≡ Liste" : "⊞ Carte"}
           </div>
@@ -7484,7 +7484,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
 
   return <div style={{ padding: "12px 16px 16px" }}>
     <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: 12 }}>
-      <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>
+      <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "var(--c-pill-fg)", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>
     </div>
 
     {/* ── Bannière dynamique : rouge (gratuit) / doré (Premium), même design ── */}
@@ -9178,7 +9178,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           <Avatar url={open.partner?.photo_url} gender={open.partner?.gender} size={38} premium={open.partner?.is_premium} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>{open.partner?.name}</div>
+          <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.brun }}>{open.partner?.name}</div>
           {open.partner?.id === SUPPORT_TEAM_ID ? <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>● Répond sous 24h</div> : open.partner?.hide_online_status ? null : (() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
@@ -11619,7 +11619,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           </div>
         </div>
       )}
-      {(!isWideProfile || ["main","premium","parrainage","verification","visibility","blocklist","darkmode","rating","logout","delete"].includes(activeSection)) && <div style={{ background: "#EEEEF2", position: "relative" }}>
+      {(!isWideProfile || ["main","premium","parrainage","verification","visibility","blocklist","darkmode","rating","logout","delete"].includes(activeSection)) && <div style={{ background: G.creme, position: "relative" }}>
         {(!isWideProfile || activeSection === "main") && <svg viewBox="0 0 500 40" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 40, marginTop: -1 }}><path d="M0,0 Q125,40 250,40 Q375,40 500,0 L500,0 L0,0 Z" style={{ fill: G.blanc }}/></svg>}
 
         {/* ── ACTIONS (cartes empilées) ── */}
@@ -17202,7 +17202,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               onChange={e => setUserSearch(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort); } }}
               placeholder="Rechercher par nom…"
-              style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, outline: "none", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
             />
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
@@ -20398,7 +20398,7 @@ export default function App() {
     if (!document.getElementById("moyo-theme-vars")) {
       const s = document.createElement("style");
       s.id = "moyo-theme-vars";
-      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A;--c-profile-bg:#E4E6ED}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5;--c-profile-bg:radial-gradient(circle at top,#1A1A24 0%,#111118 45%,#0D0D13 100%)}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
+      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A;--c-profile-bg:#E4E6ED;--c-pill-fg:#333333;--c-pill-bd:#dddddd}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5;--c-profile-bg:radial-gradient(circle at top,#1A1A24 0%,#111118 45%,#0D0D13 100%);--c-pill-fg:#FFFFFF;--c-pill-bd:rgba(255,255,255,0.4)}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
       document.head.appendChild(s);
     }
   }, [darkMode]);
