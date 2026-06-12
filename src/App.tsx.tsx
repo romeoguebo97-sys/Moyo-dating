@@ -1181,7 +1181,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   const PREMIUM_PLANS = [
     { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA, days: PREMIUM_DAYS_WEEK },
     { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: true },
-    { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, days: PREMIUM_DAYS_2MONTH },
+    { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, days: PREMIUM_DAYS_2MONTH, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
   ];
   const [planId, setPlanId] = useState("1mois");
   const selectedPlan = PREMIUM_PLANS.find(p => p.id === planId) || PREMIUM_PLANS[1];
@@ -1326,6 +1326,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             return (
               <div key={pl.id} onClick={() => setPlanId(pl.id)} style={{ flex: 1, position: "relative", cursor: "pointer", background: sel ? "#FBF1D8" : G.blanc, border: `2px solid ${sel ? gold : "#ece9e2"}`, borderRadius: 14, padding: "14px 6px 11px", textAlign: "center", boxShadow: sel ? "0 4px 14px rgba(212,168,67,0.28)" : "0 1px 4px rgba(0,0,0,0.04)", transition: "all 0.15s" }}>
                 {pl.popular && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: gold, color: "#fff", fontSize: "0.55rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 9px", borderRadius: 50, whiteSpace: "nowrap", boxShadow: "0 2px 6px rgba(212,168,67,0.4)" }}>POPULAIRE</div>}
+                {pl.badge && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: G.vert, color: "#fff", fontSize: "0.55rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 9px", borderRadius: 50, whiteSpace: "nowrap", boxShadow: "0 2px 6px rgba(26,92,58,0.4)" }}>{pl.badge}</div>}
                 <div style={{ fontSize: "0.73rem", fontWeight: 700, color: sel ? "#7a5a10" : "#8a8a8a", marginBottom: 6 }}>{pl.label}</div>
                 <div style={{ fontSize: "1rem", fontWeight: 800, color: sel ? "#3a2e10" : "#1a1a2e", lineHeight: 1.05 }}>{pl.amount.toLocaleString("fr-FR")}</div>
                 <div style={{ fontSize: "0.6rem", fontWeight: 700, color: sel ? "#7a5a10" : "#9a9a9a", marginTop: 1 }}>FCFA</div>
@@ -8935,6 +8936,14 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [giftStep, setGiftStep] = useState<"operator" | "mtn" | "airtel">("operator");
   const [giftTxRef, setGiftTxRef] = useState("");
   const [giftTxSent, setGiftTxSent] = useState(false);
+  const [giftPlanId, setGiftPlanId] = useState("1mois");
+  const GIFT_PLANS = [
+    { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA },
+    { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, popular: true },
+    { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
+  ];
+  const giftPlan = GIFT_PLANS.find(p => p.id === giftPlanId) || GIFT_PLANS[1];
+  const giftAmount = giftPlan.amount;
   const [giftTxLoading, setGiftTxLoading] = useState(false);
 
   const isWideMsg = window.innerWidth >= 768;
@@ -9218,12 +9227,27 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                       <div style={{ color: "#fff", fontSize: "1.2rem", fontWeight: 800 }}>{open.partner?.name}</div>
                     </div>
                     <div style={{ marginLeft: "auto", textAlign: "right" }}>
-                      <div style={{ color: "#fff", fontSize: "1.4rem", fontWeight: 800 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}</div>
-                      <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>1 mois Premium</div>
+                      <div style={{ color: "#fff", fontSize: "1.4rem", fontWeight: 800 }}>{`${giftAmount.toLocaleString()} FCFA`}</div>
+                      <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>{giftPlan.label} Premium</div>
                     </div>
                   </div>
                 </div>
                 <div style={{ padding: "20px 20px 28px" }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>Choisissez la formule à offrir</div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+                    {GIFT_PLANS.map(pl => {
+                      const sel = pl.id === giftPlanId;
+                      return (
+                        <div key={pl.id} onClick={() => setGiftPlanId(pl.id)} style={{ flex: 1, position: "relative", cursor: "pointer", background: sel ? "#FBF1D8" : G.blanc, border: `2px solid ${sel ? "#D4A843" : "#ece9e2"}`, borderRadius: 14, padding: "13px 6px 11px", textAlign: "center", boxShadow: sel ? "0 4px 14px rgba(212,168,67,0.28)" : "0 1px 4px rgba(0,0,0,0.04)" }}>
+                          {pl.popular && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: "#D4A843", color: "#fff", fontSize: "0.52rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 8px", borderRadius: 50, whiteSpace: "nowrap" }}>POPULAIRE</div>}
+                          {pl.badge && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: "#1A5C3A", color: "#fff", fontSize: "0.52rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 8px", borderRadius: 50, whiteSpace: "nowrap" }}>{pl.badge}</div>}
+                          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: sel ? "#7a5a10" : "#8a8a8a", marginBottom: 5 }}>{pl.label}</div>
+                          <div style={{ fontSize: "0.95rem", fontWeight: 800, color: sel ? "#3a2e10" : "#1a1a2e", lineHeight: 1.05 }}>{pl.amount.toLocaleString("fr-FR")}</div>
+                          <div style={{ fontSize: "0.58rem", fontWeight: 700, color: sel ? "#7a5a10" : "#9a9a9a" }}>FCFA</div>
+                        </div>
+                      );
+                    })}
+                  </div>
                   <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 14, textTransform: "uppercase", letterSpacing: 0.5 }}>Congo - Choisissez votre opérateur</div>
                   <button onClick={() => PAY_MTN_ENABLED && setGiftStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "linear-gradient(135deg,#FFCC00,#F5A623)" : "#cccccc", color: PAY_MTN_ENABLED ? "#1a1a1a" : "#888", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: PAY_MTN_ENABLED ? "0 4px 14px rgba(245,166,35,0.35)" : "none", opacity: PAY_MTN_ENABLED ? 1 : 0.7 }}>
                     <div style={{ width: "18%", display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
@@ -9259,7 +9283,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                   }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "linear-gradient(135deg,#1A5C3A,#0D2E1C)" : "#cccccc", color: PAY_CB_ENABLED ? "white" : "#888", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", marginBottom: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: PAY_CB_ENABLED ? "0 4px 14px rgba(26,92,58,0.4)" : "none", opacity: PAY_CB_ENABLED ? 1 : 0.7 }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={PAY_CB_ENABLED ? "white" : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                      Visa / Mastercard · {PREMIUM_PRICE_EUR}€
+                      Visa / Mastercard · {PREMIUM_PRICE_EUR}€ · 1 mois
                     </span>
                     {!PAY_CB_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}>Temporairement indisponible</span>}
                   </button>
@@ -9281,16 +9305,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                       Cadeau Premium pour {open.partner?.name}
                     </div>
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA · 1 mois`}</div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>{`${giftAmount.toLocaleString()} FCFA · ${giftPlan.label}`}</div>
                 </div>
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : {PAY_MTN_RESPONSABLE}</div>
-                    <a href={`tel:*105*2*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: G.brun, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
+                    <a href={`tel:*105*2*1*${PAY_MTN_NUMBER}*${giftAmount}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: G.brun, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                      {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
+                      {`Appuyer pour payer - ${giftAmount.toLocaleString()} FCFA`}
                     </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*${PAY_MTN_NUMBER}*${PREMIUM_PRICE_FCFA}#`}</div>
+                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*${PAY_MTN_NUMBER}*${giftAmount}#`}</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -9304,7 +9328,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                          body: JSON.stringify({ user_id: auth.userId, operator: "MTN", tx_ref: giftTxRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
+                          body: JSON.stringify({ user_id: auth.userId, operator: "MTN", tx_ref: giftTxRef.trim(), amount: giftAmount, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
                         });
                         setGiftTxSent(true);
                       } catch { setGiftTxSent(true); }
@@ -9332,16 +9356,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                     </div>
                     <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#fff" }}>Cadeau Airtel Money pour {open.partner?.name}</div>
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", marginLeft: 42 }}>{`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA - 1 mois Premium`}</div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", marginLeft: 42 }}>{`${giftAmount.toLocaleString()} FCFA - ${giftPlan.label} Premium`}</div>
                 </div>
                 <div style={{ padding: "20px 20px 32px" }}>
                   <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : {PAY_AIRTEL_RESPONSABLE}</div>
-                    <a href={`tel:*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
+                    <a href={`tel:*128*2*1*1*${PAY_AIRTEL_NUMBER}*${giftAmount}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                      {`Appuyer pour payer - ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`}
+                      {`Appuyer pour payer - ${giftAmount.toLocaleString()} FCFA`}
                     </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*${PAY_AIRTEL_NUMBER}*${PREMIUM_PRICE_FCFA}#`}</div>
+                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*${PAY_AIRTEL_NUMBER}*${giftAmount}#`}</div>
                   </div>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
@@ -9355,7 +9379,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                          body: JSON.stringify({ user_id: auth.userId, operator: "Airtel", tx_ref: giftTxRef.trim(), amount: PREMIUM_PRICE_FCFA, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
+                          body: JSON.stringify({ user_id: auth.userId, operator: "Airtel", tx_ref: giftTxRef.trim(), amount: giftAmount, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
                         });
                         setGiftTxSent(true);
                       } catch { setGiftTxSent(true); }
@@ -10609,7 +10633,7 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
     </>
   );
 }
-function MatchRequestButton({ auth }: { auth: Auth }) {
+function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium: (msg: string) => void }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ target_gender: "", target_city: "", target_age_min: "", target_age_max: "", message: "" });
   const [loading, setLoading] = useState(false);
@@ -10799,11 +10823,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                         <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
                           <button onClick={() => { setShowModal(false); setShowWizard(true); setWStep(1); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "rgba(192,57,43,0.04)", border: `1.5px solid ${G.rouge}`, color: G.rouge, borderRadius: 12, padding: "11px", fontSize: "0.84rem", fontWeight: 800, cursor: "pointer" }}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
-                            Modifier
-                          </button>
-                          <button onClick={() => setShowDeleteRel(true)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.4)`, color: G.rouge, borderRadius: 12, padding: "11px", fontSize: "0.84rem", fontWeight: 800, cursor: "pointer" }}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            Supprimer
+                            Modifier mon profil relationnel
                           </button>
                         </div>
                       </div>
@@ -10814,6 +10834,7 @@ function MatchRequestButton({ auth }: { auth: Auth }) {
                     <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value.slice(0, 300) }))} placeholder="Décrivez ce que vous recherchez..." rows={3} maxLength={300} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
                   </div>
                   <button onClick={async () => {
+                    if (!auth.isPremium) { setShowModal(false); onShowPremium("Votre profil relationnel est bien enregistré ✅ Passez Premium pour envoyer votre demande et être proposé(e) par notre équipe à des profils compatibles !"); return; }
                     if (!relProfile) { setErrorModal("Veuillez d'abord compléter votre profil relationnel."); return; }
                     const targetGender = myGender === "Homme" ? "Femme" : myGender === "Femme" ? "Homme" : null;
                     const aMin = parseInt(relProfile.age_min), aMax = parseInt(relProfile.age_max);
@@ -11319,7 +11340,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   };
 
   return (
-    <div style={{ background: G.cremeDark, minHeight: "100%", display: isWideProfile ? "flex" : "block", height: isWideProfile ? "100%" : "auto", paddingBottom: isWideProfile ? 0 : 30 }}>
+    <div style={{ background: "var(--c-profile-bg)", minHeight: "100%", display: isWideProfile ? "flex" : "block", height: isWideProfile ? "100%" : "auto", paddingBottom: isWideProfile ? 0 : 30 }}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
@@ -11396,7 +11417,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
       </div>
 
       {/* ── COLONNE DROITE : CONTENU 50% ── */}
-      <div style={{ width: isWideProfile ? "50%" : "100%", overflowY: "auto", height: isWideProfile ? "100%" : "auto", background: G.cremeDark }}>
+      <div style={{ width: isWideProfile ? "50%" : "100%", overflowY: "auto", height: isWideProfile ? "100%" : "auto", background: "var(--c-profile-bg)" }}>
 
       {/* ── ZONE BLANCHE : photo + nom + boutons - visible si section main ou mobile ── */}
       {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 8 }}>
@@ -11687,23 +11708,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
 
         {/* Parrainage - mis en avant */}
-        {/* ── Bouton Demande de mise en relation (Premium uniquement) ── */}
+        {/* ── Bouton Demande de mise en relation (ouvert à tous ; paiement requis à l'envoi) ── */}
         {(!isWideProfile || ["main"].includes(activeSection)) && (
-          auth.isPremium
-            ? <MatchRequestButton auth={auth} />
-            : <div onClick={() => onShowPremium("Passez Premium pour accéder au service de mise en relation personnalisé par l'équipe Moyo !")} style={{ background: `linear-gradient(135deg,${G.rouge} 0%,${G.rougeDark} 100%)`, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(192,57,43,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", opacity: 0.75 }}>
-                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff", marginBottom: 3 }}>Demander une mise en relation personnalisée</div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <span>Réservé aux membres Premium</span>
-                  </div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              </div>
+          <MatchRequestButton auth={auth} onShowPremium={onShowPremium} />
         )}
 
         {/* ── Bouton Passer sur les Statuts Moyo (Premium uniquement) ── */}
@@ -20391,7 +20398,7 @@ export default function App() {
     if (!document.getElementById("moyo-theme-vars")) {
       const s = document.createElement("style");
       s.id = "moyo-theme-vars";
-      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
+      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A;--c-profile-bg:#E4E6ED}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5;--c-profile-bg:radial-gradient(circle at top,#1A1A24 0%,#111118 45%,#0D0D13 100%)}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
       document.head.appendChild(s);
     }
   }, [darkMode]);
