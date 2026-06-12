@@ -3731,7 +3731,7 @@ function EditableRow({ label, value, open, onOpen, editValue, onEdit, onSave, hi
     <div>
       <div onClick={onOpen} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: open ? "rgba(192,57,43,0.06)" : G2.creme, cursor: "pointer", border: `1px solid ${open ? G2.rouge : "transparent"}` }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: G.brun }}>{label}</div>
+          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#2C1A0E" }}>{label}</div>
           <div style={{ fontSize: "0.7rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
         </div>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G2.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -4449,7 +4449,7 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
       ) : (<>
         {([["mtn", "MTN MoMo"], ["airtel", "Airtel Money"], ["cb", "Visa / Mastercard (CB)"]] as ["mtn" | "airtel" | "cb", string][]).map(([k, label]) => (
           <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
-            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: vals[k] ? "#1a1a1a" : G.rouge }}>{label}{!vals[k] && <span style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginLeft: 6 }}>(coupé)</span>}</div>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: vals[k] ? G.brun : G.rouge }}>{label}{!vals[k] && <span style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginLeft: 6 }}>(coupé)</span>}</div>
             <SwitchBtn on={vals[k]} onToggle={() => toggle(k)} />
           </div>
         ))}
@@ -6824,7 +6824,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       </div>
       <div onClick={onView} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111" }}>{p.name}, {p.age} ans</span>
+          <span style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>{p.name}, {p.age} ans</span>
           {meta?.isMatch && <Badge label={<span style={{display: "flex",alignItems: "center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill={G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match</span>} color={G.vert} bg="rgba(26,92,58,0.1)" />}
           {meta?.status === "match" && <Badge label={<span style={{display: "flex",alignItems: "center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill={G.vert} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Match</span>} color={G.vert} bg="rgba(26,92,58,0.1)" />}
           {meta?.status === "pending" && <Badge label="En attente" color="#888" bg="#F0F0F0" />}
@@ -7484,7 +7484,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
 
   return <div style={{ padding: "12px 16px 16px" }}>
     <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: 12 }}>
-      <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "#111", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>
+      <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: G.brun, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>
     </div>
 
     {/* ── Bannière dynamique : rouge (gratuit) / doré (Premium), même design ── */}
@@ -7531,7 +7531,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     {matchSubTab === "demandes" && (reqLoading ? (
       <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
     ) : myRequests.length === 0 ? (
-      <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}>
+      <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
         <p style={{ fontWeight: 700, marginBottom: 4 }}>Aucune demande pour l'instant</p>
         <p style={{ fontSize: "0.82rem", color: "#999" }}>Faites une demande depuis votre profil avec « Demander une mise en relation personnalisée ».</p>
@@ -7548,16 +7548,16 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
           return (
             <div key={rq.id} style={{ background: G.blanc, borderRadius: 16, padding: 14, marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-                <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun, display: "flex", alignItems: "center", gap: 6 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                   Demande de mise en relation
                 </span>
                 <Badge label={stCfg.label} color={stCfg.color} bg={stCfg.bg} />
               </div>
-              <div style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5 }}>
-                {rq.target_gender && <div>Recherche : <b style={{ color: "#333" }}>{rq.target_gender === "Homme" ? "un homme" : rq.target_gender === "Femme" ? "une femme" : rq.target_gender}</b></div>}
-                {rq.target_city && <div>Ville : <b style={{ color: "#333" }}>{rq.target_city}</b></div>}
-                {(rq.target_age_min || rq.target_age_max) && <div>Âge : <b style={{ color: "#333" }}>{rq.target_age_min || "?"} – {rq.target_age_max || "?"} ans</b></div>}
+              <div style={{ fontSize: "0.78rem", color: G.brunLight, lineHeight: 1.5 }}>
+                {rq.target_gender && <div>Recherche : <b style={{ color: G.brun }}>{rq.target_gender === "Homme" ? "un homme" : rq.target_gender === "Femme" ? "une femme" : rq.target_gender}</b></div>}
+                {rq.target_city && <div>Ville : <b style={{ color: G.brun }}>{rq.target_city}</b></div>}
+                {(rq.target_age_min || rq.target_age_max) && <div>Âge : <b style={{ color: G.brun }}>{rq.target_age_min || "?"} – {rq.target_age_max || "?"} ans</b></div>}
               </div>
               {rq.created_at && <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 8 }}>Envoyée le {new Date(rq.created_at).toLocaleDateString("fr-FR")}</div>}
               {(s === "completed" || s === "matched" || s === "done") && (
@@ -7570,7 +7570,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     ))}
 
     {matchSubTab === "matches" && (loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div>
-    : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><p>Continue à liker des profils pour avoir des matchs !</p></div>
+    : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><p>Continue à liker des profils pour avoir des matchs !</p></div>
     : viewMode === "list" ? (
       <div>
         {matches.map(m => (
@@ -7579,8 +7579,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
               {m.partner?.photo_url ? <img src={m.partner.photo_url} alt={m.partner?.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>}
             </div>
             <div onClick={() => setSelectedMatch(m)} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{m.partner?.name}, {m.partner?.age} ans</div>
-              <div style={{ fontSize: "0.78rem", color: "#555", marginTop: 2 }}>{m.partner?.city}{m.partner?.religion && <span style={{ marginLeft: 6 }}>· {m.partner.religion}</span>}</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>{m.partner?.name}, {m.partner?.age} ans</div>
+              <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>{m.partner?.city}{m.partner?.religion && <span style={{ marginLeft: 6 }}>· {m.partner.religion}</span>}</div>
               <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600, marginTop: 2 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#27ae60" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Match !</div>
             </div>
             {/* 3 traits */}
@@ -7690,7 +7690,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     {matchSubTab === "proposals" && (propLoading ? (
       <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
     ) : proposals.length === 0 ? (
-      <div style={{ textAlign: "center", padding: "40px 20px", color: "#555" }}>
+      <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(124,58,237,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
         <p style={{ fontWeight: 700, marginBottom: 4 }}>Aucune proposition pour l'instant</p>
         <p style={{ fontSize: "0.82rem", color: "#999" }}>Moyo vous présentera ici les profils sélectionnés pour vous.</p>
@@ -7713,7 +7713,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111" }}>{o?.name}{o?.age ? `, ${o.age} ans` : ""}</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>{o?.name}{o?.age ? `, ${o.age} ans` : ""}</span>
                     <Badge label={st.label} color={st.color} bg={st.bg} />
                   </div>
                   <div style={{ fontSize: "0.73rem", color: "#777", marginTop: 3, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -11340,7 +11340,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   };
 
   return (
-    <div style={{ background: "var(--c-profile-bg)", minHeight: "100%", display: isWideProfile ? "flex" : "block", height: isWideProfile ? "100%" : "auto", paddingBottom: isWideProfile ? 0 : 30 }}>
+    <div style={{ background: G.creme, minHeight: "100%", display: isWideProfile ? "flex" : "block", height: isWideProfile ? "100%" : "auto", paddingBottom: isWideProfile ? 0 : 30 }}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
@@ -11417,7 +11417,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
       </div>
 
       {/* ── COLONNE DROITE : CONTENU 50% ── */}
-      <div style={{ width: isWideProfile ? "50%" : "100%", overflowY: "auto", height: isWideProfile ? "100%" : "auto", background: "var(--c-profile-bg)" }}>
+      <div style={{ width: isWideProfile ? "50%" : "100%", overflowY: "auto", height: isWideProfile ? "100%" : "auto", background: G.creme }}>
 
       {/* ── ZONE BLANCHE : photo + nom + boutons - visible si section main ou mobile ── */}
       {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 8 }}>
@@ -17134,7 +17134,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 5 }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 5, color: G.brun }}>
                           {u.name}{u.is_premium && <IcoStar />}
                         </div>
                         <div style={{ fontSize: "0.72rem", color: "#888" }}>{u.city} · {u.age} ans</div>
@@ -17334,7 +17334,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                         {/* Infos */}
                         <div style={{ minWidth: 120, flex: "0 0 auto" }}>
-                          <div style={{ fontWeight: 700, fontSize: "0.82rem", color: u.name === "..." ? "#e74c3c" : "#1a1a1a", whiteSpace: "nowrap" }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.82rem", color: u.name === "..." ? "#e74c3c" : G.brun, whiteSpace: "nowrap" }}>
                             {u.name} {isSelf && <span style={{ fontSize: "0.60rem", color: G.vert, fontWeight: 700 }}>(Vous)</span>}
                             {u.name === "..." && <span style={{ fontSize: "0.60rem", color: "#e74c3c", fontWeight: 700, marginLeft: 3 }}>Incomplet</span>}
                           </div>
@@ -17407,7 +17407,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, color: G.brun }}>
                           {u.name}
                           {isSelf && <span style={{ fontSize: "0.65rem", background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Vous</span>}
                           {u.name === "..." && <span style={{ fontSize: "0.65rem", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Incomplet</span>}
