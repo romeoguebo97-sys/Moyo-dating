@@ -833,8 +833,8 @@ const sb = {
 };
 
 const GLOBAL_CSS = `
-  :root{ --c-creme:#F0F1F5; --c-cremeDark:#E4E6ED; --c-blanc:#FFFFFF; --c-gris:#E8DDD0; --c-brun:#2C1A0E; --c-brunLight:#5C3D2A; --c-card-bd:#E8E8E8; }
-  :root[data-theme="dark"], [data-theme="dark"]{ --c-creme:#0D0E12; --c-cremeDark:#171920; --c-blanc:#000000; --c-gris:#2A1F12; --c-brun:#F1DFD3; --c-brunLight:#D7B8A5; --c-card-bd:rgba(255,255,255,0.12); }
+  :root{ --c-creme:#F0F1F5; --c-cremeDark:#E4E6ED; --c-blanc:#FFFFFF; --c-gris:#E8DDD0; --c-brun:#2C1A0E; --c-brunLight:#5C3D2A; --c-card-bd:#E8E8E8; --c-ghost-bg:rgba(44,26,14,0.06); }
+  :root[data-theme="dark"], [data-theme="dark"]{ --c-creme:#0D0E12; --c-cremeDark:#171920; --c-blanc:#000000; --c-gris:#2A1F12; --c-brun:#F1DFD3; --c-brunLight:#D7B8A5; --c-card-bd:rgba(255,255,255,0.12); --c-ghost-bg:rgba(255,255,255,0.1); }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
   html{overflow-x:hidden;width:100%;max-width:100vw;background-color:var(--c-creme);-webkit-text-size-adjust:100%;text-size-adjust:100%}
   body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:var(--c-creme)}
@@ -969,8 +969,8 @@ function Btn({ children, variant = "primary", onClick, style = {}, disabled = fa
   const v: Record<string, React.CSSProperties> = {
     primary: { background: G.rouge, color: "#fff", boxShadow: "0 4px 18px rgba(192,57,43,0.3)" },
     gold: { background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111" },
-    outline: { background: "transparent", color: "#111", border: `2px solid ${G.brun}` },
-    ghost: { background: "rgba(44,26,14,0.06)", color: "#111" },
+    outline: { background: "transparent", color: G.brun, border: `2px solid ${G.brun}` },
+    ghost: { background: "var(--c-ghost-bg)", color: G.brun },
     danger: { background: "#e74c3c", color: "#fff" },
     white: { background: G.blanc, color: G.rouge },
   };
@@ -1655,7 +1655,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: `${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché.` },
       { icon: "Q", titre: "Puis-je voir le profil complet de quelqu'un gratuitement ?", desc: "Oui. Appuyez sur le bouton ☰ de n'importe quelle carte → 'Voir le profil'. C'est gratuit pour tous les membres, sans restriction." },
       { icon: "Q", titre: "Comment annuler un match ?", desc: "Dans Matchs, appuyez sur les 3 traits → Annuler le match. La conversation, les likes et les vues sont supprimés. L'autre personne n'est pas notifiée." },
-      { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, le bouton cadeau apparait uniquement si vous êtes Premium. Vous pouvez offrir le Premium à votre partenaire non-premium." },
+      { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, le bouton cadeau apparait uniquement si vous êtes Premium. Vous pouvez offrir le Premium à votre partenaire non-premium, en choisissant la formule (1 semaine, 1 mois ou 2 mois)." },
       { icon: "Q", titre: "Comment obtenir le badge vérifié ?", desc: "Profil → Faire vérifier mon compte → WhatsApp. Gratuit, vérification sous 24h." },
       { icon: "Q", titre: "Comment inviter un ami ?", desc: "Dans Profil, appuyez sur Inviter un ami. Un message pré-rempli s'ouvre sur WhatsApp ou le partage natif." },
       { icon: "Q", titre: "Comment activer le mode sombre ?", desc: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
@@ -5135,14 +5135,15 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe.", "Partage de contacts : pour ta sécurité, le partage d'un numéro, d'un réseau social ou d'un lien n'est pas autorisé dans les messages ni dans ton profil (bio, nom…) en compte gratuit. Passe les premiers échanges sur Moyo ; l'abonnement Premium débloque le partage de coordonnées en conversation privée.", "Sanctions : en cas de non-respect des règles, un compte peut être averti, suspendu temporairement (avec un décompte avant reconnexion automatique) ou banni définitivement."] },
-            { title: "Premium - " + PREMIUM_PRICE_FCFA.toLocaleString() + " FCFA / mois", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
+            { title: "Premium - 3 formules dès " + PREMIUM_PRICE_WEEK_FCFA.toLocaleString() + " FCFA", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
               "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.",
+              `3 formules au choix : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA pour 1 semaine, ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA pour 1 mois (la plus populaire), ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA pour 2 mois (la plus avantageuse). Vous sélectionnez votre formule au moment du paiement, juste après avoir appuyé sur 'Passer Premium'.`,
               "Paiement via MTN Mobile Money ou Airtel Money - les deux opérateurs sont disponibles.",
               "Comment payer : appuyez sur 'Passer Premium' → choisissez MTN Mobile Money → appuyez sur le bouton jaune pour composer automatiquement le code de paiement sur votre téléphone → validez le paiement → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'.",
               "Le numéro de transaction (ID) est reçu par SMS de votre opérateur après validation du paiement (ex: PP260523.2232.A52074 pour Airtel, 7753031542 pour MTN). Entrez-le exactement tel quel dans le champ prévu.",
               "L'activation Premium se fait sous 15 minutes. Vous recevrez une notification dans l'application dès l'activation.",
               "Après activation, l'utilisateur doit actualiser l'application pour que les changements prennent effet. Le bouton Premium sur sa page Profil devient doré et affiche le compteur de jours restants.",
-              "🎁 OFFRIR Premium à quelqu'un : si vous êtes Premium et que la personne avec qui vous discutez ne l'est pas, un bouton cadeau doré 🎁 apparaît en haut de la conversation. Appuyez dessus pour lui offrir un mois de Premium (paiement via Mobile Money). C'est un beau geste pour quelqu'un qui vous plaît.",
+              "🎁 OFFRIR Premium à quelqu'un : si vous êtes Premium et que la personne avec qui vous discutez ne l'est pas, un bouton cadeau doré 🎁 apparaît en haut de la conversation. Appuyez dessus pour lui offrir l'abonnement Premium — vous choisissez la formule à offrir (1 semaine, 1 mois ou 2 mois), paiement via Mobile Money. C'est un beau geste pour quelqu'un qui vous plaît.",
               "💝 DEMANDER Premium : si vous n'êtes pas Premium et que votre interlocuteur l'est, un bouton 💝 (rouge) apparaît en haut de la conversation. Il permet de lui demander gentiment de vous offrir l'abonnement. Une fenêtre de confirmation s'ouvre avant l'envoi.",
               "La demande de Premium est limitée à 2 fois par mois et par conversation, pour rester courtoise. La personne reçoit alors un message avec un bouton lui permettant de vous offrir Premium en un seul clic, si elle le souhaite. Elle reste entièrement libre d'accepter ou non.",
             ]},
@@ -6261,8 +6262,8 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
           </div>
-          <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111", marginBottom: 8 }}>Retirer ton like à {confirmUnlike.name} ?</h3>
-          <p style={{ fontSize: "0.83rem", color: "#666", marginBottom: 22, lineHeight: 1.6 }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Retirer ton like à {confirmUnlike.name} ?</h3>
+          <p style={{ fontSize: "0.83rem", color: G.brunLight, marginBottom: 22, lineHeight: 1.6 }}>
             Ton like sera retiré des deux côtés. Si vous aviez un match, la conversation et tous les messages seront définitivement supprimés.
           </p>
           <div style={{ display: "flex", gap: 10 }}>
@@ -6725,6 +6726,13 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
   const handleDismiss = (p: Profile, e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(p); };
 
   const handleLike = async (p: Profile) => {
+    // Si on a déjà liké cette personne (et que ce n'est pas un match) → demander confirmation
+    // avant de retirer le like, exactement comme sur l'onglet Découvrir (évite un délike involontaire).
+    if (sentLikesMeta[p.id] && sentLikesMeta[p.id].status !== "match") {
+      setSelectedProfile(null);
+      setConfirmUnlike(p);
+      return;
+    }
     setLiking(true);
     try {
       await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
@@ -6747,6 +6755,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
     try {
       await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${p.id}`);
       setSentLikes(prev => prev.filter(s => s.id !== p.id));
+      setSentLikesMeta(prev => { const n = { ...prev }; delete n[p.id]; return n; });
     } catch {}
     setConfirmUnlike(null);
   };
@@ -7260,6 +7269,10 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
                 <Btn variant="primary" onClick={() => { const pid = selectedProfile.id; setSelectedProfile(null); if (onGoMessages) onGoMessages(pid); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
                   Envoyer un message
                 </Btn>
+              ) : sentLikesMeta[selectedProfile.id] ? (
+                <Btn variant="danger" onClick={() => { const p = selectedProfile; setSelectedProfile(null); setConfirmUnlike(p); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
+                  Retirer mon like
+                </Btn>
               ) : (
                 <Btn variant="primary" onClick={() => handleLike(selectedProfile)} loading={liking} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
                   Liker {selectedProfile.name}
@@ -7280,8 +7293,8 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
               display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </div>
-            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111", marginBottom: 8 }}>Retirer {confirmDismiss.name} ?</h3>
-            <p style={{ fontSize: "0.83rem", color: "#666", marginBottom: 22, lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Retirer {confirmDismiss.name} ?</h3>
+            <p style={{ fontSize: "0.83rem", color: G.brunLight, marginBottom: 22, lineHeight: 1.6 }}>
               Cette carte disparaîtra de ta liste. Tes likes, matchs et messages restent intacts.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
@@ -7303,8 +7316,8 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
               display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
             </div>
-            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111", marginBottom: 8 }}>Retirer ton like à {confirmUnlike.name} ?</h3>
-            <p style={{ fontSize: "0.83rem", color: "#666", marginBottom: 22, lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Retirer ton like à {confirmUnlike.name} ?</h3>
+            <p style={{ fontSize: "0.83rem", color: G.brunLight, marginBottom: 22, lineHeight: 1.6 }}>
               Ton like sera retiré. Si un match existait déjà, il reste intact.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
@@ -20671,7 +20684,7 @@ export default function App() {
     if (!document.getElementById("moyo-theme-vars")) {
       const s = document.createElement("style");
       s.id = "moyo-theme-vars";
-      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A;--c-profile-bg:#E4E6ED;--c-pill-fg:#333333;--c-pill-bd:#dddddd;--c-card-bd:#E8E8E8}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5;--c-profile-bg:radial-gradient(circle at top,#1A1A24 0%,#111118 45%,#0D0D13 100%);--c-pill-fg:#FFFFFF;--c-pill-bd:rgba(255,255,255,0.4);--c-card-bd:rgba(255,255,255,0.12)}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
+      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A;--c-profile-bg:#E4E6ED;--c-pill-fg:#333333;--c-pill-bd:#dddddd;--c-card-bd:#E8E8E8;--c-ghost-bg:rgba(44,26,14,0.06)}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5;--c-profile-bg:radial-gradient(circle at top,#1A1A24 0%,#111118 45%,#0D0D13 100%);--c-pill-fg:#FFFFFF;--c-pill-bd:rgba(255,255,255,0.4);--c-card-bd:rgba(255,255,255,0.12);--c-ghost-bg:rgba(255,255,255,0.1)}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
       document.head.appendChild(s);
     }
   }, [darkMode]);
