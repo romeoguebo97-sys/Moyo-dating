@@ -1188,6 +1188,9 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   const planAmount = selectedPlan.amount;
   const [txRef, setTxRef] = useState("");
   const [txSent, setTxSent] = useState(false);
+  const [txActivated, setTxActivated] = useState(false);
+  const [txGrantDays, setTxGrantDays] = useState<number | null>(null);
+  const [txErr, setTxErr] = useState<string | null>(null);
   const [txLoading, setTxLoading] = useState(false);
   const [showAllAdv, setShowAllAdv] = useState(false);
   const [stats, setStats] = useState<{ couples: number | null; premium: number | null }>({ couples: null, premium: null });
@@ -1370,10 +1373,51 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   const tel = `tel:${OP.ussd.replace(/#/g, "%23")}`;
   const submit = async () => {
     setTxLoading(true);
+    setTxErr(null);
+    const ref = txRef.trim();
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: txRef.trim(), amount: planAmount, status: "pending" }) });
+      // 1) Vérification automatique : on cherche le paiement reçu par SMS (Moyo Payment Listener).
+      //    La formule est déterminée par le MONTANT RÉELLEMENT REÇU, pas par la formule choisie.
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ p_transaction_id: ref, p_user_id: userId }),
+      });
+      const data = await r.json().catch(() => null);
+
+      if (r.ok && data && data.success) {
+        // Premium activé instantanément.
+        setTxGrantDays(typeof data.days === "number" ? data.days : null);
+        setTxActivated(true);
+        setTxSent(true);
+        setTxLoading(false);
+        return;
+      }
+
+      if (data && data.error === "already_used") {
+        setTxErr("Paiement déjà utilisé. Ce numéro de transaction a déjà servi à activer un abonnement.");
+        setTxLoading(false);
+        return;
+      }
+
+      // 2) Repli : transaction pas encore reçue (SMS en route) ou fonction absente →
+      //    on crée une DEMANDE DE VÉRIFICATION MANUELLE et on conserve la demande
+      //    de paiement classique, pour que l'équipe Moyo garde la main (rien n'est perdu).
+      const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending" }) });
+      setTxActivated(false);
       setTxSent(true);
-    } catch { setTxSent(true); }
+    } catch {
+      // En cas d'erreur réseau, on tente quand même d'enregistrer la demande (vérification + paiement).
+      const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
+      try { await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }); } catch {}
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending" }) });
+      } catch {}
+      setTxActivated(false);
+      setTxSent(true);
+    }
     setTxLoading(false);
   };
   const numBadge = (n: string) => <div style={{ width: 26, height: 26, borderRadius: "50%", background: OP.numBg, color: OP.numColor, fontWeight: 800, fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</div>;
@@ -1383,7 +1427,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
       <div style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
         <div style={{ background: OP.main, padding: "16px 18px 14px", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div onClick={() => { setStep("offer"); setTxSent(false); setTxRef(""); }} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div onClick={() => { setStep("offer"); setTxSent(false); setTxActivated(false); setTxErr(null); setTxRef(""); }} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
             </div>
             {OP.logo}
@@ -1416,7 +1460,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.55, marginBottom: 14 }}>Après validation du paiement {OP.operator}, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-              <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder={OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: "#1a1a2e", background: "transparent" }} />
+              <input value={txRef} onChange={e => { setTxRef(e.target.value); setTxErr(null); }} placeholder={OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: "#1a1a2e", background: "transparent" }} />
             </div>
             <div style={{ background: OP.tint, border: `1px solid ${OP.tintBorder}`, borderRadius: 12, padding: "12px 14px", display: "flex", gap: 10 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={OP.tintText} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
@@ -1424,10 +1468,26 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             </div>
           </div>
 
+          {txErr && !txSent && (
+            <div style={{ background: "rgba(192,57,43,0.08)", border: "1.5px solid #C0392B", borderRadius: 12, padding: 14, marginTop: 14, display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+              <div style={{ fontSize: "0.82rem", color: "#C0392B", fontWeight: 600, lineHeight: 1.5 }}>{txErr}</div>
+            </div>
+          )}
+
           {txSent && (
             <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: 18, textAlign: "center", marginTop: 14 }}>
-              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>✓ Numéro ID envoyé avec succès !</div>
-              <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier votre paiement et activer votre Premium dans les plus brefs délais.</div>
+              {txActivated ? (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: "0.98rem", color: "#27ae60", marginBottom: 6 }}>🎉 Premium activé !</div>
+                  <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Votre paiement a été vérifié automatiquement{txGrantDays ? ` et votre abonnement de ${txGrantDays} jours est actif` : ""}. Actualisez l'application pour voir les changements.</div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>✓ Numéro ID envoyé avec succès !</div>
+                  <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Votre paiement est en cours de vérification. L'activation est automatique dès réception, sinon notre équipe la validera dans les plus brefs délais.</div>
+                </>
+              )}
               <button onClick={onClose} style={{ marginTop: 14, background: "#27ae60", color: "#fff", border: "none", borderRadius: 50, padding: "11px 26px", fontWeight: 700, cursor: "pointer", fontSize: "0.86rem" }}>Fermer</button>
             </div>
           )}
@@ -14142,6 +14202,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     } catch {}
   };
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+  const [featurePendingCount, setFeaturePendingCount] = useState(0);
   const [proposalsBadgeCount, setProposalsBadgeCount] = useState(0);
 
   const loadPayments = async () => {
@@ -14162,7 +14223,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     await adminAction(targetId, { is_premium: true, premium_until: premiumUntil }, `Premium activé.`);
     logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} - payé par ${p.user_id}` : `Premium activé - réf: ${p.tx_ref}`, targetId);
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
-    // Bonus parrainage - vérifier si le filleul a un parrain
+    // Met à jour la file de vérification manuelle (validation humaine).
+    fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?transaction_id=eq.${encodeURIComponent(p.tx_ref)}&status=eq.pending`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "verified_manually" }) }).catch(() => {});
     try {
       const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${targetId}&select=referred_by,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const profileData = await profileRes.json().catch(() => []);
@@ -14198,6 +14260,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const rejectPayment = async (p: PaymentRequest) => {
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "rejected" }) });
+    fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?transaction_id=eq.${encodeURIComponent(p.tx_ref)}&status=eq.pending`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "rejected" }) }).catch(() => {});
     logAdminAction(auth.token, auth.userId, auth.name, `Paiement rejeté - réf: ${p.tx_ref} - ${p.operator}`, p.user_id);
     await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre preuve de paiement n'a pas pu être vérifiée. Le numéro de transaction ne correspond pas. Veuillez vérifier vos informations de paiement.", warning_number: 0, acknowledged: false }) });
     loadPayments();
@@ -15049,6 +15112,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         (Array.isArray(monthReqs) ? monthReqs : []).forEach((r: any) => { usedBy[r.user_id] = (usedBy[r.user_id] || 0) + 1; });
       }
       setFeatureRequests(list.map((r: any) => ({ ...r, profile: profilesById[r.user_id], _usedThisMonth: usedBy[r.user_id] || 0 })));
+      setFeaturePendingCount(list.length);
     } catch { setFeatureRequests([]); }
   };
   const acceptFeatureRequest = async (req: any) => {
@@ -15347,6 +15411,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const rProp = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(status.eq.accepted,status.eq.refused)&created_at=gt.${encodeURIComponent(lastPropSeen)}&select=id`, { headers: h });
         const propCount = (() => { const c = rProp.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
         setProposalsBadgeCount(propCount);
+        // Demandes de mise en avant (statuts Moyo) en attente de validation
+        const rFeat = await fetch(`${SUPABASE_URL}/rest/v1/feature_requests?status=eq.en_attente&select=id`, { headers: h });
+        const featCount = (() => { const c = rFeat.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
+        setFeaturePendingCount(featCount);
       } catch {}
     };
     checkMatchBadges();
@@ -15805,7 +15873,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const messagingPendingCount = reports.filter(r => isPending(r) && isSupportInbox(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   // ── Badge global = signalements en attente + avis non lus + paiements en attente + nouvelles demandes de mise en relation ──
-  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge;
+  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge + featurePendingCount;
   const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
@@ -17249,6 +17317,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {key === "matches" && matchesBadgeCount > 0 && (
                   <span style={{ background: G.blanc, color: "#8e44ad", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(142,68,173,0.2)", border: "1px solid rgba(142,68,173,0.15)" }}>
                     {matchesBadgeCount > 99 ? "99+" : matchesBadgeCount}
+                  </span>
+                )}
+                {key === "marketing" && featurePendingCount > 0 && (
+                  <span style={{ background: G.blanc, color: "#E67E22", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(230,126,34,0.2)", border: "1px solid rgba(230,126,34,0.15)" }}>
+                    {featurePendingCount > 99 ? "99+" : featurePendingCount}
                   </span>
                 )}
               </div>
@@ -18776,7 +18849,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
             {([["statuts", "Statuts Moyo", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>]] as [("statuts" | "features" | "event"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
-              <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}</button>
+              <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
 
@@ -21358,7 +21431,10 @@ export default function App() {
         const lastReqSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
         const rMatchReqs = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&created_at=gt.${lastReqSeen}&select=id`, { headers: h });
         const matchReqCount = parseCount(rMatchReqs);
-        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount;
+        // Demandes de mise en avant (statuts Moyo) en attente de validation
+        const rFeatReqs = await fetch(`${SUPABASE_URL}/rest/v1/feature_requests?status=eq.en_attente&select=id`, { headers: h });
+        const featReqCount = parseCount(rFeatReqs);
+        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount + featReqCount;
         setAdminBadgeCount(prev => prev === newCount ? prev : newCount);
       } catch {}
     };
