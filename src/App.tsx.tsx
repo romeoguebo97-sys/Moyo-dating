@@ -138,7 +138,10 @@ const MSG_BG_STYLE: React.CSSProperties = {
   position: "relative",
 };
 const SUPER_ADMIN_ID = "2b70da16-9e1e-48b0-802e-580d8d150b44";
-const REFERRAL_BONUS_DAYS = 7;
+// Récompense de parrainage proportionnelle à la formule du filleul (réglable via app_settings).
+let REFERRAL_BONUS_WEEK = 2;    // filleul prend 1 semaine -> parrain gagne 2 jours
+let REFERRAL_BONUS_MONTH = 7;   // filleul prend 1 mois     -> parrain gagne 7 jours
+let REFERRAL_BONUS_2MONTH = 14; // filleul prend 2 mois     -> parrain gagne 14 jours
 // Intervalles de polling — modifiables via app_settings
 let POLL_BADGES_MS = 8000;        // Fallback badges (messages/likes/matchs/vues)
 let POLL_ADMIN_BADGE_MS = 5000;   // Badge admin
@@ -163,6 +166,15 @@ function premiumDaysForAmount(amount: number): number {
   return monthDays;
 }
 function premiumMsForAmount(amount: number): number { return premiumDaysForAmount(amount) * 86400000; }
+// Récompense de parrainage (en jours) selon le montant payé par le filleul.
+// Proportionnelle à la formule : 1 semaine -> 2 j, 1 mois -> 7 j, 2 mois -> 14 j.
+// Tout montant >= 2 mois donne la récompense la plus haute ; en dessous d'une semaine : 0.
+function referralBonusForAmount(amount: number): number {
+  if (amount >= PREMIUM_PRICE_2MONTH_FCFA) return REFERRAL_BONUS_2MONTH;
+  if (amount >= PREMIUM_PRICE_FCFA) return REFERRAL_BONUS_MONTH;
+  if (amount >= PREMIUM_PRICE_WEEK_FCFA) return REFERRAL_BONUS_WEEK;
+  return 0;
+}
 let PREMIUM_PRICE_EUR = 10;
 let EUR_TO_FCFA = 655.957; // taux de conversion EUR→FCFA (configurable dans Tarifs & Paiements)
 // Devises : Mobile Money = FCFA (XAF), Carte/Stripe = EUR. Helpers de classification et d'affichage.
@@ -277,6 +289,9 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["premium_price_2month_fcfa"]) PREMIUM_PRICE_2MONTH_FCFA = parseInt(map["premium_price_2month_fcfa"]) || 5900;
   if (map["premium_days_week"]) PREMIUM_DAYS_WEEK = parseInt(map["premium_days_week"]) || 7;
   if (map["premium_days_2month"]) PREMIUM_DAYS_2MONTH = parseInt(map["premium_days_2month"]) || 62;
+  if (map["referral_bonus_week_days"]) REFERRAL_BONUS_WEEK = parseInt(map["referral_bonus_week_days"]) || 2;
+  if (map["referral_bonus_month_days"]) REFERRAL_BONUS_MONTH = parseInt(map["referral_bonus_month_days"]) || 7;
+  if (map["referral_bonus_2month_days"]) REFERRAL_BONUS_2MONTH = parseInt(map["referral_bonus_2month_days"]) || 14;
   if (map["premium_price_eur"]) PREMIUM_PRICE_EUR = parseFloat(map["premium_price_eur"]) || 10;
   if (map["eur_to_fcfa_rate"]) EUR_TO_FCFA = parseFloat(map["eur_to_fcfa_rate"]) || 655.957;
   if (map["poll_badges_ms"]) POLL_BADGES_MS = parseInt(map["poll_badges_ms"]) || 8000;
@@ -1251,7 +1266,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
     { icon: "filter", titre: "Filtres avancés", desc: "Filtre par ville, âge, religion" },
     { icon: "phone", titre: "Partage tes coordonnées", desc: "Envoie ton numéro ou email librement" },
     { icon: "gift", titre: "Offrir Premium", desc: "Offre 1 mois de Premium à un match" },
-    { icon: "referral", titre: "Parrainer & gagner", desc: "+7 jours offerts pour chaque ami abonné" },
+    { icon: "referral", titre: "Parrainer & gagner", desc: `+${REFERRAL_BONUS_WEEK} à ${REFERRAL_BONUS_2MONTH} jours offerts selon la formule de votre filleul` },
     { icon: "verified", titre: "Profil vérifié", desc: "Badge de confiance visible sur ton profil" },
     { icon: "support", titre: "Support prioritaire", desc: "Assistance rapide 7j/7" },
   ];
@@ -1738,7 +1753,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Je suis en Europe, comment payer le Premium ?", desc: "Appuyez sur 'Passer Premium' → section Diaspora → bouton 'Visa / Mastercard'. Vous êtes redirigé vers une page de paiement sécurisée Stripe. Entrez votre carte bancaire et confirmez. L'activation est automatique et immédiate." },
       { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "Pour MTN/Airtel : l'activation se fait sous 15 minutes. Pour les paiements par carte (Stripe) : l'activation est automatique et immédiate. Si après 15 minutes vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo." },
       { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche votre statut en temps réel : nombre de jours restants, ou 'Actif' si votre abonnement est en cours." },
-      { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: "Depuis votre page Profil, appuyez sur 'Parrainer un ami'. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez automatiquement 7 jours de Premium offerts." },
+      { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: `Depuis votre page Profil, appuyez sur 'Parrainer un ami'. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez des jours Premium offerts selon sa formule : ${REFERRAL_BONUS_WEEK} jours (1 semaine), ${REFERRAL_BONUS_MONTH} jours (1 mois) ou ${REFERRAL_BONUS_2MONTH} jours (2 mois).` },
       { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Messages → choisissez une photo. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
       { icon: "Q", titre: "Comment créer mon compte ?", desc: "L'inscription est gratuite et rapide en 3 étapes : email + mot de passe, photo de profil, puis informations personnelles. Votre compte est actif immédiatement." },
       { icon: "Q", titre: "Je n'ai pas reçu l'email de confirmation ?", desc: "Vérifiez vos spams ou courriers indésirables. Si vous ne le trouvez pas, contactez notre équipe via l'Assistant Moyo avec votre adresse email." },
@@ -3400,7 +3415,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 // ── FAQ pour le bot ──
 const BOT_FAQ = [
   { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium est disponible en 3 formules : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA pour 1 semaine, ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA pour 1 mois, ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA pour 2 mois (la formule 2 mois est la plus avantageuse). Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money, Airtel Money ou carte Visa/Mastercard. Activation sous 15 minutes.` },
-  { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: "Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez automatiquement 7 jours Premium offerts. Pas de limite !" },
+  { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: `Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez des jours Premium offerts selon sa formule : ${REFERRAL_BONUS_WEEK} jours (1 semaine), ${REFERRAL_BONUS_MONTH} jours (1 mois) ou ${REFERRAL_BONUS_2MONTH} jours (2 mois). Pas de limite !` },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
   { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo propose un service de mise en relation personnalisé. Tout le monde peut créer et enregistrer sa carte relationnelle depuis la page Profil (bouton rouge 'Demander une mise en relation') en décrivant qui vous êtes et ce que vous recherchez. L'envoi de la demande à notre équipe est réservé aux membres Premium : au moment d'appuyer sur 'Envoyer ma demande', si vous n'êtes pas Premium, l'option de passer Premium s'affiche. Une fois la demande envoyée, notre équipe analyse votre profil et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
   { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand l'équipe Moyo vous propose une rencontre, un modal s'affiche automatiquement avec la photo, le nom, l'âge et la ville de la personne. Deux choix : 'Accepter' ou 'Refuser'. Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée pour les deux. La proposition expire si vous ne répondez pas dans le délai fixé par l'équipe." },
@@ -5207,12 +5222,12 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "💝 DEMANDER Premium : si vous n'êtes pas Premium et que votre interlocuteur l'est, un bouton 💝 (rouge) apparaît en haut de la conversation. Il permet de lui demander gentiment de vous offrir l'abonnement. Une fenêtre de confirmation s'ouvre avant l'envoi.",
               "La demande de Premium est limitée à 2 fois par mois et par conversation, pour rester courtoise. La personne reçoit alors un message avec un bouton lui permettant de vous offrir Premium en un seul clic, si elle le souhaite. Elle reste entièrement libre d'accepter ou non.",
             ]},
-            { title: "Parrainage - 7 jours offerts", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: [
+            { title: `Parrainage - jusqu'à ${REFERRAL_BONUS_2MONTH} jours offerts`, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: [
               "Le parrainage est notre programme de récompense : parrainez vos amis et gagnez des jours Premium gratuits.",
               "Comment parrainer : allez sur votre page Profil → appuyez sur le bouton vert 'Parrainer un ami' → partagez votre lien unique par WhatsApp, SMS ou tout autre canal.",
-              "Récompense : pour chaque ami qui s'inscrit via votre lien ET passe Premium, vous gagnez automatiquement 7 jours Premium offerts sur votre compte.",
-              "Les 7 jours sont ajoutés à votre Premium actuel ou démarrent immédiatement si vous n'êtes pas abonné.",
-              "Pas de limite : plus vous parrainez, plus vous cumulez. 3 filleuls Premium = 21 jours offerts.",
+              `Récompense proportionnelle à la formule de votre filleul : ${REFERRAL_BONUS_WEEK} jours s'il prend 1 semaine, ${REFERRAL_BONUS_MONTH} jours pour 1 mois, ${REFERRAL_BONUS_2MONTH} jours pour 2 mois. Le bonus est crédité automatiquement dès qu'il passe Premium.`,
+              "Le bonus est ajouté à votre Premium actuel ou démarre immédiatement si vous n'êtes pas abonné.",
+              `Pas de limite : plus vous parrainez, plus vous cumulez. Exemple : 3 filleuls qui prennent 1 mois = ${REFERRAL_BONUS_MONTH * 3} jours offerts.`,
               "Votre lien de parrainage est unique et permanent, disponible depuis votre page Profil.",
             ]},
             { title: "Statuts", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, items: [
@@ -12068,7 +12083,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Parrainer un ami</div>
-            <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.vert }}>7 jours Premium offerts</span> pour chaque ami qui s'abonne</div>
+            <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.vert }}>jusqu'à {REFERRAL_BONUS_2MONTH} jours Premium offerts</span> selon la formule de votre filleul</div>
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </div>}
@@ -14234,10 +14249,13 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const parrainRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}&select=premium_until,is_premium`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const parrainData = await parrainRes.json().catch(() => []);
         if (Array.isArray(parrainData) && parrainData[0]) {
-          const base = parrainData[0].premium_until && new Date(parrainData[0].premium_until) > new Date() ? new Date(parrainData[0].premium_until) : new Date();
-          const newUntil = new Date(base.getTime() + REFERRAL_BONUS_DAYS * 24 * 60 * 60 * 1000).toISOString();
-          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: true, premium_until: newUntil }) });
-          await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: parrain, admin_id: auth.userId, reason: `Votre filleul ${filleulName} vient de passer Premium ! Vous gagnez ${REFERRAL_BONUS_DAYS} jours de Premium offerts. Actualisez l'application pour en profiter 🌟`, warning_number: 0, acknowledged: false }) });
+          const bonusDays = referralBonusForAmount(p.amount);
+          if (bonusDays > 0) {
+            const base = parrainData[0].premium_until && new Date(parrainData[0].premium_until) > new Date() ? new Date(parrainData[0].premium_until) : new Date();
+            const newUntil = new Date(base.getTime() + bonusDays * 24 * 60 * 60 * 1000).toISOString();
+            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: true, premium_until: newUntil }) });
+            await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: parrain, admin_id: auth.userId, reason: `Votre filleul ${filleulName} vient de passer Premium ! Vous gagnez ${bonusDays} jour${bonusDays > 1 ? "s" : ""} de Premium offert${bonusDays > 1 ? "s" : ""}. Actualisez l'application pour en profiter 🌟`, warning_number: 0, acknowledged: false }) });
+          }
         }
       }
     } catch {}
