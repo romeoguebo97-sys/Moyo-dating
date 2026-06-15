@@ -327,6 +327,23 @@ const GIFT_REQUEST_TEXT = "💝 Et si tu m'offrais Premium ? On pourrait discute
 const isSupportReason = (reason?: string) => !!reason && (reason.startsWith(SUPPORT_PREFIX_USER) || reason.startsWith(SUPPORT_PREFIX_REPLY));
 const cleanSupportReason = (reason?: string) => (reason || "").replace(SUPPORT_PREFIX_USER, "").replace(SUPPORT_PREFIX_REPLY, "").trim();
 
+// ── Budget : catégories de dépenses + couleurs associées (réutilisées dans le tableau et les badges) ──
+const EXPENSE_CATEGORIES = [
+  "Marketing", "Hébergement / Serveurs", "Développement", "Design",
+  "Administration", "Prestataires", "Juridique", "Salaires", "Divers",
+] as const;
+const EXPENSE_CAT_COLORS: Record<string, string> = {
+  "Marketing": "#E67E22",
+  "Hébergement / Serveurs": "#2980b9",
+  "Développement": "#27ae60",
+  "Design": "#e84393",
+  "Administration": "#0984e3",
+  "Prestataires": "#fdcb6e",
+  "Juridique": "#8e44ad",
+  "Salaires": "#16a085",
+  "Divers": "#95a5a6",
+};
+
 const G = {
   rouge: "#C0392B", rougeDark: "#922B21", or: "#D4A843",
   vert: "#1A5C3A",
@@ -14141,6 +14158,28 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [financeNames, setFinanceNames] = useState<Record<string, string>>({});
   const [archiveSelectMode, setArchiveSelectMode] = useState(false);
   const [selectedArchiveIds, setSelectedArchiveIds] = useState<Set<string>>(new Set());
+
+  // ════════ BUDGET : sous-onglet principal (Recettes / Dépenses / Résultat net) ════════
+  // "Recettes" = ancien module Paiements (inchangé). "Dépenses" et "Résultat net" = nouveaux.
+  type BudgetTab = "recettes" | "depenses" | "resultat";
+  const [budgetTab, setBudgetTab] = useState<BudgetTab>("recettes");
+  type FeeType = "ponctuel" | "quotidien";
+  type Expense = { id: string; date: string; category: string; label: string; amount: number; currency: string; fee_type: FeeType; entered_by?: string; comment?: string; created_at?: string };
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expensesLoading, setExpensesLoading] = useState(false);
+  // Formulaire d'ajout / modification (null = fermé)
+  const emptyExpenseForm = (): Expense => ({ id: "", date: new Date().toISOString().slice(0, 10), category: "Marketing", label: "", amount: 0, currency: "EUR", fee_type: "ponctuel", entered_by: auth.name, comment: "" });
+  const [expenseForm, setExpenseForm] = useState<Expense | null>(null);
+  const [expenseSaving, setExpenseSaving] = useState(false);
+  // Filtres Dépenses
+  const [expFrom, setExpFrom] = useState("");
+  const [expTo, setExpTo] = useState("");
+  const [expCatFilter, setExpCatFilter] = useState("");
+  // Résultat net : période + devise d'affichage
+  const [budgetCurrency, setBudgetCurrency] = useState<"EUR" | "XAF">("EUR");
+  const [resultPeriod, setResultPeriod] = useState<"today" | "month" | "year" | "all" | "custom">("month");
+  const [resultFrom, setResultFrom] = useState("");
+  const [resultTo, setResultTo] = useState("");
   type AdminLog = { id: string; admin_id: string; admin_name: string; action: string; target_user_id?: string; target_user_name?: string; created_at: string };
   const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -14431,6 +14470,106 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast(`${rows.length} paiement${rows.length > 1 ? "s" : ""} exporté${rows.length > 1 ? "s" : ""}.`, "success");
+  };
+
+  // ════════ BUDGET — DÉPENSES (table Supabase : budget_expenses) ════════
+  const loadExpenses = async () => {
+    setExpensesLoading(true);
+    try {
+      const data = await sb.query<Expense>(auth.token, "budget_expenses", "?select=id,date,category,label,amount,currency,fee_type,entered_by,comment,created_at&order=date.desc&limit=1000");
+      setExpenses(Array.isArray(data) ? data : []);
+    } catch { setExpenses([]); }
+    setExpensesLoading(false);
+  };
+  const saveExpense = async () => {
+    if (!expenseForm) return;
+    const f = expenseForm;
+    if (!f.label.trim()) { showToast("Le libellé est obligatoire.", "error"); return; }
+    if (!f.amount || f.amount <= 0) { showToast("Le montant doit être supérieur à 0.", "error"); return; }
+    setExpenseSaving(true);
+    const payload = {
+      date: f.date, category: f.category, label: f.label.trim(), amount: f.amount,
+      currency: f.currency, fee_type: f.fee_type, entered_by: f.entered_by || auth.name, comment: (f.comment || "").trim() || null,
+    };
+    try {
+      if (f.id) {
+        await sb.update(auth.token, "budget_expenses", f.id, payload);
+        logAdminAction(auth.token, auth.userId, auth.name, `Dépense modifiée : ${f.label} (${formatMoney(f.amount, f.currency)})`, auth.userId);
+        showToast("Dépense modifiée.", "success");
+      } else {
+        await sb.insert(auth.token, "budget_expenses", payload);
+        logAdminAction(auth.token, auth.userId, auth.name, `Dépense ajoutée : ${f.label} (${formatMoney(f.amount, f.currency)})`, auth.userId);
+        showToast("Dépense ajoutée.", "success");
+      }
+      setExpenseForm(null);
+      loadExpenses();
+    } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
+    setExpenseSaving(false);
+  };
+  const deleteExpense = async (exp: Expense) => {
+    try {
+      await sb.delete(auth.token, "budget_expenses", `?id=eq.${exp.id}`);
+      logAdminAction(auth.token, auth.userId, auth.name, `Dépense supprimée : ${exp.label} (${formatMoney(exp.amount, exp.currency)})`, auth.userId);
+      showToast("Dépense supprimée.", "success");
+      loadExpenses();
+    } catch { showToast("Erreur lors de la suppression.", "error"); }
+  };
+  // Conversion vers la devise d'affichage choisie (EUR ou XAF/FCFA) via le taux EUR_TO_FCFA.
+  const toBudgetCurrency = (amount: number, cur: string): number => {
+    const rate = EUR_TO_FCFA || 655.957;
+    const from = cur === "EUR" ? "EUR" : "XAF";
+    if (from === budgetCurrency) return amount || 0;
+    return budgetCurrency === "EUR" ? (amount || 0) / rate : (amount || 0) * rate;
+  };
+  // Formatage dans la devise d'affichage (€ avec 2 décimales, FCFA sans décimale).
+  const fmtBudget = (v: number): string => budgetCurrency === "EUR"
+    ? `${(v || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+    : `${Math.round(v || 0).toLocaleString("fr-FR")} FCFA`;
+  // Bornes [start, end] (en ms) de la période choisie pour le Résultat net.
+  const resultPeriodRange = (): { start: number; end: number; label: string } => {
+    const now = new Date();
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+    if (resultPeriod === "today") return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), end: endOfToday, label: "Aujourd'hui" };
+    if (resultPeriod === "month") return { start: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), end: endOfToday, label: "Ce mois" };
+    if (resultPeriod === "year") return { start: new Date(now.getFullYear(), 0, 1).getTime(), end: endOfToday, label: "Cette année" };
+    if (resultPeriod === "custom") {
+      const s = resultFrom ? new Date(resultFrom + "T00:00:00").getTime() : 0;
+      const e = resultTo ? new Date(resultTo + "T23:59:59").getTime() : endOfToday;
+      return { start: s, end: e, label: "Période choisie" };
+    }
+    return { start: 0, end: endOfToday, label: "Depuis le lancement" };
+  };
+  // Montant d'une dépense imputable à une période. Les frais quotidiens sont reconduits
+  // automatiquement chaque jour à partir de leur date, jusqu'à la fin de la période (max aujourd'hui).
+  const expenseAmountForPeriod = (exp: Expense, start: number, end: number): number => {
+    const conv = toBudgetCurrency(exp.amount, exp.currency);
+    const day = new Date(exp.date + "T00:00:00").getTime();
+    if (exp.fee_type === "quotidien") {
+      const effStart = Math.max(day, start);
+      const effEnd = Math.min(end, Date.now());
+      if (effEnd < effStart) return 0;
+      const days = Math.floor((new Date(effEnd).setHours(0, 0, 0, 0) - new Date(effStart).setHours(0, 0, 0, 0)) / 86400000) + 1;
+      return conv * Math.max(0, days);
+    }
+    return day >= start && day <= end ? conv : 0;
+  };
+  // Export CSV des dépenses (selon les filtres affichés).
+  const exportExpensesCSV = (rows: Expense[]) => {
+    const esc = (v: any) => { const s = String(v ?? ""); return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const header = ["Date", "Categorie", "Libelle", "Montant", "Devise", "Type_de_frais", "Saisi_par", "Commentaire"];
+    const lines = rows.map(r => [
+      new Date(r.date).toLocaleDateString("fr-FR"), r.category, r.label, r.amount,
+      r.currency === "EUR" ? "EUR" : "FCFA", r.fee_type === "quotidien" ? "Frais quotidiens" : "Frais ponctuels",
+      r.entered_by || "", r.comment || "",
+    ].map(esc).join(";"));
+    const csv = "\uFEFF" + [header.join(";"), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `moyo-depenses-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`${rows.length} dépense${rows.length > 1 ? "s" : ""} exportée${rows.length > 1 ? "s" : ""}.`, "success");
   };
   const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
   const [hiddenReviews, setHiddenReviews] = useState<Set<string>>(new Set());
@@ -15969,7 +16108,86 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
-      {/* Modal avertissement admin */}
+      {/* Modal Ajouter / Modifier une dépense */}
+      {expenseForm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 12000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !expenseSaving && setExpenseForm(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, margin: 0 }}>{expenseForm.id ? "Modifier la dépense" : "Ajouter une dépense"}</h3>
+              <button onClick={() => !expenseSaving && setExpenseForm(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1.4rem", lineHeight: 1 }}>×</button>
+            </div>
+            {(() => {
+              const lbl = { display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#888", marginBottom: 5 } as React.CSSProperties;
+              const inp = { width: "100%", boxSizing: "border-box" as const, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", color: G.brun, background: G.blanc };
+              const set = (patch: Partial<Expense>) => setExpenseForm(f => f ? { ...f, ...patch } : f);
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 140px" }}>
+                      <label style={lbl}>Date</label>
+                      <input type="date" value={expenseForm.date} onChange={e => set({ date: e.target.value })} style={inp} />
+                    </div>
+                    <div style={{ flex: "1 1 140px" }}>
+                      <label style={lbl}>Catégorie</label>
+                      <select value={expenseForm.category} onChange={e => set({ category: e.target.value })} style={inp}>
+                        {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Libellé</label>
+                    <input type="text" value={expenseForm.label} onChange={e => set({ label: e.target.value })} placeholder="Ex : Campagne Facebook Ads - Mai" style={inp} />
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 140px" }}>
+                      <label style={lbl}>Montant</label>
+                      <input type="number" min="0" step="0.01" value={expenseForm.amount || ""} onChange={e => set({ amount: parseFloat(e.target.value) || 0 })} placeholder="0.00" style={inp} />
+                    </div>
+                    <div style={{ flex: "0 0 auto" }}>
+                      <label style={lbl}>Devise</label>
+                      <div style={{ display: "flex", gap: 4, background: G.creme, borderRadius: 10, padding: 3 }}>
+                        {([["EUR", "€"], ["XAF", "FCFA"]] as [string, string][]).map(([k, l]) => (
+                          <button key={k} onClick={() => set({ currency: k })} style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: expenseForm.currency === k ? "#27ae60" : "transparent", color: expenseForm.currency === k ? "#fff" : "#888", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Type de frais</label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {([["ponctuel", "Frais ponctuels", "Compté une seule fois"], ["quotidien", "Frais quotidiens", "Reconduit chaque jour"]] as [FeeType, string, string][]).map(([k, t, d]) => {
+                        const on = expenseForm.fee_type === k;
+                        return (
+                          <button key={k} onClick={() => set({ fee_type: k })} style={{ flex: 1, textAlign: "left", padding: "10px 12px", borderRadius: 10, cursor: "pointer", border: `2px solid ${on ? "#27ae60" : G.gris}`, background: on ? "rgba(39,174,96,0.08)" : G.blanc }}>
+                            <div style={{ fontSize: "0.82rem", fontWeight: 700, color: on ? "#27ae60" : G.brun }}>{t}</div>
+                            <div style={{ fontSize: "0.68rem", color: "#999", marginTop: 2 }}>{d}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 160px" }}>
+                      <label style={lbl}>Saisi par</label>
+                      <input type="text" value={expenseForm.entered_by || ""} onChange={e => set({ entered_by: e.target.value })} placeholder="Nom" style={inp} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Commentaire (facultatif)</label>
+                    <textarea value={expenseForm.comment || ""} onChange={e => set({ comment: e.target.value })} placeholder="Détail, fournisseur, référence..." style={{ ...inp, minHeight: 64, resize: "vertical" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                    <Btn variant="ghost" onClick={() => setExpenseForm(null)} style={{ flex: 1, padding: "11px" }} disabled={expenseSaving}>Annuler</Btn>
+                    <Btn variant="primary" onClick={saveExpense} style={{ flex: 1, padding: "11px" }} loading={expenseSaving}>{expenseForm.id ? "Enregistrer" : "Ajouter"}</Btn>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Modal réponse assistance (support) */}
       {supportReply && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 12000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
@@ -17281,7 +17499,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["messagerie", "Messagerie", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "messagerie" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
             ["marketing", "Marketing", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "marketing" ? "#E67E22" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>],
             ["reviews", "Réputation", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
-            ["payments", "Paiements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>],
+            ["payments", "Budget", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
             <div
@@ -17290,7 +17508,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 setActiveTab(key as any);
                 if (key === "users" && users.length === 0) loadUsers("", 0);
                 if (key === "reviews") loadReviews();
-                if (key === "payments") loadPayments();
+                if (key === "payments") { loadPayments(); loadExpenses(); }
                 if (key === "logs") loadAdminLogs();
                 if (key === "messagerie") loadStats();
                 if (key === "marketing") { loadOfficialStatuses(); loadFeatureRequests(); loadFeatureStatuses(); }
@@ -19531,7 +19749,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════ ONGLET PAIEMENTS */}
+      {/* ═══════════════════════════════════════════ ONGLET BUDGET (Recettes / Dépenses / Résultat net) */}
       {activeTab === "payments" && (
         (auth.adminLevel !== "superadmin" && auth.userId !== SUPER_ADMIN_ID) ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 60, gap: 16, textAlign: "center" }}>
@@ -19543,13 +19761,44 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         ) : (
         <div style={{ padding: "16px" }}>
-          {/* En-tête */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>💳 Paiements</div>
-            <Btn variant="ghost" onClick={() => { loadPayments(); if (paymentSubTab === "archive") loadArchived(); if (paymentSubTab === "finance") loadFinance(); }} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
+          {/* En-tête Budget */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1.05rem", color: G.brun }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>
+              Budget
+            </div>
+            <Btn variant="ghost" onClick={() => {
+              if (budgetTab === "recettes") { loadPayments(); if (paymentSubTab === "archive") loadArchived(); if (paymentSubTab === "finance") loadFinance(); }
+              else if (budgetTab === "depenses") loadExpenses();
+              else { loadFinance(); loadExpenses(); }
+            }} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
           </div>
 
-          {/* Sous-onglets Paiements */}
+          {/* Sélecteur principal Budget : Recettes / Dépenses / Résultat net */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 18 }}>
+            {([
+              ["recettes", "Recettes", "Entrées d'argent"],
+              ["depenses", "Dépenses", "Sorties d'argent"],
+              ["resultat", "Résultat net", "Bénéfice réel"],
+            ] as [BudgetTab, string, string][]).map(([key, title, sub]) => {
+              const active = budgetTab === key;
+              return (
+                <button key={key} onClick={() => {
+                  setBudgetTab(key);
+                  if (key === "depenses") loadExpenses();
+                  if (key === "resultat") { loadFinance(); loadExpenses(); }
+                  if (key === "recettes") loadPayments();
+                }} style={{ textAlign: "center", padding: "14px 10px", borderRadius: 14, cursor: "pointer", border: `2px solid ${active ? "#27ae60" : G.gris}`, background: active ? "#27ae60" : G.blanc, color: active ? "#fff" : G.brun, transition: "all 0.18s", boxShadow: active ? "0 6px 16px rgba(39,174,96,0.25)" : "none" }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.92rem" }}>{title}</div>
+                  <div style={{ fontSize: "0.72rem", marginTop: 3, opacity: active ? 0.92 : 0.6 }}>{sub}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ═══════════════ RECETTES (ancien module Paiements, inchangé) ═══════════════ */}
+          {budgetTab === "recettes" && (<>
+          {/* Sous-onglets Recettes */}
           <div className="match-subtabs" style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", flexWrap: "nowrap" }}>
             {([
               ["pending", "Demandes", "#27ae60"],
@@ -19914,6 +20163,206 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               )}
             </div>
           )}
+          </>)}
+
+          {/* ═══════════════════════════════════════════ DÉPENSES */}
+          {budgetTab === "depenses" && (() => {
+            const filtered = expenses.filter(e => {
+              if (expCatFilter && e.category !== expCatFilter) return false;
+              const d = new Date(e.date + "T00:00:00").getTime();
+              if (expFrom && d < new Date(expFrom + "T00:00:00").getTime()) return false;
+              if (expTo && d > new Date(expTo + "T23:59:59").getTime()) return false;
+              return true;
+            });
+            const totalDisplay = filtered.reduce((s, e) => s + toBudgetCurrency(e.amount, e.currency), 0);
+            return (
+            <div>
+              <div style={{ marginBottom: 6, fontWeight: 800, fontSize: "1rem", color: G.brun }}>Dépenses</div>
+              <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 14 }}>Consultez et gérez toutes les sorties d'argent.</div>
+
+              {/* Carte total + ajout */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                  <input type="date" value={expFrom} onChange={e => setExpFrom(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }} />
+                  <span style={{ color: "#aaa" }}>→</span>
+                  <input type="date" value={expTo} onChange={e => setExpTo(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }} />
+                  <select value={expCatFilter} onChange={e => setExpCatFilter(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }}>
+                    <option value="">Toutes les catégories</option>
+                    {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <button onClick={() => { setExpFrom(""); setExpTo(""); setExpCatFilter(""); }} style={{ padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, background: G.blanc, color: "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>↻ Réinitialiser</button>
+                </div>
+                <div style={{ background: G.blanc, borderRadius: 14, padding: "14px 18px", border: `1px solid ${G.gris}`, minWidth: 190, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Total des dépenses</div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: "#e74c3c", marginTop: 2 }}>{fmtBudget(totalDisplay)}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 1 }}>{filtered.length} dépense{filtered.length > 1 ? "s" : ""}</div>
+                  </div>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(231,76,60,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                <button onClick={() => setExpenseForm(emptyExpenseForm())} style={{ background: "#27ae60", color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>+ Ajouter une dépense</button>
+                <button onClick={() => exportExpensesCSV(filtered)} disabled={filtered.length === 0} style={{ background: "rgba(39,174,96,0.1)", color: "#1a8c4a", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 10, padding: "9px 16px", fontSize: "0.8rem", fontWeight: 700, cursor: filtered.length ? "pointer" : "not-allowed", opacity: filtered.length ? 1 : 0.5, display: "flex", alignItems: "center", gap: 6 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Exporter
+                </button>
+                <div style={{ display: "flex", gap: 4, background: G.creme, borderRadius: 50, padding: 3, alignItems: "center" }}>
+                  {([["EUR", "€"], ["XAF", "FCFA"]] as [string, string][]).map(([k, lbl]) => (
+                    <button key={k} onClick={() => setBudgetCurrency(k as any)} style={{ padding: "5px 12px", borderRadius: 50, border: "none", background: budgetCurrency === k ? "#27ae60" : "transparent", color: budgetCurrency === k ? "#fff" : "#888", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tableau des dépenses */}
+              {expensesLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : filtered.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune dépense enregistrée.</div>
+              ) : (
+                <div style={{ overflowX: "auto", border: `1px solid ${G.gris}`, borderRadius: 12, background: G.blanc }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", minWidth: 820 }}>
+                    <thead>
+                      <tr style={{ textAlign: "left", color: "#888", borderBottom: `1px solid ${G.gris}` }}>
+                        {["Date", "Catégorie", "Libellé", "Montant", "Commentaire", "Saisi par", "Type de frais", "Actions"].map(h => (
+                          <th key={h} style={{ padding: "11px 12px", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map(e => {
+                        const col = EXPENSE_CAT_COLORS[e.category] || "#95a5a6";
+                        return (
+                          <tr key={e.id} style={{ borderBottom: `1px solid ${G.gris}` }}>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap", color: "#555" }}>{new Date(e.date).toLocaleDateString("fr-FR")}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
+                              <span style={{ background: `${col}1a`, color: col, borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>{e.category}</span>
+                            </td>
+                            <td style={{ padding: "11px 12px", color: G.brun, fontWeight: 600 }}>{e.label}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap", color: "#e74c3c", fontWeight: 700 }}>{formatMoney(e.amount, e.currency)}</td>
+                            <td style={{ padding: "11px 12px", color: "#888" }}>{e.comment || "—"}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap", color: "#555" }}>{e.entered_by || "—"}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap", color: "#555" }}>{e.fee_type === "quotidien" ? "Frais quotidiens" : "Frais ponctuels"}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => setExpenseForm({ ...e })} title="Modifier" style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${G.gris}`, background: G.blanc, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+                                </button>
+                                <button onClick={() => confirm(`Supprimer la dépense « ${e.label} » ? Cette action est irréversible.`, () => deleteExpense(e))} title="Supprimer" style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid rgba(231,76,60,0.25)", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 10 }}>Affichage de {filtered.length} sur {expenses.length} dépense{expenses.length > 1 ? "s" : ""}. Les montants sont affichés dans leur devise d'origine ; le total est converti en {budgetCurrency === "EUR" ? "€" : "FCFA"}.</div>
+            </div>
+            );
+          })()}
+
+          {/* ═══════════════════════════════════════════ RÉSULTAT NET */}
+          {budgetTab === "resultat" && (() => {
+            const { start, end, label } = resultPeriodRange();
+            const recRows = financeRows.filter(r => !financeExcluded.has(r.id));
+            const totalRecettes = recRows.filter(r => {
+              const t = new Date(r.approved_at || r.created_at).getTime();
+              return t >= start && t <= end;
+            }).reduce((s, r) => s + toBudgetCurrency(r.amount, paymentCurrency(r)), 0);
+            const totalDepenses = expenses.reduce((s, e) => s + expenseAmountForPeriod(e, start, end), 0);
+            const net = totalRecettes - totalDepenses;
+            const marge = totalRecettes > 0 ? (net / totalRecettes) * 100 : 0;
+            const exportResult = () => {
+              const esc = (v: any) => { const s = String(v ?? ""); return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+              const cur = budgetCurrency === "EUR" ? "EUR" : "FCFA";
+              const lines = [
+                ["Periode", label], ["Devise", cur],
+                ["Total recettes", (Math.round(totalRecettes * 100) / 100)],
+                ["Total depenses", (Math.round(totalDepenses * 100) / 100)],
+                ["Resultat net", (Math.round(net * 100) / 100)],
+                ["Marge (%)", (Math.round(marge * 100) / 100)],
+              ].map(row => row.map(esc).join(";"));
+              const csv = "\uFEFF" + lines.join("\n");
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = `moyo-resultat-net-${new Date().toISOString().slice(0, 10)}.csv`;
+              document.body.appendChild(a); a.click(); document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              showToast("Résultat net exporté.", "success");
+            };
+            return (
+            <div>
+              <div style={{ marginBottom: 6, fontWeight: 800, fontSize: "1rem", color: G.brun }}>Résultat net</div>
+              <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 14 }}>Consultez votre performance financière. Les données sont calculées automatiquement.</div>
+
+              {/* Sélecteurs de période + devise */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                {([["today", "Aujourd'hui"], ["month", "Ce mois"], ["year", "Cette année"], ["all", "Depuis le lancement"], ["custom", "Choisir une période"]] as [string, string][]).map(([k, lbl]) => (
+                  <button key={k} onClick={() => setResultPeriod(k as any)} style={{ padding: "7px 14px", borderRadius: 50, border: `2px solid ${resultPeriod === k ? "#27ae60" : G.gris}`, background: resultPeriod === k ? "#27ae60" : G.blanc, color: resultPeriod === k ? "#fff" : "#666", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+                ))}
+                <div style={{ display: "flex", gap: 4, background: G.creme, borderRadius: 50, padding: 3, marginLeft: "auto" }}>
+                  {([["EUR", "€"], ["XAF", "FCFA"]] as [string, string][]).map(([k, lbl]) => (
+                    <button key={k} onClick={() => setBudgetCurrency(k as any)} style={{ padding: "5px 12px", borderRadius: 50, border: "none", background: budgetCurrency === k ? "#27ae60" : "transparent", color: budgetCurrency === k ? "#fff" : "#888", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
+              {resultPeriod === "custom" && (
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14 }}>
+                  <input type="date" value={resultFrom} onChange={e => setResultFrom(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }} />
+                  <span style={{ color: "#aaa" }}>→</span>
+                  <input type="date" value={resultTo} onChange={e => setResultTo(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }} />
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14, marginTop: 14, marginBottom: 14 }}>
+                {/* Colonne gauche : 3 cartes */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+                    <div><div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Total recettes</div><div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#27ae60" }}>{fmtBudget(totalRecettes)}</div><div style={{ fontSize: "0.68rem", color: "#aaa" }}>Entrées d'argent</div></div>
+                  </div>
+                  <div style={{ background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(231,76,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
+                    <div><div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Total dépenses</div><div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#e74c3c" }}>{fmtBudget(totalDepenses)}</div><div style={{ fontSize: "0.68rem", color: "#aaa" }}>Sorties d'argent</div></div>
+                  </div>
+                  <div style={{ background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: marge >= 0 ? "rgba(39,174,96,0.12)" : "rgba(231,76,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: marge >= 0 ? "#27ae60" : "#e74c3c", fontWeight: 900 }}>%</div>
+                    <div><div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Marge en %</div><div style={{ fontSize: "1.25rem", fontWeight: 900, color: marge >= 0 ? "#27ae60" : "#e74c3c" }}>{marge.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</div><div style={{ fontSize: "0.68rem", color: "#aaa" }}>(Résultat net / Total recettes)</div></div>
+                  </div>
+                </div>
+                {/* Colonne droite : grande carte Résultat net (verte si bénéfice, rouge si déficit) */}
+                <div style={{ background: net >= 0 ? "rgba(39,174,96,0.07)" : "rgba(231,76,60,0.07)", border: `2px solid ${net >= 0 ? "rgba(39,174,96,0.4)" : "rgba(231,76,60,0.4)"}`, borderRadius: 18, padding: "26px 24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center", transition: "all 0.2s" }}>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: net >= 0 ? "#27ae60" : "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#888", fontWeight: 700 }}>Résultat net</div>
+                  <div style={{ fontSize: "2rem", fontWeight: 900, color: net >= 0 ? "#27ae60" : "#e74c3c", lineHeight: 1.1 }}>{fmtBudget(net)}</div>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: net >= 0 ? "#27ae60" : "#e74c3c" }}>{net >= 0 ? "Bénéfice" : "Déficit"} · {label}</div>
+                </div>
+              </div>
+
+              {/* Bandeau formule + export */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between", background: "rgba(39,174,96,0.06)", border: "1px solid rgba(39,174,96,0.2)", borderLeft: "4px solid #27ae60", borderRadius: 12, padding: "14px 18px" }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: "0.9rem", color: G.brun }}>Résultat net = <span style={{ color: "#27ae60" }}>Total Recettes</span> − <span style={{ color: "#e74c3c" }}>Total Dépenses</span></div>
+                  <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 3 }}>Les calculs sont mis à jour automatiquement. Les frais quotidiens sont reconduits chaque jour de la période.</div>
+                </div>
+                <button onClick={exportResult} style={{ background: "rgba(39,174,96,0.12)", color: "#1a8c4a", border: "1.5px solid rgba(39,174,96,0.35)", borderRadius: 50, padding: "10px 22px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Exporter
+                </button>
+              </div>
+            </div>
+            );
+          })()}
 
         </div>
         )
