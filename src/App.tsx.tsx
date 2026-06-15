@@ -4972,7 +4972,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
   );
 }
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
   const [showBot, setShowBot] = useState(false);
@@ -5191,7 +5191,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     {/* Bot flottant — masqué quand une conversation est ouverte pour ne pas surcharger
         l'écran de chat (la flèche "descendre" prend sa place). L'Assistant reste accessible
         depuis le bouton dédié dans le header/menu Découvrir. */}
-    {FEATURE_ASSISTANT && !isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
+    {FEATURE_ASSISTANT && assistantEnabled && !isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
     {showGuide && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
       <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
         {/* Header */}
@@ -7433,6 +7433,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const [confirmBlockMatch, setConfirmBlockMatch] = useState<Match | null>(null);
   const [confirmDeleteRequest, setConfirmDeleteRequest] = useState<any | null>(null);
   const [deletingRequest, setDeletingRequest] = useState(false);
+  const [reqToast, setReqToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  useEffect(() => { if (!reqToast) return; const t = setTimeout(() => setReqToast(null), 4000); return () => clearTimeout(t); }, [reqToast]);
   const isUnmatching = useRef(false);
   // ── Sous-onglets : Mes demandes / Propositions / Matchs ──
   const [matchSubTab, setMatchSubTab] = useState<"demandes" | "proposals" | "matches">("matches");
@@ -7474,11 +7476,27 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const handleDeleteRequest = async (rq: any) => {
     if (!rq) return;
     setDeletingRequest(true);
+    const table = rq._kind === "boost" ? "feature_requests" : "match_requests";
     try {
-      const table = rq._kind === "boost" ? "feature_requests" : "match_requests";
-      await sb.delete(auth.token, table, `?id=eq.${rq.id}&user_id=eq.${auth.userId}`);
-      setMyRequests(prev => prev.filter(x => !(x.id === rq.id && x._kind === rq._kind)));
-    } catch {}
+      // On demande le renvoi des lignes supprimées (return=representation) pour VÉRIFIER
+      // que la suppression a réellement eu lieu en base. Si Supabase renvoie un tableau vide,
+      // c'est qu'aucune ligne n'a été supprimée (généralement une policy RLS DELETE manquante) :
+      // dans ce cas, on ne fait pas disparaître la carte à tort.
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${rq.id}&user_id=eq.${auth.userId}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+      });
+      const deleted = await r.json().catch(() => []);
+      if (r.ok && Array.isArray(deleted) && deleted.length > 0) {
+        setMyRequests(prev => prev.filter(x => !(x.id === rq.id && x._kind === rq._kind)));
+        setReqToast({ msg: "Demande supprimée.", type: "success" });
+      } else {
+        setReqToast({ msg: "Suppression impossible : droits insuffisants côté Supabase (policy DELETE manquante).", type: "error" });
+        loadMyRequests(); // resynchronise l'affichage avec l'état réel de la base
+      }
+    } catch {
+      setReqToast({ msg: "Erreur réseau. Réessayez.", type: "error" });
+    }
     setDeletingRequest(false);
     setConfirmDeleteRequest(null);
   };
@@ -7991,6 +8009,13 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
         onConfirm={() => { if (!deletingRequest) handleDeleteRequest(confirmDeleteRequest); }}
         onCancel={() => { if (!deletingRequest) setConfirmDeleteRequest(null); }}
       />
+    )}
+
+    {/* Toast local (suppression de demande) */}
+    {reqToast && (
+      <div style={{ position: "fixed", left: "50%", bottom: 24, transform: "translateX(-50%)", zIndex: 13000, maxWidth: 420, width: "calc(100% - 32px)", background: reqToast.type === "error" ? "#C0392B" : G.vert, color: "#fff", borderRadius: 12, padding: "12px 16px", fontSize: "0.84rem", fontWeight: 600, lineHeight: 1.45, boxShadow: "0 10px 30px rgba(0,0,0,0.25)", textAlign: "center" }}>
+        {reqToast.msg}
+      </div>
     )}
   </div>;
 }
@@ -11361,7 +11386,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
   );
 }
 
-function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin, adminBadgeCount }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void; adminBadgeCount?: number }) {
+function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin, adminBadgeCount, assistantEnabled = true, onToggleAssistant }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void; adminBadgeCount?: number; assistantEnabled?: boolean; onToggleAssistant?: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported">(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
@@ -12338,6 +12363,22 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           </div>
           <div onClick={onToggleDark} style={{ width: 52, height: 28, borderRadius: 50, background: darkMode ? "#2C1A0E" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
             <div style={{ position: "absolute", top: 3, left: darkMode ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
+          </div>
+        </div>}
+
+        {/* Assistant flottant (chatbot) — activable/désactivable par l'utilisateur */}
+        {(!isWideProfile || ["darkmode","main"].includes(activeSection)) && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid var(--c-card-bd)` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: assistantEnabled ? "rgba(39,174,96,0.12)" : "rgba(150,150,150,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={assistantEnabled ? G.vert : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><circle cx="9" cy="11" r="1" fill={assistantEnabled ? G.vert : "#999"}/><circle cx="15" cy="11" r="1" fill={assistantEnabled ? G.vert : "#999"}/></svg>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Assistant flottant</div>
+              <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{assistantEnabled ? "Visible sur vos écrans" : "Masqué pour vous"}</div>
+            </div>
+          </div>
+          <div onClick={onToggleAssistant} style={{ width: 52, height: 28, borderRadius: 50, background: assistantEnabled ? G.vert : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+            <div style={{ position: "absolute", top: 3, left: assistantEnabled ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
           </div>
         </div>}
 
@@ -20789,6 +20830,18 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <div style={{ fontSize: "0.68rem", fontWeight: 700, color: statusInfo.color, background: statusInfo.bg, padding: "3px 8px", borderRadius: 50 }}>{statusInfo.label}</div>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ fontSize: "0.62rem", color: "#aaa" }}>{new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
+                            {p.status === "expired" && <button onClick={async () => {
+                              const newExpiry = new Date(Date.now() + (parseInt(proposeDuration) || 48) * 3600 * 1000).toISOString();
+                              try {
+                                // On repasse en "pending" et on prolonge l'expiration, SANS toucher aux réponses.
+                                // La personne ayant déjà accepté (réponse ≠ null) n'est pas re-sollicitée :
+                                // le modal côté utilisateur ne s'affiche qu'à qui a une réponse encore vide.
+                                await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ status: "pending", expires_at: newExpiry, archived: false }) });
+                                setProposals(prev => prev.map(x => x.id === p.id ? { ...x, status: "pending", expires_at: newExpiry } : x));
+                                logAdminAction(auth.token, auth.userId, auth.name, `Proposition réactivée : ${p.profile1?.name || "?"} ↔ ${p.profile2?.name || "?"} (expire dans ${proposeDuration}h)`, p.user1_id);
+                                showToast("✅ Proposition réactivée", "success");
+                              } catch { showToast("Erreur lors de la réactivation", "error"); }
+                            }} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.25)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#1a8c4a", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Réactiver</button>}
                             {p.status === "pending" && <button onClick={() => handleCancelProposal(p.id)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Annuler</button>}
                         {(p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={async () => {
                           await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ archived: true }) });
@@ -21230,6 +21283,19 @@ export default function App() {
   }, [darkMode]);
   const [tab, setTab] = useState("discover");
   const [auth, setAuth] = useState<Auth | null>(null);
+  // ── Assistant flottant : préférence par utilisateur (activé par défaut) ──
+  const [assistantEnabled, setAssistantEnabled] = useState(true);
+  useEffect(() => {
+    if (!auth) return;
+    try { setAssistantEnabled(localStorage.getItem(`moyo_assistant_${auth.userId}`) !== "0"); } catch {}
+  }, [auth?.userId]);
+  const toggleAssistant = () => {
+    setAssistantEnabled(prev => {
+      const v = !prev;
+      try { if (auth) localStorage.setItem(`moyo_assistant_${auth.userId}`, v ? "1" : "0"); } catch {}
+      return v;
+    });
+  };
   const [unreadCount, setUnreadCount] = useState(0);
   const lastUnreadRef = useRef<number | null>(null);
   const [notifCount, setNotifCount] = useState(0);
@@ -22114,14 +22180,14 @@ export default function App() {
       }
       if (t === "likes") { setLikesReceived(0); try { localStorage.setItem(`moyo_likes_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
       if (t === "visitors") { setViewsReceived(0); try { localStorage.setItem(`moyo_visitors_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
-    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv}>
+    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv} assistantEnabled={assistantEnabled}>
       <div key={tab} className="page-anim" style={{ width: "100%", height: "100%" }}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} />}
-      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} />}
+      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} assistantEnabled={assistantEnabled} onToggleAssistant={toggleAssistant} />}
       {tab === "admin" && <AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} />}
       </div>
     </AppShell>
