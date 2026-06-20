@@ -21583,6 +21583,13 @@ export default function App() {
         }
       }
     } catch { localStorage.removeItem("moyo_session"); }
+    // Lien direct depuis un site externe : dating.moyo-congo.com/#login (ou /#signup).
+    // Si aucune session active, on ouvre directement l'écran demandé au lieu de la page d'accueil.
+    const wantPage = (hash.replace(/^#/, "").split(/[?&]/)[0] || "").toLowerCase();
+    if (wantPage === "login" || wantPage === "signup") {
+      setPage(wantPage);
+      try { window.history.replaceState({}, "", window.location.pathname + window.location.search); } catch {}
+    }
     setSessionLoaded(true);
   }, []);
 
