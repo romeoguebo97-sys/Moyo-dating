@@ -1583,7 +1583,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
-          <span>Moyo</span><span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+          <span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
         </div>
         <h2 style={{  fontSize: "1.5rem", fontWeight: 700, marginTop: 8 }}>Nouveau mot de passe</h2>
         <p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Choisis un nouveau mot de passe sécurisé</p>
@@ -1822,7 +1822,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           {/* Nav blanche */}
           <div style={{ background: G.blanc, padding: "10px 20px 10px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
             <div style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-1px" }}>
-              <span style={{ color: "#C0392B" }}>Moyo</span><span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+              <span style={{ color: "#C0392B" }}>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
             </div>
           </div>
 
@@ -1890,7 +1890,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: (isMobile && showMobileLanding) ? "none" : "block" }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
-            <span>Moyo</span><span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+            <span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <span onClick={() => onNav("about")}
@@ -2981,9 +2981,9 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   };
 
   if (tempBanUntil) return <BanScreen until={tempBanUntil} onExpire={() => setTempBanUntil(null)} />;
-  if (showForgot) return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 24 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div><h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2></div>{forgotSent ? <div style={{ textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><p style={{ color: "#555", fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p><Btn variant="ghost" onClick={() => { setShowForgot(false); setForgotSent(false); }}>← Retour à la connexion</Btn></div> : <><Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" /><Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowForgot(false)} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div></>}</AuthLayout>;
+  if (showForgot) return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 24 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div><h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2></div>{forgotSent ? <div style={{ textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><p style={{ color: "#555", fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p><Btn variant="ghost" onClick={() => { setShowForgot(false); setForgotSent(false); }}>← Retour à la connexion</Btn></div> : <><Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" /><Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowForgot(false)} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div></>}</AuthLayout>;
 
-  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
 function SignUp({ onNav }: { onNav: (p: string) => void }) {
@@ -3259,7 +3259,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
         <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 16px" }}>
           <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "#fff" }}>{step}</div>
@@ -4000,7 +4000,7 @@ function AdminDesktopPage() {
 
       {/* Topbar desktop */}
       <div style={{ position: "sticky", top: 0, zIndex: 200, background: G.blanc, borderBottom: `1px solid ${G.gris}`, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", padding: "0 32px", display: "flex", alignItems: "center", gap: 14, height: 60 }}>
-        <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.rouge }}>Moyo<span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+        <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.rouge }}>Moyo<span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
         <div style={{ width: 1, height: 28, background: G.gris, flexShrink: 0 }} />
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</div>
@@ -5102,7 +5102,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <div className={`moyo-sidebar${isFullscreen ? " fullscreen-blur" : ""}`}>
         <div className="moyo-sidebar-logo">
           <div style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
-            <span style={{ color: G.rouge }}>Moyo</span><span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+            <span style={{ color: G.rouge }}>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
           </div>
         </div>
         <nav className="moyo-sidebar-nav">
@@ -5155,7 +5155,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <>
         {/* Header mobile */}
         <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
-          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
             <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#333", background: "white", borderRadius: 50, padding: "5px 14px", cursor: "pointer", border: "1.5px solid #ddd", letterSpacing: "0.02em" }}>Guide</div>
           </div>
@@ -17493,7 +17493,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   romeoguebo97@gmail.com
                 </a>
                 <div style={{ marginTop: 4, fontSize: "0.75rem", fontWeight: 800, color: G.brun, letterSpacing: "0.05em" }}>
-                  Moyo<span style={{ color: "#1A1A1A", fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+                  Moyo<span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
                 </div>
               </div>
 
