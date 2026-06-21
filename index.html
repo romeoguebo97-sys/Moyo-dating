@@ -4,39 +4,57 @@
     <meta charset="UTF-8" />
     <meta name="google" content="notranslate">
     <link rel="icon" type="image/png" href="/favicon.png" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Moyo Congo</title>
-    <meta name="description" content="Moyo connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora." />
+
+    <title>Moyo Dating</title>
+
+    <meta name="description" content="Moyo Dating connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora." />
+
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://www.moyo-congo.com" />
-    <meta property="og:title" content="Moyo Congo - Rencontres congolaises" />
-    <meta property="og:description" content="Moyo connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora." />
-    <meta property="og:image" content="https://www.moyo-congo.com/og-image.jpg" />
+    <meta property="og:url" content="https://dating.moyo-congo.com" />
+    <meta property="og:title" content="Moyo Dating - Rencontres congolaises" />
+    <meta property="og:description" content="Moyo Dating connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora." />
+    <meta property="og:image" content="https://dating.moyo-congo.com/og-image.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Moyo Congo - Rencontres congolaises" />
-    <meta name="twitter:description" content="Moyo connecte les Congolais à la recherche d'une relation sincère et durable." />
-    <meta name="twitter:image" content="https://www.moyo-congo.com/og-image.jpg" />
+    <meta name="twitter:title" content="Moyo Dating - Rencontres congolaises" />
+    <meta name="twitter:description" content="Moyo Dating connecte les Congolais à la recherche d'une relation sincère et durable." />
+    <meta name="twitter:image" content="https://dating.moyo-congo.com/og-image.jpg" />
+
+    <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
+
     <meta name="theme-color" content="#FFFFFF">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Moyo">
+    <meta name="apple-mobile-web-app-title" content="Moyo Dating">
     <link rel="apple-touch-icon" href="/favicon.png">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-      * { font-family: 'Inter', sans-serif !important; box-sizing: border-box; }
-      button, a, [role="button"] { touch-action: manipulation; }
 
-      /* Bloque le zoom pinch sans casser le clavier iOS */
+    <style>
+      * {
+        font-family: 'Inter', sans-serif !important;
+        box-sizing: border-box;
+      }
+
+      button,
+      a,
+      [role="button"] {
+        touch-action: manipulation;
+      }
+
       html {
         touch-action: pan-x pan-y;
       }
 
-      html, body {
+      html,
+      body {
         overflow-x: hidden;
         width: 100%;
         max-width: 100vw;
@@ -46,52 +64,75 @@
         -webkit-text-size-adjust: 100%;
         -ms-text-size-adjust: 100%;
       }
-      body { min-height: 100vh; background-color: #FFFFFF; }
-      #root { overflow-x: hidden; width: 100%; min-height: 100vh; background-color: #FFFFFF; }
+
+      body {
+        min-height: 100vh;
+        background-color: #FFFFFF;
+      }
+
+      #root {
+        overflow-x: hidden;
+        width: 100%;
+        min-height: 100vh;
+        background-color: #FFFFFF;
+      }
     </style>
   </head>
+
   <body>
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
 
     <script>
-      // ── Bloquer zoom pinch + double-tap sans bloquer le clavier iOS ──
       var lastTap = 0;
 
-      document.addEventListener('touchstart', function(e) {
-        if (e.touches.length > 1) e.preventDefault(); // pinch zoom
+      document.addEventListener('touchstart', function (e) {
+        if (e.touches.length > 1) e.preventDefault();
       }, { passive: false });
 
-      document.addEventListener('touchend', function(e) {
+      document.addEventListener('touchend', function (e) {
         var now = Date.now();
-        if (now - lastTap < 300) e.preventDefault(); // double-tap zoom
+        if (now - lastTap < 300) e.preventDefault();
         lastTap = now;
       }, { passive: false });
 
-      // ── Fix clavier iOS PWA ──
-      // Sur iPhone en mode standalone, scrollIntoView après ouverture clavier
       (function () {
         var isIosPwa = (
           window.navigator.standalone === true &&
           /iphone|ipad|ipod/i.test(window.navigator.userAgent)
         );
+
         if (!isIosPwa) return;
 
         function onFocusIn(e) {
           var el = e.target;
           if (!el) return;
+
           var tag = el.tagName.toLowerCase();
-          if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return;
+
+          if (
+            tag !== 'input' &&
+            tag !== 'textarea' &&
+            tag !== 'select'
+          ) return;
+
           setTimeout(function () {
             if (el.scrollIntoView) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+              });
             }
           }, 400);
         }
 
         function onFocusOut() {
           setTimeout(function () {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            });
           }, 100);
         }
 
@@ -101,11 +142,21 @@
         if (window.visualViewport) {
           window.visualViewport.addEventListener('resize', function () {
             var activeEl = document.activeElement;
+
             if (!activeEl) return;
+
             var tag = activeEl.tagName.toLowerCase();
-            if (tag !== 'input' && tag !== 'textarea') return;
+
+            if (
+              tag !== 'input' &&
+              tag !== 'textarea'
+            ) return;
+
             setTimeout(function () {
-              activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              activeEl.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+              });
             }, 100);
           });
         }
@@ -114,10 +165,11 @@
 
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
           navigator.serviceWorker.register('/sw.js');
         });
       }
     </script>
+
   </body>
 </html>
