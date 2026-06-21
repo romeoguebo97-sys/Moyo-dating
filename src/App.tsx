@@ -127,13 +127,13 @@ const moderateMessage = (text: string): { blocked: boolean; type?: "insult" | "s
 };
 
 const getModerationMessage = (type: "insult" | "scam" | "sexual"): string => {
-  if (type === "insult") return "Ce message contient des termes irrespectueux et ne peut pas être envoyé. Sur Moyo, nous encourageons la bienveillance, la douceur et le respect mutuel.";
-  if (type === "scam") return "Ce message contient des demandes d'argent ou de transfert. Ce type de comportement est interdit sur Moyo et peut entraîner la suppression de votre compte.";
+  if (type === "insult") return "Ce message contient des termes irrespectueux et ne peut pas être envoyé. Sur Moyo Dating, nous encourageons la bienveillance, la douceur et le respect mutuel.";
+  if (type === "scam") return "Ce message contient des demandes d'argent ou de transfert. Ce type de comportement est interdit sur Moyo Dating et peut entraîner la suppression de votre compte.";
   if (type === "sexual") return "Ce message contient du contenu inapproprié et ne peut pas être envoyé.";
-  return "Ce message ne respecte pas les règles de Moyo.";
+  return "Ce message ne respecte pas les règles de Moyo Dating.";
 };
 
-// Fond messages style Moyo - compatible tous navigateurs mobiles
+// Fond messages style Moyo Dating - compatible tous navigateurs mobiles
 const MSG_BG_STYLE: React.CSSProperties = {
   position: "relative",
 };
@@ -214,7 +214,7 @@ let PREMIUM_STAT_MEMBERS = "";
 let LANDING_TITLE_START = "Trouve ton";
 let LANDING_TITLE_HIGHLIGHT = "âme sœur";
 let LANDING_TITLE_END = "Congolais.e";
-let LANDING_SLOGAN = "Moyo connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.";
+let LANDING_SLOGAN = "Moyo Dating connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora.";
 // Chiffres du bandeau d'accueil ("Chaque jour...") — éditables depuis l'admin
 let LANDING_STAT_MEMBERS = "12 000+";
 let LANDING_STAT_COUPLES = "850+";
@@ -306,7 +306,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
     const savedSession = localStorage.getItem("moyo_session");
     const isAdminUser = savedSession ? JSON.parse(savedSession)?.isAdmin === true : false;
     if (!isAdminUrl && !isAdminUser) {
-      const msg = map["maintenance_message"] || "Moyo est en maintenance. Nous revenons très vite ! 🔧";
+      const msg = map["maintenance_message"] || "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧";
       const el = document.getElementById("root");
       if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px">Moyo<span style="color:#1a1a1a;font-size:0.62em;font-weight:600"> Dating</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
     }
@@ -314,13 +314,13 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
 }).catch(() => {});
 
 const SUPPORT_TEAM_ID = "moyo-support-team";
-const SUPPORT_TEAM_NAME = "Assistance Moyo";
-// Photo de l'équipe Assistance Moyo (uploadée dans Supabase Storage). Vide = icône par défaut.
+const SUPPORT_TEAM_NAME = "Assistance Moyo Dating";
+// Photo de l'équipe Assistance Moyo Dating (uploadée dans Supabase Storage). Vide = icône par défaut.
 const SUPPORT_TEAM_PHOTO = "https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/assistant/Image%2031%20mai%202026,%2004_26_29.png";
 const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
 const SUPPORT_PREFIX_REPLY = "[SUPPORT_REPLY]";
-// Message envoyé automatiquement par l'Assistant Moyo lors d'une tentative de partage de contact (gratuit) — éditable depuis la config admin
-let AUTO_MOD_CONTACT_REPLY = "Bonjour, notre système informatique a détecté une tentative d'échange de coordonnées personnelles. Cette action enfreint les Conditions Générales d'Utilisation de Moyo. Le partage de coordonnées étant réservé aux membres Premium, nous vous invitons à respecter les règles de la communauté afin d'éviter toute restriction ou suppression définitive de votre compte.";
+// Message envoyé automatiquement par l'Assistant Moyo Dating lors d'une tentative de partage de contact (gratuit) — éditable depuis la config admin
+let AUTO_MOD_CONTACT_REPLY = "Bonjour, notre système informatique a détecté une tentative d'échange de coordonnées personnelles. Cette action enfreint les Conditions Générales d'Utilisation de Moyo Dating. Le partage de coordonnées étant réservé aux membres Premium, nous vous invitons à respecter les règles de la communauté afin d'éviter toute restriction ou suppression définitive de votre compte.";
 // Demande de Premium (un non-Premium demande à son interlocuteur Premium de lui offrir)
 const GIFT_REQUEST_PREFIX = "[GIFTREQ]";
 const GIFT_REQUEST_TEXT = "💝 Et si tu m'offrais Premium ? On pourrait discuter sans aucune limite 🥰";
@@ -1408,7 +1408,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
     setTxErr(null);
     const ref = txRef.trim();
     try {
-      // 1) Vérification automatique : on cherche le paiement reçu par SMS (Moyo Payment Listener).
+      // 1) Vérification automatique : on cherche le paiement reçu par SMS (Moyo Dating Payment Listener).
       //    La formule est déterminée par le MONTANT RÉELLEMENT REÇU, pas par la formule choisie.
       const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
         method: "POST",
@@ -1434,7 +1434,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
       // 2) Repli : transaction pas encore reçue (SMS en route) ou fonction absente →
       //    on crée une DEMANDE DE VÉRIFICATION MANUELLE et on conserve la demande
-      //    de paiement classique, pour que l'équipe Moyo garde la main (rien n'est perdu).
+      //    de paiement classique, pour que l'équipe Moyo Dating garde la main (rien n'est perdu).
       const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
       await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
       await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending" }) });
@@ -1667,7 +1667,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     }
   };
 
-  // Bouton "Google Play" → modale "Installe l'app Moyo !" puis installation Android
+  // Bouton "Google Play" → modale "Installe l'app Moyo Dating !" puis installation Android
   const installGooglePlay = () => {
     const isInStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
     if (isInStandalone) { setInstallModal("done"); return; }
@@ -1736,14 +1736,14 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "✓", titre: "Accompagnement pour les couples diaspora/Congo", desc: "" },
     ]},
     { id: "temoignages", title: "Témoignages", emoji: "💬", items: [
-      { icon: "couple", titre: "Fatou & Rodrigue - Paris · Brazza", desc: "On s'est rencontrés sur Moyo en janvier. Aujourd'hui on est fiancés ! Merci Moyo 💕" },
+      { icon: "couple", titre: "Fatou & Rodrigue - Paris · Brazza", desc: "On s'est rencontrés sur Moyo Dating en janvier. Aujourd'hui on est fiancés ! Merci Moyo Dating 💕" },
       { icon: "star3", titre: "Céleste - Diaspora Belgique", desc: "Enfin une appli faite pour nous ! J'ai trouvé quelqu'un de sérieux en 2 semaines." },
 { icon: "thumbup", titre: "Patrick - Pointe-Noire", desc: "Simple, propre, efficace. Exactement ce qu'il fallait pour la diaspora congolaise." },
     ]},
     { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
-      { icon: "Q", titre: "Moyo est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium en 3 formules : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA (1 sem.), ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA (1 mois) ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA (2 mois).` },
+      { icon: "Q", titre: "Moyo Dating est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium en 3 formules : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA (1 sem.), ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA (1 mois) ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA (2 mois).` },
       { icon: "Q", titre: "Comment naviguer entre les profils ?", desc: "3 modes disponibles : Vue carte (swipe gauche/droite ou boutons ←→), Vue liste (défilement vertical), Plein écran (immersion totale, footer masqué). Passez d'un mode à l'autre via les boutons en haut de l'écran Découvrir." },
-      { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
+      { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo Dating parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
       { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: `${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché.` },
       { icon: "Q", titre: "Puis-je voir le profil complet de quelqu'un gratuitement ?", desc: "Oui. Appuyez sur le bouton ☰ de n'importe quelle carte → 'Voir le profil'. C'est gratuit pour tous les membres, sans restriction." },
       { icon: "Q", titre: "Comment annuler un match ?", desc: "Dans Matchs, appuyez sur les 3 traits → Annuler le match. La conversation, les likes et les vues sont supprimés. L'autre personne n'est pas notifiée." },
@@ -1757,50 +1757,50 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "Q", titre: "Qui apparaît dans mes Vues ?", desc: "Uniquement les membres Premium qui ont consulté votre profil. Les membres gratuits ne génèrent pas de vues et n'apparaissent pas dans votre liste Vues." },
       { icon: "Q", titre: "Comment suis-je informé d'un nouveau match ?", desc: "Dès qu'un match est créé, un message de bienvenue apparaît automatiquement dans la conversation. Le badge rouge sur l'onglet Messages se met à jour en temps réel." },
       { icon: "Q", titre: "Si je unlike quelqu'un, que se passe-t-il ?", desc: "Le like disparait des deux côtés instantanément. Si vous aviez un match, la conversation et tous les messages sont supprimés." },
-      { icon: "Q", titre: "Que se passe-t-il si j'envoie un message irrespectueux ?", desc: "Moyo bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement automatique est envoyé à notre équipe." },
+      { icon: "Q", titre: "Que se passe-t-il si j'envoie un message irrespectueux ?", desc: "Moyo Dating bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement automatique est envoyé à notre équipe." },
       { icon: "Q", titre: "Pourquoi je ne peux pas partager mon numéro ou mon WhatsApp ?", desc: "Pour ta sécurité et contre les arnaques, le partage d'un numéro, d'un réseau social ou d'un lien est bloqué dans les messages et dans le profil (bio, nom…) pour les comptes gratuits. Cela vaut même si tu espaces les chiffres ou les écris en lettres. L'abonnement Premium débloque le partage de coordonnées en conversation privée." },
       { icon: "Q", titre: "Mon compte est suspendu avec un décompte, que faire ?", desc: "Il s'agit d'une suspension temporaire suite à un non-respect des règles. Tu n'as rien à faire : à la fin du décompte affiché, tu peux te reconnecter automatiquement. Une suspension définitive, elle, nécessite de contacter l'assistance." },
       { icon: "Q", titre: "Comment réagir à un message ?", desc: "Appuyez longuement sur un message pour ouvrir le menu de réactions (👍 ❤️ 😂 😮 😢 🙏). Une seule réaction par message est autorisée." },
-      { icon: "Q", titre: "Comment contacter l'assistance Moyo ?", desc: "Appuyez sur l'icône verte (Assistant Moyo) à côté du bouton Guide. Vous pouvez poser vos questions ou signaler un problème directement depuis l'app." },
+      { icon: "Q", titre: "Comment contacter l'assistance Moyo Dating ?", desc: "Appuyez sur l'icône verte (Assistant Moyo Dating) à côté du bouton Guide. Vous pouvez poser vos questions ou signaler un problème directement depuis l'app." },
       { icon: "Q", titre: "Puis-je voir le profil de quelqu'un depuis les messages ?", desc: "Oui. Dans une conversation, appuyez sur la photo de profil de votre match en haut de l'écran pour voir sa fiche complète." },
       { icon: "Q", titre: "Comment répondre à un message précis ?", desc: "Appuyez longuement sur le message → Répondre. Un bandeau s'affiche avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
       { icon: "Q", titre: "Comment supprimer un message ?", desc: "Appuyez longuement sur le message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque uniquement de votre côté)." },
       { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Vous devez cliquer 'OK, j'ai compris' pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
       { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → section Congo → choisissez votre opérateur → effectuez le paiement → entrez le numéro de transaction (ID) reçu par SMS → appuyez sur 'J'ai payé'. L'activation est rapide, sous 15 minutes." },
       { icon: "Q", titre: "Je suis en Europe, comment payer le Premium ?", desc: "Appuyez sur 'Passer Premium' → section Diaspora → bouton 'Visa / Mastercard'. Vous êtes redirigé vers une page de paiement sécurisée Stripe. Entrez votre carte bancaire et confirmez. L'activation est automatique et immédiate." },
-      { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "Pour MTN/Airtel : l'activation se fait sous 15 minutes. Pour les paiements par carte (Stripe) : l'activation est automatique et immédiate. Si après 15 minutes vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo." },
+      { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "Pour MTN/Airtel : l'activation se fait sous 15 minutes. Pour les paiements par carte (Stripe) : l'activation est automatique et immédiate. Si après 15 minutes vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo Dating." },
       { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche votre statut en temps réel : nombre de jours restants, ou 'Actif' si votre abonnement est en cours." },
       { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: `Depuis votre page Profil, appuyez sur 'Parrainer un ami'. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez des jours Premium offerts selon sa formule : ${REFERRAL_BONUS_WEEK} jours (1 semaine), ${REFERRAL_BONUS_MONTH} jours (1 mois) ou ${REFERRAL_BONUS_2MONTH} jours (2 mois).` },
       { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Messages → choisissez une photo. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
       { icon: "Q", titre: "Comment créer mon compte ?", desc: "L'inscription est gratuite et rapide en 3 étapes : email + mot de passe, photo de profil, puis informations personnelles. Votre compte est actif immédiatement." },
-      { icon: "Q", titre: "Je n'ai pas reçu l'email de confirmation ?", desc: "Vérifiez vos spams ou courriers indésirables. Si vous ne le trouvez pas, contactez notre équipe via l'Assistant Moyo avec votre adresse email." },
-      { icon: "Q", titre: "Je me suis retrouvé déconnecté, pourquoi ?", desc: "Moyo essaie toujours de maintenir votre session active automatiquement. Si une déconnexion survient, elle est due à une expiration de session trop longue sans activité. Il vous suffit de vous reconnecter une fois et la session reste active." },
-      { icon: "Q", titre: "Puis-je supprimer ma conversation avec Assistance Moyo ?", desc: "Oui. Dans Messages → conversation Assistance Moyo → icône 🗑️ en haut à droite → Supprimer. L'historique disparaît de votre côté. Notre équipe conserve les échanges pour le suivi." },
-      { icon: "Q", titre: "Combien de temps avant qu'on me réponde sur Assistance Moyo ?", desc: "Notre équipe répond sous 24h. Le statut 'Répond sous 24h' s'affiche en haut de la conversation." },
+      { icon: "Q", titre: "Je n'ai pas reçu l'email de confirmation ?", desc: "Vérifiez vos spams ou courriers indésirables. Si vous ne le trouvez pas, contactez notre équipe via l'Assistant Moyo Dating avec votre adresse email." },
+      { icon: "Q", titre: "Je me suis retrouvé déconnecté, pourquoi ?", desc: "Moyo Dating essaie toujours de maintenir votre session active automatiquement. Si une déconnexion survient, elle est due à une expiration de session trop longue sans activité. Il vous suffit de vous reconnecter une fois et la session reste active." },
+      { icon: "Q", titre: "Puis-je supprimer ma conversation avec Assistance Moyo Dating ?", desc: "Oui. Dans Messages → conversation Assistance Moyo Dating → icône 🗑️ en haut à droite → Supprimer. L'historique disparaît de votre côté. Notre équipe conserve les échanges pour le suivi." },
+      { icon: "Q", titre: "Combien de temps avant qu'on me réponde sur Assistance Moyo Dating ?", desc: "Notre équipe répond sous 24h. Le statut 'Répond sous 24h' s'affiche en haut de la conversation." },
     ]},
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
       { icon: "shield", titre: "Données sécurisées", desc: "Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers." },
       { icon: "eyeoff", titre: "Profil invisible", desc: "Rendez votre profil invisible depuis vos paramètres sans supprimer votre compte." },
       { icon: "block", titre: "Blocage utilisateur", desc: "Bloquez n'importe quel utilisateur d'un simple clic." },
-      { icon: "adult", titre: "Majorité requise", desc: "Moyo est strictement réservé aux personnes de 18 ans et plus." },
+      { icon: "adult", titre: "Majorité requise", desc: "Moyo Dating est strictement réservé aux personnes de 18 ans et plus." },
     ]},
     { id: "confidentialite", title: "Confidentialité & CGU", emoji: "📋", items: [
       { icon: "shield", titre: "Responsable du traitement", desc: `Romeo GUEBO - contact : ${CONTACT_EMAIL}` },
-      { icon: "lock2", titre: "Données collectées", desc: "Nom, e-mail, photos, messages, données de connexion et abonnement. Utilisées uniquement pour le fonctionnement de Moyo." },
+      { icon: "lock2", titre: "Données collectées", desc: "Nom, e-mail, photos, messages, données de connexion et abonnement. Utilisées uniquement pour le fonctionnement de Moyo Dating." },
       { icon: "lock2", titre: "Conservation & sécurité", desc: "Données conservées le temps nécessaire au service. Aucune revente. Prestataires techniques liés à l'hébergement uniquement." },
       { icon: "verified", titre: "Vos droits (RGPD)", desc: `Accès, modification et suppression de vos données sur demande à ${CONTACT_EMAIL}` },
-      { icon: "chat", titre: "CGU - Utilisation", desc: "Moyo est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
+      { icon: "chat", titre: "CGU - Utilisation", desc: "Moyo Dating est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
       { icon: "alert", titre: "Contenus interdits", desc: "Faux profils, harcèlement, contenus illégaux, tentatives d'arnaque ou usurpation d'identité sont strictement interdits." },
-      { icon: "shield", titre: "Sanctions & poursuites", desc: "Moyo se réserve le droit de porter plainte et d'engager des poursuites judiciaires contre toute personne enfreignant les présentes conditions d'utilisation." },
+      { icon: "shield", titre: "Sanctions & poursuites", desc: "Moyo Dating se réserve le droit de porter plainte et d'engager des poursuites judiciaires contre toute personne enfreignant les présentes conditions d'utilisation." },
       { icon: "star2", titre: "Premium & paiement", desc: "Certaines fonctionnalités sont accessibles via abonnement. Paiements via prestataires sécurisés (MTN MoMo, Airtel Money) pour le Congo, et Stripe (carte Visa/Mastercard) pour la diaspora." },
     ]},
     { id: "mentions", title: "Mentions légales", emoji: "⚖️", items: [
       { icon: "user", titre: "Éditeur du site", desc: `Romeo GUEBO - ${CONTACT_EMAIL}` },
-      { icon: "shield", titre: "Propriété intellectuelle", desc: "Tous les contenus, visuels et logos de Moyo sont protégés. Toute reproduction sans autorisation est interdite." },
+      { icon: "shield", titre: "Propriété intellectuelle", desc: "Tous les contenus, visuels et logos de Moyo Dating sont protégés. Toute reproduction sans autorisation est interdite." },
       { icon: "verified", titre: "Droit applicable", desc: "Les présentes conditions sont régies par le droit français. Tout litige relève des tribunaux compétents." },
       { icon: "chat", titre: "Contact", desc: `Pour toute question légale : ${CONTACT_EMAIL}` },
     ]},
-    { id: "notation", title: "Noter Moyo", emoji: "⭐", items: [] },
+    { id: "notation", title: "Noter Moyo Dating", emoji: "⭐", items: [] },
   ];
 
   return (
@@ -1956,7 +1956,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                             <div>
                               <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
                               <div style={{ fontWeight: 700, fontSize: "1rem", color: "#111", marginBottom: 4 }}>Merci pour ton avis !</div>
-                              <div style={{ fontSize: "0.82rem", color: "#555" }}>Tu as noté Moyo {userRating}/5 étoiles</div>
+                              <div style={{ fontSize: "0.82rem", color: "#555" }}>Tu as noté Moyo Dating {userRating}/5 étoiles</div>
                               <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 8 }}>
                                 {[1,2,3,4,5].map(s => (
                                   <svg key={s} width="24" height="24" viewBox="0 0 24 24" fill={s <= userRating ? G.or : "#ddd"} stroke="none">
@@ -1967,7 +1967,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                             </div>
                           ) : (
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111", marginBottom: 4 }}>Comment tu trouves Moyo ?</div>
+                              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111", marginBottom: 4 }}>Comment tu trouves Moyo Dating ?</div>
                               <div style={{ fontSize: "0.8rem", color: "#555", marginBottom: 16 }}>Ton avis nous aide à améliorer la plateforme</div>
                               <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 16 }}>
                                 {[1,2,3,4,5].map(star => (
@@ -2170,7 +2170,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               {/* Bulles flottantes mobile */}
               <div style={{ position: "absolute", bottom: 10, right: 0, background: G.blanc, borderRadius: 14, padding: "6px 10px", boxShadow: "0 6px 20px rgba(44,26,14,0.14)", display: "flex", alignItems: "center", gap: 6 }}>
                 <div style={{ width: 24, height: 24, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-                <div><div style={{ fontWeight: 800, fontSize: "0.65rem", color: "#111" }}>850+ couples</div><div style={{ fontSize: "0.5rem", color: "#555" }}>formés sur Moyo</div></div>
+                <div><div style={{ fontWeight: 800, fontSize: "0.65rem", color: "#111" }}>850+ couples</div><div style={{ fontSize: "0.5rem", color: "#555" }}>formés sur Moyo Dating</div></div>
               </div>
             </div>
           </div>
@@ -2212,7 +2212,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 }}>
                   {/* Encoche */}
                   <div style={{ width: 40, height: 8, background: "#0D0B1A", borderRadius: 8, margin: "0 auto 10px" }} />
-                  {/* Écran - profil Moyo */}
+                  {/* Écran - profil Moyo Dating */}
                   <div style={{ background: G.creme, borderRadius: 20, overflow: "hidden", height: 310 }}>
                     {/* Header app */}
                     <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "14px 12px 10px", display: "flex", alignItems: "center", gap: 8 }}>
@@ -2317,7 +2317,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
               <div>
                 <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#111" }}>850+ couples</div>
-                <div style={{ fontSize: "0.65rem", color: "#555" }}>formés sur Moyo</div>
+                <div style={{ fontSize: "0.65rem", color: "#555" }}>formés sur Moyo Dating</div>
               </div>
             </div>
             {/* Bulle 12 000+ */}
@@ -2366,7 +2366,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <div style={{ padding: "48px 24px" }}>
         <div className="landing-sections">
           <h2 className="fu2" style={{  fontSize: "clamp(1.4rem,4vw,2rem)", fontWeight: 700, textAlign: "center", marginBottom: 8, color: "#111" }}>
-            Pourquoi faire confiance à <span style={{ color: G.rouge }}>Moyo</span> ?
+            Pourquoi faire confiance à <span style={{ color: G.rouge }}>Moyo Dating</span> ?
           </h2>
           <p style={{ textAlign: "center", color: "#555", fontSize: "0.88rem", marginBottom: 32 }}>
             Une plateforme pensée pour des rencontres sincères et sécurisées
@@ -2410,9 +2410,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             const isMobile = window.innerWidth < 768;
             const CarouselTesti = () => {
               const fictifs = [
-                { initiales: "OA", noms: "Orlane & Armel", lieu: "Diaspora France / Congo", since: "Ensemble depuis 2024", temoignage: "Même à distance, nous avons réussi à créer une vraie connexion. Moyo nous a donné l'espace pour nous découvrir vraiment avant de se rencontrer.", stars: 5, accent: G.rouge },
-                { initiales: "GJ", noms: "Grâce & Junior", lieu: "Brazzaville", since: "Mariage coutumier en préparation", temoignage: "On discutait simplement au début… aujourd'hui nous préparons notre mariage coutumier. Moyo nous a mis en contact avec les bonnes personnes.", stars: 5, accent: G.or },
-                { initiales: "RL", noms: "Ruth & Lionel", lieu: "Pointe-Noire", since: "En couple depuis 18 mois", temoignage: "Après plusieurs déceptions sur d'autres applis, Moyo nous a permis de construire une relation sérieuse. Ici les gens cherchent vraiment l'amour.", stars: 5, accent: G.vert },
+                { initiales: "OA", noms: "Orlane & Armel", lieu: "Diaspora France / Congo", since: "Ensemble depuis 2024", temoignage: "Même à distance, nous avons réussi à créer une vraie connexion. Moyo Dating nous a donné l'espace pour nous découvrir vraiment avant de se rencontrer.", stars: 5, accent: G.rouge },
+                { initiales: "GJ", noms: "Grâce & Junior", lieu: "Brazzaville", since: "Mariage coutumier en préparation", temoignage: "On discutait simplement au début… aujourd'hui nous préparons notre mariage coutumier. Moyo Dating nous a mis en contact avec les bonnes personnes.", stars: 5, accent: G.or },
+                { initiales: "RL", noms: "Ruth & Lionel", lieu: "Pointe-Noire", since: "En couple depuis 18 mois", temoignage: "Après plusieurs déceptions sur d'autres applis, Moyo Dating nous a permis de construire une relation sérieuse. Ici les gens cherchent vraiment l'amour.", stars: 5, accent: G.vert },
               ];
               const vrais = featuredAvis.map((a, i) => ({
                 initiales: a.name.slice(0, 2).toUpperCase(),
@@ -2579,7 +2579,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
         <div className="landing-sections" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <p style={{ fontSize: "0.88rem", color: "rgba(255,255,255,0.7)", marginBottom: 6, fontWeight: 500 }}>L'amour n'attend pas.</p>
           <h2 style={{  fontSize: "clamp(1.6rem,5vw,2.4rem)", fontWeight: 700, color: "#fff", marginBottom: 28 }}>
-            Rejoins <span style={{ color: G.or }}>Moyo</span> aujourd'hui.
+            Rejoins <span style={{ color: G.or }}>Moyo Dating</span> aujourd'hui.
           </h2>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 32 }}>
             <button className="btn-p" onClick={() => onNav("signup")} style={{ border: "none", borderRadius: 50, padding: "15px 36px", fontWeight: 700, fontSize: "0.95rem", background: G.rouge, color: "#fff", boxShadow: "0 4px 18px rgba(192,57,43,0.4)", cursor: "pointer" }}>
@@ -2640,8 +2640,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 </div>
               </div>
               <div style={{ padding: "22px", textAlign: "center" }}>
-                <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo !</div>
-                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
+                <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo Dating !</div>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo Dating depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
                 <button onClick={launchAndroidPrompt} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>Installer l'app</button>
                 <button onClick={() => setInstallModal(null)} style={{ width: "100%", background: G.blanc, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
               </div>
@@ -2651,8 +2651,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             {installModal === "ios" ? (
               <>
                 <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
-                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Installer Moyo sur iPhone</div>
-                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Pour installer Moyo comme une application :</p>
+                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Installer Moyo Dating sur iPhone</div>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Pour installer Moyo Dating comme une application :</p>
                 <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>1</div>
@@ -2672,13 +2672,13 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               <>
                 <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>✅</div>
                 <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Déjà installée !</div>
-                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Moyo est déjà installée sur ton appareil. Tu peux la lancer depuis ton écran d'accueil.</p>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Moyo Dating est déjà installée sur ton appareil. Tu peux la lancer depuis ton écran d'accueil.</p>
               </>
             ) : (
               <>
                 <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
                 <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Installer Moyo</div>
-                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Pour installer Moyo, ouvre ce site dans <b>Chrome</b> (Android) ou <b>Safari</b> (iPhone), puis utilise le menu du navigateur → « Ajouter à l'écran d'accueil ».</p>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Pour installer Moyo Dating, ouvre ce site dans <b>Chrome</b> (Android) ou <b>Safari</b> (iPhone), puis utilise le menu du navigateur → « Ajouter à l'écran d'accueil ».</p>
               </>
             )}
             <button onClick={() => setInstallModal(null)} style={{ width: "100%", padding: "12px", borderRadius: 50, border: "none", background: `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>J'ai compris</button>
@@ -2720,10 +2720,16 @@ function About({ onBack }: { onBack: () => void }) {
           </div>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 10 }}>Notre mission</h2>
           <p style={{ fontSize: "0.88rem", lineHeight: 1.8, color: "#555" }}>
-            <strong>Moyo</strong> (qui signifie "cœur" en swahili) est le premier site de rencontres dédié aux Congolais. Notre mission est simple : créer des rencontres sincères et durables entre Congolais, qu'ils soient au pays ou dans la diaspora.
+            <strong>Moyo Dating</strong> est une plateforme du Groupe Moyo-Congo, dédiée aux rencontres sérieuses entre célibataires congolais au Congo et dans la diaspora.
           </p>
           <p style={{ fontSize: "0.88rem", lineHeight: 1.8, color: "#555", marginTop: 10 }}>
-            Nous croyons que chaque Congolais mérite de trouver l'amour dans un espace sûr, respectueux et adapté à notre culture et nos valeurs.
+            Notre mission est de permettre aux Congolais de construire des relations sincères, authentiques et durables dans un environnement sécurisé, respectueux et adapté à nos réalités culturelles. Nous croyons que les valeurs, la confiance et le respect mutuel sont les fondements des plus belles histoires.
+          </p>
+          <p style={{ fontSize: "0.88rem", lineHeight: 1.8, color: "#555", marginTop: 10 }}>
+            À travers Moyo Dating, nous souhaitons offrir bien plus qu'une simple application de rencontres : un espace où les célibataires congolais peuvent se découvrir, échanger et créer des liens significatifs avec des personnes partageant des objectifs de vie similaires.
+          </p>
+          <p style={{ fontSize: "0.88rem", lineHeight: 1.8, color: "#555", marginTop: 10 }}>
+            En tant que plateforme du Groupe Moyo-Congo, nous contribuons à rapprocher les Congolais du monde entier grâce à des solutions numériques conçues pour répondre aux besoins de notre communauté. Notre ambition est simple : faciliter des rencontres de qualité et permettre à chacun de trouver la personne qui lui correspond réellement.
           </p>
         </div>
 
@@ -2881,7 +2887,7 @@ function BanScreen({ until, onExpire, onBack }: { until?: string | null; onExpir
           )
         ) : (
           <>
-            <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à {CONTACT_EMAIL} ou sur WhatsApp au {formatWhatsApp(CONTACT_WHATSAPP)}.</p>
+            <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo Dating. Pour toute réclamation, contacte-nous à {CONTACT_EMAIL} ou sur WhatsApp au {formatWhatsApp(CONTACT_WHATSAPP)}.</p>
             {onBack && <button onClick={onBack} style={{ width: "100%", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Retour à l'accueil</button>}
           </>
         )}
@@ -2929,7 +2935,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
       }
       if ((profiles[0] as any).is_banned) {
         await sb.signOut(res.access_token);
-        setErrorMsg(`Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo. Pour toute réclamation, contacte-nous à ${CONTACT_EMAIL} ou sur WhatsApp au ${formatWhatsApp(CONTACT_WHATSAPP)}`);
+        setErrorMsg(`Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo Dating. Pour toute réclamation, contacte-nous à ${CONTACT_EMAIL} ou sur WhatsApp au ${formatWhatsApp(CONTACT_WHATSAPP)}`);
         setLoading(false); return;
       }
       const banUntil = (profiles[0] as any).ban_until as string | null | undefined;
@@ -3434,12 +3440,12 @@ const BOT_FAQ = [
   { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium est disponible en 3 formules : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA pour 1 semaine, ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA pour 1 mois, ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA pour 2 mois (la formule 2 mois est la plus avantageuse). Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money, Airtel Money ou carte Visa/Mastercard. Activation sous 15 minutes.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: `Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez des jours Premium offerts selon sa formule : ${REFERRAL_BONUS_WEEK} jours (1 semaine), ${REFERRAL_BONUS_MONTH} jours (1 mois) ou ${REFERRAL_BONUS_2MONTH} jours (2 mois). Pas de limite !` },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
-  { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo propose un service de mise en relation personnalisé. Tout le monde peut créer et enregistrer sa carte relationnelle depuis la page Profil (bouton rouge 'Demander une mise en relation') en décrivant qui vous êtes et ce que vous recherchez. L'envoi de la demande à notre équipe est réservé aux membres Premium : au moment d'appuyer sur 'Envoyer ma demande', si vous n'êtes pas Premium, l'option de passer Premium s'affiche. Une fois la demande envoyée, notre équipe analyse votre profil et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
-  { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand l'équipe Moyo vous propose une rencontre, un modal s'affiche automatiquement avec la photo, le nom, l'âge et la ville de la personne. Deux choix : 'Accepter' ou 'Refuser'. Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée pour les deux. La proposition expire si vous ne répondez pas dans le délai fixé par l'équipe." },
+  { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo Dating propose un service de mise en relation personnalisé. Tout le monde peut créer et enregistrer sa carte relationnelle depuis la page Profil (bouton rouge 'Demander une mise en relation') en décrivant qui vous êtes et ce que vous recherchez. L'envoi de la demande à notre équipe est réservé aux membres Premium : au moment d'appuyer sur 'Envoyer ma demande', si vous n'êtes pas Premium, l'option de passer Premium s'affiche. Une fois la demande envoyée, notre équipe analyse votre profil et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
+  { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand l'équipe Moyo Dating vous propose une rencontre, un modal s'affiche automatiquement avec la photo, le nom, l'âge et la ville de la personne. Deux choix : 'Accepter' ou 'Refuser'. Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée pour les deux. La proposition expire si vous ne répondez pas dans le délai fixé par l'équipe." },
   { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: `Compte gratuit : ${FREE_LIMITS.likes} likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément.` },
   { q: ["message", "envoyer", "écrire", "conversation"], r: `Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message.` },
   { q: ["réaction", "réagir", "emoji", "like message"], r: "Appuyez longuement sur un message pour ouvrir le menu de réactions. Une seule réaction par message est autorisée : choisir une nouvelle réaction remplace automatiquement l'ancienne." },
-  { q: ["insulte", "bloqué", "interdit", "avertissement", "modération"], r: "Moyo bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés. Un avertissement s'affiche et un signalement est transmis à notre équipe. Les comportements répétés entraînent la suppression du compte." },
+  { q: ["insulte", "bloqué", "interdit", "avertissement", "modération"], r: "Moyo Dating bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés. Un avertissement s'affiche et un signalement est transmis à notre équipe. Les comportements répétés entraînent la suppression du compte." },
   { q: ["numéro", "numero", "whatsapp", "contact", "téléphone", "partager numéro", "reseau", "réseau", "snap", "insta", "lien"], r: "Pour ta sécurité et contre les arnaques, le partage d'un numéro, d'un réseau social ou d'un lien est bloqué dans les messages et dans le profil (bio, nom…) pour les comptes gratuits — même en espaçant les chiffres ou en les écrivant en lettres. L'abonnement Premium débloque le partage de coordonnées en conversation privée." },
   { q: ["suspendu", "suspension", "banni temporaire", "décompte", "temporaire", "réactiver"], r: "Une suspension temporaire affiche un décompte : à la fin, tu peux te reconnecter automatiquement, rien à faire. Une suspension définitive nécessite de contacter l'assistance pour toute réclamation." },
   { q: ["photo", "image", "profil", "modifier"], r: "Allez dans l'onglet Profil → Modifier ma photo. Un outil de recadrage s'ouvre pour cadrer votre photo parfaitement." },
@@ -3457,7 +3463,7 @@ const BOT_FAQ = [
   { q: ["supprimer message", "effacer message", "pour moi", "pour tous"], r: "Appuyez longuement sur un message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté)." },
   { q: ["avertissement", "sanction", "notification officielle", "banni", "suspension"], r: "Un avertissement est une notification officielle MOYO qui apparaît à votre connexion. Vous devez cliquer \"OK, j\'ai compris\" pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
   { q: ["confirmer", "confirmation", "email confirmation", "activer compte", "lien email"], r: "L'inscription est gratuite. Votre compte est actif immédiatement après les 3 étapes d'inscription. Pas besoin de confirmer votre email." },
-  { q: ["pas reçu", "email introuvable", "spam", "confirmation pas reçue"], r: "Vérifiez vos spams ou courriers indésirables. Si vous ne trouvez toujours pas l'email, contactez notre équipe via l'Assistant Moyo avec votre adresse email." },
+  { q: ["pas reçu", "email introuvable", "spam", "confirmation pas reçue"], r: "Vérifiez vos spams ou courriers indésirables. Si vous ne trouvez toujours pas l'email, contactez notre équipe via l'Assistant Moyo Dating avec votre adresse email." },
 ];
 
 function getBotResponse(input: string): string {
@@ -3547,7 +3553,7 @@ function BotFloat({ onOpen, G }: { onOpen: () => void; G: any }) {
 function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
   const [mode, setMode] = useState<"home" | "chat" | "report">("home");
   const [msgs, setMsgs] = useState<{ from: "bot" | "user"; text: string }[]>([
-    { from: "bot", text: `Bonjour ${auth.name || ""} ! Je suis l'assistant Moyo. Comment puis-je t'aider ?` }
+    { from: "bot", text: `Bonjour ${auth.name || ""} ! Je suis l'assistant Moyo Dating. Comment puis-je t'aider ?` }
   ]);
   const [input, setInput] = useState("");
   const [reportText, setReportText] = useState("");
@@ -3600,7 +3606,7 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
             </svg>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#fff" }}>{mode === "report" ? "Assistance Moyo" : "Assistant Moyo"}</div>
+            <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#fff" }}>{mode === "report" ? "Assistance Moyo Dating" : "Assistant Moyo Dating"}</div>
             <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.75)" }}>{mode === "chat" ? "Répond instantanément" : mode === "report" ? "Répond sous 24h" : "Équipe officielle"}</div>
           </div>
           <div onClick={onClose} style={{ cursor: "pointer", opacity: 0.7 }}>
@@ -3664,11 +3670,11 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
                 <div style={{ fontWeight: 700, color: G.brun, marginBottom: 6 }}>Message envoyé</div>
-                <div style={{ fontSize: "0.82rem", color: "#555" }}>L’assistance Moyo vous répondra directement dans votre messagerie.</div>
+                <div style={{ fontSize: "0.82rem", color: "#555" }}>L’assistance Moyo Dating vous répondra directement dans votre messagerie.</div>
               </div>
             ) : (
               <>
-                <p style={{ fontSize: "0.85rem", color: "#555", marginBottom: 14 }}>Écris ton message à l’équipe Moyo. La réponse apparaîtra ensuite dans ta messagerie.</p>
+                <p style={{ fontSize: "0.85rem", color: "#555", marginBottom: 14 }}>Écris ton message à l’équipe Moyo Dating. La réponse apparaîtra ensuite dans ta messagerie.</p>
                 <textarea value={reportText} onChange={e => setReportText(e.target.value)} placeholder="Ex : Bonjour, j’ai une question concernant mon compte..." style={{ width: "100%", minHeight: 100, padding: "12px", borderRadius: 12, border: `1px solid ${G.gris}`, fontSize: "0.85rem", resize: "none", outline: "none", marginBottom: 12 }} />
                 <div style={{ display: "flex", gap: 10 }}>
                   <Btn variant="ghost" onClick={() => setMode("home")} style={{ flex: 1 }}>Retour</Btn>
@@ -3698,7 +3704,7 @@ const openAdminPanel = (fallback: () => void) => {
 
 // ─── Admin Desktop page (mounted when ?admin=1) ───────────────────────────────
 // ── Composants helpers pour le off-canvas ──
-// Modale de confirmation au style Moyo (réutilisable, autonome)
+// Modale de confirmation au style Moyo Dating (réutilisable, autonome)
 function ConfirmModal({ msg, onConfirm, onCancel, confirmLabel = "Confirmer", danger = false }: { msg: string; onConfirm: () => void; onCancel: () => void; confirmLabel?: string; danger?: boolean }) {
   return (
     <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -3761,8 +3767,8 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
                 </div>
               </div>
               <div style={{ padding: "22px", textAlign: "center" }}>
-                <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo !</div>
-                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
+                <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo Dating !</div>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo Dating depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
                 <button onClick={launchAndroidPrompt} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>Installer l'app</button>
                 <button onClick={() => setModal(null)} style={{ width: "100%", background: G.blanc, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
               </div>
@@ -3772,7 +3778,7 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
               {modal === "ios" ? (
                 <>
                   <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>📲</div>
-                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Installer Moyo sur iPhone</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Installer Moyo Dating sur iPhone</div>
                   <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 12, margin: "14px 0 20px" }}>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>1</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>Partager</b> en bas de Safari</div></div>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>2</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Choisis <b>« Sur l'écran d'accueil »</b></div></div>
@@ -3783,7 +3789,7 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
                 <>
                   <div style={{ fontSize: "2.4rem", marginBottom: 10 }}>✅</div>
                   <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Déjà installée !</div>
-                  <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Moyo est déjà sur ton appareil. Lance-la depuis ton écran d'accueil.</p>
+                  <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Moyo Dating est déjà sur ton appareil. Lance-la depuis ton écran d'accueil.</p>
                 </>
               ) : (
                 <>
@@ -3855,9 +3861,9 @@ function AdminDesktopPage() {
     sameGenderFemme: "Eh sœur, reste du bon côté ! 😂",
     matchTitle: "C'est un Match !",
     matchSubtitle: "Toi et {name} vous plaisez mutuellement !",
-    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !",
+    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !",
     likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
-    sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄",
+    sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄",
     signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.",
   });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
@@ -3878,7 +3884,7 @@ function AdminDesktopPage() {
     featureGiftPremium: "true",
     featureAssistant: "true",
     maintenanceMode: "false",
-    maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧",
+    maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧",
     customBannedWords: "",
     contactBannedWords: "",
     autoModContactReply: AUTO_MOD_CONTACT_REPLY,
@@ -4272,7 +4278,7 @@ function AdminDesktopPage() {
                   setEditingConfig(null);
                 }} />
               <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
-                <b>Message automatique de l'Assistant Moyo.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo.
+                <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
               </div>
               <EditableRow label="Message auto (tentative de contact)" value={appConfig.autoModContactReply || "(par défaut)"} open={editingConfig === "auto_mod_contact_reply"}
                 onOpen={() => { setEditingConfig(editingConfig === "auto_mod_contact_reply" ? null : "auto_mod_contact_reply"); setEditingConfigValue(appConfig.autoModContactReply); }}
@@ -4811,8 +4817,8 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
 
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
-  const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
+  const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -4911,7 +4917,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
             setEditingConfig(null);
           }} />
         <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
-          <b>Message automatique de l'Assistant Moyo.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo.
+          <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
         </div>
         <EditableRow label="Message auto (tentative de contact)" value={appConfig.autoModContactReply || "(par défaut)"} open={editingConfig === "auto_mod_contact_reply"}
           onOpen={() => { setEditingConfig(editingConfig === "auto_mod_contact_reply" ? null : "auto_mod_contact_reply"); setEditingConfigValue(appConfig.autoModContactReply); }}
@@ -5199,7 +5205,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           <div onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 14, right: 16, cursor: "pointer", opacity: 0.8 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </div>
-          <div style={{ fontSize: "1.6rem", color: "#fff", fontWeight: 800 }}>Guide <span style={{ color: G.or }}>Moyo</span></div>
+          <div style={{ fontSize: "1.6rem", color: "#fff", fontWeight: 800 }}>Guide <span style={{ color: G.or }}>Moyo Dating</span></div>
           <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem", marginTop: 4 }}>Tout ce que vous devez savoir</div>
         </div>
         {/* Accordéon */}
@@ -5213,7 +5219,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Vous pouvez voir le profil complet de n'importe quel utilisateur gratuitement en appuyant sur les 3 traits (☰) de sa carte puis 'Voir le profil'.",
               `Compte gratuit : ${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel. Premium : likes illimités, pas de compteur.`,
               "Filtres disponibles : genre, ville, âge (18-99), religion.",
-              "Moyo est réservé aux rencontres hétérosexuelles uniquement.",
+              "Moyo Dating est réservé aux rencontres hétérosexuelles uniquement.",
               "Seuls les membres Premium génèrent des vues sur les profils qu'ils consultent. Les non-premium peuvent naviguer sans laisser de trace.",
             ]},
             { title: "Menu ☰ - Options sur un profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>, items: [
@@ -5223,10 +5229,10 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Le menu fonctionne sur chaque profil indépendamment en mode carte, liste et plein écran.",
             ]},
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
-            { title: "Mise en relation Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Tout le monde peut créer et enregistrer sa carte relationnelle (qui vous êtes, ce que vous recherchez). Notre équipe recherche ensuite personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → remplissez votre carte relationnelle et enregistrez → appuyez sur 'Envoyer ma demande'. L'envoi est réservé aux membres Premium : si vous ne l'êtes pas encore, l'option de passer Premium s'affiche à ce moment-là.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
-            { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Moyo encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
+            { title: "Mise en relation Moyo Dating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Tout le monde peut créer et enregistrer sa carte relationnelle (qui vous êtes, ce que vous recherchez). Notre équipe recherche ensuite personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → remplissez votre carte relationnelle et enregistrez → appuyez sur 'Envoyer ma demande'. L'envoi est réservé aux membres Premium : si vous ne l'êtes pas encore, l'option de passer Premium s'affiche à ce moment-là.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
+            { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Moyo Dating encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
-            { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe.", "Partage de contacts : pour ta sécurité, le partage d'un numéro, d'un réseau social ou d'un lien n'est pas autorisé dans les messages ni dans ton profil (bio, nom…) en compte gratuit. Passe les premiers échanges sur Moyo ; l'abonnement Premium débloque le partage de coordonnées en conversation privée.", "Sanctions : en cas de non-respect des règles, un compte peut être averti, suspendu temporairement (avec un décompte avant reconnexion automatique) ou banni définitivement."] },
+            { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo Dating dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe.", "Partage de contacts : pour ta sécurité, le partage d'un numéro, d'un réseau social ou d'un lien n'est pas autorisé dans les messages ni dans ton profil (bio, nom…) en compte gratuit. Passe les premiers échanges sur Moyo Dating ; l'abonnement Premium débloque le partage de coordonnées en conversation privée.", "Sanctions : en cas de non-respect des règles, un compte peut être averti, suspendu temporairement (avec un décompte avant reconnexion automatique) ou banni définitivement."] },
             { title: "Premium - 3 formules dès " + PREMIUM_PRICE_WEEK_FCFA.toLocaleString() + " FCFA", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
               "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.",
               `3 formules au choix : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA pour 1 semaine, ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA pour 1 mois (la plus populaire), ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA pour 2 mois (la plus avantageuse). Vous sélectionnez votre formule au moment du paiement, juste après avoir appuyé sur 'Passer Premium'.`,
@@ -5284,8 +5290,8 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         "🌍 Diaspora - Payez par carte : appuyez sur le bouton vert 'Visa / Mastercard'. Vous êtes redirigé vers une page de paiement sécurisée Stripe. Entrez votre carte bancaire et confirmez. L'activation est automatique et immédiate.",
         "Une fois Premium activé, actualisez l'application pour que le statut soit mis à jour.",
       ]},
-      { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo est réservé aux personnes majeures de 18 ans et plus.", "La modération automatique bloque les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement est automatiquement transmis à notre équipe.", "Si votre comportement enfreint les règles, un administrateur peut vous envoyer un avertissement officiel. Une notification apparaît à votre prochaine connexion. Après plusieurs avertissements, le compte peut être banni.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
-      { title: "Assistant Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/></svg>, items: ["L'icône verte en forme de robot à côté du bouton Guide ouvre l'Assistant Moyo.", "Il propose deux options : Besoin d'aide (répond instantanément à vos questions sur l'app) et Signaler un problème (comportement abusif, arnaque, harcèlement).", "Les signalements sont traités par notre équipe sous 24h."] },
+      { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo Dating est réservé aux personnes majeures de 18 ans et plus.", "La modération automatique bloque les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement est automatiquement transmis à notre équipe.", "Si votre comportement enfreint les règles, un administrateur peut vous envoyer un avertissement officiel. Une notification apparaît à votre prochaine connexion. Après plusieurs avertissements, le compte peut être banni.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
+      { title: "Assistant Moyo Dating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/></svg>, items: ["L'icône verte en forme de robot à côté du bouton Guide ouvre l'Assistant Moyo Dating.", "Il propose deux options : Besoin d'aide (répond instantanément à vos questions sur l'app) et Signaler un problème (comportement abusif, arnaque, harcèlement).", "Les signalements sont traités par notre équipe sous 24h."] },
           ].map((s, i) => (
             <div key={i} style={{ borderBottom: `1px solid ${G.gris}` }}>
               <div onClick={() => setOpenGuideSection(openGuideSection === i ? null : i)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", cursor: "pointer", background: openGuideSection === i ? "rgba(192,57,43,0.03)" : "transparent" }}>
@@ -5571,7 +5577,7 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
     if (isPremium) {
       onNav?.((slide as typeof premiumAdviceSlides[0]).tab || "profile");
     } else {
-      onShowPremium("Passe Premium pour débloquer toutes les fonctionnalités de Moyo !");
+      onShowPremium("Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !");
     }
   };
 
@@ -5704,9 +5710,9 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     sameGenderFemme: "Eh sœur, reste du bon côté ! 😂",
     matchTitle: "C'est un Match !",
     matchSubtitle: "Toi et {name} vous plaisez mutuellement !",
-    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo !",
+    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !",
     likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
-    sameGenderSub: "Moyo c'est pour les rencontres hétérosexuelles 😄",
+    sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄",
   });
 
   useEffect(() => {
@@ -5795,7 +5801,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       while (keepLoading) {
         let params = `?id=neq.${auth.userId}&is_visible=neq.false&is_complete=eq.true&order=is_premium.desc,is_verified.desc,created_at.desc&limit=${BATCH}&offset=${offset}`;
         if (filters.city && !filters.city.startsWith("──")) params += `&city=eq.${encodeURIComponent(filters.city)}`;
-        // Moyo est une app de rencontre hétérosexuelle : on ne montre que le genre opposé.
+        // Moyo Dating est une app de rencontre hétérosexuelle : on ne montre que le genre opposé.
         // Le filtre manuel "filters.gender" ne peut donc PAS forcer le même genre que soi.
         // App hétéro : si la règle est active, ne montrer que le genre opposé.
         if (BLOCK_SAME_GENDER && effectiveGender === "Homme") params += `&gender=eq.Femme`;
@@ -5945,7 +5951,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       );
       if (res && res.length > 0) {
         console.log(`[Moyo][Report] ✅ Signalement enregistré - id:${res[0]?.id}`);
-        setDiscoverToast({ msg: "Signalement envoyé. Merci de protéger la communauté Moyo.", type: "success" });
+        setDiscoverToast({ msg: "Signalement envoyé. Merci de protéger la communauté Moyo Dating.", type: "success" });
         
         setShowSignaler(false);
       } else {
@@ -6433,7 +6439,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
           <PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />
         </div>
 
-        {/* 4. Guide + Assistant Moyo */}
+        {/* 4. Guide + Assistant Moyo Dating */}
         <div style={{ display: "flex", gap: 8 }}>
           <div onClick={() => { const evt = new CustomEvent("moyo-show-guide"); window.dispatchEvent(evt); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.rouge}`, background: G.rouge, color: "#fff", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -6450,7 +6456,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
           <div onClick={() => onShowPremium("")} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 16, padding: "16px", cursor: "pointer", boxShadow: "0 6px 20px rgba(192,57,43,0.3)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#fff" }}>Passer à Moyo Premium</span>
+              <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#fff" }}>Passer à Moyo Dating Premium</span>
             </div>
             <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.78)", lineHeight: 1.5, marginBottom: 10 }}>Messages illimités · Likes illimités · Voir qui vous like</div>
             <div style={{ fontSize: "1rem", fontWeight: 900, color: G.or }}>{PREMIUM_PRICE_FCFA.toLocaleString()} <span style={{ fontSize: "0.62rem", fontWeight: 600, opacity: 0.85 }}>FCFA/mois</span></div>
@@ -7513,10 +7519,10 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     if (pr.expires_at && new Date(pr.expires_at) < new Date()) return { key: "expired", label: "Expirée", color: "#aaa", bg: "#F5F5F5" };
     return { key: "todo", label: "Nouvelle proposition", color: "#B8860B", bg: "rgba(212,168,67,0.14)" };
   };
-  // Origine de la proposition (badge) : Suggestion Moyo (algo/admin) vs Demande d'un membre
+  // Origine de la proposition (badge) : Suggestion Moyo Dating (algo/admin) vs Demande d'un membre
   const propOrigin = (pr: any) => pr.source === "request"
     ? { label: "Demande de mise en relation", color: "#2980b9", bg: "rgba(41,128,185,0.1)" }
-    : { label: "Suggestion Moyo", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" };
+    : { label: "Suggestion Moyo Dating", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" };
   const acceptProposal = async (pr: any) => {
     const role = myRole(pr); const field = role === "user1" ? "user1_response" : "user2_response";
     try {
@@ -7693,11 +7699,11 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
                   <span style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun, display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
-                    Mise en avant — Statut Moyo
+                    Mise en avant — Statut Moyo Dating
                   </span>
                   <Badge label={bCfg.label} color={bCfg.color} bg={bCfg.bg} />
                 </div>
-                <div style={{ fontSize: "0.78rem", color: G.brunLight, lineHeight: 1.5 }}>Boost de visibilité de votre profil pendant 24h auprès de la communauté Moyo.</div>
+                <div style={{ fontSize: "0.78rem", color: G.brunLight, lineHeight: 1.5 }}>Boost de visibilité de votre profil pendant 24h auprès de la communauté Moyo Dating.</div>
                 {rq.created_at && <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 8 }}>Envoyée le {new Date(rq.created_at).toLocaleDateString("fr-FR")}</div>}
                 <button onClick={() => setConfirmDeleteRequest(rq)} style={{ width: "100%", marginTop: 10, background: G.blanc, color: G.rouge, border: `1.5px solid ${G.rouge}`, borderRadius: 10, padding: "9px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
@@ -7864,7 +7870,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(124,58,237,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
         <p style={{ fontWeight: 700, marginBottom: 4 }}>Aucune proposition pour l'instant</p>
-        <p style={{ fontSize: "0.82rem", color: "#999" }}>Moyo vous présentera ici les profils sélectionnés pour vous.</p>
+        <p style={{ fontSize: "0.82rem", color: "#999" }}>Moyo Dating vous présentera ici les profils sélectionnés pour vous.</p>
       </div>
     ) : (
       <div>
@@ -8239,7 +8245,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const statusInputRef = useRef<HTMLInputElement>(null);
   const openRef = useRef<Match | null>(null);
-  const supportProfile: Profile = { id: SUPPORT_TEAM_ID, name: SUPPORT_TEAM_NAME, age: 0, city: "Brazzaville · Congo", gender: "", bio: "Assistance officielle Moyo", photo_url: SUPPORT_TEAM_PHOTO || null, is_premium: true, is_admin: true, is_verified: true };
+  const supportProfile: Profile = { id: SUPPORT_TEAM_ID, name: SUPPORT_TEAM_NAME, age: 0, city: "Brazzaville · Congo", gender: "", bio: "Assistance officielle Moyo Dating", photo_url: SUPPORT_TEAM_PHOTO || null, is_premium: true, is_admin: true, is_verified: true };
   const supportMatch: Match = { id: "__support__", user1: auth.userId, user2: SUPPORT_TEAM_ID, partner: supportProfile };
 
   useEffect(() => { openRef.current = open; }, [open]);
@@ -8464,8 +8470,8 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
       const mine = await Promise.all((Array.isArray(mineRaw) ? mineRaw : []).map(async st => ({ ...st, profile: { ...ownProfile, is_premium: ownProfile.is_premium ?? auth.isPremium }, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
       setMyStatuses(mine);
 
-      // ── Statuts officiels Moyo : visibles par TOUT LE MONDE (gratuits inclus), regroupés sous "Moyo" ──
-      const moyoProfile: Profile = { id: "moyo-official", name: "Moyo", age: 0, city: "", gender: "", bio: "", photo_url: SUPPORT_TEAM_PHOTO || null, is_premium: true, is_verified: true };
+      // ── Statuts officiels Moyo Dating : visibles par TOUT LE MONDE (gratuits inclus), regroupés sous "Moyo Dating" ──
+      const moyoProfile: Profile = { id: "moyo-official", name: "Moyo Dating", age: 0, city: "", gender: "", bio: "", photo_url: SUPPORT_TEAM_PHOTO || null, is_premium: true, is_verified: true };
       const officialRaw = await sb.query<StatusPost>(auth.token, "statuses", `?is_official=eq.true&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`).catch(() => [] as StatusPost[]);
       const officialEnriched = await Promise.all((Array.isArray(officialRaw) ? officialRaw : []).map(async st => ({ ...st, user_id: "moyo-official", profile: moyoProfile, image_url: await resolveStatusImageUrl(auth.token, st.image_url) })));
       // Mises en avant Premium : ciblées par genre (filtrées aussi côté serveur par RLS). Image = photo de profil (URL directe).
@@ -8689,16 +8695,16 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
     try {
       const isOfficialOrFeature = st.is_official || st.is_feature || st.user_id === "moyo-official";
       if (isOfficialOrFeature) {
-        // Réponse à un statut Moyo officiel / mise en avant → arrive dans la Messagerie admin (système support)
-        const reason = `${SUPPORT_PREFIX_USER} ↩ Statut Moyo [#${st.id}] : ${content}`;
+        // Réponse à un statut Moyo Dating officiel / mise en avant → arrive dans la Messagerie admin (système support)
+        const reason = `${SUPPORT_PREFIX_USER} ↩ Statut Moyo Dating [#${st.id}] : ${content}`;
         await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: null, reason, status: "pending" });
         setStatusReplyText("");
         setStatusPaused(false);
-        setToast({ msg: "Réponse envoyée à l'équipe Moyo.", type: "success" });
+        setToast({ msg: "Réponse envoyée à l'équipe Moyo Dating.", type: "success" });
       } else {
         const match = getMatchWithUser(st.user_id);
         if (!match) { setToast({ msg: "Vous devez avoir un match actif pour répondre à ce statut.", type: "error" }); setStatusActionLoading(false); return; }
-        const prefix = `[↩ Statut Moyo : ${st.caption || "Photo"}]\n`;
+        const prefix = `[↩ Statut Moyo Dating : ${st.caption || "Photo"}]\n`;
         await sb.insert<Message>(auth.token, "messages", { match_id: match.id, sender_id: auth.userId, content: prefix + content, is_read: false });
         setStatusReplyText("");
         setStatusPaused(false);
@@ -9019,7 +9025,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim().substring(0, 120)} · Réponse auto envoyée`,
           status: "pending",
         });
-        // ── Réponse automatique de l'Assistant Moyo à l'auteur (apparaît dans SA messagerie support) ──
+        // ── Réponse automatique de l'Assistant Moyo Dating à l'auteur (apparaît dans SA messagerie support) ──
         await sb.insert(auth.token, "reports", {
           reporter_id: auth.userId,
           reported_id: auth.userId,
@@ -9247,7 +9253,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
               const isSupport = c.id === "__support__";
               return (
               <div key={c.id} style={{ position: "relative", overflow: "hidden" }}>
-                {/* Fond révélé pendant le swipe (couleur Moyo + étoile) */}
+                {/* Fond révélé pendant le swipe (couleur Moyo Dating + étoile) */}
                 {!isSupport && dx > 0 && (
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", paddingLeft: 22, background: `linear-gradient(90deg, ${isFav ? "#9aa0a6" : G.or}, ${isFav ? "#7c8085" : "#B8860B"})`, color: "#fff", zIndex: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: Math.min(dx / 64, 1), transform: `scale(${0.7 + Math.min(dx / 64, 1) * 0.3})` }}>
@@ -9373,7 +9379,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           {open.partner?.id === SUPPORT_TEAM_ID ? <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>● Répond sous 24h</div> : open.partner?.hide_online_status ? null : (() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
         {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
-        {/* Bouton "Demander Premium" (💝, rouge Moyo) : visible si JE ne suis pas Premium et que mon interlocuteur l'est */}
+        {/* Bouton "Demander Premium" (💝, rouge Moyo Dating) : visible si JE ne suis pas Premium et que mon interlocuteur l'est */}
         {FEATURE_GIFT_PREMIUM && !auth.isPremium && open.partner?.is_premium && open.partner?.id !== SUPPORT_TEAM_ID && (
           <div onClick={() => setConfirmGiftRequest(true)} title="Demander à recevoir Premium" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: "1.05rem" }}>
             💝
@@ -10347,7 +10353,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
           <Avatar url={statusPreview.profile?.photo_url} gender={statusPreview.profile?.gender} size={44} premium={statusPreview.profile?.is_premium} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 900, fontSize: "1.02rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>{statusPreview.profile?.name || "Statut"}{(statusPreview.profile?.id === "moyo-official" || statusPreview.is_official || statusPreview.is_feature) && <VerifiedBadge size={15} />}</div>
-            <div style={{ fontSize: "0.78rem", opacity: 0.82, display: "flex", alignItems: "center", gap: 6 }}>{(statusPreview.is_official || statusPreview.is_feature) ? "Statut officiel" : "Statut Moyo"}{statusPreview.is_sponsored && <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 6, padding: "1px 7px", fontSize: "0.68rem", fontWeight: 700 }}>Sponsorisé</span>}</div>
+            <div style={{ fontSize: "0.78rem", opacity: 0.82, display: "flex", alignItems: "center", gap: 6 }}>{(statusPreview.is_official || statusPreview.is_feature) ? "Statut officiel" : "Statut Moyo Dating"}{statusPreview.is_sponsored && <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 6, padding: "1px 7px", fontSize: "0.68rem", fontWeight: 700 }}>Sponsorisé</span>}</div>
           </div>
           {statusPreview.user_id === auth.userId && (
             <button
@@ -10974,16 +10980,16 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                   </div>
                   <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 8 }}>Demande envoyée !</div>
-                  <div style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6 }}>L'équipe Moyo va valider votre mise en avant. Une fois acceptée, votre profil apparaîtra dans les Statuts Moyo pendant 24h.</div>
+                  <div style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6 }}>L'équipe Moyo Dating va valider votre mise en avant. Une fois acceptée, votre profil apparaîtra dans les Statuts Moyo Dating pendant 24h.</div>
                 </div>
               ) : (
                 <>
-                  <p style={{ fontSize: "0.9rem", color: "#444", lineHeight: 1.6, marginBottom: 16 }}>Faites découvrir votre profil à toute la communauté Moyo pendant 24 heures.</p>
+                  <p style={{ fontSize: "0.9rem", color: "#444", lineHeight: 1.6, marginBottom: 16 }}>Faites découvrir votre profil à toute la communauté Moyo Dating pendant 24 heures.</p>
                   <div style={{ background: G.creme, borderRadius: 14, padding: "14px 16px", marginBottom: 20 }}>
                     {[
                       "Réservé aux membres Premium",
                       "Maximum 2 mises en avant par mois",
-                      "Validation par l'équipe Moyo",
+                      "Validation par l'équipe Moyo Dating",
                     ].map((c, i) => (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.84rem", color: "#555", padding: "4px 0" }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
@@ -11346,7 +11352,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: "0.74rem", color: "#888", background: "rgba(26,92,58,0.08)", borderRadius: 10, padding: "9px 12px", lineHeight: 1.5, margin: "16px 0 6px" }}>Moyo vous proposera des profils correspondant à <b>{oppGender}</b>. Précisez vos préférences.</div>
+                    <div style={{ fontSize: "0.74rem", color: "#888", background: "rgba(26,92,58,0.08)", borderRadius: 10, padding: "9px 12px", lineHeight: 1.5, margin: "16px 0 6px" }}>Moyo Dating vous proposera des profils correspondant à <b>{oppGender}</b>. Précisez vos préférences.</div>
                     {qBlock(1, "pin", "Localisation recherchée", "Où souhaitez-vous rencontrer quelqu'un ?",
                       <select value={rel.search_city} onChange={e => setRel(r => ({ ...r, search_city: e.target.value }))} style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", background: G.blanc }}>
                         <option value="">Choisir…</option>
@@ -11707,7 +11713,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
     if (id === "invite") {
       const refLink = `https://dating.moyo-congo.com?ref=${auth.userId}`;
       const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nCrée ton compte gratuitement ici : ${refLink}`);
-      if (navigator.share) navigator.share({ title: "Moyo Congo", text: "Rejoins-moi sur Moyo !", url: refLink });
+      if (navigator.share) navigator.share({ title: "Moyo Congo", text: "Rejoins-moi sur Moyo Dating !", url: refLink });
       else window.open(`https://wa.me/?text=${msg}`, "_blank");
       return;
     }
@@ -12073,7 +12079,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                     : <svg width="16" height="16" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   }
                   <span style={{ fontSize: "1rem", fontWeight: 700, color: "#fff" }}>
-                    {isExpired ? "Votre Premium a expiré - Renouveler" : "Passer à Moyo Premium"}
+                    {isExpired ? "Votre Premium a expiré - Renouveler" : "Passer à Moyo Dating Premium"}
                   </span>
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.75)" }}>
@@ -12092,11 +12098,11 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           <MatchRequestButton auth={auth} onShowPremium={onShowPremium} />
         )}
 
-        {/* ── Bouton Passer sur les Statuts Moyo (Premium uniquement) ── */}
+        {/* ── Bouton Passer sur les Statuts Moyo Dating (Premium uniquement) ── */}
         {(!isWideProfile || ["main"].includes(activeSection)) && (
           auth.isPremium
             ? <FeatureRequestButton auth={auth} />
-            : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo !")} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", opacity: 0.75 }}>
+            : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo Dating !")} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", opacity: 0.75 }}>
                 <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                 </div>
@@ -12265,7 +12271,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
         {/* Demande de vérification */}
         {(!isWideProfile || ["verification","main"].includes(activeSection)) && (!profile?.is_verified ? (
-          <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo.\n\n👤 Nom : ${profile?.name || auth.name}\n🎂 Âge : ${profile?.age} ans\n⚥ Genre : ${profile?.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+          <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo Dating.\n\n👤 Nom : ${profile?.name || auth.name}\n🎂 Âge : ${profile?.age} ans\n⚥ Genre : ${profile?.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
             <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid var(--c-card-bd)` }}>
               <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(29,155,240,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <VerifiedBadge size={22} />
@@ -12402,10 +12408,10 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               </div>
               <div style={{ background: "rgba(212,168,67,0.08)", border: "1px solid rgba(212,168,67,0.25)", borderRadius: 12, padding: "12px 14px", fontSize: "0.8rem", color: "#555", lineHeight: 1.7 }}>
                 Pour recevoir les notifications sur iPhone :<br />
-                1. Ouvrez Moyo dans <b>Safari</b> (pas Chrome)<br />
+                1. Ouvrez Moyo Dating dans <b>Safari</b> (pas Chrome)<br />
                 2. Touchez l'icône <b>Partager</b> <span style={{ fontSize: "0.9rem" }}>⬆️</span> en bas de l'écran<br />
                 3. Choisissez <b>« Sur l'écran d'accueil »</b><br />
-                4. Ouvrez Moyo depuis la nouvelle icône → le bouton Notifications apparaîtra.
+                4. Ouvrez Moyo Dating depuis la nouvelle icône → le bouton Notifications apparaîtra.
               </div>
             </div>
           );
@@ -12449,7 +12455,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>
-              {ratingSubmitted ? "Ton avis Moyo" : "Noter Moyo"}
+              {ratingSubmitted ? "Ton avis Moyo Dating" : "Noter Moyo Dating"}
             </div>
             <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>
               {ratingSubmitted
@@ -12486,7 +12492,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                 </div>
               ) : (
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#111", marginBottom: 4, textAlign: "center" }}>Comment tu trouves Moyo ?</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#111", marginBottom: 4, textAlign: "center" }}>Comment tu trouves Moyo Dating ?</div>
                   <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, textAlign: "center" }}>Ton avis nous aide à améliorer l'application</div>
                   <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 4 }}>
                     {[1,2,3,4,5].map(star => (
@@ -12672,7 +12678,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </div>
             <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Se déconnecter ?</h3>
-            <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 24, lineHeight: 1.6 }}>Tu seras redirigé vers la page d'accueil. À bientôt sur Moyo !</p>
+            <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 24, lineHeight: 1.6 }}>Tu seras redirigé vers la page d'accueil. À bientôt sur Moyo Dating !</p>
             <div style={{ display: "flex", gap: 10 }}>
               <Btn variant="ghost" onClick={() => setShowLogout(false)} style={{ flex: 1 }}>Annuler</Btn>
               <Btn variant="danger" onClick={() => { sb.signOut(auth.token); onLogout(); }} style={{ flex: 1 }}>Se déconnecter</Btn>
@@ -12737,7 +12743,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
           </svg>
           <div style={{ marginBottom: 10, display: "flex", justifyContent: "center" }}><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
           <div style={{ color: "#fff", fontWeight: 900, fontSize: "1.3rem", letterSpacing: "0.01em", textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>Vous avez un cadeau !</div>
-          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.78rem", marginTop: 6 }}>Quelqu'un pense à vous sur Moyo 💛</div>
+          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.78rem", marginTop: 6 }}>Quelqu'un pense à vous sur Moyo Dating 💛</div>
         </div>
         {/* Body */}
         <div style={{ padding: "22px 22px 26px", textAlign: "center" }}>
@@ -12765,7 +12771,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
               : <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             }
           </div>
-          <div style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, letterSpacing: "0.01em" }}>{isInfo ? "Information Moyo" : "Avertissement de modération"}</div>
+          <div style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, letterSpacing: "0.01em" }}>{isInfo ? "Information Moyo Dating" : "Avertissement de modération"}</div>
           {!isInfo && <div style={{ fontSize: "0.72rem", color: "#e67e22", fontWeight: 600, marginTop: 5, background: "rgba(243,156,18,0.15)", borderRadius: 50, padding: "3px 12px", display: "inline-block" }}>Avertissement n°{warning.warning_number}</div>}
         </div>
         <div style={{ padding: "20px 22px 24px" }}>
@@ -13069,7 +13075,7 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
 }) {
   const isWide = window.innerWidth >= 768;
   const msgTemplates = [
-    `${user.name}, bienvenue sur Moyo ! Nous vous conseillons de liker les profils qui vous intéressent. Si une personne vous like en retour, le match se débloque automatiquement pour discuter et voir ses stories. Moyo 100% Congolais !!!!`,
+    `${user.name}, bienvenue sur Moyo Dating ! Nous vous conseillons de liker les profils qui vous intéressent. Si une personne vous like en retour, le match se débloque automatiquement pour discuter et voir ses stories. Moyo Dating 100% Congolais !!!!`,
     "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟",
     "Votre abonnement Premium expire dans [X] jours.",
     "Votre demande de vérification est en cours d'examen. Merci de patienter.",
@@ -13082,7 +13088,7 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
     "Votre compte a été suspendu car votre nom de profil n'est pas conforme. Vous pouvez créer un nouveau compte gratuitement avec des informations valides.",
     "Les insultes, menaces et comportements irrespectueux sont interdits sur la plateforme. Toute récidive entraînera une suppression définitive du compte.",
     "Pour garantir la sécurité des utilisateurs, les faux profils sont supprimés automatiquement.",
-    "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo.",
+    "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo Dating.",
     "Profitez de -50% sur le Premium ce weekend uniquement !",
   ];
 
@@ -13240,9 +13246,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage">("avis");
   // ── SONDAGES ──
   const DEFAULT_SURVEY_QUESTIONS = [
-    { id: "q1", text: "Êtes-vous satisfait(e) de votre expérience sur Moyo ?", type: "single", options: ["Très satisfait(e)", "Satisfait(e)", "Moyen", "Insatisfait(e)"] },
+    { id: "q1", text: "Êtes-vous satisfait(e) de votre expérience sur Moyo Dating ?", type: "single", options: ["Très satisfait(e)", "Satisfait(e)", "Moyen", "Insatisfait(e)"] },
     { id: "q2", text: "Quelles fonctionnalités utilisez-vous le plus ?", type: "multi", options: ["Découvrir", "Messagerie", "Statuts", "Mise en relation", "Premium"] },
-    { id: "q3", text: "Recommanderiez-vous Moyo à un ami ?", type: "single", options: ["Oui, sûrement", "Peut-être", "Non"] },
+    { id: "q3", text: "Recommanderiez-vous Moyo Dating à un ami ?", type: "single", options: ["Oui, sûrement", "Peut-être", "Non"] },
   ];
   const [surveys, setSurveys] = useState<any[]>([]);
   const [surveysLoading, setSurveysLoading] = useState(false);
@@ -13264,8 +13270,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     } catch { showToast("Erreur de chargement des sondages.", "error"); }
     setSurveysLoading(false);
   };
-  const newSurveyDraft = () => setSurveyEditor({ title: "", intro_message: "Votre avis nous intéresse ! Aidez-nous à améliorer Moyo en répondant à quelques questions rapides.", target: "all|all", status: "active", questions: [] });
-  const loadDefaultSurvey = () => setSurveyEditor({ title: "Votre satisfaction Moyo", intro_message: "Votre avis nous intéresse ! Aidez-nous à améliorer Moyo en répondant à quelques questions rapides.", target: "all|all", status: "active", questions: JSON.parse(JSON.stringify(DEFAULT_SURVEY_QUESTIONS)) });
+  const newSurveyDraft = () => setSurveyEditor({ title: "", intro_message: "Votre avis nous intéresse ! Aidez-nous à améliorer Moyo Dating en répondant à quelques questions rapides.", target: "all|all", status: "active", questions: [] });
+  const loadDefaultSurvey = () => setSurveyEditor({ title: "Votre satisfaction Moyo Dating", intro_message: "Votre avis nous intéresse ! Aidez-nous à améliorer Moyo Dating en répondant à quelques questions rapides.", target: "all|all", status: "active", questions: JSON.parse(JSON.stringify(DEFAULT_SURVEY_QUESTIONS)) });
   const saveSurvey = async () => {
     if (!surveyEditor) return;
     if (!surveyEditor.title.trim()) { showToast("Donnez un titre au sondage.", "error"); return; }
@@ -13536,7 +13542,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     if (commonVal.length) forts.push(`${commonVal.length} valeur${commonVal.length > 1 ? "s" : ""} commune${commonVal.length > 1 ? "s" : ""}`);
     if (childA && childA === childB) forts.push("Même vision sur les enfants");
     if (ageGap !== null && ageGap <= 5) forts.push("Écart d'âge faible");
-    if (!forts.length) forts.push("Profils compatibles selon les critères Moyo");
+    if (!forts.length) forts.push("Profils compatibles selon les critères Moyo Dating");
     const ref = s.prop?.id ? `MOYO-MI-${String(s.prop.id).slice(0, 8).toUpperCase()}` : `MOYO-MI-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const today = new Date().toLocaleDateString("fr-FR");
     const esc = (t: any) => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
@@ -13623,7 +13629,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       <div class="circle"><div class="inner"><div class="pct">${global}%</div><div style="font-size:1.1rem">❤</div></div></div>
       <div class="clevel">${level}</div>
       <div class="stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</div>
-      <div class="cnote">Cette analyse est basée sur les informations renseignées par les deux profils et les critères de compatibilité Moyo.</div>
+      <div class="cnote">Cette analyse est basée sur les informations renseignées par les deux profils et les critères de compatibilité Moyo Dating.</div>
     </div>
     ${profileCard(woman, "PROFIL FEMME", projB, intB, valB)}
   </div>
@@ -13650,8 +13656,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     </div>
   </div></div>
   <div class="sec"><div class="grid2">
-    <div class="conf" style="flex:1"><b>🔒 CONFIDENTIEL</b>Ce document est strictement confidentiel et destiné uniquement à l'usage interne de Moyo. Ne pas partager avec des tiers sans autorisation.<br/><br/>ID Proposition : <b style="color:${R}">${ref}</b></div>
-    <div class="conf" style="flex:1"><b>✍ SIGNATURE</b>Administrateur Moyo : ____________________<br/><br/>Date : ____ / ____ / ________</div>
+    <div class="conf" style="flex:1"><b>🔒 CONFIDENTIEL</b>Ce document est strictement confidentiel et destiné uniquement à l'usage interne de Moyo Dating. Ne pas partager avec des tiers sans autorisation.<br/><br/>ID Proposition : <b style="color:${R}">${ref}</b></div>
+    <div class="conf" style="flex:1"><b>✍ SIGNATURE</b>Administrateur Moyo Dating : ____________________<br/><br/>Date : ____ / ____ / ________</div>
   </div></div>
   <div class="footer"><span>♥ Moyo</span><span>Construisons des relations qui durent · dating.moyo-congo.com</span><span>Page 1/1</span></div>
 </div>
@@ -14349,7 +14355,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         if (Array.isArray(d) && d[0]?.name) giftSenderName = d[0].name;
       } catch {}
     }
-    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `🎁 Vous avez reçu 1 mois de Premium en cadeau offert par ${giftSenderName || "un membre Moyo"} ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟` : "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟", warning_number: 0, acknowledged: false }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `🎁 Vous avez reçu 1 mois de Premium en cadeau offert par ${giftSenderName || "un membre Moyo Dating"} ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟` : "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟", warning_number: 0, acknowledged: false }) });
     // Si cadeau, notifier aussi l'acheteur
     if (p.gift_for) {
       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: `Votre cadeau Premium pour ${p.gift_for_name || "votre match"} a bien été activé !`, warning_number: 0, acknowledged: false }) });
@@ -15111,10 +15117,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [archiveTypeFilter, setArchiveTypeFilter] = useState<"all" | "messaging" | "system" | "profile">("all");
   const [archiveActionFilter, setArchiveActionFilter] = useState<"all" | "reviewed" | "rejected" | "banned" | "archived">("all");
   const [archivePage, setArchivePage] = useState(1);
-  // ── Modèles de réponse (Assistant Moyo) ──
+  // ── Modèles de réponse (Assistant Moyo Dating) ──
   const TEMPLATE_CATS = ["Accueil", "Abonnement", "Paiement", "Sécurité", "Fonctionnalités", "Signalements", "Mise en avant", "Autre"];
   const DEFAULT_SUPPORT_TEMPLATES = [
-    { id: "t1", category: "Accueil", title: "Accueil - Message de bienvenue", content: "Bonjour 👋 Merci de contacter Moyo. Comment pouvons-nous vous aider aujourd'hui ?" },
+    { id: "t1", category: "Accueil", title: "Accueil - Message de bienvenue", content: "Bonjour 👋 Merci de contacter Moyo Dating. Comment pouvons-nous vous aider aujourd'hui ?" },
     { id: "t2", category: "Abonnement", title: "Abonnement - Annulation", content: "Oui, vous pouvez annuler votre abonnement Premium à tout moment depuis vos paramètres. L'accès Premium reste actif jusqu'à la fin de votre période en cours." },
     { id: "t3", category: "Abonnement", title: "Abonnement - Activation", content: "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟" },
     { id: "t4", category: "Paiement", title: "Paiement - Échec de paiement", content: "Votre paiement a malheureusement échoué. Veuillez vérifier vos informations et réessayer, ou essayer un autre moyen de paiement." },
@@ -15123,9 +15129,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     { id: "t7", category: "Sécurité", title: "Sécurité - Photo non conforme", content: "Votre photo de profil ne respecte pas nos conditions. Merci d'utiliser une photo claire de votre visage, sinon votre compte pourra être suspendu." },
     { id: "t8", category: "Fonctionnalités", title: "Fonctionnalité - Explication", content: "Cette fonctionnalité vous permet de [description]. N'hésitez pas si vous avez d'autres questions !" },
     { id: "t9", category: "Fonctionnalités", title: "Fonctionnalité - Matchs", content: "Pour discuter avec quelqu'un, likez son profil. Si la personne vous like en retour, le match se débloque automatiquement !" },
-    { id: "t10", category: "Signalements", title: "Signalement - Suivi", content: "Votre signalement a bien été pris en compte. Merci de contribuer à la sécurité de la communauté Moyo." },
-    { id: "t11", category: "Mise en avant", title: "Mise en avant - Validée", content: "Votre demande de mise en avant a été acceptée ! Votre profil apparaîtra dans les Statuts Moyo pendant 24h." },
-    { id: "t12", category: "Autre", title: "Autre - Remerciement", content: "Merci beaucoup de nous avoir contactés. Belle journée sur Moyo ! 💛" },
+    { id: "t10", category: "Signalements", title: "Signalement - Suivi", content: "Votre signalement a bien été pris en compte. Merci de contribuer à la sécurité de la communauté Moyo Dating." },
+    { id: "t11", category: "Mise en avant", title: "Mise en avant - Validée", content: "Votre demande de mise en avant a été acceptée ! Votre profil apparaîtra dans les Statuts Moyo Dating pendant 24h." },
+    { id: "t12", category: "Autre", title: "Autre - Remerciement", content: "Merci beaucoup de nous avoir contactés. Belle journée sur Moyo Dating ! 💛" },
   ];
   const [supportTemplates, setSupportTemplates] = useState<{ id: string; category: string; title: string; content: string }[]>(DEFAULT_SUPPORT_TEMPLATES);
   const [templateSearch, setTemplateSearch] = useState("");
@@ -15163,7 +15169,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const deleteTemplate = (id: string) => { setTplMenu(null); persistTemplates(supportTemplates.filter(t => t.id !== id)); showToast("Modèle supprimé", "success"); };
 
-  // ── Statuts officiels Moyo (publiés depuis l'onglet Marketing) ──
+  // ── Statuts officiels Moyo Dating (publiés depuis l'onglet Marketing) ──
   const [officialStatuses, setOfficialStatuses] = useState<(StatusPost & { _views?: number; _replies?: number })[]>([]);
   const [confirmDeleteStatus, setConfirmDeleteStatus] = useState<StatusPost | null>(null);
   
@@ -15232,7 +15238,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         caption: stCaption.trim() || null, is_official: true, is_sponsored: stSponsored,
         link_url: linkUrl, expires_at,
       });
-      showToast("Statut Moyo publié pour 24h.", "success");
+      showToast("Statut Moyo Dating publié pour 24h.", "success");
       setStFile(null); setStPreview(null); setStCaption(""); setStSponsored(false); setStLink(""); setStCtaType("none"); setStPhone("");
       if (stFileRef.current) stFileRef.current.value = "";
       loadOfficialStatuses();
@@ -15609,7 +15615,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const rProp = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(status.eq.accepted,status.eq.refused)&created_at=gt.${encodeURIComponent(lastPropSeen)}&select=id`, { headers: h });
         const propCount = (() => { const c = rProp.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
         setProposalsBadgeCount(propCount);
-        // Demandes de mise en avant (statuts Moyo) en attente de validation
+        // Demandes de mise en avant (statuts Moyo Dating) en attente de validation
         const rFeat = await fetch(`${SUPABASE_URL}/rest/v1/feature_requests?status=eq.en_attente&select=id`, { headers: h });
         const featCount = (() => { const c = rFeat.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
         setFeaturePendingCount(featCount);
@@ -16233,9 +16239,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 12000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Répondre via {SUPPORT_TEAM_NAME}</h3>
-            <p style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>La réponse apparaîtra directement dans la messagerie de l’utilisateur comme une conversation avec l’assistance Moyo.</p>
+            <p style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>La réponse apparaîtra directement dans la messagerie de l’utilisateur comme une conversation avec l’assistance Moyo Dating.</p>
             <div style={{ background: "rgba(26,92,58,0.06)", border: "1px solid rgba(26,92,58,0.15)", borderRadius: 12, padding: 10, fontSize: "0.78rem", color: "#444", lineHeight: 1.5, marginBottom: 12 }}>{cleanSupportReason(supportReply.report.reason)}</div>
-            <textarea value={supportReplyText} onChange={e => setSupportReplyText(e.target.value)} placeholder="Écrire la réponse de l’assistance Moyo..." style={{ width: "100%", minHeight: 110, boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: 12, fontSize: "0.86rem", outline: "none", resize: "vertical", marginBottom: 12 }} />
+            <textarea value={supportReplyText} onChange={e => setSupportReplyText(e.target.value)} placeholder="Écrire la réponse de l’assistance Moyo Dating..." style={{ width: "100%", minHeight: 110, boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: 12, fontSize: "0.86rem", outline: "none", resize: "vertical", marginBottom: 12 }} />
             <div style={{ display: "flex", gap: 10 }}>
               <Btn variant="ghost" onClick={() => { setSupportReply(null); setSupportReplyText(""); }} style={{ flex: 1 }}>Annuler</Btn>
               <Btn variant="primary" onClick={sendSupportReply} disabled={!supportReplyText.trim()} style={{ flex: 2 }}>Envoyer</Btn>
@@ -16329,16 +16335,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ padding: "16px 20px 20px" }}>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
                 {[
-                  "Moyo est en maintenance ce soir de [H] à [H]. Merci de votre compréhension.",
+                  "Moyo Dating est en maintenance ce soir de [H] à [H]. Merci de votre compréhension.",
                   "Nouvelle fonctionnalité disponible : [PRÉCISION]",
                   "Une mise à jour est disponible. Rechargez l'application pour en profiter.",
                   "Un incident technique a été résolu. Tout fonctionne normalement.",
                   "Profitez de -50% sur le Premium ce weekend uniquement !",
                   "Offre spéciale : 1 mois Premium offert pour tout parrainage !",
-                  "Rappel : Moyo est une plateforme de rencontre respectueuse. Soyons bienveillants ❤️",
-                  "La communauté Moyo grandit ! Invitez vos amis à nous rejoindre.",
+                  "Rappel : Moyo Dating est une plateforme de rencontre respectueuse. Soyons bienveillants ❤️",
+                  "La communauté Moyo Dating grandit ! Invitez vos amis à nous rejoindre.",
                   "Pour votre sécurité, ne partagez jamais vos informations personnelles.",
-                  "Moyo ne vous demandera jamais d'argent. Signalez toute tentative d'arnaque.",
+                  "Moyo Dating ne vous demandera jamais d'argent. Signalez toute tentative d'arnaque.",
                 ].map(t => (
                   <button key={t} onClick={() => setBroadcastText(t)} style={{ fontSize: "0.72rem", background: broadcastText === t ? "rgba(230,126,34,0.12)" : G.creme, border: `1.5px solid ${broadcastText === t ? "#e67e22" : "transparent"}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: "#333", textAlign: "left", lineHeight: 1.3 }}>{t.length > 48 ? t.slice(0, 48) + "…" : t}</button>
                 ))}
@@ -16556,7 +16562,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   {mailSending === "send-bienvenue" ? "Envoi en cours..." : "Email de bienvenue"}
                 </div>
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#C0392B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Inscription incomplète</div>
-                <div onClick={() => sendMailTemplate("send-inscription-incomplete", "Finalisez votre inscription", "Finalisez votre inscription Moyo", `Bonjour,\n\nVotre inscription sur Moyo n'a pas abouti car votre profil n'avait pas été complété à 100 %.\n\nVous pouvez vous réinscrire avec les mêmes identifiants (e-mail et mot de passe) sur : 👉 https://dating.moyo-congo.com\n\nPensez à compléter votre profil jusqu'au bout pour apparaître dans les résultats.\n\nÀ bientôt sur Moyo !\n\nMoyo Brazzaville - République du Congo\ncontact@moyo-congo.com | WhatsApp : +242 06 513 20 12`, mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === "send-inscription-incomplete" ? "not-allowed" : "pointer", background: mailSending === "send-inscription-incomplete" ? "#fdeaea" : "#fff5f5", border: `1.5px solid ${mailSending === "send-inscription-incomplete" ? "#f0b4b4" : "#f5d5d5"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: mailSending && mailSending !== "send-inscription-incomplete" ? 0.5 : 1 }}>
+                <div onClick={() => sendMailTemplate("send-inscription-incomplete", "Finalisez votre inscription", "Finalisez votre inscription Moyo Dating", `Bonjour,\n\nVotre inscription sur Moyo Dating n'a pas abouti car votre profil n'avait pas été complété à 100 %.\n\nVous pouvez vous réinscrire avec les mêmes identifiants (e-mail et mot de passe) sur : 👉 https://dating.moyo-congo.com\n\nPensez à compléter votre profil jusqu'au bout pour apparaître dans les résultats.\n\nÀ bientôt sur Moyo Dating !\n\nMoyo Dating Brazzaville - République du Congo\ncontact@moyo-congo.com | WhatsApp : +242 06 513 20 12`, mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === "send-inscription-incomplete" ? "not-allowed" : "pointer", background: mailSending === "send-inscription-incomplete" ? "#fdeaea" : "#fff5f5", border: `1.5px solid ${mailSending === "send-inscription-incomplete" ? "#f0b4b4" : "#f5d5d5"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: mailSending && mailSending !== "send-inscription-incomplete" ? 0.5 : 1 }}>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#C0392B", flexShrink: 0 }} />
                   {mailSending === "send-inscription-incomplete" ? "Envoi en cours..." : "Finalisez votre inscription"}
                 </div>
@@ -16590,7 +16596,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <input
                 value={mailCustomSubject}
                 onChange={e => setMailCustomSubject(e.target.value)}
-                placeholder="Ex: Votre compte Moyo"
+                placeholder="Ex: Votre compte Moyo Dating"
                 style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e8d5f5", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", marginBottom: 12, background: G.blanc }}
               />
               <div style={{ fontWeight: 600, fontSize: "0.75rem", color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>Message</div>
@@ -17035,7 +17041,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Sélection multiple", "Cochez les cases à gauche de chaque profil pour les sélectionner. Utilisez 'Tout sélectionner' pour sélectionner d'un coup tous les profils affichés. Idéal combiné avec le filtre 'Incomplets'."],
                     ["Suppression en masse", "Une fois des profils sélectionnés, le bouton 🗑 Supprimer (X) apparaît. Cette action supprime définitivement les comptes sélectionnés de la base de données. Irréversible."],
                     ["Rendre Premium / Retirer Premium", "Attribue 30 jours de Premium ou retire l'accès aux fonctionnalités payantes. Si l'utilisateur a le Premium à vie, le bouton affiche '- À vie' à la place."],
-                    ["★ À vie", "Attribue le Premium permanent à un utilisateur (date d'expiration fixée à 2099). Réservé aux employés et collaborateurs Moyo. L'utilisateur voit le symbole ∞ sur son profil. Un badge ♾️ À vie (doré foncé) apparaît directement sur sa carte dans l'Admin. Le bouton est grisé si l'utilisateur a déjà le Premium à vie."],
+                    ["★ À vie", "Attribue le Premium permanent à un utilisateur (date d'expiration fixée à 2099). Réservé aux employés et collaborateurs Moyo Dating. L'utilisateur voit le symbole ∞ sur son profil. Un badge ♾️ À vie (doré foncé) apparaît directement sur sa carte dans l'Admin. Le bouton est grisé si l'utilisateur a déjà le Premium à vie."],
                     ["- À vie", "Retire le Premium à vie d'un utilisateur. Ce bouton remplace '- Premium' lorsque l'utilisateur possède le Premium permanent. L'utilisateur repasse en compte gratuit."],
                     ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
                     ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
@@ -17062,7 +17068,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["En attente (tous)", "Vue par défaut. Affiche tous les signalements non encore traités. Le badge rouge indique le nombre en attente."],
                     ["Profils", "Filtre les signalements manuels d'utilisateurs contre d'autres profils. À examiner en priorité."],
                     ["Système", "Signalements générés automatiquement par la modération (insultes, arnaques, contenus sexuels, alertes techniques)."],
-                    ["Messagerie", "Boîte de réception regroupant tous les échanges avec les utilisateurs (signalements + support). Chaque conversation est groupée par utilisateur avec photo, nom, dernier message et badge non lu. Le bouton Répondre ouvre une modale pour répondre directement — le message arrive dans la messagerie de l'utilisateur sous le nom Assistance Moyo (\"Répond sous 24h\")."],
+                    ["Messagerie", "Boîte de réception regroupant tous les échanges avec les utilisateurs (signalements + support). Chaque conversation est groupée par utilisateur avec photo, nom, dernier message et badge non lu. Le bouton Répondre ouvre une modale pour répondre directement — le message arrive dans la messagerie de l'utilisateur sous le nom Assistance Moyo Dating (\"Répond sous 24h\")."],
                     ["Archives", "Tous les signalements traités, rejetés, ayant entraîné un bannissement ou archivés. La page offre une recherche, des filtres par type (Messagerie / Auto-modération / Signalement) et par action (Traité / Rejeté / Banni / Archivé), un regroupement par date (Aujourd'hui, Hier…) et une pagination (10 par page). Chaque ligne peut être dépliée (Voir les détails) ou supprimée. 'Tout supprimer' nettoie toutes les archives d'un coup."],
                     ["Modération auto des contacts", "Quand un utilisateur gratuit tente de partager ou demander un numéro, un réseau social ou un lien (dans un message OU dans son profil), l'envoi est bloqué et un signalement automatique [AUTO-MOD CONTACT] est créé dans la catégorie Système. La détection couvre les numéros même très espacés, écrits en lettres ou avec des caractères intercalés."],
                   ] as [string, string][]).map(([label, desc]) => (
@@ -17103,9 +17109,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
-                    ["Signalé par (bleu)", "Bloc bleu en haut de la carte : photo + nom + âge + ville de la personne qui a fait le signalement. Le bouton 'Répondre' envoie un message directement dans sa messagerie Assistance Moyo."],
+                    ["Signalé par (bleu)", "Bloc bleu en haut de la carte : photo + nom + âge + ville de la personne qui a fait le signalement. Le bouton 'Répondre' envoie un message directement dans sa messagerie Assistance Moyo Dating."],
                     ["Profil signalé (rouge)", "Bloc rouge : photo + nom + âge + ville du profil accusé. Un badge ⚠️ x/3 s'affiche si ce profil a déjà des avertissements. Un badge 'Banni' s'affiche s'il est déjà banni."],
-                    ["Bouton Répondre", "Sur le bloc 'Signalé par' — ouvre une modale pour écrire un message à la personne qui a signalé. Elle reçoit la réponse dans Messages → Assistance Moyo."],
+                    ["Bouton Répondre", "Sur le bloc 'Signalé par' — ouvre une modale pour écrire un message à la personne qui a signalé. Elle reçoit la réponse dans Messages → Assistance Moyo Dating."],
                     ["Bouton Voir profil", "Ouvre la fiche complète du profil concerné (signalé ou support selon le contexte)."],
                     ["Bouton Avertir", "Envoie un avertissement officiel au profil signalé. Il voit un modal à sa prochaine connexion."],
                     ["Bouton Traité / Rejeter / Bannir", "Actions finales sur le signalement. Traité = pris en charge. Rejeter = sans suite. Bannir = interdit d'accès."],
@@ -17159,7 +17165,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
-                    ["Assistant Moyo", "Centre de support. À gauche : la conversation avec l'utilisateur (infos, historique, zone de réponse, Archiver). À droite : la bibliothèque de Modèles de réponse."],
+                    ["Assistant Moyo Dating", "Centre de support. À gauche : la conversation avec l'utilisateur (infos, historique, zone de réponse, Archiver). À droite : la bibliothèque de Modèles de réponse."],
                     ["Modèles de réponse", "Réponses prédéfinies pour répondre plus vite. Créez-en (titre, catégorie, contenu), modifiez/supprimez via le menu ⋮, recherchez et filtrez par catégorie. Le bouton Copier place le texte dans le presse-papiers (notification 'Modèle copié') pour le coller dans la conversation. Les modèles sont partagés entre tous les admins."],
                     ["Diffusion générale", "Envoie une annonce (bannière) aux utilisateurs. Vous choisissez le message, un modèle rapide, la cible (Genre : tout le monde / femmes / hommes × Abonnement : tous / premium / gratuits) et une date d'expiration. L'audience estimée et la liste des diffusions actives sont affichées ; chaque diffusion peut être prévisualisée ou arrêtée."],
                   ] as [string, string][]).map(([label, desc]) => (
@@ -17179,8 +17185,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
-                    ["Statuts Moyo", "Publiez des statuts officiels (sponsorisés) visibles par les membres, avec une option de bouton d'action (lien ou numéro WhatsApp/appel). Gérez les statuts actifs et leur durée de vie."],
-                    ["Mises en avant", "Validez les demandes de mise en avant des profils Premium (24h dans les Statuts Moyo, visibles par le genre opposé). Suivez les mises en avant actives (vues, likes, réponses) et retirez-les si besoin."],
+                    ["Statuts Moyo Dating", "Publiez des statuts officiels (sponsorisés) visibles par les membres, avec une option de bouton d'action (lien ou numéro WhatsApp/appel). Gérez les statuts actifs et leur durée de vie."],
+                    ["Mises en avant", "Validez les demandes de mise en avant des profils Premium (24h dans les Statuts Moyo Dating, visibles par le genre opposé). Suivez les mises en avant actives (vues, likes, réponses) et retirez-les si besoin."],
                     ["Événement Premium", "Offrez le Premium gratuitement à tous les utilisateurs pour un événement (lancement, promo, fête). Les vrais abonnés ne sont pas affectés ; à la date d'expiration choisie, le Premium est retiré automatiquement aux non-abonnés."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
@@ -17223,7 +17229,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Bouton ✉ Message", "Dans l'onglet Utilisateurs, chaque carte possède un bouton bleu '✉ Message' dans la section Modération. Il permet d'envoyer un message privé directement à cet utilisateur."],
                     ["Raccourcis disponibles", "La modale propose des messages pré-rédigés : expiration Premium, activation Premium, vérification en cours, profil vérifié, promotion -50%, signalement. Cliquez dessus pour pré-remplir le champ, puis modifiez si besoin."],
                     ["Champ libre", "Vous pouvez aussi rédiger un message entièrement personnalisé dans le champ texte."],
-                    ["Réception côté utilisateur", "Le message apparaît sous forme de modal bleu 'Information Moyo' à la prochaine connexion de l'utilisateur. Il doit cliquer 'OK, J'AI COMPRIS' pour continuer."],
+                    ["Réception côté utilisateur", "Le message apparaît sous forme de modal bleu 'Information Moyo Dating' à la prochaine connexion de l'utilisateur. Il doit cliquer 'OK, J'AI COMPRIS' pour continuer."],
                     ["Cas d'usage typiques", "Informer un utilisateur que son Premium est actif, qu'il doit se reconnecter, qu'il a été signalé, ou tout autre communication officielle."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
@@ -17243,7 +17249,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {([
                     ["Accès", "Dans l'onglet Utilisateurs, le bouton orange '📢 Diffusion générale' se trouve au-dessus de la liste des utilisateurs."],
-                    ["Fonctionnement", "Un seul message est enregistré en base. À leur prochaine connexion, tous les utilisateurs qui n'ont pas encore vu ce message reçoivent le modal bleu 'Information Moyo'."],
+                    ["Fonctionnement", "Un seul message est enregistré en base. À leur prochaine connexion, tous les utilisateurs qui n'ont pas encore vu ce message reçoivent le modal bleu 'Information Moyo Dating'."],
                     ["Raccourcis disponibles", "Maintenance, mise à jour, incident résolu, promotions, rappels de bienveillance, sécurité. Cliquez pour pré-remplir, modifiez si besoin."],
                     ["À utiliser pour", "Annonces de maintenance, nouvelles fonctionnalités, promotions temporaires, rappels communautaires importants."],
                     ["Important", "Chaque nouvelle diffusion écrase la précédente. Un utilisateur déjà connecté après la diffusion ne la reverra pas."],
@@ -18216,7 +18222,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "messagerie" && (
         <div style={{ padding: "16px 16px 0" }}>
           <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 2 }}>
-            {([["assistant", "Assistant Moyo", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>], ["broadcast", "Diffusion générale", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>]] as [("assistant" | "broadcast"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["assistant", "Assistant Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>], ["broadcast", "Diffusion générale", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>]] as [("assistant" | "broadcast"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMsgSubTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: msgSubTab === k ? G.rouge : "#fff", color: msgSubTab === k ? "#fff" : "#555", border: msgSubTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: msgSubTab === k ? "0 4px 12px rgba(192,57,43,0.25)" : "none" }}>{ico}{lbl}</button>
             ))}
           </div>
@@ -18244,12 +18250,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ fontSize: "0.74rem", color: "#999", margin: "3px 0 12px" }}>Cliquez sur un modèle pour préremplir le message.</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(115px, 1fr))", gap: 8 }}>
                   {([
-                    { lbl: "Maintenance", col: "#E67E22", txt: "Moyo est en maintenance ce soir de [H] à [H]. Merci de votre compréhension.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
+                    { lbl: "Maintenance", col: "#E67E22", txt: "Moyo Dating est en maintenance ce soir de [H] à [H]. Merci de votre compréhension.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
                     { lbl: "Nouvelle fonctionnalité", col: "#8e44ad", txt: "Nouvelle fonctionnalité disponible : [PRÉCISION]", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg> },
                     { lbl: "Mise à jour disponible", col: "#2980b9", txt: "Une mise à jour est disponible. Rechargez l'application pour en profiter.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> },
                     { lbl: "Promo Premium", col: "#E67E22", txt: "Profitez de -50% sur le Premium ce weekend uniquement !", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> },
                     { lbl: "Rappel événement", col: "#c0392b", txt: "Rappel : [ÉVÉNEMENT] aura lieu le [DATE]. Ne manquez pas ça !", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
-                    { lbl: "Communauté", col: "#16a085", txt: "La communauté Moyo grandit ! Invitez vos amis à nous rejoindre.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+                    { lbl: "Communauté", col: "#16a085", txt: "La communauté Moyo Dating grandit ! Invitez vos amis à nous rejoindre.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
                     { lbl: "Sécurité", col: "#27ae60", txt: "Pour votre sécurité, ne partagez jamais vos informations personnelles.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
                   ]).map(m => (
                     <button key={m.lbl} onClick={() => setBroadcastText(m.txt)} style={{ display: "flex", alignItems: "center", gap: 8, background: broadcastText === m.txt ? "rgba(192,57,43,0.06)" : "#fff", border: `1.5px solid ${broadcastText === m.txt ? G.rouge : G.gris}`, borderRadius: 12, padding: "10px 11px", cursor: "pointer", textAlign: "left" }}>
@@ -19125,7 +19131,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>]] as [("statuts" | "features" | "event"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>]] as [("statuts" | "features" | "event"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
@@ -19175,7 +19181,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {s.image_url ? <img src={s.image_url} alt="" style={{ width: 58, height: 50, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 58, height: 50, borderRadius: 10, background: G.creme, flexShrink: 0 }} />}
                           <div style={{ flex: "1 1 170px", minWidth: 0 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              <span style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 230 }}>{s.caption || "Statut Moyo"}</span>
+                              <span style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 230 }}>{s.caption || "Statut Moyo Dating"}</span>
                               {s.is_sponsored && <span style={{ background: "rgba(192,57,43,0.1)", color: G.rouge, borderRadius: 50, padding: "2px 9px", fontSize: "0.64rem", fontWeight: 800 }}>Sponsorisé</span>}
                             </div>
                             <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 3 }}>Publié le {new Date(s.created_at || Date.now()).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })} à {new Date(s.created_at || Date.now()).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
@@ -19276,7 +19282,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {/* ── COLONNE GAUCHE : demandes à traiter ── */}
                 <div style={{ flex: "1 1 430px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
                   <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Demandes à traiter</div>
-                  <p style={{ fontSize: "0.76rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>À l'acceptation, le profil sera publié 24h dans les Statuts Moyo, visible uniquement par le genre opposé.</p>
+                  <p style={{ fontSize: "0.76rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>À l'acceptation, le profil sera publié 24h dans les Statuts Moyo Dating, visible uniquement par le genre opposé.</p>
                   {featureRequests.length === 0 ? (
                     <div style={{ fontSize: "0.82rem", color: "#aaa", textAlign: "center", padding: "30px 0" }}>Aucune demande en attente.</div>
                   ) : (
@@ -19316,7 +19322,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {/* ── COLONNE DROITE : mises en avant actives ── */}
                 <div style={{ flex: "1 1 430px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
                   <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Mises en avant actives</div>
-                  <p style={{ fontSize: "0.76rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Profils actuellement affichés dans les Statuts Moyo.</p>
+                  <p style={{ fontSize: "0.76rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Profils actuellement affichés dans les Statuts Moyo Dating.</p>
                   {featureStatuses.length === 0 ? (
                     <div style={{ fontSize: "0.82rem", color: "#aaa", textAlign: "center", padding: "30px 0" }}>Aucune mise en avant active.</div>
                   ) : (
@@ -19404,7 +19410,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <div style={{ fontSize: "0.72rem", color: "#999", margin: "6px 0 20px" }}>À la date sélectionnée, le Premium sera retiré automatiquement.</div>
 
                     <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>4. Message affiché aux bénéficiaires <span style={{ color: "#aaa", fontWeight: 500 }}>(optionnel)</span></div>
-                    <textarea value={campMessage} onChange={e => setCampMessage(e.target.value.slice(0, 200))} rows={3} placeholder="🎉 Moyo vous offre le Premium pour célébrer un événement. Profitez-en !" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 13px", fontSize: "0.84rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
+                    <textarea value={campMessage} onChange={e => setCampMessage(e.target.value.slice(0, 200))} rows={3} placeholder="🎉 Moyo Dating vous offre le Premium pour célébrer un événement. Profitez-en !" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 13px", fontSize: "0.84rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
                     <div style={{ textAlign: "right", fontSize: "0.7rem", color: "#aaa", marginTop: 4 }}>{campMessage.length}/200</div>
 
                     <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18 }}>
@@ -19695,7 +19701,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
               <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Titre du sondage</label>
-              <input value={surveyEditor.title} onChange={e => setSurveyEditor((s: any) => ({ ...s, title: e.target.value }))} placeholder="Ex : Votre satisfaction Moyo" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box", marginBottom: 14 }} />
+              <input value={surveyEditor.title} onChange={e => setSurveyEditor((s: any) => ({ ...s, title: e.target.value }))} placeholder="Ex : Votre satisfaction Moyo Dating" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box", marginBottom: 14 }} />
               <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Message d'invitation (affiché au membre)</label>
               <textarea value={surveyEditor.intro_message} onChange={e => setSurveyEditor((s: any) => ({ ...s, intro_message: e.target.value }))} rows={2} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", marginBottom: 14 }} />
               <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Destinataires</label>
@@ -20708,7 +20714,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
               <div style={{ background: "rgba(124,58,237,0.05)", borderRadius: 12, padding: "12px 16px", marginTop: 14, fontSize: "0.76rem", color: "#6b46c1", display: "flex", alignItems: "center", gap: 8 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                Ces suggestions sont générées automatiquement. L'équipe Moyo garde le contrôle final sur chaque mise en relation.
+                Ces suggestions sont générées automatiquement. L'équipe Moyo Dating garde le contrôle final sur chaque mise en relation.
               </div>
 
               {/* Modal profil rapide */}
@@ -21303,6 +21309,7 @@ export default function App() {
   const [viewsReceived, setViewsReceived] = useState(0);
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
   const [premiumSuccess, setPremiumSuccess] = useState(false);
+  const [premiumCancelled, setPremiumCancelled] = useState(false);
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [userGender, setUserGender] = useState<string>("");
@@ -21503,6 +21510,11 @@ export default function App() {
         // Nettoie l'URL pour ne pas réafficher la modale au rechargement
         const clean = window.location.origin + window.location.pathname;
         window.history.replaceState({}, "", clean);
+      } else if (sp.get("paiement") === "annule") {
+        setPremiumCancelled(true);
+        // Nettoie l'URL pour ne pas réafficher la modale au rechargement
+        const clean = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, "", clean);
       }
     } catch {}
     const type = params.get("type");
@@ -21615,7 +21627,7 @@ export default function App() {
       const t = setTimeout(() => {
         Notification.requestPermission().then(permission => {
           if (permission === "granted") {
-            showMoyoNotification("Moyo - Notifications activées !", "Vous recevrez des alertes pour vos nouveaux messages.");
+            showMoyoNotification("Moyo Dating - Notifications activées !", "Vous recevrez des alertes pour vos nouveaux messages.");
             subscribeToPush(auth);
           }
         }).catch(() => {});
@@ -21889,7 +21901,18 @@ export default function App() {
         ]);
         const matchedIds = new Set<string>();
         if (Array.isArray(myMatches)) myMatches.forEach(mm => matchedIds.add(mm.user1 === auth.userId ? mm.user2 : mm.user1));
-        const likesCount = Array.isArray(likes) ? new Set(likes.filter(l => !dIds.has(l.from_user) && !matchedIds.has(l.from_user)).map(l => l.from_user)).size : 0;
+        // Le badge ne doit compter que les likes dont le profil existe encore
+        // (sinon un like d'un compte supprimé/banni gonfle le badge alors que la liste est vide).
+        const likeCandidateIds = Array.isArray(likes)
+          ? [...new Set(likes.filter(l => !dIds.has(l.from_user) && !matchedIds.has(l.from_user)).map(l => l.from_user))]
+          : [];
+        let likesCount = 0;
+        if (likeCandidateIds.length > 0) {
+          try {
+            const existingLikers = await sb.query<{ id: string }>(auth.token, "profiles", `?id=in.(${likeCandidateIds.join(",")})&select=id`);
+            likesCount = Array.isArray(existingLikers) ? existingLikers.length : 0;
+          } catch { likesCount = likeCandidateIds.length; }
+        }
         const viewsCount = Array.isArray(views) ? [...new Set(views.map(v => v.viewer_id))].filter(id => !dIds.has(id)).length : 0;
         const currentTab = document.querySelector('[data-active-tab]')?.getAttribute('data-active-tab') || '';
         // Ne pas écraser le zéro si l'onglet est actif OU si l'utilisateur l'a consulté récemment
@@ -21947,7 +21970,7 @@ export default function App() {
         if (activeTab3 === 'messages' || msgJustSeen) { lastUnreadRef.current = 0; setUnreadCount(0); return; }
         // Ne notifier que si le nombre AUGMENTE après le 1er relevé (jamais au tout 1er chargement)
         if (lastUnreadRef.current !== null && count > lastUnreadRef.current && 'Notification' in window && Notification.permission === 'granted') {
-          showMoyoNotification('Moyo - Nouveau message', 'Vous avez reçu un nouveau message !');
+          showMoyoNotification('Moyo Dating - Nouveau message', 'Vous avez reçu un nouveau message !');
         }
         lastUnreadRef.current = count;
         setUnreadCount(count);
@@ -21971,7 +21994,7 @@ export default function App() {
         const lastReqSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
         const rMatchReqs = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&created_at=gt.${lastReqSeen}&select=id`, { headers: h });
         const matchReqCount = parseCount(rMatchReqs);
-        // Demandes de mise en avant (statuts Moyo) en attente de validation
+        // Demandes de mise en avant (statuts Moyo Dating) en attente de validation
         const rFeatReqs = await fetch(`${SUPABASE_URL}/rest/v1/feature_requests?status=eq.en_attente&select=id`, { headers: h });
         const featReqCount = parseCount(rFeatReqs);
         const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount + featReqCount;
@@ -22138,14 +22161,14 @@ export default function App() {
         </div>
         {/* Contenu */}
         <div style={{ padding: "22px 24px 24px", textAlign: "center" }}>
-          <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#111", marginBottom: 8 }}>Installe l'app Moyo !</h3>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#111", marginBottom: 8 }}>Installe l'app Moyo Dating !</h3>
           {isIos ? (
             <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>
               Appuie sur <strong style={{ color: G.rouge }}>Partager</strong> en bas de ton navigateur, puis <strong style={{ color: G.rouge }}>Sur l'écran d'accueil</strong>
             </p>
           ) : (
             <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>
-              Accède rapidement à Moyo depuis ton écran d'accueil - rapide, pratique et sans passer par le navigateur !
+              Accède rapidement à Moyo Dating depuis ton écran d'accueil - rapide, pratique et sans passer par le navigateur !
             </p>
           )}
           {!isIos && (
@@ -22212,7 +22235,24 @@ export default function App() {
             Ton abonnement <strong style={{ color: "#B8860B" }}>Premium</strong> est désormais actif ! Tu peux profiter des likes et messages illimités, voir qui t'a liké, et bien plus encore.
           </div>
           <button onClick={() => setPremiumSuccess(false)} style={{ width: "100%", background: "linear-gradient(135deg,#D4A843,#B8860B)", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px rgba(184,134,11,0.35)" }}>
-            Découvrir Moyo Premium
+            Découvrir Moyo Dating Premium
+          </button>
+        </div>
+      </div>
+    )}
+    {premiumCancelled && (
+      <div onClick={() => setPremiumCancelled(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100000, padding: 20, backdropFilter: "blur(3px)" }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "30px 24px 24px", maxWidth: 360, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 90, background: "linear-gradient(135deg,#8a8f98,#5b6068)" }} />
+          <div style={{ position: "relative", width: 72, height: 72, margin: "0 auto 16px", borderRadius: "50%", background: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 18px rgba(0,0,0,0.15)" }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          </div>
+          <div style={{ fontWeight: 900, fontSize: "1.25rem", color: G.brun, marginBottom: 8 }}>Paiement annulé</div>
+          <div style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.55, marginBottom: 22 }}>
+            Ton paiement a été annulé et <strong>aucun montant n'a été débité</strong>. Tu peux réessayer à tout moment depuis le bouton Premium.
+          </div>
+          <button onClick={() => setPremiumCancelled(false)} style={{ width: "100%", background: "#6b7280", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer" }}>
+            Fermer
           </button>
         </div>
       </div>
@@ -22231,8 +22271,8 @@ export default function App() {
             <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.1rem" }}>Votre avis nous intéresse</div>
           </div>
           <div style={{ padding: "20px 22px 24px" }}>
-            <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.55, textAlign: "center", marginBottom: 20 }}>{activeSurvey.intro_message || "Aidez-nous à améliorer Moyo en répondant à quelques questions rapides."}</p>
-            <button onClick={() => { setSurveyAnswers({}); setSurveyStep(0); setShowSurveyInvite(true); }} style={{ width: "100%", background: "#2980b9", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: "pointer", marginBottom: 8 }}>J'aide Moyo ({(activeSurvey.questions || []).length} questions)</button>
+            <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.55, textAlign: "center", marginBottom: 20 }}>{activeSurvey.intro_message || "Aidez-nous à améliorer Moyo Dating en répondant à quelques questions rapides."}</p>
+            <button onClick={() => { setSurveyAnswers({}); setSurveyStep(0); setShowSurveyInvite(true); }} style={{ width: "100%", background: "#2980b9", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: "pointer", marginBottom: 8 }}>J'aide Moyo Dating ({(activeSurvey.questions || []).length} questions)</button>
             <button onClick={() => { persistDismissedSurvey(activeSurvey.id); setActiveSurvey(null); }} style={{ width: "100%", background: "transparent", color: "#999", border: "none", padding: "8px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>Plus tard</button>
           </div>
         </div>
@@ -22329,7 +22369,7 @@ export default function App() {
         </div>
       </div>
     )}
-    {/* Flux B : suggestion spontanée Moyo (modal existant "On pense à toi") */}
+    {/* Flux B : suggestion spontanée Moyo Dating (modal existant "On pense à toi") */}
     {pendingProposal && pendingProposal.source !== "request" && !pendingWarning && !pendingBroadcast && (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
@@ -22339,7 +22379,7 @@ export default function App() {
               <svg width="48" height="48" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </div>
             <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>On pense à toi !</div>
-            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", marginTop: 4 }}>L'équipe Moyo te propose une rencontre</div>
+            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", marginTop: 4 }}>L'équipe Moyo Dating te propose une rencontre</div>
           </div>
           {/* Profil proposé */}
           <div style={{ padding: "24px 20px 8px", textAlign: "center" }}>
