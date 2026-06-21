@@ -1,8 +1,9 @@
 {
-  "name": "Moyo - Rencontres Congo",
-  "short_name": "Moyo",
-  "description": "L'application de rencontres pour les Congolais",
+  "name": "Moyo Dating",
+  "short_name": "Moyo Dating",
+  "description": "La plateforme de rencontres des Congolais du Congo et de la diaspora.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
