@@ -195,6 +195,7 @@ let FEATURE_ASSISTANT = true;
 let APPOINTMENTS_ENABLED = true;
 let APPT_PHONE_ENABLED = true;
 let APPT_PHYSICAL_ENABLED = true;
+let APPOINTMENT_PHYSICAL_PRICE = 10000;
 // Coordonnées de paiement (modifiables depuis Config admin)
 let PAY_MTN_NUMBER = "065132012";
 let PAY_MTN_RESPONSABLE = "Juste-Emmanuelle AKOUMOU ISSOMBO";
@@ -246,7 +247,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -261,6 +262,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
+  if (map["appointment_physical_price"]) APPOINTMENT_PHYSICAL_PRICE = parseInt(map["appointment_physical_price"]) || 10000;
   if (map["feature_assistant"] !== undefined) FEATURE_ASSISTANT = map["feature_assistant"] !== "false";
   if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
   if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
@@ -519,8 +521,56 @@ const apptStatusInfo = (s: string) => APPT_STATUS[s] || { label: s, color: "#888
 const fmtApptDT = (s?: string) => s ? new Date(s).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(":", "h") : "";
 const APPT_INPUT: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", background: G.blanc, color: G.brun };
 
+// Sélecteur date (calendrier natif) + heure (01–23) + minute (00–59)
+function DateTimePicker({ date, hour, minute, onChange }: { date: string; hour: string; minute: string; onChange: (d: string, h: string, m: string) => void }) {
+  const hours = Array.from({ length: 23 }, (_, i) => String(i + 1).padStart(2, "0"));
+  const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+  const sel: React.CSSProperties = { ...APPT_INPUT, width: "auto", padding: "10px 8px", cursor: "pointer" };
+  return (
+    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+      <input type="date" value={date} onChange={e => onChange(e.target.value, hour, minute)} style={{ ...APPT_INPUT, flex: "1 1 140px", padding: "9px 10px", cursor: "pointer" }} />
+      <select value={hour} onChange={e => onChange(date, e.target.value, minute)} style={sel}>
+        <option value="">-- h</option>
+        {hours.map(h => <option key={h} value={h}>{h} h</option>)}
+      </select>
+      <select value={minute} onChange={e => onChange(date, hour, e.target.value)} style={sel}>
+        <option value="">-- min</option>
+        {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+      </select>
+    </div>
+  );
+}
+
+// Vrai modal de choix de date/heure (remplace le prompt navigateur)
+function DateTimeModal({ title, initialISO, confirmLabel, onConfirm, onClose }: { title: string; initialISO?: string; confirmLabel?: string; onConfirm: (iso: string) => void; onClose: () => void }) {
+  const init = initialISO ? new Date(initialISO) : null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const [date, setDate] = useState(init ? `${init.getFullYear()}-${pad(init.getMonth() + 1)}-${pad(init.getDate())}` : "");
+  const [hour, setHour] = useState(init ? pad(init.getHours()) : "");
+  const [minute, setMinute] = useState(init ? pad(init.getMinutes()) : "");
+  const [err, setErr] = useState("");
+  const submit = () => {
+    if (!date) { setErr("Choisissez une date dans le calendrier."); return; }
+    if (!hour) { setErr("Choisissez l'heure."); return; }
+    onConfirm(new Date(`${date}T${hour}:${minute || "00"}:00`).toISOString());
+  };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10010, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 380, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 16 }}>{title}</div>
+        <DateTimePicker date={date} hour={hour} minute={minute} onChange={(d, h, m) => { setDate(d); setHour(h); setMinute(m); setErr(""); }} />
+        {err && <div style={{ color: "#c0392b", fontSize: "0.78rem", marginTop: 10, fontWeight: 600 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <button onClick={onClose} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+          <button onClick={submit} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>{confirmLabel || "Confirmer"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Carte + modal côté utilisateur (formulaire de demande + « Mes rendez-vous »)
-function AppointmentsButton({ auth }: { auth: any }) {
+function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium: (msg: string) => void }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"new" | "list">("new");
   const [list, setList] = useState<any[]>([]);
@@ -529,11 +579,14 @@ function AppointmentsButton({ auth }: { auth: any }) {
   const [topic, setTopic] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
-  const [slots, setSlots] = useState(["", "", ""]);
+  const [slots, setSlots] = useState([{ date: "", hour: "", minute: "" }, { date: "", hour: "", minute: "" }, { date: "", hour: "", minute: "" }]);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
   const [sent, setSent] = useState(false);
+  const [payView, setPayView] = useState(false);
+  const [operator, setOperator] = useState<"MTN" | "Airtel">("MTN");
+  const [txRef, setTxRef] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -549,17 +602,38 @@ function AppointmentsButton({ auth }: { auth: any }) {
     } catch { setList([]); }
     setLoading(false);
   };
+  const createAppointment = async (extra: any = {}): Promise<any> => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, type, topic: topic.trim(), phone: phone.trim(), city: city.trim(), preferred_slots: slots.filter(s => s.date && s.hour).map(s => new Date(`${s.date}T${s.hour}:${s.minute || "00"}:00`).toISOString()), message: message.trim(), status: "en_attente", ...extra }) });
+      const body = await r.json().catch(() => null); const row = Array.isArray(body) ? body[0] : body;
+      if (!r.ok || !row?.id) { setErr(row?.message || "Échec de l'envoi. Votre demande n'a pas été enregistrée."); return null; }
+      return row;
+    } catch (e: any) { setErr("Échec : " + (e?.message || "réseau")); return null; }
+  };
   const submit = async () => {
     if (!topic.trim()) { setErr("Indiquez le motif du rendez-vous."); return; }
-    if (type === "telephonique" && !phone.trim()) { setErr("Le téléphone est requis pour un rendez-vous téléphonique."); return; }
+    if (type === "telephonique") {
+      if (!auth.isPremium) { onShowPremium("Le rendez-vous téléphonique avec notre équipe est réservé aux membres Premium. Passez Premium pour en profiter."); setOpen(false); return; }
+      if (!phone.trim()) { setErr("Le téléphone est requis pour un rendez-vous téléphonique."); return; }
+      setSending(true); setErr("");
+      const row = await createAppointment();
+      setSending(false);
+      if (row) setSent(true);
+      return;
+    }
+    // Physique → étape de paiement Mobile Money
+    setErr(""); setPayView(true);
+  };
+  const payAndCreate = async () => {
+    if (!txRef.trim()) { setErr("Entrez la référence (ID) de votre paiement Mobile Money."); return; }
     setSending(true); setErr("");
+    const row = await createAppointment({ price: APPOINTMENT_PHYSICAL_PRICE, payment_status: "en_attente_validation", operator, tx_ref: txRef.trim() });
+    if (!row) { setSending(false); return; }
+    // Demande de paiement -> validée dans Budget (comme boost/sponsor)
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, type, topic: topic.trim(), phone: phone.trim(), city: city.trim(), preferred_slots: slots.map(s => s.trim()).filter(Boolean), message: message.trim(), status: "en_attente" }) });
-      const body = await r.json().catch(() => null); const row = Array.isArray(body) ? body[0] : body;
-      if (!r.ok || !row?.id) { setErr(row?.message || "Échec de l'envoi. Votre demande n'a pas été enregistrée."); setSending(false); return; }
-      setSent(true);
-    } catch (e: any) { setErr("Échec : " + (e?.message || "réseau")); }
-    setSending(false);
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, operator, tx_ref: txRef.trim(), amount: APPOINTMENT_PHYSICAL_PRICE, status: "pending" }) });
+    } catch {}
+    setSending(false); setPayView(false); setSent(true);
   };
 
   if (!APPOINTMENTS_ENABLED) return null;
@@ -577,7 +651,7 @@ function AppointmentsButton({ auth }: { auth: any }) {
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={() => { setOpen(true); setView("new"); setSent(false); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Demander un rendez-vous</button>
+        <button onClick={() => { setOpen(true); setView("new"); setSent(false); setPayView(false); setTxRef(""); setErr(""); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Demander un rendez-vous</button>
         <button onClick={() => { setOpen(true); setView("list"); loadList(); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Mes rendez-vous</button>
       </div>
     </div>
@@ -602,6 +676,30 @@ function AppointmentsButton({ auth }: { auth: any }) {
                 <div style={{ fontSize: "0.83rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Votre demande de rendez-vous est en attente. Notre équipe vous confirmera un créneau prochainement.</div>
                 <button onClick={() => { setView("list"); loadList(); }} style={{ background: G.vert, color: "#fff", border: "none", borderRadius: 10, padding: "11px 22px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Voir mes rendez-vous</button>
               </div>
+            ) : payView ? (
+              <div>
+                <div style={{ background: "rgba(26,92,58,0.06)", border: "1px solid rgba(26,92,58,0.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                  <div style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.5 }}>Rendez-vous à l'agence — service payant</div>
+                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: G.vert, marginTop: 4 }}>{APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA</div>
+                </div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Opérateur Mobile Money</div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                  {(["MTN", "Airtel"] as const).map(op => (
+                    <button key={op} onClick={() => setOperator(op)} style={{ flex: 1, background: operator === op ? G.vert : G.blanc, color: operator === op ? "#fff" : "#666", border: `1.5px solid ${operator === op ? G.vert : G.gris}`, borderRadius: 10, padding: "12px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>{op} MoMo</button>
+                  ))}
+                </div>
+                <div style={{ background: G.blanc, border: `1.5px dashed ${G.gris}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14, textAlign: "center" }}>
+                  <div style={{ fontSize: "0.72rem", color: "#888" }}>Envoyez {APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA au numéro</div>
+                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, letterSpacing: 1 }}>{operator === "MTN" ? PAY_MTN_NUMBER : PAY_AIRTEL_NUMBER}</div>
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Référence (ID) de votre paiement</div>
+                  <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex : 7753031542" style={APPT_INPUT} />
+                </div>
+                {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
+                <button onClick={payAndCreate} disabled={sending} style={{ width: "100%", background: sending ? "#9bb8a8" : `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : "J'ai payé — envoyer la demande"}</button>
+                <button onClick={() => { setPayView(false); setErr(""); }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", color: "#888", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>← Retour</button>
+              </div>
             ) : (<>
               {!onlyType && <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Type de rendez-vous</div>
@@ -610,18 +708,23 @@ function AppointmentsButton({ auth }: { auth: any }) {
                   {APPT_PHYSICAL_ENABLED && <button onClick={() => setType("physique")} style={{ flex: 1, background: type === "physique" ? G.vert : G.blanc, color: type === "physique" ? "#fff" : "#666", border: `1.5px solid ${type === "physique" ? G.vert : G.gris}`, borderRadius: 10, padding: "12px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>🏢 À l'agence</button>}
                 </div>
               </div>}
+              {type === "telephonique" && !auth.isPremium && <div style={{ background: "rgba(212,168,67,0.12)", border: "1px solid rgba(212,168,67,0.4)", borderRadius: 10, padding: "9px 12px", marginBottom: 12, fontSize: "0.76rem", color: "#8a6d2a", lineHeight: 1.45, fontWeight: 600 }}>⭐ Réservé aux membres Premium. En validant, vous pourrez passer Premium.</div>}
+              {type === "physique" && <div style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.25)", borderRadius: 10, padding: "9px 12px", marginBottom: 12, fontSize: "0.76rem", color: "#15803d", lineHeight: 1.45, fontWeight: 600 }}>💳 Service à l'agence — {APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA, payable par Mobile Money à l'étape suivante.</div>}
               <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Motif</div><textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ex. étudier mon cas, améliorer mon profil, préparer une mise en relation…" style={{ ...APPT_INPUT, minHeight: 60, resize: "vertical" }} /></div>
               {type === "telephonique" && <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Téléphone</div><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Votre numéro" style={APPT_INPUT} /></div>}
               <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Ville</div><input value={city} onChange={e => setCity(e.target.value)} placeholder="Votre ville" style={APPT_INPUT} /></div>
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Trois créneaux souhaités</div>
                 {[0, 1, 2].map(i => (
-                  <input key={i} value={slots[i]} onChange={e => setSlots(prev => prev.map((s, j) => j === i ? e.target.value : s))} placeholder={`Créneau ${i + 1} (ex. lundi 14h, mardi matin…)`} style={{ ...APPT_INPUT, marginBottom: 6 }} />
+                  <div key={i} style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: "0.7rem", color: "#999", marginBottom: 3 }}>Créneau {i + 1}{i === 0 ? "" : " (facultatif)"}</div>
+                    <DateTimePicker date={slots[i].date} hour={slots[i].hour} minute={slots[i].minute} onChange={(d, h, m) => setSlots(prev => prev.map((s, j) => j === i ? { date: d, hour: h, minute: m } : s))} />
+                  </div>
                 ))}
               </div>
               <div style={{ marginBottom: 14 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Message complémentaire (facultatif)</div><textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Une précision pour l'équipe…" style={{ ...APPT_INPUT, minHeight: 50, resize: "vertical" }} /></div>
               {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
-              <button onClick={submit} disabled={sending} style={{ width: "100%", background: sending ? "#9bb8a8" : `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : "Envoyer ma demande"}</button>
+              <button onClick={submit} disabled={sending} style={{ width: "100%", background: sending ? "#9bb8a8" : `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : type === "physique" ? "Continuer vers le paiement" : "Envoyer ma demande"}</button>
             </>)}
           </div>
         ) : (
@@ -635,8 +738,9 @@ function AppointmentsButton({ auth }: { auth: any }) {
                     <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{si.label}</span>
                   </div>
                   <div style={{ fontSize: "0.82rem", color: "#555", marginBottom: 4 }}>{a.topic}</div>
+                  {a.type === "physique" && a.price && <div style={{ fontSize: "0.74rem", color: a.payment_status === "valide" ? "#27ae60" : "#b9770e", fontWeight: 700, marginBottom: 2 }}>💳 {Number(a.price).toLocaleString("fr-FR")} FCFA — {a.payment_status === "valide" ? "paiement validé" : "paiement en cours de validation"}</div>}
                   {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
-                  {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999" }}>Créneaux souhaités : {a.preferred_slots.join(" · ")}</div>}
+                  {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999" }}>Créneaux souhaités : {a.preferred_slots.map(fmtApptDT).join(" · ")}</div>}
                   {a.status === "annule" && a.admin_note && <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4 }}>{a.admin_note}</div>}
                   <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 4 }}>Demandé le {new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
                 </div>
@@ -651,6 +755,7 @@ function AppointmentsButton({ auth }: { auth: any }) {
 // Onglet admin « Rendez-vous »
 function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: string, t?: string) => void }) {
   const [filter, setFilter] = useState<"en_attente" | "confirme" | "today" | "passes" | "annule">("en_attente");
+  const [scheduling, setScheduling] = useState<{ a: any; mode: "confirme" | "reporte" } | null>(null);
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const load = async () => {
@@ -681,9 +786,8 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
       if (okMsg) showToast(okMsg, "success");
     } catch { showToast("Erreur", "error"); }
   };
-  const askSlot = (cur?: string) => { const v = window.prompt("Date et heure du rendez-vous (format AAAA-MM-JJ HH:MM) :", cur || ""); if (!v) return null; const d = new Date(v.replace(" ", "T")); if (isNaN(d.getTime())) { showToast("Format de date invalide. Utilisez AAAA-MM-JJ HH:MM.", "error"); return null; } return d.toISOString(); };
-  const confirmAppt = (a: any) => { const iso = askSlot(); if (iso) patch(a.id, { status: "confirme", scheduled_at: iso }, "✅ Rendez-vous confirmé"); };
-  const rescheduleAppt = (a: any) => { const iso = askSlot(a.scheduled_at ? a.scheduled_at.slice(0, 16).replace("T", " ") : ""); if (iso) patch(a.id, { status: "reporte", scheduled_at: iso }, "🔁 Nouveau créneau proposé"); };
+  const confirmAppt = (a: any) => setScheduling({ a, mode: "confirme" });
+  const rescheduleAppt = (a: any) => setScheduling({ a, mode: "reporte" });
   const cancelAppt = (a: any) => { const reason = window.prompt("Motif d'annulation (visible par l'utilisateur, facultatif) :", ""); patch(a.id, { status: "annule", admin_note: reason || a.admin_note || "" }, "Rendez-vous annulé"); };
   const noteAppt = (a: any) => { const n = window.prompt("Note interne sur ce rendez-vous :", a.admin_note || ""); if (n !== null) patch(a.id, { admin_note: n }, "Note enregistrée"); };
 
@@ -724,9 +828,10 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
                 <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, flexShrink: 0 }}>{si.label}</span>
               </div>
               <div style={{ fontSize: "0.82rem", color: "#555", marginBottom: 6 }}>{a.topic}</div>
+              {a.type === "physique" && a.price && <div style={{ fontSize: "0.74rem", color: "#b9770e", fontWeight: 700, marginBottom: 6 }}>💳 {Number(a.price).toLocaleString("fr-FR")} FCFA{a.tx_ref ? ` · réf ${a.tx_ref}` : ""} — à valider dans l'onglet Budget</div>}
               {a.message && <div style={{ fontSize: "0.74rem", color: "#777", fontStyle: "italic", marginBottom: 6 }}>« {a.message} »</div>}
               {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700, marginBottom: 6 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
-              {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 6 }}>Créneaux souhaités : {a.preferred_slots.join(" · ")}</div>}
+              {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 6 }}>Créneaux souhaités : {a.preferred_slots.map(fmtApptDT).join(" · ")}</div>}
               {a.admin_note && <div style={{ fontSize: "0.72rem", color: "#8a6d2a", background: "rgba(212,168,67,0.1)", borderRadius: 8, padding: "5px 8px", marginBottom: 6 }}>Note : {a.admin_note}</div>}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
                 {(a.status === "en_attente" || a.status === "reporte") && <button onClick={() => confirmAppt(a)} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#1a8c4a", cursor: "pointer" }}>Confirmer</button>}
@@ -739,6 +844,13 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
             </div>
           ); })}
         </div>}
+      {scheduling && <DateTimeModal
+        title={scheduling.mode === "confirme" ? "Confirmer le rendez-vous" : "Proposer un nouveau créneau"}
+        initialISO={scheduling.a.scheduled_at || undefined}
+        confirmLabel={scheduling.mode === "confirme" ? "Confirmer" : "Reporter"}
+        onConfirm={(iso) => { patch(scheduling.a.id, { status: scheduling.mode, scheduled_at: iso }, scheduling.mode === "confirme" ? "✅ Rendez-vous confirmé" : "🔁 Nouveau créneau proposé"); setScheduling(null); }}
+        onClose={() => setScheduling(null)}
+      />}
     </div>
   );
 }
@@ -4146,6 +4258,7 @@ function AdminDesktopPage() {
     appointmentsEnabled: "true",
     phoneAppointmentsEnabled: "true",
     physicalAppointmentsEnabled: "true",
+    appointmentPhysicalPrice: "10000",
     maintenanceMode: "false",
     maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧",
     customBannedWords: "",
@@ -4167,6 +4280,7 @@ function AdminDesktopPage() {
       "premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days",
       "feature_statuses","feature_gift_premium","feature_assistant",
       "appointments_enabled","phone_appointments_enabled","physical_appointments_enabled",
+      "appointment_physical_price",
       "maintenance_mode","maintenance_message",
       "custom_banned_words",
       "contact_banned_words",
@@ -4207,6 +4321,7 @@ function AdminDesktopPage() {
         appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
         phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
         physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
+        appointmentPhysicalPrice: map["appointment_physical_price"] || c.appointmentPhysicalPrice,
         maintenanceMode: map["maintenance_mode"] || c.maintenanceMode,
         maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage,
         customBannedWords: map["custom_banned_words"] || c.customBannedWords,
@@ -4440,6 +4555,7 @@ function AdminDesktopPage() {
                 ["premium_days_week", "premiumDaysWeek" as keyof typeof appConfig, "Durée 1 semaine (jours)", appConfig.premiumDaysWeek],
                 ["premium_days_2month", "premiumDays2month" as keyof typeof appConfig, "Durée 2 mois (jours)", appConfig.premiumDays2month],
                 ["likes_notification_delay_hours", "likesNotifDelayHours" as keyof typeof appConfig, "Notif likes après (heures)", appConfig.likesNotifDelayHours],
+                ["appointment_physical_price", "appointmentPhysicalPrice" as keyof typeof appConfig, "Prix rendez-vous agence (FCFA)", appConfig.appointmentPhysicalPrice],
               ] as [string, keyof typeof appConfig, string, string][]).map(([key, ck, label, value]) => (
                 <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} open={editingConfig === key} type="number"
                   onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
@@ -5145,7 +5261,7 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
       </OffCanvasSection>
       <OffCanvasSection title="Prix & Abonnement">
         {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix 1 mois (FCFA)",appConfig.premiumPriceFcfa],["premium_price_week_fcfa","premiumPriceWeekFcfa" as keyof typeof appConfig,"Prix 1 semaine (FCFA)",appConfig.premiumPriceWeekFcfa],["premium_price_2month_fcfa","premiumPrice2monthFcfa" as keyof typeof appConfig,"Prix 2 mois (FCFA)",appConfig.premiumPrice2monthFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["eur_to_fcfa_rate","eurToFcfaRate" as keyof typeof appConfig,"Taux 1 € en FCFA",appConfig.eurToFcfaRate],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée 1 mois (jours)",appConfig.premiumDurationDays],["premium_days_week","premiumDaysWeek" as keyof typeof appConfig,"Durée 1 semaine (jours)",appConfig.premiumDaysWeek],["premium_days_2month","premiumDays2month" as keyof typeof appConfig,"Durée 2 mois (jours)",appConfig.premiumDays2month],["likes_notification_delay_hours","likesNotifDelayHours" as keyof typeof appConfig,"Notif likes après (heures)",appConfig.likesNotifDelayHours]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
-          <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_price_week_fcfa") PREMIUM_PRICE_WEEK_FCFA = parseInt(editingConfigValue) || 1200; if (key === "premium_price_2month_fcfa") PREMIUM_PRICE_2MONTH_FCFA = parseInt(editingConfigValue) || 5900; if (key === "premium_days_week") PREMIUM_DAYS_WEEK = parseInt(editingConfigValue) || 7; if (key === "premium_days_2month") PREMIUM_DAYS_2MONTH = parseInt(editingConfigValue) || 62; if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10; if (key === "eur_to_fcfa_rate") EUR_TO_FCFA = parseFloat(editingConfigValue) || 655.957; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; setEditingConfig(null); }} />
+          <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") PREMIUM_PRICE_FCFA = parseInt(editingConfigValue) || 3500; if (key === "premium_price_week_fcfa") PREMIUM_PRICE_WEEK_FCFA = parseInt(editingConfigValue) || 1200; if (key === "premium_price_2month_fcfa") PREMIUM_PRICE_2MONTH_FCFA = parseInt(editingConfigValue) || 5900; if (key === "premium_days_week") PREMIUM_DAYS_WEEK = parseInt(editingConfigValue) || 7; if (key === "premium_days_2month") PREMIUM_DAYS_2MONTH = parseInt(editingConfigValue) || 62; if (key === "premium_price_eur") PREMIUM_PRICE_EUR = parseFloat(editingConfigValue) || 10; if (key === "eur_to_fcfa_rate") EUR_TO_FCFA = parseFloat(editingConfigValue) || 655.957; if (key === "premium_duration_days") PREMIUM_30_DAYS_MS = (parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000; if (key === "appointment_physical_price") APPOINTMENT_PHYSICAL_PRICE = parseInt(editingConfigValue) || 10000; setEditingConfig(null); }} />
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
@@ -8225,7 +8341,6 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
             <button onClick={() => { acceptProposal(confirmDelProp); setConfirmDelProp(null); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>✓ Accepter</button>
             <button onClick={() => { refuseProposal(confirmDelProp); setConfirmDelProp(null); }} style={{ flex: 1, background: G.blanc, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Refuser</button>
           </div>
-          <button onClick={() => { const pr = confirmDelProp; setConfirmDelProp(null); deleteProposal(pr); }} style={{ background: "none", border: "none", color: "#c0392b", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: "6px" }}>Supprimer quand même</button>
         </div>
       </div>
     ); })()}
@@ -11439,7 +11554,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
-      <AppointmentsButton auth={auth} />
+      <AppointmentsButton auth={auth} onShowPremium={onShowPremium} />
       {/* ── Modal confirmation suppression du profil relationnel ── */}
       {showDeleteRel && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10004, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !deletingRel && setShowDeleteRel(false)}>
