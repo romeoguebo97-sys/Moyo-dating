@@ -825,7 +825,7 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
                   {a.status === "annule" && a.admin_note && <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4 }}>{a.admin_note}</div>}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 8 }}>
                     <div style={{ fontSize: "0.68rem", color: "#aaa" }}>Demandé le {new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
-                    {a.status === "annule" && <button onClick={() => setConfirmDel(a)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", flexShrink: 0 }}>🗑 Supprimer</button>}
+                    {(a.status === "annule" || a.status === "effectue" || a.status === "absent" || (a.scheduled_at && new Date(a.scheduled_at).getTime() < Date.now() && a.status !== "en_attente")) && <button onClick={() => setConfirmDel(a)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", flexShrink: 0 }}>🗑 Supprimer</button>}
                   </div>
                 </div>
               ); })}
@@ -837,7 +837,7 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
     {confirmDel && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overscrollBehavior: "contain", touchAction: "none" }} onClick={() => !deleting && setConfirmDel(null)}>
       <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
         <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 8 }}>Supprimer ce rendez-vous ?</div>
-        <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Cette demande annulée sera retirée de votre liste. Cette action est définitive.</div>
+        <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Ce rendez-vous sera retiré de votre liste. Cette action est définitive.</div>
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={() => setConfirmDel(null)} disabled={deleting} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
           <button onClick={() => deleteMine(confirmDel)} disabled={deleting} style={{ flex: 1, background: deleting ? "#d99" : "#e74c3c", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: deleting ? "not-allowed" : "pointer" }}>{deleting ? "Suppression…" : "Supprimer"}</button>
@@ -3965,6 +3965,7 @@ const BOT_FAQ = [
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
   { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo Dating propose un service de mise en relation personnalisé. Tout le monde peut créer et enregistrer sa carte relationnelle depuis la page Profil (bouton rouge 'Demander une mise en relation') en décrivant qui vous êtes et ce que vous recherchez. L'envoi de la demande à notre équipe est réservé aux membres Premium : au moment d'appuyer sur 'Envoyer ma demande', si vous n'êtes pas Premium, l'option de passer Premium s'affiche. Une fois la demande envoyée, notre équipe analyse votre profil et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
   { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand l'équipe Moyo Dating vous propose une rencontre, un modal s'affiche automatiquement avec la photo, le nom, l'âge et la ville de la personne. Deux choix : 'Accepter' ou 'Refuser'. Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée pour les deux. La proposition expire si vous ne répondez pas dans le délai fixé par l'équipe." },
+  { q: ["rendez-vous", "rdv", "agence", "téléphonique", "rencontrer l'équipe", "prendre rendez-vous", "accompagnement"], r: `Vous pouvez prendre rendez-vous avec l'équipe Moyo depuis la page Profil (carte 'Rendez-vous avec l'équipe Moyo'). Deux formules : téléphonique (réservé aux membres Premium) et à l'agence (service payant, ${APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA réglés par Mobile Money). Indiquez le motif puis choisissez vos créneaux dans le calendrier : les dates passées et les dimanches sont indisponibles (l'agence est fermée le dimanche), et les horaires vont de 9h à 19h. Le rendez-vous à l'agence n'a rien à voir avec le Premium : c'est un paiement distinct, validé par notre équipe, qui ne déclenche aucun abonnement Premium. Dans 'Mes rendez-vous', vous suivez l'état de chaque demande (en attente, confirmé, reporté, effectué, annulé) et vous pouvez supprimer de votre liste un rendez-vous annulé ou déjà passé.` },
   { q: ["like", "liker", "coeur", "j'ai pas", "limite"], r: `Compte gratuit : ${FREE_LIMITS.likes} likes par jour. Premium : likes illimités. Si vous avez unliké quelqu'un, le like disparaît des deux côtés instantanément.` },
   { q: ["message", "envoyer", "écrire", "conversation"], r: `Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message.` },
   { q: ["réaction", "réagir", "emoji", "like message"], r: "Appuyez longuement sur un message pour ouvrir le menu de réactions. Une seule réaction par message est autorisée : choisir une nouvelle réaction remplace automatiquement l'ancienne." },
@@ -5766,6 +5767,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               "Le menu fonctionne sur chaque profil indépendamment en mode carte, liste et plein écran.",
             ]},
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
+            { title: "Rendez-vous avec l'équipe Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, items: ["Depuis votre page Profil, la carte 'Rendez-vous avec l'équipe Moyo' permet de demander un accompagnement : étudier votre cas, améliorer votre profil, préparer une mise en relation.", "Deux formules : Téléphonique (réservé aux membres Premium) et À l'agence (service payant de " + APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR") + " FCFA, réglé par Mobile Money MTN ou Airtel à l'étape de paiement).", "Indiquez le motif, puis choisissez vos créneaux dans le calendrier. Les dates déjà passées et les dimanches sont indisponibles (l'agence est fermée le dimanche), et les horaires proposés vont de 9h à 19h.", "Le rendez-vous à l'agence est totalement distinct du Premium : votre paiement sert uniquement au rendez-vous et n'active aucun abonnement. Notre équipe vérifie votre référence de paiement puis confirme votre créneau.", "Dans l'onglet 'Mes rendez-vous', suivez l'état de chaque demande : en attente, confirmé, reporté, effectué ou annulé. Vous pouvez supprimer de votre liste un rendez-vous annulé ou déjà passé pour la garder bien rangée."] },
             { title: "Mise en relation Moyo Dating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Tout le monde peut créer et enregistrer sa carte relationnelle (qui vous êtes, ce que vous recherchez). Notre équipe recherche ensuite personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → remplissez votre carte relationnelle et enregistrez → appuyez sur 'Envoyer ma demande'. L'envoi est réservé aux membres Premium : si vous ne l'êtes pas encore, l'option de passer Premium s'affiche à ce moment-là.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Moyo Dating encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
@@ -11612,6 +11614,18 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
   const [showRelPrompt, setShowRelPrompt] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [wStep, setWStep] = useState(1);
+  // Empêche le scroll de l'arrière-plan (profil) quand un modal mise-en-relation est ouvert
+  useEffect(() => {
+    if (!showModal && !showWizard) return;
+    const y = window.scrollY;
+    const body = document.body;
+    const prev = { position: body.style.position, top: body.style.top, width: body.style.width, overflow: body.style.overflow };
+    body.style.position = "fixed"; body.style.top = `-${y}px`; body.style.width = "100%"; body.style.overflow = "hidden";
+    return () => {
+      body.style.position = prev.position; body.style.top = prev.top; body.style.width = prev.width; body.style.overflow = prev.overflow;
+      window.scrollTo(0, y);
+    };
+  }, [showModal, showWizard]);
   useEffect(() => {
     try {
       if (sessionStorage.getItem("moyo_open_rel_wizard") === "1") {
@@ -11743,7 +11757,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
       )}
 
       {showModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overscrollBehavior: "contain", touchAction: "none" }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 400, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "20px 20px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
@@ -11754,7 +11768,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 24px" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 24px", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
               {sent ? (
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
                   <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
@@ -11896,7 +11910,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
         const canNext = wStep === 1 ? step1ok : step2ok;
         const oppGender = myGender === "Homme" ? "une femme" : myGender === "Femme" ? "un homme" : "le genre opposé";
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overscrollBehavior: "contain", touchAction: "none" }}>
             <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 440, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
               <div style={{ background: wStep === 1 ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : `linear-gradient(135deg,${G.vert},#0f3d25)`, padding: "18px 20px 14px", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -11909,7 +11923,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
                 <div style={{ fontSize: "0.8rem", color: "#fff", fontWeight: 700, marginTop: 8 }}>{wStep === 1 ? "Étape 1 : Parlez-nous d'abord de vous" : "Étape 2 : Ce que vous recherchez"}</div>
               </div>
 
-              <div style={{ flex: 1, overflowY: "auto", padding: "4px 20px 22px" }}>
+              <div style={{ flex: 1, overflowY: "auto", padding: "4px 20px 22px", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
                 {wStep === 1 ? (
                   <>
                     <div style={{ fontSize: "0.74rem", color: "#888", background: G.creme, borderRadius: 10, padding: "9px 12px", lineHeight: 1.5, margin: "16px 0 6px", display: "flex", gap: 8, alignItems: "center" }}>
@@ -17784,10 +17798,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {([
+                    ["📂 Sous-onglets", "L'onglet Matchs regroupe 7 vues : Demandes, Matchmaking intelligent, Suivi couples Matchmaking, Propositions, Voir les matchs, Archivés et Créer un match."],
                     ["Demandes de mise en relation", "Liste des demandes envoyées par les membres (genre, ville, âge recherchés). La création de la carte relationnelle est ouverte à tous ; l'envoi de la demande est réservé aux membres Premium."],
-                    ["Matchmaking intelligent", "Suggestions de couples générées automatiquement selon les critères et la compatibilité. Filtres pour exclure refus, matchs existants, comptes signalés/bannis, etc."],
+                    ["Matchmaking intelligent", "Suggestions de couples générées automatiquement selon les critères et la compatibilité. Filtres pour exclure refus, matchs existants, comptes signalés/bannis, etc. Depuis une suggestion, vous proposez le couple : il part en suivi."],
                     ["Profils relationnels créés", "Carte en haut du Matchmaking : compteur (membres ayant rempli leur carte sur le total) et liste consultable. Bouton 'Voir' pour afficher la fiche détaillée (Qui je suis / Ce que je recherche / Note) de chaque membre."],
                     ["Inviter à remplir la carte", "Depuis la carte, filtrez les membres SANS profil relationnel et activez l'invitation : ils verront un message les incitant à remplir leur carte ('Remplir maintenant' / 'Plus tard') à leur prochaine ouverture de l'app."],
+                    ["💚 Suivi couples Matchmaking", "Suit chaque couple proposé via le Matchmaking intelligent : la réponse de chaque personne (accepté/refusé, avec l'heure exacte) et le statut global du couple — En attente, Un seul a répondu, Les deux ont accepté (match créé), Refusée, ou Expirée. La carte indique aussi qui a proposé le couple, la date de proposition et la date d'expiration."],
+                    ["Actions du suivi", "Voir chaque profil. Si les deux acceptent → « Voir le match » + « 💌 Encourager le couple » (message aux deux). Prolonger (+1j / +3j / +7j) une proposition en attente, ou Réactiver une proposition expirée. Annuler une proposition en attente. « Reproposer un autre profil » après un refus ou une expiration. Archiver le couple une fois traité. Et une note interne libre par couple (visible uniquement par l'équipe)."],
+                    ["Propositions vs Suivi", "L'onglet « Propositions » regroupe les propositions spontanées et celles issues d'une demande utilisateur. Les couples créés depuis le Matchmaking intelligent, eux, sont suivis séparément dans « Suivi couples Matchmaking » pour ne pas mélanger les deux flux."],
                     ["Créer / Proposer un match", "Créez un match direct entre deux membres, ou proposez-leur une mise en relation qu'ils peuvent accepter ou refuser."],
                   ] as [string, string][]).map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
@@ -17903,6 +17921,38 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              {/* Section - Onglet Rendez-vous */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Rendez-vous</span>
+                </div>
+                <div style={{ background: "#f0faf4", borderRadius: 10, padding: "9px 12px", marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start", border: "1px solid rgba(26,92,58,0.2)" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span style={{ fontSize: "0.79rem", color: "#1a5c3a" }}>Gère les demandes de rendez-vous (téléphoniques et à l'agence) envoyées par les membres depuis leur Profil.</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {([
+                    ["Badge vert", "Le badge vert sur l'onglet Rendez-vous indique le nombre de demandes en attente à traiter (à confirmer, reporter ou annuler)."],
+                    ["Filtres", "En attente (à traiter), Confirmés (créneau fixé / reporté), Aujourd'hui (RDV du jour), Passés (effectués, absents ou dépassés), Annulés, et Archivés."],
+                    ["Confirmer", "Ouvre un sélecteur de date/heure (calendrier Moyo) pour fixer le créneau. L'utilisateur est prévenu. Dates passées et dimanches indisponibles ; horaires de 9h à 19h."],
+                    ["Autre créneau", "Propose une nouvelle date/heure quand le créneau demandé ne convient pas (statut « reporté »)."],
+                    ["Effectué / Absent", "Sur un RDV confirmé : marquez-le « effectué » s'il a eu lieu, ou « absent » si la personne ne s'est pas présentée."],
+                    ["Annuler", "Ouvre un modal Moyo pour saisir un motif d'annulation (facultatif, visible par l'utilisateur). Plus de fenêtre du navigateur."],
+                    ["Note interne", "Ouvre un modal Moyo pour ajouter une note visible uniquement par l'équipe."],
+                    ["📦 Archiver", "Sur un RDV passé ou annulé : le range dans le filtre « Archivés » pour garder la liste propre. Réversible via « Désarchiver »."],
+                    ["🗑 Supprimer", "Sur un RDV passé ou annulé : supprime définitivement le rendez-vous (action irréversible)."],
+                    ["💳 Paiement agence", "Un RDV à l'agence est payant (" + APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR") + " FCFA). Le paiement apparaît dans l'onglet Budget avec le badge « 🗓 Rendez-vous agence » et se valide là-bas — c'est un paiement DISTINCT du Premium : le valider n'active aucun abonnement."],
+                    ["Côté utilisateur", "Dans « Mes rendez-vous », le membre suit l'état de sa demande et peut supprimer lui-même de sa liste un RDV annulé ou déjà passé."],
+                  ] as [string, string][]).map(([label, desc]) => (
+                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Section - Onglet Paiements */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -17927,8 +17977,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Silhouette cliquable", "Cliquez sur la silhouette à gauche de chaque carte pour voir le profil complet de l'utilisateur (photo, nom, âge, ville, bio, badges). L'ID est affiché grisé en bas de la carte et dans la modale."],
                     ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN ou Airtel (ex: 7753031542)."],
                     ["Réf. MTN reçue", "Numéro que vous entrez après avoir vérifié votre SMS ou application MTN. Doit correspondre à la réf. client."],
-                    ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert 'Activer Premium'. Si elles ne correspondent pas → bouton rouge 'Rejeter & notifier'."],
-                    ["Activer Premium", "Active l'abonnement Premium pour la durée configurée (31 jours par défaut) ET envoie automatiquement un message 'Votre Premium est actif, reconnectez-vous'. Le compteur démarre immédiatement."],
+                    ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert (« Activer Premium » pour un paiement Premium, « Valider le paiement RDV » pour un rendez-vous). Si elles ne correspondent pas → bouton rouge 'Rejeter & notifier'."],
+                    ["Activer Premium", "Pour un paiement Premium : active l'abonnement pour la durée configurée (31 jours par défaut) ET envoie automatiquement un message 'Votre Premium est actif, reconnectez-vous'. Le compteur démarre immédiatement."],
+                    ["🗓 Paiement Rendez-vous agence", "Un paiement de rendez-vous porte le badge vert « 🗓 Rendez-vous agence ». Le valider (bouton « Valider le paiement RDV ») marque le rendez-vous comme payé et prévient l'utilisateur avec un message dédié au rendez-vous — SANS activer aucun Premium. Le montant compte dans le chiffre d'affaires. La confirmation du créneau, elle, se fait dans l'onglet Rendez-vous."],
                     ["Compteur ⏱", "Affiché en vert sur la carte après activation : '28j 14h restants'. Passe en orange sous 3 jours. Affiche '⏰ Expiré' en rouge à l'échéance."],
                     ["Expiration automatique", "À l'échéance des 31 jours, le statut Premium de l'utilisateur repasse automatiquement à gratuit dès sa prochaine connexion. Le compteur affiche 'Expiré'."],
                     ["Rejeter & notifier", "Marque la demande comme rejetée ET envoie un modal à l'utilisateur l'informant que sa preuve de paiement n'a pas pu être vérifiée."],
