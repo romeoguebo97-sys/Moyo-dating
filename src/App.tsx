@@ -521,22 +521,79 @@ const apptStatusInfo = (s: string) => APPT_STATUS[s] || { label: s, color: "#888
 const fmtApptDT = (s?: string) => s ? new Date(s).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(":", "h") : "";
 const APPT_INPUT: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", background: G.blanc, color: G.brun };
 
-// Sélecteur date (calendrier natif) + heure (01–23) + minute (00–59)
+// Bornes de l'agence : horaires 9h → 19h, fermée le dimanche.
+const APPT_HOUR_MIN = 9;
+const APPT_HOUR_MAX = 19;
+const APPT_HOURS = Array.from({ length: APPT_HOUR_MAX - APPT_HOUR_MIN + 1 }, (_, i) => String(APPT_HOUR_MIN + i).padStart(2, "0"));
+const APPT_MINUTES = ["00", "15", "30", "45"];
+const apptTodayYMD = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+
+// Mini calendrier Moyo : dates passées et dimanches désactivés (agence fermée le dimanche)
+function ApptCalendar({ value, onPick, onClose }: { value: string; onPick: (d: string) => void; onClose: () => void }) {
+  const base = value ? new Date(value + "T00:00:00") : new Date();
+  const today = new Date(); const tY = today.getFullYear(); const tM = today.getMonth();
+  const [vy, setVy] = useState(base.getFullYear());
+  const [vm, setVm] = useState(base.getMonth());
+  const firstDay = new Date(vy, vm, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7; // lundi = 0
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  const canPrev = vy > tY || (vy === tY && vm > tM);
+  const monthLabel = firstDay.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const todayStr = apptTodayYMD();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  const navBtn: React.CSSProperties = { background: G.creme, border: `1px solid ${G.gris}`, borderRadius: 8, width: 30, height: 30, fontWeight: 800, color: G.brun };
+  return (
+    <div style={{ background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.12)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <button type="button" onClick={() => { if (!canPrev) return; if (vm - 1 < 0) { setVm(11); setVy(vy - 1); } else setVm(vm - 1); }} disabled={!canPrev} style={{ ...navBtn, cursor: canPrev ? "pointer" : "not-allowed", opacity: canPrev ? 1 : 0.4 }}>‹</button>
+        <div style={{ fontWeight: 800, fontSize: "0.85rem", color: G.brun, textTransform: "capitalize" }}>{monthLabel}</div>
+        <button type="button" onClick={() => { if (vm + 1 > 11) { setVm(0); setVy(vy + 1); } else setVm(vm + 1); }} style={{ ...navBtn, cursor: "pointer" }}>›</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3, marginBottom: 4 }}>
+        {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: "0.62rem", fontWeight: 800, color: i === 6 ? "#c0392b" : "#aaa", padding: "2px 0" }}>{d}</div>)}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
+        {cells.map((d, i) => {
+          if (d === null) return <div key={i} />;
+          const ds = `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          const sunday = new Date(vy, vm, d).getDay() === 0;
+          const past = ds < todayStr;
+          const disabled = sunday || past;
+          const selected = ds === value;
+          return (
+            <div key={i} onClick={() => { if (disabled) return; onPick(ds); onClose(); }}
+              title={sunday ? "Agence fermée le dimanche" : past ? "Date passée" : ""}
+              style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, fontSize: "0.8rem", fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", background: selected ? G.vert : disabled ? "transparent" : G.creme, color: selected ? "#fff" : disabled ? "#ccc" : G.brun, textDecoration: disabled ? "line-through" : "none", opacity: disabled ? 0.55 : 1 }}>{d}</div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: "0.64rem", color: "#999", marginTop: 8, textAlign: "center" }}>Agence fermée le dimanche · horaires 9h–19h</div>
+    </div>
+  );
+}
+
+// Sélecteur date (calendrier Moyo) + heure (9h–19h) + minute
 function DateTimePicker({ date, hour, minute, onChange }: { date: string; hour: string; minute: string; onChange: (d: string, h: string, m: string) => void }) {
-  const hours = Array.from({ length: 23 }, (_, i) => String(i + 1).padStart(2, "0"));
-  const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+  const [openCal, setOpenCal] = useState(false);
   const sel: React.CSSProperties = { ...APPT_INPUT, width: "auto", padding: "10px 8px", cursor: "pointer" };
+  const fmt = date ? new Date(date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) : "Choisir une date";
   return (
     <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <input type="date" value={date} onChange={e => onChange(e.target.value, hour, minute)} style={{ ...APPT_INPUT, flex: "1 1 140px", padding: "9px 10px", cursor: "pointer" }} />
+      <button type="button" onClick={() => setOpenCal(o => !o)} style={{ ...APPT_INPUT, flex: "1 1 150px", padding: "9px 10px", cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8, color: date ? G.brun : "#999" }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+        <span style={{ textTransform: "capitalize" }}>{fmt}</span>
+      </button>
       <select value={hour} onChange={e => onChange(date, e.target.value, minute)} style={sel}>
         <option value="">-- h</option>
-        {hours.map(h => <option key={h} value={h}>{h} h</option>)}
+        {APPT_HOURS.map(h => <option key={h} value={h}>{h} h</option>)}
       </select>
       <select value={minute} onChange={e => onChange(date, hour, e.target.value)} style={sel}>
         <option value="">-- min</option>
-        {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+        {APPT_MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
       </select>
+      {openCal && <div style={{ flexBasis: "100%", marginTop: 4 }}><ApptCalendar value={date} onPick={(d) => onChange(d, hour, minute)} onClose={() => setOpenCal(false)} /></div>}
     </div>
   );
 }
@@ -546,8 +603,9 @@ function DateTimeModal({ title, initialISO, confirmLabel, onConfirm, onClose }: 
   const init = initialISO ? new Date(initialISO) : null;
   const pad = (n: number) => String(n).padStart(2, "0");
   const [date, setDate] = useState(init ? `${init.getFullYear()}-${pad(init.getMonth() + 1)}-${pad(init.getDate())}` : "");
-  const [hour, setHour] = useState(init ? pad(init.getHours()) : "");
-  const [minute, setMinute] = useState(init ? pad(init.getMinutes()) : "");
+  const initH = init ? init.getHours() : null;
+  const [hour, setHour] = useState(initH !== null && initH >= APPT_HOUR_MIN && initH <= APPT_HOUR_MAX ? pad(initH) : "");
+  const [minute, setMinute] = useState(init ? pad(Math.round(init.getMinutes() / 15) % 4 * 15) : "");
   const [err, setErr] = useState("");
   const submit = () => {
     if (!date) { setErr("Choisissez une date dans le calendrier."); return; }
@@ -578,7 +636,6 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
   const [type, setType] = useState<"telephonique" | "physique">(APPT_PHONE_ENABLED ? "telephonique" : "physique");
   const [topic, setTopic] = useState("");
   const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("");
   const [slots, setSlots] = useState([{ date: "", hour: "", minute: "" }, { date: "", hour: "", minute: "" }, { date: "", hour: "", minute: "" }]);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -587,12 +644,37 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
   const [payView, setPayView] = useState(false);
   const [operator, setOperator] = useState<"MTN" | "Airtel">("MTN");
   const [txRef, setTxRef] = useState("");
+  const [confirmDel, setConfirmDel] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Empêche le scroll de l'arrière-plan (profil) quand la feuille est ouverte
+  useEffect(() => {
+    if (!open) return;
+    const y = window.scrollY;
+    const body = document.body;
+    const prev = { position: body.style.position, top: body.style.top, width: body.style.width, overflow: body.style.overflow };
+    body.style.position = "fixed"; body.style.top = `-${y}px`; body.style.width = "100%"; body.style.overflow = "hidden";
+    return () => {
+      body.style.position = prev.position; body.style.top = prev.top; body.style.width = prev.width; body.style.overflow = prev.overflow;
+      window.scrollTo(0, y);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
-    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=phone,city&limit=1`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } })
-      .then(r => r.json()).then(d => { const p = Array.isArray(d) ? d[0] : null; if (p) { setPhone(prev => prev || p.phone || ""); setCity(prev => prev || p.city || ""); } }).catch(() => {});
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=phone&limit=1`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(d => { const p = Array.isArray(d) ? d[0] : null; if (p) { setPhone(prev => prev || p.phone || ""); } }).catch(() => {});
   }, [open]);
+
+  const deleteMine = async (a: any) => {
+    setDeleting(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments?id=eq.${a.id}&user_id=eq.${auth.userId}`, { method: "DELETE", headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" } });
+      if (!r.ok) { setErr("Suppression impossible. Réessayez."); }
+      else setList(prev => prev.filter(x => x.id !== a.id));
+    } catch { setErr("Erreur réseau."); }
+    setDeleting(false); setConfirmDel(null);
+  };
 
   const loadList = async () => {
     setLoading(true);
@@ -604,7 +686,7 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
   };
   const createAppointment = async (extra: any = {}): Promise<any> => {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, type, topic: topic.trim(), phone: phone.trim(), city: city.trim(), preferred_slots: slots.filter(s => s.date && s.hour).map(s => new Date(`${s.date}T${s.hour}:${s.minute || "00"}:00`).toISOString()), message: message.trim(), status: "en_attente", ...extra }) });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, type, topic: topic.trim(), phone: phone.trim(), preferred_slots: slots.filter(s => s.date && s.hour).map(s => new Date(`${s.date}T${s.hour}:${s.minute || "00"}:00`).toISOString()), message: message.trim(), status: "en_attente", ...extra }) });
       const body = await r.json().catch(() => null); const row = Array.isArray(body) ? body[0] : body;
       if (!r.ok || !row?.id) { setErr(row?.message || "Échec de l'envoi. Votre demande n'a pas été enregistrée."); return null; }
       return row;
@@ -629,9 +711,9 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
     setSending(true); setErr("");
     const row = await createAppointment({ price: APPOINTMENT_PHYSICAL_PRICE, payment_status: "en_attente_validation", operator, tx_ref: txRef.trim() });
     if (!row) { setSending(false); return; }
-    // Demande de paiement -> validée dans Budget (comme boost/sponsor)
+    // Demande de paiement RDV -> validée dans Budget, MAIS distincte du Premium (kind = "appointment")
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, operator, tx_ref: txRef.trim(), amount: APPOINTMENT_PHYSICAL_PRICE, status: "pending" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, operator, tx_ref: txRef.trim(), amount: APPOINTMENT_PHYSICAL_PRICE, status: "pending", kind: "appointment", appointment_id: row.id }) });
     } catch {}
     setSending(false); setPayView(false); setSent(true);
   };
@@ -656,8 +738,8 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
       </div>
     </div>
 
-    {open && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setOpen(false)}>
-      <div onClick={e => e.stopPropagation()} style={{ background: G.creme, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto" }}>
+    {open && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }} onClick={() => setOpen(false)}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.creme, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
         <div style={{ position: "sticky", top: 0, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
           <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>Rendez-vous Moyo</div>
           <div onClick={() => setOpen(false)} style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontWeight: 700 }}>✕</div>
@@ -712,7 +794,6 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
               {type === "physique" && <div style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.25)", borderRadius: 10, padding: "9px 12px", marginBottom: 12, fontSize: "0.76rem", color: "#15803d", lineHeight: 1.45, fontWeight: 600 }}>💳 Service à l'agence — {APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA, payable par Mobile Money à l'étape suivante.</div>}
               <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Motif</div><textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ex. étudier mon cas, améliorer mon profil, préparer une mise en relation…" style={{ ...APPT_INPUT, minHeight: 60, resize: "vertical" }} /></div>
               {type === "telephonique" && <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Téléphone</div><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Votre numéro" style={APPT_INPUT} /></div>}
-              <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Ville</div><input value={city} onChange={e => setCity(e.target.value)} placeholder="Votre ville" style={APPT_INPUT} /></div>
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Trois créneaux souhaités</div>
                 {[0, 1, 2].map(i => (
@@ -742,11 +823,25 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
                   {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
                   {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999" }}>Créneaux souhaités : {a.preferred_slots.map(fmtApptDT).join(" · ")}</div>}
                   {a.status === "annule" && a.admin_note && <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4 }}>{a.admin_note}</div>}
-                  <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 4 }}>Demandé le {new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 8 }}>
+                    <div style={{ fontSize: "0.68rem", color: "#aaa" }}>Demandé le {new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
+                    {a.status === "annule" && <button onClick={() => setConfirmDel(a)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", flexShrink: 0 }}>🗑 Supprimer</button>}
+                  </div>
                 </div>
               ); })}
           </div>
         )}
+      </div>
+    </div>}
+
+    {confirmDel && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overscrollBehavior: "contain", touchAction: "none" }} onClick={() => !deleting && setConfirmDel(null)}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 8 }}>Supprimer ce rendez-vous ?</div>
+        <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Cette demande annulée sera retirée de votre liste. Cette action est définitive.</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => setConfirmDel(null)} disabled={deleting} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+          <button onClick={() => deleteMine(confirmDel)} disabled={deleting} style={{ flex: 1, background: deleting ? "#d99" : "#e74c3c", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: deleting ? "not-allowed" : "pointer" }}>{deleting ? "Suppression…" : "Supprimer"}</button>
+        </div>
       </div>
     </div>}
   </>);
@@ -754,10 +849,16 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
 
 // Onglet admin « Rendez-vous »
 function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: string, t?: string) => void }) {
-  const [filter, setFilter] = useState<"en_attente" | "confirme" | "today" | "passes" | "annule">("en_attente");
+  const [filter, setFilter] = useState<"en_attente" | "confirme" | "today" | "passes" | "annule" | "archive">("en_attente");
   const [scheduling, setScheduling] = useState<{ a: any; mode: "confirme" | "reporte" } | null>(null);
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<any>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [noteTarget, setNoteTarget] = useState<any>(null);
+  const [noteText, setNoteText] = useState("");
+  const [delTarget, setDelTarget] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
   const load = async () => {
     setLoading(true);
     try {
@@ -788,26 +889,42 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
   };
   const confirmAppt = (a: any) => setScheduling({ a, mode: "confirme" });
   const rescheduleAppt = (a: any) => setScheduling({ a, mode: "reporte" });
-  const cancelAppt = (a: any) => { const reason = window.prompt("Motif d'annulation (visible par l'utilisateur, facultatif) :", ""); patch(a.id, { status: "annule", admin_note: reason || a.admin_note || "" }, "Rendez-vous annulé"); };
-  const noteAppt = (a: any) => { const n = window.prompt("Note interne sur ce rendez-vous :", a.admin_note || ""); if (n !== null) patch(a.id, { admin_note: n }, "Note enregistrée"); };
+  const openCancel = (a: any) => { setCancelReason(a.admin_note || ""); setCancelTarget(a); };
+  const doCancel = () => { if (!cancelTarget) return; patch(cancelTarget.id, { status: "annule", admin_note: cancelReason.trim() || cancelTarget.admin_note || "" }, "Rendez-vous annulé"); setCancelTarget(null); };
+  const openNote = (a: any) => { setNoteText(a.admin_note || ""); setNoteTarget(a); };
+  const doNote = () => { if (!noteTarget) return; patch(noteTarget.id, { admin_note: noteText.trim() }, "Note enregistrée"); setNoteTarget(null); };
+  const archiveAppt = (a: any) => patch(a.id, { archived: true }, "📦 Rendez-vous archivé");
+  const unarchiveAppt = (a: any) => patch(a.id, { archived: false }, "Rendez-vous désarchivé");
+  const deleteAppt = async (a: any) => {
+    setBusy(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments?id=eq.${a.id}`, { method: "DELETE", headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" } });
+      if (!r.ok) { showToast("Suppression refusée par la base (vérifie la policy DELETE).", "error"); }
+      else { setList(prev => prev.filter(x => x.id !== a.id)); showToast("🗑 Rendez-vous supprimé", "success"); }
+    } catch { showToast("Erreur réseau.", "error"); }
+    setBusy(false); setDelTarget(null);
+  };
 
   const now = Date.now();
   const filtered = list.filter(a => {
+    if (filter === "archive") return a.archived === true;
+    if (a.archived) return false;
     if (filter === "today") return a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule";
     if (filter === "passes") return a.status === "effectue" || a.status === "absent" || (a.scheduled_at && new Date(a.scheduled_at).getTime() < now && a.status !== "annule" && a.status !== "en_attente");
     if (filter === "confirme") return a.status === "confirme" || a.status === "reporte";
     if (filter === "annule") return a.status === "annule";
     return a.status === "en_attente";
   });
+  const isPastOrDone = (a: any) => a.status === "annule" || a.status === "effectue" || a.status === "absent" || (a.scheduled_at && new Date(a.scheduled_at).getTime() < now && a.status !== "en_attente");
   const counts = {
-    en_attente: list.filter(a => a.status === "en_attente").length,
-    today: list.filter(a => a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule").length,
+    en_attente: list.filter(a => !a.archived && a.status === "en_attente").length,
+    today: list.filter(a => !a.archived && a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule").length,
   };
 
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        {([["en_attente", "En attente", counts.en_attente], ["confirme", "Confirmés", 0], ["today", "Aujourd'hui", counts.today], ["passes", "Passés", 0], ["annule", "Annulés", 0]] as [string, string, number][]).map(([k, lbl, badge]) => (
+        {([["en_attente", "En attente", counts.en_attente], ["confirme", "Confirmés", 0], ["today", "Aujourd'hui", counts.today], ["passes", "Passés", 0], ["annule", "Annulés", 0], ["archive", "Archivés", 0]] as [string, string, number][]).map(([k, lbl, badge]) => (
           <button key={k} onClick={() => setFilter(k as any)} style={{ padding: "7px 14px", borderRadius: 50, border: `2px solid ${filter === k ? G.vert : G.gris}`, background: filter === k ? G.vert : G.blanc, color: filter === k ? "#fff" : "#666", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
             {lbl}{badge > 0 && <span style={{ background: filter === k ? "#fff" : G.rouge, color: filter === k ? G.vert : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px" }}>{badge}</span>}
           </button>
@@ -838,8 +955,11 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
                 {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => rescheduleAppt(a)} style={{ background: "rgba(41,128,185,0.1)", border: "1.5px solid rgba(41,128,185,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>Autre créneau</button>}
                 {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "effectue" }, "✅ Marqué effectué")} style={{ background: "rgba(142,68,173,0.1)", border: "1.5px solid rgba(142,68,173,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#7d3c98", cursor: "pointer" }}>Effectué</button>}
                 {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "absent" }, "Marqué absent")} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Absent</button>}
-                {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => cancelAppt(a)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer" }}>Annuler</button>}
-                <button onClick={() => noteAppt(a)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Note interne</button>
+                {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => openCancel(a)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer" }}>Annuler</button>}
+                <button onClick={() => openNote(a)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Note interne</button>
+                {isPastOrDone(a) && !a.archived && <button onClick={() => archiveAppt(a)} style={{ background: "rgba(230,126,34,0.1)", border: "1.5px solid rgba(230,126,34,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#cf7012", cursor: "pointer" }}>📦 Archiver</button>}
+                {a.archived && <button onClick={() => unarchiveAppt(a)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>↩ Désarchiver</button>}
+                {isPastOrDone(a) && <button onClick={() => setDelTarget(a)} style={{ background: "rgba(192,57,43,0.08)", border: "1.5px solid rgba(192,57,43,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#c0392b", cursor: "pointer" }}>🗑 Supprimer</button>}
               </div>
             </div>
           ); })}
@@ -851,6 +971,37 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
         onConfirm={(iso) => { patch(scheduling.a.id, { status: scheduling.mode, scheduled_at: iso }, scheduling.mode === "confirme" ? "✅ Rendez-vous confirmé" : "🔁 Nouveau créneau proposé"); setScheduling(null); }}
         onClose={() => setScheduling(null)}
       />}
+      {cancelTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setCancelTarget(null)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 400, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 6 }}>Annuler le rendez-vous</div>
+          <div style={{ fontSize: "0.8rem", color: "#666", marginBottom: 12 }}>Motif d'annulation (visible par l'utilisateur, facultatif) :</div>
+          <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="Ex. créneau indisponible, à reprogrammer…" autoFocus style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", minHeight: 70, resize: "vertical", background: G.blanc, color: G.brun }} />
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <button onClick={() => setCancelTarget(null)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Retour</button>
+            <button onClick={doCancel} style={{ flex: 1, background: "#e74c3c", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>Annuler le RDV</button>
+          </div>
+        </div>
+      </div>}
+      {noteTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setNoteTarget(null)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 400, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 12 }}>Note interne</div>
+          <textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Note visible uniquement par l'équipe…" autoFocus style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", minHeight: 70, resize: "vertical", background: G.blanc, color: G.brun }} />
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <button onClick={() => setNoteTarget(null)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+            <button onClick={doNote} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>Enregistrer</button>
+          </div>
+        </div>
+      </div>}
+      {delTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !busy && setDelTarget(null)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 380, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 8 }}>Supprimer ce rendez-vous ?</div>
+          <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Le rendez-vous de {delTarget.user?.name || "cet utilisateur"} sera définitivement supprimé. Cette action est irréversible.</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => setDelTarget(null)} disabled={busy} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+            <button onClick={() => deleteAppt(delTarget)} disabled={busy} style={{ flex: 1, background: busy ? "#d99" : "#c0392b", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}>{busy ? "Suppression…" : "Supprimer"}</button>
+          </div>
+        </div>
+      </div>}
     </div>
   );
 }
@@ -13227,7 +13378,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
+type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; kind?: string; appointment_id?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
 function getPremiumCountdown(approvedAt?: string, amount?: number): { label: string; color: string; expired: boolean } {
   if (!approvedAt) return { label: "", color: "#888", expired: false };
   const ms = typeof amount === "number" ? premiumMsForAmount(amount) : PREMIUM_30_DAYS_MS;
@@ -13262,6 +13413,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
               }
               {p.operator === "Carte" || p.operator === "Stripe" ? "Carte bancaire" : p.operator}
               {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Cadeau pour {p.gift_for_name || "un match"}</span>}
+              {p.kind === "appointment" && <span style={{ background: "rgba(26,92,58,0.12)", color: G.vert, borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>🗓 Rendez-vous agence</span>}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {formatMoney(p.amount, paymentCurrency(p))}</div>
             <div style={{ fontSize: "0.62rem", color: "#bbb", fontFamily: "monospace", marginTop: 2 }}>{p.user_id}</div>
@@ -13290,7 +13442,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
       {isPending && (
         <div style={{ display: "flex", gap: 8 }}>
           {verified === null && <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim()} style={{ flex: 1, background: adminRef.trim() ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: adminRef.trim() ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: adminRef.trim() ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>}
-          {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✓ Activer Premium</button>}
+          {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>{p.kind === "appointment" ? "✓ Valider le paiement RDV" : "✓ Activer Premium"}</button>}
           {verified === "mismatch" && <button onClick={() => onReject(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter & notifier</button>}
           {verified !== null && <button onClick={() => { setVerified(null); setAdminRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>}
         </div>
@@ -14775,11 +14927,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
   const [featurePendingCount, setFeaturePendingCount] = useState(0);
   const [proposalsBadgeCount, setProposalsBadgeCount] = useState(0);
+  const [appointmentsPendingCount, setAppointmentsPendingCount] = useState(0);
 
   const loadPayments = async () => {
     setPaymentsLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name,archived,currency&status=neq.deleted&archived=eq.false&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name,archived,currency,kind,appointment_id&status=neq.deleted&archived=eq.false&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) {
         setPayments(data);
@@ -14789,6 +14942,20 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setPaymentsLoading(false);
   };
   const activatePayment = async (p: PaymentRequest) => {
+    // ── Paiement d'un RENDEZ-VOUS à l'agence : on NE touche PAS au Premium ──
+    if (p.kind === "appointment") {
+      if (p.appointment_id) {
+        await fetch(`${SUPABASE_URL}/rest/v1/appointments?id=eq.${p.appointment_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ payment_status: "valide", updated_at: new Date().toISOString() }) }).catch(() => {});
+      }
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
+      fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?transaction_id=eq.${encodeURIComponent(p.tx_ref)}&status=eq.pending`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "verified_manually" }) }).catch(() => {});
+      logAdminAction(auth.token, auth.userId, auth.name, `Paiement RDV agence validé - réf: ${p.tx_ref}`, p.user_id);
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre paiement pour le rendez-vous à l'agence a bien été reçu. Notre équipe vous confirmera un créneau prochainement. 🗓", warning_number: 0, acknowledged: false }) });
+      showToast("Paiement du rendez-vous validé.", "success");
+      loadPayments();
+      return;
+    }
+    // ── Paiement Premium (comportement habituel) ──
     const premiumUntil = new Date(Date.now() + premiumMsForAmount(p.amount)).toISOString();
     const targetId = p.gift_for || p.user_id;
     await adminAction(targetId, { is_premium: true, premium_until: premiumUntil }, `Premium activé.`);
@@ -16089,6 +16256,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const rFeat = await fetch(`${SUPABASE_URL}/rest/v1/feature_requests?status=eq.en_attente&select=id`, { headers: h });
         const featCount = (() => { const c = rFeat.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
         setFeaturePendingCount(featCount);
+        // Rendez-vous en attente de traitement (à confirmer / reporter / annuler)
+        const rAppt = await fetch(`${SUPABASE_URL}/rest/v1/appointments?status=eq.en_attente&select=id`, { headers: h });
+        const apptCount = (() => { const c = rAppt.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
+        setAppointmentsPendingCount(apptCount);
       } catch {}
     };
     checkMatchBadges();
@@ -16547,7 +16718,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const messagingPendingCount = reports.filter(r => isPending(r) && isSupportInbox(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   // ── Badge global = signalements en attente + avis non lus + paiements en attente + nouvelles demandes de mise en relation ──
-  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge + featurePendingCount;
+  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge + featurePendingCount + appointmentsPendingCount;
   const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
@@ -18066,6 +18237,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {key === "payments" && pendingPaymentsCount > 0 && (
                   <span style={{ background: G.blanc, color: "#27ae60", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(39,174,96,0.2)", border: "1px solid rgba(39,174,96,0.15)" }}>
                     {pendingPaymentsCount > 99 ? "99+" : pendingPaymentsCount}
+                  </span>
+                )}
+                {key === "appointments" && appointmentsPendingCount > 0 && (
+                  <span style={{ background: G.blanc, color: G.vert, borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(26,92,58,0.2)", border: "1px solid rgba(26,92,58,0.15)" }}>
+                    {appointmentsPendingCount > 99 ? "99+" : appointmentsPendingCount}
                   </span>
                 )}
                 {key === "matches" && matchesBadgeCount > 0 && (
@@ -22599,7 +22775,10 @@ export default function App() {
         // Demandes de mise en avant (statuts Moyo Dating) en attente de validation
         const rFeatReqs = await fetch(`${SUPABASE_URL}/rest/v1/feature_requests?status=eq.en_attente&select=id`, { headers: h });
         const featReqCount = parseCount(rFeatReqs);
-        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount + featReqCount;
+        // Rendez-vous en attente
+        const rApptReqs = await fetch(`${SUPABASE_URL}/rest/v1/appointments?status=eq.en_attente&select=id`, { headers: h });
+        const apptReqCount = parseCount(rApptReqs);
+        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount + featReqCount + apptReqCount;
         setAdminBadgeCount(prev => prev === newCount ? prev : newCount);
       } catch {}
     };
