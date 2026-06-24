@@ -192,6 +192,9 @@ let BLOCK_SAME_GENDER = true;
 let FEATURE_STATUSES = true;
 let FEATURE_GIFT_PREMIUM = true;
 let FEATURE_ASSISTANT = true;
+let APPOINTMENTS_ENABLED = true;
+let APPT_PHONE_ENABLED = true;
+let APPT_PHYSICAL_ENABLED = true;
 // Coordonnées de paiement (modifiables depuis Config admin)
 let PAY_MTN_NUMBER = "065132012";
 let PAY_MTN_RESPONSABLE = "Juste-Emmanuelle AKOUMOU ISSOMBO";
@@ -243,7 +246,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -255,6 +258,9 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["rule_block_same_gender_like"] !== undefined) BLOCK_SAME_GENDER = map["rule_block_same_gender_like"] !== "false";
   if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
+  if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
+  if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
+  if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
   if (map["feature_assistant"] !== undefined) FEATURE_ASSISTANT = map["feature_assistant"] !== "false";
   if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
   if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
@@ -499,6 +505,243 @@ const mmScore = (a: any, b: any): { score: number; reasons: string[] } => {
   return { score: Math.min(s, 99), reasons };
 };
 const mmLevel = (score: number) => score >= 90 ? { label: "Compatibilité élevée", color: "#8e44ad" } : score >= 75 ? { label: "Bonne compatibilité", color: "#e67e22" } : score >= 50 ? { label: "Compatibilité moyenne", color: "#2980b9" } : { label: "Profil sélectionné pour vous", color: "#9aa0a6" };
+
+// ══════════════════════ RENDEZ-VOUS ══════════════════════
+const APPT_STATUS: Record<string, { label: string; color: string }> = {
+  en_attente: { label: "En attente", color: "#f39c12" },
+  confirme: { label: "Confirmé", color: "#27ae60" },
+  reporte: { label: "Reporté", color: "#2980b9" },
+  effectue: { label: "Effectué", color: "#8e44ad" },
+  annule: { label: "Annulé", color: "#e74c3c" },
+  absent: { label: "Absent", color: "#888" },
+};
+const apptStatusInfo = (s: string) => APPT_STATUS[s] || { label: s, color: "#888" };
+const fmtApptDT = (s?: string) => s ? new Date(s).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(":", "h") : "";
+const APPT_INPUT: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", background: G.blanc, color: G.brun };
+
+// Carte + modal côté utilisateur (formulaire de demande + « Mes rendez-vous »)
+function AppointmentsButton({ auth }: { auth: any }) {
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"new" | "list">("new");
+  const [list, setList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [type, setType] = useState<"telephonique" | "physique">(APPT_PHONE_ENABLED ? "telephonique" : "physique");
+  const [topic, setTopic] = useState("");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [slots, setSlots] = useState(["", "", ""]);
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState("");
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=phone,city&limit=1`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(d => { const p = Array.isArray(d) ? d[0] : null; if (p) { setPhone(prev => prev || p.phone || ""); setCity(prev => prev || p.city || ""); } }).catch(() => {});
+  }, [open]);
+
+  const loadList = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments?user_id=eq.${auth.userId}&order=created_at.desc`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => []); setList(Array.isArray(d) ? d : []);
+    } catch { setList([]); }
+    setLoading(false);
+  };
+  const submit = async () => {
+    if (!topic.trim()) { setErr("Indiquez le motif du rendez-vous."); return; }
+    if (type === "telephonique" && !phone.trim()) { setErr("Le téléphone est requis pour un rendez-vous téléphonique."); return; }
+    setSending(true); setErr("");
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, type, topic: topic.trim(), phone: phone.trim(), city: city.trim(), preferred_slots: slots.map(s => s.trim()).filter(Boolean), message: message.trim(), status: "en_attente" }) });
+      const body = await r.json().catch(() => null); const row = Array.isArray(body) ? body[0] : body;
+      if (!r.ok || !row?.id) { setErr(row?.message || "Échec de l'envoi. Votre demande n'a pas été enregistrée."); setSending(false); return; }
+      setSent(true);
+    } catch (e: any) { setErr("Échec : " + (e?.message || "réseau")); }
+    setSending(false);
+  };
+
+  if (!APPOINTMENTS_ENABLED) return null;
+  const onlyType = APPT_PHONE_ENABLED && !APPT_PHYSICAL_ENABLED ? "telephonique" : !APPT_PHONE_ENABLED && APPT_PHYSICAL_ENABLED ? "physique" : null;
+
+  return (<>
+    <div style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", border: "1.5px solid rgba(26,92,58,0.18)", marginTop: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(26,92,58,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Rendez-vous avec l'équipe Moyo</div>
+          <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Étudier votre cas, améliorer votre profil, être accompagné</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button onClick={() => { setOpen(true); setView("new"); setSent(false); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Demander un rendez-vous</button>
+        <button onClick={() => { setOpen(true); setView("list"); loadList(); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Mes rendez-vous</button>
+      </div>
+    </div>
+
+    {open && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setOpen(false)}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.creme, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto" }}>
+        <div style={{ position: "sticky", top: 0, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>Rendez-vous Moyo</div>
+          <div onClick={() => setOpen(false)} style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontWeight: 700 }}>✕</div>
+        </div>
+        <div style={{ display: "flex", gap: 8, padding: "12px 16px 0" }}>
+          {([["new", "Nouvelle demande"], ["list", "Mes rendez-vous"]] as [string, string][]).map(([k, lbl]) => (
+            <button key={k} onClick={() => { setView(k as any); if (k === "list") loadList(); }} style={{ flex: 1, background: view === k ? G.vert : G.blanc, color: view === k ? "#fff" : "#666", border: `1.5px solid ${view === k ? G.vert : G.gris}`, borderRadius: 50, padding: "8px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+          ))}
+        </div>
+        {view === "new" ? (
+          <div style={{ padding: 16 }}>
+            {sent ? (
+              <div style={{ textAlign: "center", padding: "30px 10px" }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></div>
+                <div style={{ fontWeight: 800, color: G.brun, fontSize: "1rem", marginBottom: 6 }}>Demande envoyée !</div>
+                <div style={{ fontSize: "0.83rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Votre demande de rendez-vous est en attente. Notre équipe vous confirmera un créneau prochainement.</div>
+                <button onClick={() => { setView("list"); loadList(); }} style={{ background: G.vert, color: "#fff", border: "none", borderRadius: 10, padding: "11px 22px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Voir mes rendez-vous</button>
+              </div>
+            ) : (<>
+              {!onlyType && <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Type de rendez-vous</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {APPT_PHONE_ENABLED && <button onClick={() => setType("telephonique")} style={{ flex: 1, background: type === "telephonique" ? G.vert : G.blanc, color: type === "telephonique" ? "#fff" : "#666", border: `1.5px solid ${type === "telephonique" ? G.vert : G.gris}`, borderRadius: 10, padding: "12px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>📞 Téléphonique</button>}
+                  {APPT_PHYSICAL_ENABLED && <button onClick={() => setType("physique")} style={{ flex: 1, background: type === "physique" ? G.vert : G.blanc, color: type === "physique" ? "#fff" : "#666", border: `1.5px solid ${type === "physique" ? G.vert : G.gris}`, borderRadius: 10, padding: "12px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>🏢 À l'agence</button>}
+                </div>
+              </div>}
+              <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Motif</div><textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ex. étudier mon cas, améliorer mon profil, préparer une mise en relation…" style={{ ...APPT_INPUT, minHeight: 60, resize: "vertical" }} /></div>
+              {type === "telephonique" && <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Téléphone</div><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Votre numéro" style={APPT_INPUT} /></div>}
+              <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Ville</div><input value={city} onChange={e => setCity(e.target.value)} placeholder="Votre ville" style={APPT_INPUT} /></div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Trois créneaux souhaités</div>
+                {[0, 1, 2].map(i => (
+                  <input key={i} value={slots[i]} onChange={e => setSlots(prev => prev.map((s, j) => j === i ? e.target.value : s))} placeholder={`Créneau ${i + 1} (ex. lundi 14h, mardi matin…)`} style={{ ...APPT_INPUT, marginBottom: 6 }} />
+                ))}
+              </div>
+              <div style={{ marginBottom: 14 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Message complémentaire (facultatif)</div><textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Une précision pour l'équipe…" style={{ ...APPT_INPUT, minHeight: 50, resize: "vertical" }} /></div>
+              {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
+              <button onClick={submit} disabled={sending} style={{ width: "100%", background: sending ? "#9bb8a8" : `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : "Envoyer ma demande"}</button>
+            </>)}
+          </div>
+        ) : (
+          <div style={{ padding: 16 }}>
+            {loading ? <div style={{ textAlign: "center", padding: 30, color: "#999" }}>Chargement…</div>
+              : list.length === 0 ? <div style={{ textAlign: "center", padding: 30, color: "#999", fontSize: "0.85rem" }}>Aucun rendez-vous pour l'instant.</div>
+              : list.map(a => { const si = apptStatusInfo(a.status); return (
+                <div key={a.id} style={{ background: G.blanc, borderRadius: 14, padding: 14, marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontWeight: 700, color: G.brun, fontSize: "0.88rem" }}>{a.type === "physique" ? "🏢 À l'agence" : "📞 Téléphonique"}</span>
+                    <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{si.label}</span>
+                  </div>
+                  <div style={{ fontSize: "0.82rem", color: "#555", marginBottom: 4 }}>{a.topic}</div>
+                  {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
+                  {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999" }}>Créneaux souhaités : {a.preferred_slots.join(" · ")}</div>}
+                  {a.status === "annule" && a.admin_note && <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4 }}>{a.admin_note}</div>}
+                  <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 4 }}>Demandé le {new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
+                </div>
+              ); })}
+          </div>
+        )}
+      </div>
+    </div>}
+  </>);
+}
+
+// Onglet admin « Rendez-vous »
+function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: string, t?: string) => void }) {
+  const [filter, setFilter] = useState<"en_attente" | "confirme" | "today" | "passes" | "annule">("en_attente");
+  const [list, setList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments?order=created_at.desc&limit=400`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => null);
+      if (!Array.isArray(d)) { showToast("Erreur chargement des rendez-vous : " + (d?.message || d?.code || "vérifie la table appointments"), "error"); setList([]); setLoading(false); return; }
+      const ids = [...new Set(d.map((a: any) => a.user_id))];
+      const profs: Record<string, any> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,photo_url`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } });
+        const pd = await pr.json().catch(() => []); if (Array.isArray(pd)) pd.forEach((p: any) => { profs[p.id] = p; });
+      }
+      setList(d.map((a: any) => ({ ...a, user: profs[a.user_id] })));
+    } catch (e: any) { showToast("Erreur réseau (rendez-vous) : " + (e?.message || ""), "error"); }
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const patch = async (id: string, fields: any, okMsg?: string) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments?id=eq.${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ ...fields, updated_at: new Date().toISOString() }) });
+      const b = await r.json().catch(() => null);
+      if (!r.ok || (Array.isArray(b) && b.length === 0)) { showToast("Action refusée par la base (vérifie la contrainte status ou les policies UPDATE).", "error"); return; }
+      setList(prev => prev.map(a => a.id === id ? { ...a, ...fields } : a));
+      if (okMsg) showToast(okMsg, "success");
+    } catch { showToast("Erreur", "error"); }
+  };
+  const askSlot = (cur?: string) => { const v = window.prompt("Date et heure du rendez-vous (format AAAA-MM-JJ HH:MM) :", cur || ""); if (!v) return null; const d = new Date(v.replace(" ", "T")); if (isNaN(d.getTime())) { showToast("Format de date invalide. Utilisez AAAA-MM-JJ HH:MM.", "error"); return null; } return d.toISOString(); };
+  const confirmAppt = (a: any) => { const iso = askSlot(); if (iso) patch(a.id, { status: "confirme", scheduled_at: iso }, "✅ Rendez-vous confirmé"); };
+  const rescheduleAppt = (a: any) => { const iso = askSlot(a.scheduled_at ? a.scheduled_at.slice(0, 16).replace("T", " ") : ""); if (iso) patch(a.id, { status: "reporte", scheduled_at: iso }, "🔁 Nouveau créneau proposé"); };
+  const cancelAppt = (a: any) => { const reason = window.prompt("Motif d'annulation (visible par l'utilisateur, facultatif) :", ""); patch(a.id, { status: "annule", admin_note: reason || a.admin_note || "" }, "Rendez-vous annulé"); };
+  const noteAppt = (a: any) => { const n = window.prompt("Note interne sur ce rendez-vous :", a.admin_note || ""); if (n !== null) patch(a.id, { admin_note: n }, "Note enregistrée"); };
+
+  const now = Date.now();
+  const filtered = list.filter(a => {
+    if (filter === "today") return a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule";
+    if (filter === "passes") return a.status === "effectue" || a.status === "absent" || (a.scheduled_at && new Date(a.scheduled_at).getTime() < now && a.status !== "annule" && a.status !== "en_attente");
+    if (filter === "confirme") return a.status === "confirme" || a.status === "reporte";
+    if (filter === "annule") return a.status === "annule";
+    return a.status === "en_attente";
+  });
+  const counts = {
+    en_attente: list.filter(a => a.status === "en_attente").length,
+    today: list.filter(a => a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule").length,
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        {([["en_attente", "En attente", counts.en_attente], ["confirme", "Confirmés", 0], ["today", "Aujourd'hui", counts.today], ["passes", "Passés", 0], ["annule", "Annulés", 0]] as [string, string, number][]).map(([k, lbl, badge]) => (
+          <button key={k} onClick={() => setFilter(k as any)} style={{ padding: "7px 14px", borderRadius: 50, border: `2px solid ${filter === k ? G.vert : G.gris}`, background: filter === k ? G.vert : G.blanc, color: filter === k ? "#fff" : "#666", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            {lbl}{badge > 0 && <span style={{ background: filter === k ? "#fff" : G.rouge, color: filter === k ? G.vert : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px" }}>{badge}</span>}
+          </button>
+        ))}
+        <button onClick={load} style={{ marginLeft: "auto", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "7px 12px", cursor: "pointer", color: "#555", fontSize: "0.74rem", fontWeight: 700 }}>↻ Actualiser</button>
+      </div>
+      {loading ? <div style={{ textAlign: "center", padding: 40, color: "#999" }}>Chargement…</div>
+        : filtered.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun rendez-vous dans cette catégorie.</div>
+        : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {filtered.map(a => { const si = apptStatusInfo(a.status); return (
+            <div key={a.id} style={{ background: G.blanc, borderRadius: 16, padding: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${si.color}22` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{a.user?.photo_url && <img src={a.user.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>{a.user?.name || "Utilisateur"}</div>
+                  <div style={{ fontSize: "0.7rem", color: "#888" }}>{a.type === "physique" ? "🏢 À l'agence" : "📞 Téléphonique"}{a.phone ? ` · ${a.phone}` : ""}{a.city ? ` · ${a.city}` : ""}</div>
+                </div>
+                <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, flexShrink: 0 }}>{si.label}</span>
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#555", marginBottom: 6 }}>{a.topic}</div>
+              {a.message && <div style={{ fontSize: "0.74rem", color: "#777", fontStyle: "italic", marginBottom: 6 }}>« {a.message} »</div>}
+              {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700, marginBottom: 6 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
+              {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 6 }}>Créneaux souhaités : {a.preferred_slots.join(" · ")}</div>}
+              {a.admin_note && <div style={{ fontSize: "0.72rem", color: "#8a6d2a", background: "rgba(212,168,67,0.1)", borderRadius: 8, padding: "5px 8px", marginBottom: 6 }}>Note : {a.admin_note}</div>}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                {(a.status === "en_attente" || a.status === "reporte") && <button onClick={() => confirmAppt(a)} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#1a8c4a", cursor: "pointer" }}>Confirmer</button>}
+                {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => rescheduleAppt(a)} style={{ background: "rgba(41,128,185,0.1)", border: "1.5px solid rgba(41,128,185,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>Autre créneau</button>}
+                {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "effectue" }, "✅ Marqué effectué")} style={{ background: "rgba(142,68,173,0.1)", border: "1.5px solid rgba(142,68,173,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#7d3c98", cursor: "pointer" }}>Effectué</button>}
+                {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "absent" }, "Marqué absent")} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Absent</button>}
+                {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => cancelAppt(a)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer" }}>Annuler</button>}
+                <button onClick={() => noteAppt(a)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Note interne</button>
+              </div>
+            </div>
+          ); })}
+        </div>}
+    </div>
+  );
+}
 
 const shuffleArray = <T,>(items: T[]): T[] => {
   const arr = [...items];
@@ -3900,6 +4143,9 @@ function AdminDesktopPage() {
     featureStatuses: "true",
     featureGiftPremium: "true",
     featureAssistant: "true",
+    appointmentsEnabled: "true",
+    phoneAppointmentsEnabled: "true",
+    physicalAppointmentsEnabled: "true",
     maintenanceMode: "false",
     maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧",
     customBannedWords: "",
@@ -3920,6 +4166,7 @@ function AdminDesktopPage() {
       "limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
       "premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days",
       "feature_statuses","feature_gift_premium","feature_assistant",
+      "appointments_enabled","phone_appointments_enabled","physical_appointments_enabled",
       "maintenance_mode","maintenance_message",
       "custom_banned_words",
       "contact_banned_words",
@@ -3957,6 +4204,9 @@ function AdminDesktopPage() {
         featureStatuses: map["feature_statuses"] || c.featureStatuses,
         featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium,
         featureAssistant: map["feature_assistant"] || c.featureAssistant,
+        appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
+        phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
+        physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
         maintenanceMode: map["maintenance_mode"] || c.maintenanceMode,
         maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage,
         customBannedWords: map["custom_banned_words"] || c.customBannedWords,
@@ -4209,6 +4459,9 @@ function AdminDesktopPage() {
             {configTab === "general" && <OffCanvasSection title="Fonctionnalités">
               {([
                 ["feature_statuses", "featureStatuses" as keyof typeof appConfig, "Statuts (Stories)"],
+                ["appointments_enabled", "appointmentsEnabled" as keyof typeof appConfig, "Rendez-vous activés"],
+                ["phone_appointments_enabled", "phoneAppointmentsEnabled" as keyof typeof appConfig, "Rendez-vous téléphoniques"],
+                ["physical_appointments_enabled", "physicalAppointmentsEnabled" as keyof typeof appConfig, "Rendez-vous physiques (agence)"],
                 ["feature_gift_premium", "featureGiftPremium" as keyof typeof appConfig, "Cadeau Premium"],
                 ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
               ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
@@ -7465,6 +7718,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const isPremiumReal = auth.isPremium;
   const [proposals, setProposals] = useState<any[]>([]);
   const [propLoading, setPropLoading] = useState(false);
+  const [confirmDelProp, setConfirmDelProp] = useState<any>(null);
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [reqLoading, setReqLoading] = useState(false);
   const loadProposals = async () => {
@@ -7951,13 +8205,30 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                   En attente de la réponse de {o?.name?.split(" ")[0] || "votre match"}
                 </div>}
                 {st.key === "matched" && o && <button onClick={() => { if (onGoMessages) onGoMessages(o.id); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Envoyer un message</button>}
-                <button onClick={() => deleteProposal(pr)} title="Retirer de ma liste" style={{ flex: st.key === "refused" || st.key === "expired" ? 1 : "0 0 auto", background: G.blanc, color: "#c0392b", border: `1.5px solid rgba(192,57,43,0.3)`, borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Supprimer</button>
+                <button onClick={() => { if (st.key === "todo") setConfirmDelProp(pr); else deleteProposal(pr); }} title="Retirer de ma liste" style={{ flex: st.key === "refused" || st.key === "expired" ? 1 : "0 0 auto", background: G.blanc, color: "#c0392b", border: `1.5px solid rgba(192,57,43,0.3)`, borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Supprimer</button>
               </div>
             </div>
           );
         })}
       </div>
     ))}
+
+    {confirmDelProp && (() => { const o = confirmDelProp.other; return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10006, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setConfirmDelProp(null)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, padding: "24px 22px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(124,58,237,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+          </div>
+          <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 6 }}>Donnez d'abord une réponse</div>
+          <div style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.55, marginBottom: 20 }}>Cette proposition attend votre réponse. Plutôt que de la supprimer, dites à notre équipe si {o?.name?.split(" ")[0] || "cette personne"} vous intéresse — c'est ce qui permet de créer le match.</div>
+          <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+            <button onClick={() => { acceptProposal(confirmDelProp); setConfirmDelProp(null); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>✓ Accepter</button>
+            <button onClick={() => { refuseProposal(confirmDelProp); setConfirmDelProp(null); }} style={{ flex: 1, background: G.blanc, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Refuser</button>
+          </div>
+          <button onClick={() => { const pr = confirmDelProp; setConfirmDelProp(null); deleteProposal(pr); }} style={{ background: "none", border: "none", color: "#c0392b", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: "6px" }}>Supprimer quand même</button>
+        </div>
+      </div>
+    ); })()}
 
     {selectedMatch && p && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setSelectedMatch(null)}>
       <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
@@ -11168,6 +11439,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
+      <AppointmentsButton auth={auth} />
       {/* ── Modal confirmation suppression du profil relationnel ── */}
       {showDeleteRel && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10004, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !deletingRel && setShowDeleteRel(false)}>
@@ -13284,7 +13556,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Onglet actif ──
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing" | "appointments">("stats");
   const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage">("avis");
   // ── SONDAGES ──
   const DEFAULT_SURVEY_QUESTIONS = [
@@ -17629,6 +17901,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["messagerie", "Messagerie", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "messagerie" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
             ["marketing", "Marketing", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "marketing" ? "#E67E22" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>],
             ["reviews", "Réputation", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
+            ["appointments", "Rendez-vous", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "appointments" ? G.vert : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>],
             ["payments", "Budget", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
@@ -19880,6 +20153,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
 
       {/* ═══════════════════════════════════════════ ONGLET BUDGET (Recettes / Dépenses / Résultat net) */}
+      {activeTab === "appointments" && (
+        <div style={{ padding: "0 4px" }}>
+          <AdminAppointments auth={auth!} showToast={showToast} />
+        </div>
+      )}
+
       {activeTab === "payments" && (
         (auth.adminLevel !== "superadmin" && auth.userId !== SUPER_ADMIN_ID) ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 60, gap: 16, textAlign: "center" }}>
