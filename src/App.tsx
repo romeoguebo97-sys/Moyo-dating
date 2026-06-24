@@ -7519,18 +7519,20 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     if (pr.expires_at && new Date(pr.expires_at) < new Date()) return { key: "expired", label: "Expirée", color: "#aaa", bg: "#F5F5F5" };
     return { key: "todo", label: "Nouvelle proposition", color: "#B8860B", bg: "rgba(212,168,67,0.14)" };
   };
-  // Origine de la proposition (badge) : Suggestion Moyo Dating (algo/admin) vs Demande d'un membre
-  const propOrigin = (pr: any) => pr.source === "request"
+  // Origine de la proposition (badge) : Matchmaking (carte relationnelle) vs Demande vs Suggestion
+  const propOrigin = (pr: any) => pr.origin === "matchmaking"
+    ? { label: "Suggestion d'après votre Profil relationnel", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" }
+    : pr.source === "request"
     ? { label: "Demande de mise en relation", color: "#2980b9", bg: "rgba(41,128,185,0.1)" }
     : { label: "Suggestion Moyo Dating", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" };
   const acceptProposal = async (pr: any) => {
-    const role = myRole(pr); const field = role === "user1" ? "user1_response" : "user2_response";
+    const role = myRole(pr); const field = role === "user1" ? "user1_response" : "user2_response"; const tsField = role === "user1" ? "user1_responded_at" : "user2_responded_at";
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pr.id}&select=user1_response,user2_response,user1_id,user2_id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const prop = (await r.json().catch(() => []))[0];
       const other = role === "user1" ? prop?.user2_response : prop?.user1_response;
       const newStatus = other === "accepted" ? "accepted" : "pending";
-      await sb.update(auth.token, "match_proposals", pr.id, { [field]: "accepted", status: newStatus });
+      await sb.update(auth.token, "match_proposals", pr.id, { [field]: "accepted", [tsField]: new Date().toISOString(), status: newStatus });
       if (newStatus === "accepted" && prop) {
         try {
           const mr = await fetch(`${SUPABASE_URL}/rest/v1/matches`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ user1: prop.user1_id, user2: prop.user2_id }) });
@@ -7542,9 +7544,9 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     } catch {}
   };
   const refuseProposal = async (pr: any) => {
-    const field = myRole(pr) === "user1" ? "user1_response" : "user2_response";
+    const role = myRole(pr); const field = role === "user1" ? "user1_response" : "user2_response"; const tsField = role === "user1" ? "user1_responded_at" : "user2_responded_at";
     setProposals(prev => prev.map(x => x.id === pr.id ? { ...x, [field]: "refused", status: "refused", refused_by: auth.userId } : x));
-    try { await sb.update(auth.token, "match_proposals", pr.id, { [field]: "refused", status: "refused", refused_by: auth.userId }); } catch {}
+    try { await sb.update(auth.token, "match_proposals", pr.id, { [field]: "refused", [tsField]: new Date().toISOString(), status: "refused", refused_by: auth.userId }); } catch {}
   };
   const deleteProposal = async (pr: any) => { setProposals(prev => prev.filter(x => x.id !== pr.id)); try { await sb.update(auth.token, "match_proposals", pr.id, { archived: true }); } catch {} };
   const propPending = proposals.filter(p => propStatus(p).key === "todo").length;
@@ -13325,8 +13327,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     profile2?: AdminProfile;
   };
   const [proposals, setProposals] = useState<MatchProposal[]>([]);
+  const [mmFollow, setMmFollow] = useState<any[]>([]);
+  const [mmFollowLoading, setMmFollowLoading] = useState(false);
+  const [mmAdminNames, setMmAdminNames] = useState<Record<string, string>>({});
   const [proposalsLoading, setProposalsLoading] = useState(false);
-  const [matchSubTab, setMatchSubTab] = useState<"create" | "propose" | "matchmaking" | "list" | "requests" | "archived">("requests");
+  const [matchSubTab, setMatchSubTab] = useState<"create" | "propose" | "matchmaking" | "mmfollow" | "list" | "requests" | "archived">("requests");
   const [showCreateMatch, setShowCreateMatch] = useState(false);
   const [showProposeMatch, setShowProposeMatch] = useState(false);
 
@@ -13479,7 +13484,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const mmDoPropose = async (s: any) => {
     try {
       const expiresAt = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
-      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId, source: "request" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId, source: "request", origin: "matchmaking" }) });
       logAdminAction(auth.token, auth.userId, auth.name, `Couple proposé (matchmaking) : ${s.man.name} ↔ ${s.woman.name} - ${s.score}%`, s.man.id);
       showToast("Couple proposé !", "success");
       setMmProposedKeys(prev => new Set(prev).add(s.key));
@@ -14000,7 +14005,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const pdata = await pr.json().catch(() => []);
         if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
       }
-      const mapped = data.map((p: any) => ({ ...p, profile1: profiles[p.user1_id], profile2: profiles[p.user2_id] }));
+      const mapped = data.filter((p: any) => p.origin !== "matchmaking").map((p: any) => ({ ...p, profile1: profiles[p.user1_id], profile2: profiles[p.user2_id] }));
       setProposals(mapped);
       // Badge = propositions ayant reçu une réponse (acceptée ou refusée) non encore vues
       const lastSeen = localStorage.getItem("moyo_proposals_seen") || "1970-01-01";
@@ -14017,7 +14022,45 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setProposalsLoading(false);
   };
 
-  // ── Vérifier si le même genre est bloqué ──
+  // ── Suivi des couples issus du MATCHMAKING (origin = "matchmaking") ──
+  const loadMmFollow = async () => {
+    setMmFollowLoading(true);
+    try {
+      // Expirer les propositions matchmaking échues
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&origin=eq.matchmaking&expires_at=lt.${new Date().toISOString()}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ status: "expired" })
+      });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?origin=eq.matchmaking&or=(archived.is.null,archived.eq.false)&order=created_at.desc&limit=200`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => null);
+      if (!Array.isArray(data)) {
+        showToast("Erreur chargement du suivi : " + (data?.message || data?.code || "réponse inattendue de la base (vérifie la colonne 'origin')"), "error");
+        setMmFollowLoading(false); return;
+      }
+      const ids = [...new Set(data.flatMap((p: any) => [p.user1_id, p.user2_id]))];
+      const profiles: Record<string, AdminProfile> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const pdata = await pr.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
+      }
+      // Noms des admins ayant proposé (created_by)
+      const adminIds = [...new Set(data.map((p: any) => p.created_by).filter(Boolean))] as string[];
+      const names: Record<string, string> = {};
+      if (adminIds.length) {
+        const ar = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${adminIds.join(",")})&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const adata = await ar.json().catch(() => []);
+        if (Array.isArray(adata)) adata.forEach((a: any) => { names[a.id] = a.name; });
+      }
+      setMmAdminNames(names);
+      setMmFollow(data.map((p: any) => ({ ...p, profile1: profiles[p.user1_id], profile2: profiles[p.user2_id] })));
+    } catch (e: any) { showToast("Erreur réseau (suivi) : " + (e?.message || "inconnue"), "error"); }
+    setMmFollowLoading(false);
+  };
   const isSameGenderBlocked = async (): Promise<boolean> => {
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value&limit=1`, {
@@ -20543,6 +20586,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             {([
               ["requests", "Demandes", G.rouge],
               ["matchmaking", "Matchmaking intelligent", "#7c3aed"],
+              ["mmfollow", "Suivi couples Matchmaking", "#16a34a"],
               ["propose", "Propositions", "#e67e22"],
               ["list", "Voir les matchs", "#2980b9"],
               ["archived", "Archivés", "#555"],
@@ -20553,6 +20597,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 if (key === "list") { loadMatchListData(); }
                 if (key === "requests") { loadMatchRequests(); localStorage.setItem("moyo_requests_seen", new Date().toISOString()); setMatchRequestsBadge(0); }
                 if (key === "propose") loadProposals();
+                if (key === "mmfollow") loadMmFollow();
                 if (key === "matchmaking") loadMatchmaking();
                 if (key === "archived") loadArchivedItems();
               }} style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 50, border: `2px solid ${matchSubTab === key ? color : G.gris}`, background: matchSubTab === key ? color : G.blanc, color: matchSubTab === key ? "#fff" : "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
@@ -20863,6 +20908,102 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               )}
             </div>
           )}
+
+          {matchSubTab === "mmfollow" && (() => {
+            const fmtDT = (s?: string) => s ? new Date(s).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(":", "h") : "";
+            return (
+            <div>
+              <div style={{ background: "rgba(22,163,74,0.07)", border: "1px solid rgba(22,163,74,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: "0.74rem", color: "#15803d", lineHeight: 1.5 }}>
+                Suivi des couples proposés via le <b>Matchmaking intelligent</b> : qui a accepté ou refusé, quand, et les actions possibles. Les propositions spontanées et les demandes restent dans l'onglet « Propositions ».
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                <button onClick={loadMmFollow} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                {([["En attente", "#f39c12"], ["Un seul a répondu", "#2980b9"], ["Les deux ont accepté", "#27ae60"], ["Refusée", "#e74c3c"], ["Expirée", "#888"]] as [string, string][]).map(([label, color]) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color, fontWeight: 600 }}>
+                    <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={color} /></svg><span>{label}</span>
+                  </div>
+                ))}
+              </div>
+              {mmFollowLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg></div>
+              ) : mmFollow.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                  <div style={{ color: "#aaa", fontSize: "0.88rem", lineHeight: 1.6 }}>Aucun couple matchmaking en suivi pour l'instant.<br />Propose un couple depuis « Matchmaking intelligent » et il apparaîtra ici.</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {mmFollow.map(p => {
+                    const oneAnswered = p.user1_response === "accepted" || p.user2_response === "accepted";
+                    const statusInfo = p.status === "pending"
+                      ? { label: oneAnswered ? "Un seul a répondu" : "En attente", color: oneAnswered ? "#2980b9" : "#f39c12", bg: oneAnswered ? "rgba(41,128,185,0.08)" : "rgba(243,156,18,0.08)" }
+                      : p.status === "accepted" ? { label: "Les deux ont accepté", color: "#27ae60", bg: "rgba(39,174,96,0.08)" }
+                      : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? (p.profile1?.name || "?") : (p.profile2?.name || "?")}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
+                      : { label: "Expirée", color: "#888", bg: "rgba(0,0,0,0.04)" };
+                    return (
+                      <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user1_response === "accepted" ? "#27ae60" : p.user1_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile1?.photo_url && <img src={p.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile1?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile1?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user1_response === "accepted" ? <span style={{ color: "#27ae60" }}>✓ Accepté{p.user1_responded_at ? ` · ${fmtDT(p.user1_responded_at)}` : ""}</span> : p.user1_response === "refused" ? <span style={{ color: "#e74c3c" }}>✕ Refusé{p.user1_responded_at ? ` · ${fmtDT(p.user1_responded_at)}` : ""}</span> : <span style={{ color: "#aaa" }}>En attente</span>}</div>
+                            </div>
+                          </div>
+                          <div style={{ flexShrink: 0, textAlign: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="#16a34a" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg><div style={{ marginTop: 2 }}><svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={statusInfo.color} /></svg></div></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user2_response === "accepted" ? "#27ae60" : p.user2_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile2?.photo_url && <img src={p.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ minWidth: 0, textAlign: "right" }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile2?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile2?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user2_response === "accepted" ? <span style={{ color: "#27ae60" }}>✓ Accepté{p.user2_responded_at ? ` · ${fmtDT(p.user2_responded_at)}` : ""}</span> : p.user2_response === "refused" ? <span style={{ color: "#e74c3c" }}>✕ Refusé{p.user2_responded_at ? ` · ${fmtDT(p.user2_responded_at)}` : ""}</span> : <span style={{ color: "#aaa" }}>En attente</span>}</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: `1px solid ${G.gris}`, flexWrap: "wrap", gap: 8 }}>
+                          <div style={{ fontSize: "0.68rem", fontWeight: 700, color: statusInfo.color, background: statusInfo.bg, padding: "3px 8px", borderRadius: 50 }}>{statusInfo.label}</div>
+                          <div style={{ fontSize: "0.62rem", color: "#aaa" }}>Proposé par {mmAdminNames[p.created_by] || "—"} le {new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                          {p.status === "accepted" && <>
+                            <div style={{ fontSize: "0.66rem", color: "#15803d", fontWeight: 700 }}>✅ Match créé — ils peuvent discuter</div>
+                            <button onClick={() => { setMatchSubTab("list"); loadMatchListData(); }} style={{ background: "rgba(41,128,185,0.1)", border: "1.5px solid rgba(41,128,185,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>Voir le match</button>
+                          </>}
+                          {p.status === "pending" && oneAnswered && <button onClick={async () => {
+                            const newExpiry = new Date(Date.now() + (parseInt(proposeDuration) || 48) * 3600 * 1000).toISOString();
+                            try {
+                              await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ expires_at: newExpiry }) });
+                              setMmFollow(prev => prev.map(x => x.id === p.id ? { ...x, expires_at: newExpiry } : x));
+                              showToast("⏳ Délai prolongé pour la personne en attente", "success");
+                            } catch { showToast("Erreur", "error"); }
+                          }} style={{ background: "rgba(243,156,18,0.1)", border: "1.5px solid rgba(243,156,18,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#b9770e", cursor: "pointer" }}>Prolonger le délai</button>}
+                          {(p.status === "refused" || p.status === "expired") && <button onClick={() => { setMatchSubTab("matchmaking"); loadMatchmaking(); }} style={{ background: "rgba(124,58,237,0.1)", border: "1.5px solid rgba(124,58,237,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#6d28d9", cursor: "pointer" }}>Reproposer un autre profil</button>}
+                          {p.status === "expired" && <button onClick={async () => {
+                            const newExpiry = new Date(Date.now() + (parseInt(proposeDuration) || 48) * 3600 * 1000).toISOString();
+                            try {
+                              await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ status: "pending", expires_at: newExpiry, archived: false }) });
+                              setMmFollow(prev => prev.map(x => x.id === p.id ? { ...x, status: "pending", expires_at: newExpiry } : x));
+                              showToast("✅ Proposition réactivée", "success");
+                            } catch { showToast("Erreur", "error"); }
+                          }} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#1a8c4a", cursor: "pointer" }}>Réactiver</button>}
+                          {(p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={async () => {
+                            try {
+                              await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ archived: true }) });
+                              setMmFollow(prev => prev.filter(x => x.id !== p.id));
+                              showToast("✅ Archivé", "success");
+                            } catch { showToast("Erreur", "error"); }
+                          }} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Archiver</button>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            );
+          })()}
 
           {/* ══ VOIR LES MATCHS ══ */}
           {matchSubTab === "list" && (
