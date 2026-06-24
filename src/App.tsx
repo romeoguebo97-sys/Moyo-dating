@@ -483,6 +483,23 @@ const sendMatchWelcomeMessage = async (token: string, matchId: string, myName: s
   } catch {}
 };
 
+// ── Score de compatibilité relationnelle entre deux profils (réutilisé admin + utilisateur) ──
+const mmScore = (a: any, b: any): { score: number; reasons: string[] } => {
+  const ra = a?.relational_profile || {}, rb = b?.relational_profile || {};
+  let s = 0; const reasons: string[] = [];
+  if (a?.religion && b?.religion && a.religion === b.religion) { s += 25; reasons.push(`Même religion : ${a.religion}`); }
+  else if (ra.religion === "Sans importance" || rb.religion === "Sans importance") s += 10;
+  if (ra.project && rb.project && ra.project === rb.project) { s += 25; reasons.push(`Même objectif : ${ra.project}`); }
+  if (a?.city && b?.city && a.city === b.city) { s += 15; reasons.push(`Même ville : ${a.city}`); }
+  else if (/diaspora/i.test(a?.city || "") && /diaspora/i.test(b?.city || "")) { s += 8; reasons.push("Tous deux en diaspora"); }
+  const ci = (Array.isArray(ra.interests) ? ra.interests : []).filter((x: string) => (Array.isArray(rb.interests) ? rb.interests : []).includes(x));
+  if (ci.length) { s += Math.min(ci.length * 5, 20); reasons.push(`${ci.length} centre${ci.length > 1 ? "s" : ""} d'intérêt commun${ci.length > 1 ? "s" : ""}`); }
+  const cq = (Array.isArray(ra.qualities) ? ra.qualities : []).filter((x: string) => (Array.isArray(rb.qualities) ? rb.qualities : []).includes(x));
+  if (cq.length) { s += Math.min(cq.length * 4, 20); reasons.push(`${cq.length} valeur${cq.length > 1 ? "s" : ""} commune${cq.length > 1 ? "s" : ""}`); }
+  return { score: Math.min(s, 99), reasons };
+};
+const mmLevel = (score: number) => score >= 90 ? { label: "Compatibilité élevée", color: "#8e44ad" } : score >= 75 ? { label: "Bonne compatibilité", color: "#e67e22" } : score >= 50 ? { label: "Compatibilité moyenne", color: "#2980b9" } : { label: "Profil sélectionné pour vous", color: "#9aa0a6" };
+
 const shuffleArray = <T,>(items: T[]): T[] => {
   const arr = [...items];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -7456,10 +7473,15 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       const res = await sb.query<any>(auth.token, "match_proposals", `?or=(user1_id.eq.${auth.userId},user2_id.eq.${auth.userId})&order=created_at.desc`);
       // Onglet Propositions = UNIQUEMENT les mises en relation issues d'une demande utilisateur (source "request")
       const visible = (Array.isArray(res) ? res : []).filter(pr => !pr.archived && pr.source === "request");
+      // Profil complet de l'utilisateur courant, pour calculer la compatibilité avec chaque proposition
+      const meArr = await sb.query<any>(auth.token, "profiles", `?id=eq.${auth.userId}&limit=1`).catch(() => []);
+      const me = Array.isArray(meArr) ? meArr[0] : undefined;
       const enriched = await Promise.all(visible.map(async (pr) => {
         const otherId = pr.user1_id === auth.userId ? pr.user2_id : pr.user1_id;
         const profs = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${otherId}`).catch(() => []);
-        return { ...pr, other: Array.isArray(profs) ? profs[0] : undefined };
+        const other = Array.isArray(profs) ? profs[0] : undefined;
+        const compat = (me && other) ? mmScore(me, other) : { score: 0, reasons: [] };
+        return { ...pr, other, compat };
       }));
       setProposals(enriched.filter(p => p.other));
     } catch { setProposals([]); }
@@ -7901,6 +7923,24 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                   </div>
                 </div>
               </div>
+              {pr.compat && pr.compat.score > 0 && (() => { const lvl = mmLevel(pr.compat.score); return (
+                <div style={{ marginTop: 12, background: "rgba(124,58,237,0.04)", border: `1px solid ${lvl.color}33`, borderRadius: 12, padding: "10px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 800, color: lvl.color }}>{lvl.label}</span>
+                    <span style={{ fontSize: "0.98rem", fontWeight: 800, color: lvl.color }}>{pr.compat.score}%</span>
+                  </div>
+                  <div style={{ height: 6, background: "rgba(0,0,0,0.06)", borderRadius: 50, marginTop: 6, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${pr.compat.score}%`, background: lvl.color, borderRadius: 50 }} />
+                  </div>
+                  {pr.compat.reasons.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
+                    {pr.compat.reasons.map((rr: string, i: number) => (
+                      <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: G.blanc, border: `1px solid ${lvl.color}33`, color: "#555", borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 600 }}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={lvl.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>{rr}
+                      </span>
+                    ))}
+                  </div>}
+                </div>
+              ); })()}
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 {st.key === "todo" && <>
                   <button onClick={() => acceptProposal(pr)} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>✓ Accepter</button>
@@ -20911,6 +20951,38 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
           {matchSubTab === "mmfollow" && (() => {
             const fmtDT = (s?: string) => s ? new Date(s).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(":", "h") : "";
+            // Prolonger / réactiver avec une durée choisie par l'admin (en jours)
+            const extendMm = async (id: string, days: number) => {
+              const newExpiry = new Date(Date.now() + days * 24 * 3600 * 1000).toISOString();
+              try {
+                await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ status: "pending", expires_at: newExpiry, archived: false }) });
+                setMmFollow(prev => prev.map(x => x.id === id ? { ...x, status: "pending", expires_at: newExpiry } : x));
+                showToast(`⏳ Délai fixé à ${days} jour${days > 1 ? "s" : ""}`, "success");
+              } catch { showToast("Erreur", "error"); }
+            };
+            // Envoyer un mot d'encouragement de l'équipe dans la conversation du couple (quand les deux ont accepté)
+            const encourageCouple = async (p: any) => {
+              try {
+                const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${p.user1_id},user2.eq.${p.user2_id}),and(user1.eq.${p.user2_id},user2.eq.${p.user1_id}))&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+                const d = await r.json().catch(() => []);
+                const mid = Array.isArray(d) ? d[0]?.id : null;
+                if (!mid) { showToast("Conversation introuvable (le match n'existe peut-être pas encore).", "error"); return; }
+                const def = `Bonjour ${p.profile1?.name || ""} et ${p.profile2?.name || ""} 👋 L'équipe Moyo est ravie de vous avoir mis en relation. Prenez le temps d'échanger, on vous souhaite le meilleur ❤️`;
+                const msg = window.prompt("Message d'encouragement à envoyer dans leur conversation :", def);
+                if (!msg || !msg.trim()) return;
+                await fetch(`${SUPABASE_URL}/rest/v1/messages`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ match_id: mid, sender_id: SUPPORT_TEAM_ID, content: msg.trim(), is_read: false }) });
+                showToast("💌 Message d'encouragement envoyé", "success");
+              } catch { showToast("Erreur lors de l'envoi", "error"); }
+            };
+            // Note interne admin sur le couple (sauvegarde au blur)
+            const saveMmNote = async (id: string, note: string) => {
+              try {
+                const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ admin_note: note }) });
+                const body = await r.json().catch(() => null);
+                if (!r.ok || (Array.isArray(body) && body.length === 0)) { showToast("Note non enregistrée (vérifie la colonne admin_note).", "error"); return; }
+                setMmFollow(prev => prev.map(x => x.id === id ? { ...x, admin_note: note } : x));
+              } catch { showToast("Erreur enregistrement de la note", "error"); }
+            };
             return (
             <div>
               <div style={{ background: "rgba(22,163,74,0.07)", border: "1px solid rgba(22,163,74,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: "0.74rem", color: "#15803d", lineHeight: 1.5 }}>
@@ -20966,28 +21038,22 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <div style={{ fontSize: "0.68rem", fontWeight: 700, color: statusInfo.color, background: statusInfo.bg, padding: "3px 8px", borderRadius: 50 }}>{statusInfo.label}</div>
                           <div style={{ fontSize: "0.62rem", color: "#aaa" }}>Proposé par {mmAdminNames[p.created_by] || "—"} le {new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
                         </div>
-                        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                          <button onClick={() => openAdminProfile(p.user1_id)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.64rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Voir {p.profile1?.name || "profil 1"}</button>
+                          <button onClick={() => openAdminProfile(p.user2_id)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.64rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Voir {p.profile2?.name || "profil 2"}</button>
                           {p.status === "accepted" && <>
-                            <div style={{ fontSize: "0.66rem", color: "#15803d", fontWeight: 700 }}>✅ Match créé — ils peuvent discuter</div>
+                            <span style={{ fontSize: "0.64rem", color: "#15803d", fontWeight: 700 }}>✅ Match créé</span>
                             <button onClick={() => { setMatchSubTab("list"); loadMatchListData(); }} style={{ background: "rgba(41,128,185,0.1)", border: "1.5px solid rgba(41,128,185,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>Voir le match</button>
+                            <button onClick={() => encourageCouple(p)} style={{ background: "rgba(233,30,140,0.08)", border: "1.5px solid rgba(233,30,140,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#c2185b", cursor: "pointer" }}>💌 Encourager le couple</button>
                           </>}
-                          {p.status === "pending" && oneAnswered && <button onClick={async () => {
-                            const newExpiry = new Date(Date.now() + (parseInt(proposeDuration) || 48) * 3600 * 1000).toISOString();
-                            try {
-                              await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ expires_at: newExpiry }) });
-                              setMmFollow(prev => prev.map(x => x.id === p.id ? { ...x, expires_at: newExpiry } : x));
-                              showToast("⏳ Délai prolongé pour la personne en attente", "success");
-                            } catch { showToast("Erreur", "error"); }
-                          }} style={{ background: "rgba(243,156,18,0.1)", border: "1.5px solid rgba(243,156,18,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#b9770e", cursor: "pointer" }}>Prolonger le délai</button>}
+                          {(p.status === "pending" || p.status === "expired") && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(243,156,18,0.06)", border: "1px solid rgba(243,156,18,0.2)", borderRadius: 50, padding: "2px 4px 2px 10px" }}>
+                            <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#b9770e" }}>{p.status === "expired" ? "Réactiver :" : "Prolonger :"}</span>
+                            {([["+1j", 1], ["+3j", 3], ["+7j", 7]] as [string, number][]).map(([lbl, d]) => (
+                              <button key={lbl} onClick={() => extendMm(p.id, d)} style={{ background: "#fff", border: "1.5px solid rgba(243,156,18,0.4)", borderRadius: 50, padding: "3px 9px", fontSize: "0.64rem", fontWeight: 800, color: "#b9770e", cursor: "pointer" }}>{lbl}</button>
+                            ))}
+                          </span>}
+                          {p.status === "pending" && <button onClick={() => handleCancelProposal(p.id)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer" }}>Annuler</button>}
                           {(p.status === "refused" || p.status === "expired") && <button onClick={() => { setMatchSubTab("matchmaking"); loadMatchmaking(); }} style={{ background: "rgba(124,58,237,0.1)", border: "1.5px solid rgba(124,58,237,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#6d28d9", cursor: "pointer" }}>Reproposer un autre profil</button>}
-                          {p.status === "expired" && <button onClick={async () => {
-                            const newExpiry = new Date(Date.now() + (parseInt(proposeDuration) || 48) * 3600 * 1000).toISOString();
-                            try {
-                              await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ status: "pending", expires_at: newExpiry, archived: false }) });
-                              setMmFollow(prev => prev.map(x => x.id === p.id ? { ...x, status: "pending", expires_at: newExpiry } : x));
-                              showToast("✅ Proposition réactivée", "success");
-                            } catch { showToast("Erreur", "error"); }
-                          }} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#1a8c4a", cursor: "pointer" }}>Réactiver</button>}
                           {(p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={async () => {
                             try {
                               await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ archived: true }) });
@@ -20996,6 +21062,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             } catch { showToast("Erreur", "error"); }
                           }} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Archiver</button>}
                         </div>
+                        <textarea defaultValue={p.admin_note || ""} onBlur={(e) => { if ((e.target.value || "") !== (p.admin_note || "")) saveMmNote(p.id, e.target.value); }} placeholder="Note interne sur ce couple (visible uniquement par l'équipe)…" style={{ width: "100%", marginTop: 10, boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "8px 10px", fontSize: "0.72rem", fontFamily: "inherit", resize: "vertical", minHeight: 34, color: "#555", background: G.creme }} />
                       </div>
                     );
                   })}
