@@ -13795,6 +13795,470 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
   );
 }
 
+// ════════════════════════ AIDE ADMIN (Guide) ════════════════════════
+type HelpBlock =
+  | { kind: "callout"; tone: "warn" | "info" | "purple"; text: React.ReactNode }
+  | { kind: "rows"; color?: string; items: [string, string][] }
+  | { kind: "statusRows"; items: [string, string, string][] }
+  | { kind: "bullets"; box?: string; color?: string; items: string[] }
+  | { kind: "paragraph"; text: React.ReactNode }
+  | { kind: "subhead"; text: string };
+type HelpSection = { id: string; label: string; color: string; icon: React.ReactNode; blocks: HelpBlock[] };
+
+const helpIco = (paths: React.ReactNode, stroke = "currentColor", fill = "none") => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths}</svg>
+);
+
+const HELP_SECTIONS: HelpSection[] = [
+  {
+    id: "role", label: "Rôle & bonnes pratiques", color: G.rouge,
+    icon: helpIco(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />, G.rouge),
+    blocks: [
+      { kind: "paragraph", text: "Un admin supervise la plateforme, protège les utilisateurs, vérifie les signalements et applique les décisions de modération. Il agit avec neutralité, sans jamais utiliser ses droits à des fins personnelles." },
+      { kind: "subhead", text: "Bonnes pratiques admin" },
+      { kind: "bullets", box: G.vert, items: [
+        "Rester neutre en toutes circonstances.",
+        "Ne jamais utiliser les droits admin pour des raisons personnelles.",
+        "Vérifier les faits avant d'appliquer une sanction.",
+        "Protéger les données des utilisateurs - elles sont confidentielles.",
+        "Ne jamais partager d'informations privées avec des tiers.",
+        "Privilégier l'avertissement avant le bannissement quand c'est possible.",
+      ] },
+    ],
+  },
+  {
+    id: "stats", label: "Statistiques", color: G.vert,
+    icon: helpIco(<><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>, G.vert),
+    blocks: [
+      { kind: "rows", color: G.vert, items: [
+        ["Membres total", "Nombre total de comptes créés sur la plateforme."],
+        ["Matchs", "Nombre de paires qui se sont mutuellement likées."],
+        ["Messages", "Volume total de messages échangés."],
+        ["Signalements", "Nombre de signalements reçus toutes sources confondues."],
+        ["Nouveaux membres", "Inscriptions du jour en cours."],
+        ["Premium actifs", "Utilisateurs ayant un abonnement Premium actif."],
+        ["Profils vérifiés", "Comptes ayant obtenu le badge de vérification."],
+        ["Profils bannis", "Comptes actuellement bannis de la plateforme."],
+      ] },
+    ],
+  },
+  {
+    id: "users", label: "Utilisateurs", color: G.rouge,
+    icon: helpIco(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>, G.brun),
+    blocks: [
+      { kind: "callout", tone: "warn", text: "Les actions sensibles doivent toujours être utilisées avec prudence et discernement." },
+      { kind: "rows", color: G.rouge, items: [
+        ["Vue grille / Vue liste", "Basculez entre la vue grille (cartes détaillées) et la vue liste (lignes compactes) via les icônes en haut à droite. La vue liste affiche 500 utilisateurs par page avec numérotation, la vue grille en affiche 20."],
+        ["Tri", "15 options de tri disponibles : Plus récents/anciens, A→Z/Z→A, Dernière connexion, En ligne d'abord, Âge croissant/décroissant, Premium d'abord, ♾️ À vie d'abord, Admin d'abord, Vérifiés d'abord, Bannis d'abord, Hommes/Femmes d'abord. Les tris par statut s'appliquent instantanément sans rechargement."],
+        ["Voir le profil complet", "Cliquez sur la silhouette/avatar d'un utilisateur pour ouvrir sa fiche complète : photo, bio, religion, profession, centres d'intérêt, date d'inscription."],
+        ["Profils incomplets", "Cochez 'Afficher uniquement les profils incomplets' pour filtrer les comptes dont l'inscription n'a pas été terminée (nom affiché comme '...')."],
+        ["Sélection multiple", "Cochez les cases à gauche de chaque profil pour les sélectionner. Utilisez 'Tout sélectionner' pour sélectionner d'un coup tous les profils affichés."],
+        ["Suppression en masse", "Une fois des profils sélectionnés, le bouton 🗑 Supprimer (X) apparaît. Cette action supprime définitivement les comptes sélectionnés. Irréversible."],
+        ["Rendre Premium / Retirer Premium", "Attribue 30 jours de Premium ou retire l'accès aux fonctionnalités payantes. Si l'utilisateur a le Premium à vie, le bouton affiche '- À vie'."],
+        ["★ À vie", "Attribue le Premium permanent (date d'expiration fixée à 2099). Réservé aux employés et collaborateurs Moyo Dating. Un badge ♾️ À vie apparaît sur sa carte. Grisé si déjà à vie."],
+        ["- À vie", "Retire le Premium à vie d'un utilisateur. Remplace '- Premium' lorsque l'utilisateur possède le Premium permanent. Il repasse en compte gratuit."],
+        ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
+        ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
+        ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
+        ["Bannir (3 options)", "(1) Bannissement définitif — accès bloqué jusqu'à débannissement ; (2) Éjection immédiate — la session active est coupée sur-le-champ ; (3) Bannissement temporaire — durée au choix (1h à 7j ou libre), avec décompte et reconnexion automatique."],
+        ["Supprimer", "Efface définitivement le compte et toutes ses données."],
+      ] },
+      { kind: "subhead", text: "✉ Envoyer un message individuel" },
+      { kind: "rows", color: "#2980b9", items: [
+        ["Bouton ✉ Message", "Dans chaque carte utilisateur (section Modération), un bouton bleu permet d'envoyer un message privé directement à cette personne."],
+        ["Raccourcis disponibles", "Messages pré-rédigés : expiration Premium, activation Premium, vérification en cours, profil vérifié, promotion -50%, signalement. Cliquez pour pré-remplir puis modifiez."],
+        ["Champ libre", "Vous pouvez aussi rédiger un message entièrement personnalisé."],
+        ["Réception côté utilisateur", "Le message apparaît sous forme de modal bleu 'Information Moyo Dating' à sa prochaine connexion. Il doit cliquer 'OK, J'AI COMPRIS'."],
+        ["Cas d'usage typiques", "Informer qu'un Premium est actif, qu'il faut se reconnecter, qu'un compte a été signalé, ou toute communication officielle."],
+      ] },
+      { kind: "subhead", text: "📢 Diffusion générale" },
+      { kind: "rows", color: "#e67e22", items: [
+        ["Accès", "Le bouton orange '📢 Diffusion générale' se trouve au-dessus de la liste des utilisateurs."],
+        ["Fonctionnement", "Un seul message est enregistré. À leur prochaine connexion, tous ceux qui ne l'ont pas encore vu reçoivent le modal bleu 'Information Moyo Dating'."],
+        ["Raccourcis", "Maintenance, mise à jour, incident résolu, promotions, rappels de bienveillance, sécurité. Cliquez pour pré-remplir."],
+        ["À utiliser pour", "Annonces de maintenance, nouvelles fonctionnalités, promotions temporaires, rappels communautaires importants."],
+        ["Important", "Chaque nouvelle diffusion écrase la précédente. Un utilisateur déjà connecté après la diffusion ne la reverra pas."],
+      ] },
+    ],
+  },
+  {
+    id: "reports", label: "Signalements", color: G.rouge,
+    icon: helpIco(<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>, G.rouge),
+    blocks: [
+      { kind: "rows", color: G.rouge, items: [
+        ["En attente (tous)", "Vue par défaut. Affiche tous les signalements non encore traités. Le badge rouge indique le nombre en attente."],
+        ["Profils", "Filtre les signalements manuels d'utilisateurs contre d'autres profils. À examiner en priorité."],
+        ["Système", "Signalements générés automatiquement par la modération (insultes, arnaques, contenus sexuels, alertes techniques)."],
+        ["Messagerie", "Boîte de réception regroupant tous les échanges avec les utilisateurs (signalements + support), groupés par utilisateur. Le bouton Répondre arrive sous le nom Assistance Moyo Dating."],
+        ["Archives", "Tous les signalements traités, rejetés, ou archivés. Recherche, filtres par type et par action, regroupement par date et pagination. Chaque ligne se déplie ou se supprime."],
+        ["Modération auto des contacts", "Quand un utilisateur gratuit tente de partager un numéro, un réseau ou un lien (message OU profil), l'envoi est bloqué et un signalement [AUTO-MOD CONTACT] est créé en catégorie Système."],
+      ] },
+      { kind: "subhead", text: "Traitement des signalements" },
+      { kind: "statusRows", items: [
+        ["En attente", "#e67e22", "Pas encore examiné par un administrateur."],
+        ["Traité", G.vert, "Signalement vérifié et pris en charge par un admin."],
+        ["Rejeté", "#999", "Signalement examiné mais non retenu (sans suite)."],
+        ["Banni", G.rouge, "Sanction appliquée suite au signalement."],
+      ] },
+      { kind: "subhead", text: "Carte de signalement — Profil" },
+      { kind: "rows", color: G.rouge, items: [
+        ["Signalé par (bleu)", "Bloc bleu en haut : photo + nom + âge + ville de la personne qui a signalé. Le bouton 'Répondre' lui envoie un message dans sa messagerie Assistance Moyo Dating."],
+        ["Profil signalé (rouge)", "Bloc rouge : photo + nom + âge + ville du profil accusé. Badge ⚠️ x/3 si avertissements, badge 'Banni' s'il est déjà banni."],
+        ["Bouton Répondre", "Sur le bloc 'Signalé par' — écrire un message à la personne qui a signalé."],
+        ["Bouton Voir profil", "Ouvre la fiche complète du profil concerné."],
+        ["Bouton Avertir", "Envoie un avertissement officiel au profil signalé."],
+        ["Bouton Traité / Rejeter / Bannir", "Actions finales. Traité = pris en charge. Rejeter = sans suite. Bannir = interdit d'accès."],
+      ] },
+      { kind: "subhead", text: "Avertissements utilisateurs" },
+      { kind: "paragraph", text: <>Un avertissement est une étape préventive avant bannissement. L'utilisateur voit une modal officielle MOYO à sa prochaine connexion. Lorsqu'il clique <strong>"OK, j'ai compris"</strong>, la plateforme enregistre qu'il a pris connaissance de l'avertissement. L'admin peut suivre le 1er, 2e ou 3e avertissement et adapter la décision.</> },
+    ],
+  },
+  {
+    id: "matches", label: "Matchs & Matchmaking", color: "#7c3aed",
+    icon: helpIco(<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />, "#7c3aed"),
+    blocks: [
+      { kind: "rows", color: "#7c3aed", items: [
+        ["📂 Sous-onglets", "L'onglet Matchs regroupe 7 vues : Demandes, Matchmaking intelligent, Suivi couples Matchmaking, Propositions, Voir les matchs, Archivés et Créer un match."],
+        ["Demandes de mise en relation", "Liste des demandes envoyées par les membres (genre, ville, âge recherchés). La carte relationnelle est ouverte à tous ; l'envoi de la demande est réservé aux Premium."],
+        ["Matchmaking intelligent", "Suggestions de couples générées automatiquement selon les critères et la compatibilité. Filtres pour exclure refus, matchs existants, comptes signalés/bannis. Depuis une suggestion, vous proposez le couple : il part en suivi."],
+        ["Profils relationnels créés", "Carte en haut du Matchmaking : compteur et liste consultable. Bouton 'Voir' pour la fiche détaillée (Qui je suis / Ce que je recherche / Note)."],
+        ["Inviter à remplir la carte", "Filtrez les membres SANS profil relationnel et activez l'invitation : ils verront un message les incitant à remplir leur carte à leur prochaine ouverture."],
+        ["💚 Suivi couples Matchmaking", "Suit chaque couple proposé via le Matchmaking : la réponse de chaque personne (accepté/refusé avec l'heure) et le statut global — En attente, Un seul a répondu, Les deux ont accepté (match créé), Refusée, ou Expirée. Indique qui a proposé et la date d'expiration."],
+        ["Actions du suivi", "Voir chaque profil. Si les deux acceptent → « Voir le match » + « 💌 Encourager le couple ». Prolonger (+1j/+3j/+7j) ou Réactiver une expirée. Annuler une proposition en attente. « Reproposer un autre profil » après refus/expiration. Archiver. Note interne par couple."],
+        ["Propositions vs Suivi", "L'onglet « Propositions » regroupe les propositions spontanées et celles issues d'une demande. Les couples créés depuis le Matchmaking sont suivis séparément dans « Suivi couples Matchmaking »."],
+        ["Créer / Proposer un match", "Créez un match direct entre deux membres, ou proposez-leur une mise en relation qu'ils peuvent accepter ou refuser."],
+      ] },
+    ],
+  },
+  {
+    id: "messagerie", label: "Messagerie", color: G.rouge,
+    icon: helpIco(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />, G.rouge),
+    blocks: [
+      { kind: "rows", color: G.rouge, items: [
+        ["Assistant Moyo Dating", "Centre de support. À gauche : la conversation avec l'utilisateur. À droite : la bibliothèque de Modèles de réponse."],
+        ["Modèles de réponse", "Réponses prédéfinies pour répondre plus vite. Créez (titre, catégorie, contenu), modifiez/supprimez, recherchez et filtrez. Le bouton Copier place le texte dans le presse-papiers. Modèles partagés entre tous les admins."],
+        ["Diffusion générale", "Envoie une annonce aux utilisateurs : message, modèle rapide, cible (genre × abonnement) et date d'expiration. L'audience estimée et les diffusions actives sont affichées."],
+      ] },
+    ],
+  },
+  {
+    id: "marketing", label: "Marketing", color: "#E67E22",
+    icon: helpIco(<><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>, "#E67E22"),
+    blocks: [
+      { kind: "rows", color: "#E67E22", items: [
+        ["Statuts Moyo Dating", "Publiez des statuts officiels (sponsorisés) visibles par les membres, avec un bouton d'action (lien ou WhatsApp/appel). Gérez les statuts actifs et leur durée."],
+        ["Mises en avant", "Validez les demandes de mise en avant des profils Premium (24h dans les Statuts, visibles par le genre opposé). Suivez vues, likes, réponses et retirez-les si besoin."],
+        ["Événement Premium", "Offrez le Premium gratuitement à tous pour un événement. Les vrais abonnés ne sont pas affectés ; à la date d'expiration, le Premium est retiré automatiquement aux non-abonnés."],
+      ] },
+      { kind: "subhead", text: "🎉 Événement Premium (détail)" },
+      { kind: "rows", color: G.or, items: [
+        ["Activation", "Le bouton '🎉 Événement Premium - Offrir à tous' passe tous les utilisateurs en Premium gratuitement. Uniquement pour des événements spéciaux."],
+        ["Date d'expiration obligatoire", "À l'activation, choisissez une date/heure d'expiration. Passé cette date, le Premium est retiré automatiquement aux non-abonnés."],
+        ["Abonnés réels protégés", "Les utilisateurs ayant payé conservent leur Premium même après l'événement. Seuls les bénéficiaires gratuits sont concernés."],
+        ["Désactivation manuelle", "Désactivable à tout moment via '⏹ Désactiver'. Les abonnés réels ne sont jamais affectés."],
+        ["Vérification automatique", "Le système vérifie chaque minute si la date est dépassée et désactive l'événement sans intervention."],
+      ] },
+      { kind: "subhead", text: "📢 Diffusion - Date d'expiration" },
+      { kind: "rows", color: "#e67e22", items: [
+        ["Date d'expiration obligatoire", "Chaque message de diffusion doit avoir une date d'expiration. 'Envoyer' est désactivé tant qu'aucune date n'est choisie."],
+        ["Expiration automatique", "Passé la date, le message ne s'affiche plus pour personne — même pour ceux qui ne l'ont pas vu."],
+        ["Nouveaux inscrits protégés", "Un utilisateur inscrit après l'envoi ne reçoit pas les messages antérieurs à son inscription."],
+        ["Corriger un broadcast actif", "Pour stopper un message envoyé : Supabase → Table broadcasts → mettez expires_at à une date passée."],
+      ] },
+    ],
+  },
+  {
+    id: "reviews", label: "Réputation / Avis", color: "#B8860B",
+    icon: helpIco(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />, "#B8860B", "#B8860B"),
+    blocks: [
+      { kind: "rows", color: "#B8860B", items: [
+        ["Avis non lus", "Les avis avec une bordure rouge sont non lus. 'Marquer lu' les acquitte et réduit le badge compteur de l'onglet."],
+        ["Masquer / Afficher", "Masquer un avis le rend discret sans le supprimer. Utile pour les avis déjà traités."],
+        ["Supprimer un avis", "Supprime définitivement l'avis. Action irréversible."],
+        ["Badge compteur", "Le badge doré indique le nombre d'avis non lus. Il disparaît quand tous sont marqués comme lus."],
+      ] },
+    ],
+  },
+  {
+    id: "appointments", label: "Rendez-vous", color: G.vert,
+    icon: helpIco(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>, G.vert),
+    blocks: [
+      { kind: "callout", tone: "info", text: "Gère les demandes de rendez-vous (téléphoniques et à l'agence) envoyées par les membres depuis leur Profil." },
+      { kind: "rows", color: G.vert, items: [
+        ["Badge vert", "Le badge vert sur l'onglet Rendez-vous indique le nombre de demandes en attente à traiter."],
+        ["Filtres", "En attente, Confirmés (créneau fixé / reporté), Aujourd'hui, Passés (effectués, absents ou dépassés), Annulés, et Archivés."],
+        ["Confirmer", "Ouvre un calendrier Moyo pour fixer le créneau. L'utilisateur est prévenu. Dates passées et dimanches indisponibles ; horaires de 9h à 19h."],
+        ["Autre créneau", "Propose une nouvelle date/heure quand le créneau demandé ne convient pas (statut « reporté »)."],
+        ["Effectué / Absent", "Sur un RDV confirmé : marquez-le « effectué » s'il a eu lieu, ou « absent » si la personne ne s'est pas présentée."],
+        ["Annuler", "Ouvre un modal Moyo pour saisir un motif d'annulation (facultatif, visible par l'utilisateur)."],
+        ["Note interne", "Ouvre un modal Moyo pour ajouter une note visible uniquement par l'équipe."],
+        ["📦 Archiver", "Sur un RDV passé ou annulé : le range dans le filtre « Archivés ». Réversible via « Désarchiver »."],
+        ["🗑 Supprimer", "Sur un RDV passé ou annulé : supprime définitivement le rendez-vous (irréversible)."],
+        ["💳 Paiement agence", "Un RDV à l'agence est payant (" + APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR") + " FCFA). Le paiement apparaît dans Budget avec le badge « 🗓 Rendez-vous agence » et se valide là-bas — paiement DISTINCT du Premium : le valider n'active aucun abonnement."],
+        ["Côté utilisateur", "Dans « Mes rendez-vous », le membre suit l'état de sa demande et peut supprimer lui-même un RDV annulé ou déjà passé."],
+      ] },
+    ],
+  },
+  {
+    id: "payments", label: "Budget / Paiements", color: "#27ae60",
+    icon: helpIco(<><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" /><path d="M21 12v-2a2 2 0 0 0-2-2H6" /><circle cx="16" cy="12" r="1" /></>, "#27ae60"),
+    blocks: [
+      { kind: "callout", tone: "info", text: "Vérifiez toujours le paiement sur votre téléphone MTN avant d'activer le Premium." },
+      { kind: "rows", color: "#27ae60", items: [
+        ["Badge vert", "Le badge vert sur l'onglet (et sur Demandes) indique le nombre de demandes en attente de validation."],
+        ["📂 4 sous-onglets", "Demandes (en attente), Traitées (approuvées/refusées), Données financières et Archivage."],
+        ["Sous-onglet Demandes", "Les paiements pas encore traités. Vérifiez la référence puis Activez ou Rejetez. Une fois traité, il bascule dans Traitées."],
+        ["Sous-onglet Traitées", "Les demandes approuvées ✓ et refusées ✕. La corbeille y archive le paiement."],
+        ["Données financières", "Chiffre d'affaires total et par mois. Le bouton ↺ Réinitialiser repart de zéro à partir d'aujourd'hui SANS rien supprimer. Un paiement archivé reste compté dans le CA."],
+        ["🧪 Exclure du CA (tests)", "Dépliez un mois pour voir chaque paiement. '🧪 Exclure du CA' retire un paiement de test sans le supprimer. Réversible via '↩ Réintégrer'."],
+        ["📊 Tableau de bord financier", "Indicateurs de conversion, dernier paiement, graphique d'évolution, répartition Premium / Cadeaux, classement des meilleurs contributeurs."],
+        ["⬇ Exporter", "Télécharge un CSV (Excel) de tous les paiements : date, utilisateur, type, opérateur, référence, montant, exclusion du CA."],
+        ["Sous-onglet Archivage", "Les paiements rangés. Ici la corbeille et 'Tout supprimer' effacent DÉFINITIVEMENT."],
+        ["Silhouette cliquable", "Cliquez sur la silhouette pour voir le profil complet de l'utilisateur. L'ID est affiché grisé."],
+        ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN ou Airtel."],
+        ["Réf. MTN reçue", "Numéro que vous entrez après vérification de votre SMS/app MTN. Doit correspondre à la réf. client."],
+        ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert (« Activer Premium » ou « Valider le paiement RDV »). Sinon → bouton rouge 'Rejeter & notifier'."],
+        ["Activer Premium", "Pour un paiement Premium : active l'abonnement pour la durée configurée ET envoie un message à l'utilisateur. Le compteur démarre immédiatement."],
+        ["🗓 Paiement Rendez-vous agence", "Un paiement de rendez-vous porte le badge « 🗓 Rendez-vous agence ». Le valider marque le RDV comme payé et prévient l'utilisateur — SANS activer aucun Premium. Le montant compte dans le CA. La confirmation du créneau se fait dans l'onglet Rendez-vous."],
+        ["Compteur ⏱", "Affiché après activation : '28j 14h restants'. Orange sous 3 jours. '⏰ Expiré' en rouge à l'échéance."],
+        ["Expiration automatique", "À l'échéance, le Premium repasse à gratuit dès la prochaine connexion. Le compteur affiche 'Expiré'."],
+        ["Rejeter & notifier", "Marque la demande comme rejetée ET prévient l'utilisateur que sa preuve n'a pas pu être vérifiée."],
+        ["Bouton ↩", "Réinitialise la vérification pour recommencer en cas d'erreur de frappe."],
+        ["Bouton archiver 🗑", "Range un paiement traité dans Archivage. Le Premium et le CA ne changent pas. Pour retirer un Premium accordé par erreur : '- Premium' dans Utilisateurs."],
+        ["Statuts des demandes", "En attente = à traiter. Approuvé ✓ / Rejeté ✕ = traité. Archivé = rangé. Expiré = durée écoulée."],
+      ] },
+    ],
+  },
+  {
+    id: "logs", label: "Historique", color: "#8e44ad",
+    icon: helpIco(<><polyline points="12 8 12 12 14 14" /><circle cx="12" cy="12" r="10" /></>, "#8e44ad"),
+    blocks: [
+      { kind: "rows", color: "#8e44ad", items: [
+        ["Activité par admin", "Récapitulatif du nombre d'actions par admin, filtrable par période (Aujourd'hui, 7 jours, 30 jours, Tout)."],
+        ["Détail des actions", "Liste chronologique de toutes les actions admin (la plus récente en haut)."],
+        ["Sélectionner (multi)", "Réservé au Super Admin. Cochez plusieurs entrées (ou 'Tout sélectionner') puis 'Supprimer (N)' pour les effacer d'un coup."],
+        ["Corbeille (une par une)", "Hors mode sélection, chaque ligne garde sa corbeille pour supprimer une seule action."],
+        ["Tout effacer", "Vide tout l'historique d'un coup. Action définitive et irréversible."],
+      ] },
+    ],
+  },
+  {
+    id: "security", label: "Sécurité & accès admin", color: "#8e44ad",
+    icon: helpIco(<><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>, "#8e44ad"),
+    blocks: [
+      { kind: "subhead", text: "Accès Admin - PIN de sécurité" },
+      { kind: "callout", tone: "purple", text: "Ne communiquez jamais votre PIN à un tiers. Il est personnel et confidentiel." },
+      { kind: "rows", color: "#8e44ad", items: [
+        ["Accès au panel", "À chaque ouverture du panel Admin, une modale demande votre PIN à 4 chiffres. Sans PIN correct, l'accès est refusé."],
+        ["Création du PIN", "Lors de l'attribution du statut admin ('+ Admin'), un PIN à 4 chiffres est demandé et communiqué par un canal sécurisé (SMS, WhatsApp)."],
+        ["Bouton 🔑 PIN", "Sur les cartes des autres admins : permet de réinitialiser leur PIN à tout moment."],
+        ["Retrait du statut admin", "'- Admin' retire les droits ET supprime le PIN. La personne ne peut plus accéder au panel."],
+        ["PIN oublié", "Seul l'administrateur principal peut réinitialiser un PIN. Pour votre propre PIN : modifiez-le dans Supabase."],
+        ["Sécurité renforcée", "Le PIN est vérifié en temps réel à chaque tentative. Un mauvais PIN affiche une erreur et vide le champ."],
+      ] },
+      { kind: "subhead", text: "Badges et alertes admin" },
+      { kind: "paragraph", text: <>Le bouton <strong>⚙️ Admin</strong> du header affiche un badge dès qu'il y a des actions en attente (signalements + avis non lus + paiements + rendez-vous). Visible depuis n'importe quel onglet, il se met à jour automatiquement toutes les quelques secondes, même si le dashboard admin n'est pas ouvert.</> },
+    ],
+  },
+  {
+    id: "config", label: "Configuration ☰ (Super Admin)", color: "#555",
+    icon: helpIco(<><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>, "#555"),
+    blocks: [
+      { kind: "rows", color: "#555", items: [
+        ["Accès", "Le bouton burger ☰ se trouve à droite de 'Aide'. ⚠️ Réservé au Super Admin : les admins simples ne le voient pas."],
+        ["Règles - Switch même genre", "Vert = bloqué (H→H et F→F interdits). Rouge = ouvert. Sauvegarde instantanée."],
+        ["Textes des modals", "6 modals personnalisables : message même genre H/F, titre et sous-titre du match, message Premium, message likes épuisés."],
+        ["Limites & Quotas", "Likes gratuits/jour, messages gratuits/match, taille max des photos, message de bienvenue après match. Modifiable sans redéployer."],
+        ["Prix & Abonnement", "Prix Premium en FCFA et durée en jours. ⚠️ Le prix modifie les boutons de paiement. La durée s'applique aux nouveaux abonnements."],
+        ["Fonctionnalités on/off", "Activer/désactiver Statuts, Cadeau Premium et Assistant IA. Effet au prochain chargement de l'app."],
+        ["🔔 Notifications admin", "Pour chaque admin, choisir ses notifications push : Signalements, Matchs, Paiements. Ex : activer 'Paiements' pour le responsable des paiements."],
+        ["💳 Moyens de paiement", "Couper rapidement un moyen de paiement (MTN, Airtel, Visa/Mastercard). Une fois coupé : grisé et 'Temporairement indisponible' partout."],
+        ["🔴 Mode maintenance", "Active un écran de maintenance pour tous. Seuls les admins peuvent encore accéder. Message personnalisable."],
+        ["Gestion des admins", "Visible par le Super Admin uniquement : nommer Admin, Super Admin ou retirer les droits via l'email."],
+        ["Niveaux d'accès", "Super Admin : accès total (Paiements + Configuration ☰). Admin simple : tout sauf Paiements et Configuration."],
+      ] },
+    ],
+  },
+  {
+    id: "news", label: "✨ Nouveautés récentes", color: G.or,
+    icon: helpIco(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />, G.or),
+    blocks: [
+      { kind: "rows", color: G.or, items: [
+        ["📝 Notes internes", "Sur chaque fiche utilisateur et signalement, un bloc de notes visibles uniquement par les admins. Idéal pour se coordonner. N'importe quel admin peut supprimer une note."],
+        ["🗂 Archives repliées", "Dans Signalements → Archivés, chaque carte est repliée. Cliquez pour le détail, 'Replier' pour refermer."],
+        ["🔔 Notifications utilisateur", "Les utilisateurs peuvent (ré)activer leurs notifications depuis leur Profil, même après un refus initial."],
+        ["🎁💝 Offrir / Demander Premium", "En conversation : un Premium peut OFFRIR Premium (🎁), un non-Premium peut DEMANDER (💝, max 2/mois)."],
+        ["💳 Paiements réorganisés", "4 sous-onglets : Demandes, Traitées, Données financières (réinitialisable) et Archivage. Archiver ne retire plus le Premium."],
+        ["🗂 Historique : suppression multiple", "Le bouton 'Sélectionner' permet de cocher et supprimer plusieurs actions d'un coup (Super Admin)."],
+        ["🎚 Interrupteurs de fonctionnalités", "Configuration ⚙️ → Fonctionnalités : Statuts, Cadeau Premium et Assistant IA s'activent/désactivent réellement."],
+      ] },
+    ],
+  },
+];
+
+function AdminHelpModal({ onClose }: { onClose: () => void }) {
+  const [isWide, setIsWide] = useState(typeof window !== "undefined" ? window.innerWidth >= 860 : true);
+  const [q, setQ] = useState("");
+  const [active, setActive] = useState(HELP_SECTIONS[0].id);
+  const [openId, setOpenId] = useState<string>(HELP_SECTIONS[0].id);
+
+  useEffect(() => {
+    const onR = () => setIsWide(window.innerWidth >= 860);
+    window.addEventListener("resize", onR);
+    return () => window.removeEventListener("resize", onR);
+  }, []);
+  useEffect(() => {
+    const y = window.scrollY; const body = document.body;
+    const prev = { position: body.style.position, top: body.style.top, width: body.style.width, overflow: body.style.overflow };
+    body.style.position = "fixed"; body.style.top = `-${y}px`; body.style.width = "100%"; body.style.overflow = "hidden";
+    return () => { body.style.position = prev.position; body.style.top = prev.top; body.style.width = prev.width; body.style.overflow = prev.overflow; window.scrollTo(0, y); };
+  }, []);
+
+  const blockText = (b: HelpBlock): string => {
+    if (b.kind === "rows") return b.items.map(r => r[0] + " " + r[1]).join(" ");
+    if (b.kind === "statusRows") return b.items.map(r => r[0] + " " + r[2]).join(" ");
+    if (b.kind === "bullets") return b.items.join(" ");
+    if (b.kind === "subhead") return b.text;
+    if (b.kind === "callout" || b.kind === "paragraph") return typeof b.text === "string" ? b.text : "";
+    return "";
+  };
+  const nq = q.trim().toLowerCase();
+  const matches = (s: HelpSection) => !nq || s.label.toLowerCase().includes(nq) || s.blocks.some(b => blockText(b).toLowerCase().includes(nq));
+  const visible = HELP_SECTIONS.filter(matches);
+  useEffect(() => { if (nq && visible.length && !visible.find(s => s.id === active)) setActive(visible[0].id); }, [nq]);
+
+  const activeSection = visible.find(s => s.id === active) || visible[0];
+
+  const renderBlock = (b: HelpBlock, i: number): React.ReactNode => {
+    if (b.kind === "subhead") return <div key={i} style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginTop: i === 0 ? 0 : 8, marginBottom: 2 }}>{b.text}</div>;
+    if (b.kind === "paragraph") return <div key={i} style={{ background: G.creme, borderRadius: 10, padding: "11px 13px", fontSize: "0.82rem", color: G.brun, lineHeight: 1.7 }}>{b.text}</div>;
+    if (b.kind === "callout") {
+      const tones: Record<string, { bg: string; col: string; bd: string }> = {
+        warn: { bg: "#FFF8F0", col: "#7a5500", bd: "rgba(212,168,67,0.3)" },
+        info: { bg: "#f0faf4", col: "#1a5c3a", bd: "rgba(26,92,58,0.2)" },
+        purple: { bg: "#f9f0ff", col: "#5b2c6f", bd: "rgba(142,68,173,0.2)" },
+      };
+      const t = tones[b.tone];
+      return <div key={i} style={{ background: t.bg, color: t.col, border: `1px solid ${t.bd}`, borderRadius: 10, padding: "10px 13px", fontSize: "0.8rem", lineHeight: 1.55 }}>{b.text}</div>;
+    }
+    if (b.kind === "bullets") {
+      const inner = b.items.map((r, j) => (
+        <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={b.box || G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12" /></svg>
+          <span style={{ fontSize: "0.82rem", color: G.brun, lineHeight: 1.6 }}>{r}</span>
+        </div>
+      ));
+      return <div key={i} style={b.box ? { background: `${b.box}10`, borderLeft: `3px solid ${b.box}`, borderRadius: 12, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 7 } : { display: "flex", flexDirection: "column", gap: 7 }}>{inner}</div>;
+    }
+    if (b.kind === "statusRows") {
+      return <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>{b.items.map(([label, color, desc], j) => (
+        <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, marginTop: 4, flexShrink: 0 }} />
+          <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+        </div>
+      ))}</div>;
+    }
+    // rows
+    return <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>{b.items.map(([label, desc], j) => (
+      <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={b.color || G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12" /></svg>
+        <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+      </div>
+    ))}</div>;
+  };
+
+  const Signature = (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, textAlign: "center" }}>
+      <div style={{ fontSize: "0.68rem", color: "#bbb", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>Conçu et développé par</div>
+      <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Roméo GUEBO</div>
+      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: G.rouge }}>CEO Moyo</span>
+      <a href="mailto:romeoguebo97@gmail.com" style={{ fontSize: "0.72rem", color: G.rouge, textDecoration: "none", fontWeight: 600, opacity: 0.8 }}>romeoguebo97@gmail.com</a>
+    </div>
+  );
+
+  const searchBox = (
+    <div style={{ position: "relative" }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+      <input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher dans le guide…" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px 9px 34px", fontSize: "0.82rem", fontFamily: "inherit", background: G.blanc, color: G.brun, outline: "none" }} />
+    </div>
+  );
+
+  const navBtn = (s: HelpSection, onClick: () => void, isActive: boolean) => (
+    <button key={s.id} onClick={onClick} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", borderRadius: 10, border: "none", cursor: "pointer", textAlign: "left", background: isActive ? G.blanc : "transparent", boxShadow: isActive ? "0 1px 6px rgba(0,0,0,0.06)" : "none" }}>
+      <span style={{ width: 28, height: 28, borderRadius: 8, background: `${s.color}16`, color: s.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.icon}</span>
+      <span style={{ flex: 1, fontWeight: isActive ? 800 : 600, fontSize: "0.82rem", color: isActive ? G.brun : "#666" }}>{s.label}</span>
+    </button>
+  );
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: isWide ? "center" : "flex-end", justifyContent: "center", padding: isWide ? 24 : 0, animation: "fadeIn 0.2s ease", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: isWide ? 20 : "24px 24px 0 0", width: "100%", maxWidth: isWide ? 1040 : 560, height: isWide ? "86vh" : "auto", maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 -8px 40px rgba(0,0,0,0.2)", animation: "fadeUp 0.28s ease" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+            </div>
+            <div>
+              <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun }}>Guide Admin</div>
+              <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 1 }}>Tableau de bord MOYO</div>
+            </div>
+          </div>
+          <div onClick={onClose} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </div>
+        </div>
+
+        {isWide ? (
+          <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+            {/* Sidebar */}
+            <div style={{ width: 268, borderRight: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", background: "#FAFAFB", flexShrink: 0 }}>
+              <div style={{ padding: "12px 12px 8px" }}>{searchBox}</div>
+              <div style={{ overflowY: "auto", padding: "0 8px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
+                {visible.map(s => navBtn(s, () => setActive(s.id), s.id === activeSection?.id))}
+                {visible.length === 0 && <div style={{ padding: "20px 12px", fontSize: "0.8rem", color: "#aaa", textAlign: "center" }}>Aucun résultat.</div>}
+              </div>
+            </div>
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "22px 26px 28px", overscrollBehavior: "contain" }}>
+              {activeSection && <>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  <span style={{ width: 34, height: 34, borderRadius: 9, background: `${activeSection.color}16`, color: activeSection.color, display: "flex", alignItems: "center", justifyContent: "center" }}>{activeSection.icon}</span>
+                  <span style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun }}>{activeSection.label}</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{activeSection.blocks.map(renderBlock)}</div>
+              </>}
+              {Signature}
+            </div>
+          </div>
+        ) : (
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px 22px", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+            <div style={{ marginBottom: 10 }}>{searchBox}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {visible.map(s => {
+                const open = openId === s.id;
+                return (
+                  <div key={s.id} style={{ border: `1px solid ${G.gris}`, borderRadius: 14, overflow: "hidden", background: G.blanc }}>
+                    <button onClick={() => setOpenId(open ? "" : s.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 13px", background: open ? G.creme : G.blanc, border: "none", cursor: "pointer", textAlign: "left" }}>
+                      <span style={{ width: 30, height: 30, borderRadius: 8, background: `${s.color}16`, color: s.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.icon}</span>
+                      <span style={{ flex: 1, fontWeight: 800, fontSize: "0.88rem", color: G.brun }}>{s.label}</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+                    </button>
+                    {open && <div style={{ padding: "6px 13px 15px", display: "flex", flexDirection: "column", gap: 10 }}>{s.blocks.map(renderBlock)}</div>}
+                  </div>
+                );
+              })}
+              {visible.length === 0 && <div style={{ padding: "26px 12px", fontSize: "0.85rem", color: "#aaa", textAlign: "center" }}>Aucun résultat pour « {q} ».</div>}
+            </div>
+            {Signature}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
@@ -17616,589 +18080,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
 
       {/* Modal d'aide Admin */}
-      {showHelp && (
-        <div
-          onClick={() => setShowHelp(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center", animation: "fadeIn 0.2s ease" }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 560, maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 -8px 40px rgba(0,0,0,0.18)", animation: "fadeUp 0.28s ease" }}
-          >
-            {/* En-tête modal */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 20px 14px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-                <div>
-                  <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun }}>Guide Admin</div>
-                  <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 1 }}>Tableau de bord MOYO</div>
-                </div>
-              </div>
-              <div onClick={() => setShowHelp(false)} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </div>
-            </div>
-            {/* Contenu scrollable */}
-            <div style={{ overflowY: "auto", padding: "18px 20px 32px", display: "flex", flexDirection: "column", gap: 18 }}>
-
-              {/* Section 1 - Rôle admin */}
-              <div style={{ background: `linear-gradient(135deg,${G.rouge}12,${G.rouge}06)`, borderRadius: 14, padding: "14px 16px", borderLeft: `3px solid ${G.rouge}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.rouge }}>Rôle d'un administrateur</span>
-                </div>
-                <p style={{ fontSize: "0.82rem", color: G.brun, lineHeight: 1.65 }}>Un admin supervise la plateforme, protège les utilisateurs, vérifie les signalements et applique les décisions de modération. Il agit avec neutralité, sans jamais utiliser ses droits à des fins personnelles.</p>
-              </div>
-
-              {/* Section 2 - Stats */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Statistiques</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Membres total", "Nombre total de comptes créés sur la plateforme."],
-                    ["Matchs", "Nombre de paires qui se sont mutuellement likées."],
-                    ["Messages", "Volume total de messages échangés."],
-                    ["Signalements", "Nombre de signalements reçus toutes sources confondues."],
-                    ["Nouveaux membres", "Inscriptions du jour en cours."],
-                    ["Premium actifs", "Utilisateurs ayant un abonnement Premium actif."],
-                    ["Profils vérifiés", "Comptes ayant obtenu le badge de vérification."],
-                    ["Profils bannis", "Comptes actuellement bannis de la plateforme."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section 3 - Utilisateurs */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Utilisateurs</span>
-                </div>
-                <div style={{ background: "#FFF8F0", borderRadius: 10, padding: "9px 12px", marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  <span style={{ fontSize: "0.79rem", color: "#7a5500" }}>Les actions sensibles doivent toujours être utilisées avec prudence et discernement.</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                  {([
-                    ["Vue grille / Vue liste", "Basculez entre la vue grille (cartes détaillées) et la vue liste (lignes compactes) via les icônes en haut à droite. La vue liste affiche 500 utilisateurs par page avec numérotation, la vue grille en affiche 20."],
-                    ["Tri", "15 options de tri disponibles : Plus récents/anciens, A→Z/Z→A, Dernière connexion, En ligne d'abord, Âge croissant/décroissant, Premium d'abord, ♾️ À vie d'abord, Admin d'abord, Vérifiés d'abord, Bannis d'abord, Hommes/Femmes d'abord. Les tris par statut (Premium, Admin, etc.) s'appliquent instantanément sans rechargement."],
-                    ["Voir le profil complet", "Cliquez sur la silhouette/avatar d'un utilisateur pour ouvrir sa fiche complète : photo, bio, religion, profession, centres d'intérêt, date d'inscription."],
-                    ["Profils incomplets", "Cochez 'Afficher uniquement les profils incomplets (...)' pour filtrer les comptes dont l'inscription n'a pas été terminée (nom affiché comme '...'). Ces profils n'ont pas finalisé leur inscription."],
-                    ["Sélection multiple", "Cochez les cases à gauche de chaque profil pour les sélectionner. Utilisez 'Tout sélectionner' pour sélectionner d'un coup tous les profils affichés. Idéal combiné avec le filtre 'Incomplets'."],
-                    ["Suppression en masse", "Une fois des profils sélectionnés, le bouton 🗑 Supprimer (X) apparaît. Cette action supprime définitivement les comptes sélectionnés de la base de données. Irréversible."],
-                    ["Rendre Premium / Retirer Premium", "Attribue 30 jours de Premium ou retire l'accès aux fonctionnalités payantes. Si l'utilisateur a le Premium à vie, le bouton affiche '- À vie' à la place."],
-                    ["★ À vie", "Attribue le Premium permanent à un utilisateur (date d'expiration fixée à 2099). Réservé aux employés et collaborateurs Moyo Dating. L'utilisateur voit le symbole ∞ sur son profil. Un badge ♾️ À vie (doré foncé) apparaît directement sur sa carte dans l'Admin. Le bouton est grisé si l'utilisateur a déjà le Premium à vie."],
-                    ["- À vie", "Retire le Premium à vie d'un utilisateur. Ce bouton remplace '- Premium' lorsque l'utilisateur possède le Premium permanent. L'utilisateur repasse en compte gratuit."],
-                    ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
-                    ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
-                    ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
-                    ["Bannir (3 options)", "Le bouton Bannir ouvre un menu : (1) Bannissement définitif — accès bloqué jusqu'à ce qu'un admin débannisse ; (2) Éjection immédiate — la session active est coupée sur-le-champ, la personne est renvoyée à l'accueil et ne peut plus se reconnecter ; (3) Bannissement temporaire — durée au choix (1h, 6h, 24h, 3j, 7j ou libre) : l'utilisateur voit un décompte et se reconnecte automatiquement à la fin."],
-                    ["Supprimer", "Efface définitivement le compte et toutes ses données."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section 4 - Signalements */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Signalements</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["En attente (tous)", "Vue par défaut. Affiche tous les signalements non encore traités. Le badge rouge indique le nombre en attente."],
-                    ["Profils", "Filtre les signalements manuels d'utilisateurs contre d'autres profils. À examiner en priorité."],
-                    ["Système", "Signalements générés automatiquement par la modération (insultes, arnaques, contenus sexuels, alertes techniques)."],
-                    ["Messagerie", "Boîte de réception regroupant tous les échanges avec les utilisateurs (signalements + support). Chaque conversation est groupée par utilisateur avec photo, nom, dernier message et badge non lu. Le bouton Répondre ouvre une modale pour répondre directement — le message arrive dans la messagerie de l'utilisateur sous le nom Assistance Moyo Dating (\"Répond sous 24h\")."],
-                    ["Archives", "Tous les signalements traités, rejetés, ayant entraîné un bannissement ou archivés. La page offre une recherche, des filtres par type (Messagerie / Auto-modération / Signalement) et par action (Traité / Rejeté / Banni / Archivé), un regroupement par date (Aujourd'hui, Hier…) et une pagination (10 par page). Chaque ligne peut être dépliée (Voir les détails) ou supprimée. 'Tout supprimer' nettoie toutes les archives d'un coup."],
-                    ["Modération auto des contacts", "Quand un utilisateur gratuit tente de partager ou demander un numéro, un réseau social ou un lien (dans un message OU dans son profil), l'envoi est bloqué et un signalement automatique [AUTO-MOD CONTACT] est créé dans la catégorie Système. La détection couvre les numéros même très espacés, écrits en lettres ou avec des caractères intercalés."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section 5 - Statuts */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Traitement des signalements</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["En attente", "#e67e22", "Pas encore examiné par un administrateur."],
-                    ["Traité", G.vert, "Signalement vérifié et pris en charge par un admin."],
-                    ["Rejeté", "#999", "Signalement examiné mais non retenu (sans suite)."],
-                    ["Banni", G.rouge, "Sanction appliquée suite au signalement."],
-                  ] as [string, string, string][]).map(([label, color, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, marginTop: 3, flexShrink: 0 }} />
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section 5b - Carte de signalement profil */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Carte de signalement — Profil</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Signalé par (bleu)", "Bloc bleu en haut de la carte : photo + nom + âge + ville de la personne qui a fait le signalement. Le bouton 'Répondre' envoie un message directement dans sa messagerie Assistance Moyo Dating."],
-                    ["Profil signalé (rouge)", "Bloc rouge : photo + nom + âge + ville du profil accusé. Un badge ⚠️ x/3 s'affiche si ce profil a déjà des avertissements. Un badge 'Banni' s'affiche s'il est déjà banni."],
-                    ["Bouton Répondre", "Sur le bloc 'Signalé par' — ouvre une modale pour écrire un message à la personne qui a signalé. Elle reçoit la réponse dans Messages → Assistance Moyo Dating."],
-                    ["Bouton Voir profil", "Ouvre la fiche complète du profil concerné (signalé ou support selon le contexte)."],
-                    ["Bouton Avertir", "Envoie un avertissement officiel au profil signalé. Il voit un modal à sa prochaine connexion."],
-                    ["Bouton Traité / Rejeter / Bannir", "Actions finales sur le signalement. Traité = pris en charge. Rejeter = sans suite. Bannir = interdit d'accès."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section 6 - Avertissements */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Avertissements utilisateurs</span>
-                </div>
-                <div style={{ background: G.creme, borderRadius: 10, padding: "12px 14px", fontSize: "0.82rem", color: G.brun, lineHeight: 1.7 }}>
-                  Un avertissement est une étape préventive avant bannissement. L'utilisateur voit une modal officielle MOYO à sa prochaine connexion. Lorsqu'il clique <strong>"OK, j'ai compris"</strong>, la plateforme enregistre qu'il a bien pris connaissance de l'avertissement. L'admin peut ainsi suivre le 1er, 2e ou 3e avertissement et adapter la décision en conséquence.
-                </div>
-              </div>
-
-              {/* Section Matchs */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Matchs</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                  {([
-                    ["📂 Sous-onglets", "L'onglet Matchs regroupe 7 vues : Demandes, Matchmaking intelligent, Suivi couples Matchmaking, Propositions, Voir les matchs, Archivés et Créer un match."],
-                    ["Demandes de mise en relation", "Liste des demandes envoyées par les membres (genre, ville, âge recherchés). La création de la carte relationnelle est ouverte à tous ; l'envoi de la demande est réservé aux membres Premium."],
-                    ["Matchmaking intelligent", "Suggestions de couples générées automatiquement selon les critères et la compatibilité. Filtres pour exclure refus, matchs existants, comptes signalés/bannis, etc. Depuis une suggestion, vous proposez le couple : il part en suivi."],
-                    ["Profils relationnels créés", "Carte en haut du Matchmaking : compteur (membres ayant rempli leur carte sur le total) et liste consultable. Bouton 'Voir' pour afficher la fiche détaillée (Qui je suis / Ce que je recherche / Note) de chaque membre."],
-                    ["Inviter à remplir la carte", "Depuis la carte, filtrez les membres SANS profil relationnel et activez l'invitation : ils verront un message les incitant à remplir leur carte ('Remplir maintenant' / 'Plus tard') à leur prochaine ouverture de l'app."],
-                    ["💚 Suivi couples Matchmaking", "Suit chaque couple proposé via le Matchmaking intelligent : la réponse de chaque personne (accepté/refusé, avec l'heure exacte) et le statut global du couple — En attente, Un seul a répondu, Les deux ont accepté (match créé), Refusée, ou Expirée. La carte indique aussi qui a proposé le couple, la date de proposition et la date d'expiration."],
-                    ["Actions du suivi", "Voir chaque profil. Si les deux acceptent → « Voir le match » + « 💌 Encourager le couple » (message aux deux). Prolonger (+1j / +3j / +7j) une proposition en attente, ou Réactiver une proposition expirée. Annuler une proposition en attente. « Reproposer un autre profil » après un refus ou une expiration. Archiver le couple une fois traité. Et une note interne libre par couple (visible uniquement par l'équipe)."],
-                    ["Propositions vs Suivi", "L'onglet « Propositions » regroupe les propositions spontanées et celles issues d'une demande utilisateur. Les couples créés depuis le Matchmaking intelligent, eux, sont suivis séparément dans « Suivi couples Matchmaking » pour ne pas mélanger les deux flux."],
-                    ["Créer / Proposer un match", "Créez un match direct entre deux membres, ou proposez-leur une mise en relation qu'ils peuvent accepter ou refuser."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section Messagerie */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Messagerie</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Assistant Moyo Dating", "Centre de support. À gauche : la conversation avec l'utilisateur (infos, historique, zone de réponse, Archiver). À droite : la bibliothèque de Modèles de réponse."],
-                    ["Modèles de réponse", "Réponses prédéfinies pour répondre plus vite. Créez-en (titre, catégorie, contenu), modifiez/supprimez via le menu ⋮, recherchez et filtrez par catégorie. Le bouton Copier place le texte dans le presse-papiers (notification 'Modèle copié') pour le coller dans la conversation. Les modèles sont partagés entre tous les admins."],
-                    ["Diffusion générale", "Envoie une annonce (bannière) aux utilisateurs. Vous choisissez le message, un modèle rapide, la cible (Genre : tout le monde / femmes / hommes × Abonnement : tous / premium / gratuits) et une date d'expiration. L'audience estimée et la liste des diffusions actives sont affichées ; chaque diffusion peut être prévisualisée ou arrêtée."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section Marketing */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Marketing</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Statuts Moyo Dating", "Publiez des statuts officiels (sponsorisés) visibles par les membres, avec une option de bouton d'action (lien ou numéro WhatsApp/appel). Gérez les statuts actifs et leur durée de vie."],
-                    ["Mises en avant", "Validez les demandes de mise en avant des profils Premium (24h dans les Statuts Moyo Dating, visibles par le genre opposé). Suivez les mises en avant actives (vues, likes, réponses) et retirez-les si besoin."],
-                    ["Événement Premium", "Offrez le Premium gratuitement à tous les utilisateurs pour un événement (lancement, promo, fête). Les vrais abonnés ne sont pas affectés ; à la date d'expiration choisie, le Premium est retiré automatiquement aux non-abonnés."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section 7 - Onglet Avis */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Avis</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Avis non lus", "Les avis avec une bordure rouge sont non lus. Cliquez sur 'Marquer lu' pour les acquitter et réduire le badge compteur de l'onglet."],
-                    ["Masquer / Afficher", "Masquer un avis le rend discret visuellement sans le supprimer. Utile pour les avis déjà traités."],
-                    ["Supprimer un avis", "Supprime définitivement l'avis de la base de données. Cette action est irréversible."],
-                    ["Badge compteur", "Le badge doré sur l'onglet Avis indique le nombre d'avis non lus. Il disparaît quand tous les avis sont marqués comme lus."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - Message individuel */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Envoyer un message individuel</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Bouton ✉ Message", "Dans l'onglet Utilisateurs, chaque carte possède un bouton bleu '✉ Message' dans la section Modération. Il permet d'envoyer un message privé directement à cet utilisateur."],
-                    ["Raccourcis disponibles", "La modale propose des messages pré-rédigés : expiration Premium, activation Premium, vérification en cours, profil vérifié, promotion -50%, signalement. Cliquez dessus pour pré-remplir le champ, puis modifiez si besoin."],
-                    ["Champ libre", "Vous pouvez aussi rédiger un message entièrement personnalisé dans le champ texte."],
-                    ["Réception côté utilisateur", "Le message apparaît sous forme de modal bleu 'Information Moyo Dating' à la prochaine connexion de l'utilisateur. Il doit cliquer 'OK, J'AI COMPRIS' pour continuer."],
-                    ["Cas d'usage typiques", "Informer un utilisateur que son Premium est actif, qu'il doit se reconnecter, qu'il a été signalé, ou tout autre communication officielle."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - Diffusion générale */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>📢 Diffusion générale</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Accès", "Dans l'onglet Utilisateurs, le bouton orange '📢 Diffusion générale' se trouve au-dessus de la liste des utilisateurs."],
-                    ["Fonctionnement", "Un seul message est enregistré en base. À leur prochaine connexion, tous les utilisateurs qui n'ont pas encore vu ce message reçoivent le modal bleu 'Information Moyo Dating'."],
-                    ["Raccourcis disponibles", "Maintenance, mise à jour, incident résolu, promotions, rappels de bienveillance, sécurité. Cliquez pour pré-remplir, modifiez si besoin."],
-                    ["À utiliser pour", "Annonces de maintenance, nouvelles fonctionnalités, promotions temporaires, rappels communautaires importants."],
-                    ["Important", "Chaque nouvelle diffusion écrase la précédente. Un utilisateur déjà connecté après la diffusion ne la reverra pas."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - Onglet Rendez-vous */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Rendez-vous</span>
-                </div>
-                <div style={{ background: "#f0faf4", borderRadius: 10, padding: "9px 12px", marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start", border: "1px solid rgba(26,92,58,0.2)" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  <span style={{ fontSize: "0.79rem", color: "#1a5c3a" }}>Gère les demandes de rendez-vous (téléphoniques et à l'agence) envoyées par les membres depuis leur Profil.</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Badge vert", "Le badge vert sur l'onglet Rendez-vous indique le nombre de demandes en attente à traiter (à confirmer, reporter ou annuler)."],
-                    ["Filtres", "En attente (à traiter), Confirmés (créneau fixé / reporté), Aujourd'hui (RDV du jour), Passés (effectués, absents ou dépassés), Annulés, et Archivés."],
-                    ["Confirmer", "Ouvre un sélecteur de date/heure (calendrier Moyo) pour fixer le créneau. L'utilisateur est prévenu. Dates passées et dimanches indisponibles ; horaires de 9h à 19h."],
-                    ["Autre créneau", "Propose une nouvelle date/heure quand le créneau demandé ne convient pas (statut « reporté »)."],
-                    ["Effectué / Absent", "Sur un RDV confirmé : marquez-le « effectué » s'il a eu lieu, ou « absent » si la personne ne s'est pas présentée."],
-                    ["Annuler", "Ouvre un modal Moyo pour saisir un motif d'annulation (facultatif, visible par l'utilisateur). Plus de fenêtre du navigateur."],
-                    ["Note interne", "Ouvre un modal Moyo pour ajouter une note visible uniquement par l'équipe."],
-                    ["📦 Archiver", "Sur un RDV passé ou annulé : le range dans le filtre « Archivés » pour garder la liste propre. Réversible via « Désarchiver »."],
-                    ["🗑 Supprimer", "Sur un RDV passé ou annulé : supprime définitivement le rendez-vous (action irréversible)."],
-                    ["💳 Paiement agence", "Un RDV à l'agence est payant (" + APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR") + " FCFA). Le paiement apparaît dans l'onglet Budget avec le badge « 🗓 Rendez-vous agence » et se valide là-bas — c'est un paiement DISTINCT du Premium : le valider n'active aucun abonnement."],
-                    ["Côté utilisateur", "Dans « Mes rendez-vous », le membre suit l'état de sa demande et peut supprimer lui-même de sa liste un RDV annulé ou déjà passé."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - Onglet Paiements */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Paiements</span>
-                </div>
-                <div style={{ background: "#f0faf4", borderRadius: 10, padding: "9px 12px", marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start", border: "1px solid rgba(39,174,96,0.2)" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  <span style={{ fontSize: "0.79rem", color: "#1a5c3a" }}>Vérifiez toujours le paiement sur votre téléphone MTN avant d'activer le Premium.</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Badge vert", "Le badge vert sur l'onglet Paiements (et sur le sous-onglet Demandes) indique le nombre de demandes en attente de validation."],
-                    ["📂 4 sous-onglets", "L'onglet Paiements est organisé en 4 sous-onglets : Demandes (en attente), Traitées (approuvées/refusées), Données financières et Archivage."],
-                    ["Sous-onglet Demandes", "Les paiements pas encore traités. Vérifiez la référence puis Activez ou Rejetez. Une fois traité, le paiement bascule automatiquement dans Traitées."],
-                    ["Sous-onglet Traitées", "Les demandes approuvées ✓ et refusées ✕. La corbeille y archive le paiement (il part dans Archivage)."],
-                    ["Sous-onglet Données financières", "Chiffre d'affaires total et détail par mois (paiements approuvés). Le bouton ↺ Réinitialiser fait repartir le compteur de zéro à partir d'aujourd'hui, SANS rien supprimer. Un paiement approuvé puis archivé reste compté dans le CA."],
-                    ["🧪 Exclure du CA (tests)", "Dans Données financières, dépliez un mois pour voir chaque paiement. Le bouton '🧪 Exclure du CA' retire un paiement de test du chiffre d'affaires sans le supprimer ni perdre sa trace. Réversible à tout moment via '↩ Réintégrer'."],
-                    ["📊 Tableau de bord financier", "Données financières affiche : indicateurs de conversion (demandes reçues, approuvés, refusés, taux), dernier paiement reçu, graphique d'évolution du CA par mois, répartition Premium / Cadeaux, et classement des meilleurs contributeurs."],
-                    ["⬇ Exporter", "Le bouton 'Exporter' télécharge un fichier CSV (ouvrable dans Excel) de tous les paiements de la période : date, utilisateur, type, opérateur, référence, montant, et s'il est exclu du CA."],
-                    ["Sous-onglet Archivage", "Les paiements rangés. Ici la corbeille et 'Tout supprimer' effacent DÉFINITIVEMENT (action irréversible)."],
-                    ["Silhouette cliquable", "Cliquez sur la silhouette à gauche de chaque carte pour voir le profil complet de l'utilisateur (photo, nom, âge, ville, bio, badges). L'ID est affiché grisé en bas de la carte et dans la modale."],
-                    ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN ou Airtel (ex: 7753031542)."],
-                    ["Réf. MTN reçue", "Numéro que vous entrez après avoir vérifié votre SMS ou application MTN. Doit correspondre à la réf. client."],
-                    ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert (« Activer Premium » pour un paiement Premium, « Valider le paiement RDV » pour un rendez-vous). Si elles ne correspondent pas → bouton rouge 'Rejeter & notifier'."],
-                    ["Activer Premium", "Pour un paiement Premium : active l'abonnement pour la durée configurée (31 jours par défaut) ET envoie automatiquement un message 'Votre Premium est actif, reconnectez-vous'. Le compteur démarre immédiatement."],
-                    ["🗓 Paiement Rendez-vous agence", "Un paiement de rendez-vous porte le badge vert « 🗓 Rendez-vous agence ». Le valider (bouton « Valider le paiement RDV ») marque le rendez-vous comme payé et prévient l'utilisateur avec un message dédié au rendez-vous — SANS activer aucun Premium. Le montant compte dans le chiffre d'affaires. La confirmation du créneau, elle, se fait dans l'onglet Rendez-vous."],
-                    ["Compteur ⏱", "Affiché en vert sur la carte après activation : '28j 14h restants'. Passe en orange sous 3 jours. Affiche '⏰ Expiré' en rouge à l'échéance."],
-                    ["Expiration automatique", "À l'échéance des 31 jours, le statut Premium de l'utilisateur repasse automatiquement à gratuit dès sa prochaine connexion. Le compteur affiche 'Expiré'."],
-                    ["Rejeter & notifier", "Marque la demande comme rejetée ET envoie un modal à l'utilisateur l'informant que sa preuve de paiement n'a pas pu être vérifiée."],
-                    ["Bouton ↩", "Réinitialise la vérification pour recommencer la saisie si vous avez fait une erreur de frappe."],
-                    ["Bouton archiver 🗑", "Sur une demande traitée, la corbeille range le paiement dans le sous-onglet Archivage. Le Premium de l'utilisateur N'EST PAS modifié et le chiffre d'affaires reste inchangé. Pour retirer un Premium accordé par erreur, utilisez '- Premium' dans l'onglet Utilisateurs. La suppression définitive se fait depuis Archivage."],
-                    ["Statuts des demandes", "En attente (Demandes) = à traiter. Approuvé ✓ / Rejeté ✕ (Traitées) = déjà traité. Archivé (Archivage) = rangé. Expiré = durée écoulée."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - Historique */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Onglet Historique</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Activité par admin", "Récapitulatif du nombre d'actions par admin, filtrable par période (Aujourd'hui, 7 jours, 30 jours, Tout)."],
-                    ["Détail des actions", "La liste chronologique de toutes les actions admin (la plus récente en haut)."],
-                    ["Sélectionner (multi)", "Réservé au Super Admin. Le bouton 'Sélectionner' affiche des cases à cocher : cochez plusieurs entrées (ou 'Tout sélectionner'), puis 'Supprimer (N)' les efface en une seule fois. Idéal quand il y a beaucoup d'entrées. 'Annuler' quitte le mode."],
-                    ["Corbeille (une par une)", "Hors mode sélection, chaque ligne garde sa corbeille pour supprimer une seule action."],
-                    ["Tout effacer", "Vide tout l'historique d'un coup. Action définitive et irréversible."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - PIN Admin */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Accès Admin - PIN de sécurité</span>
-                </div>
-                <div style={{ background: "#f9f0ff", borderRadius: 10, padding: "9px 12px", marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start", border: "1px solid rgba(142,68,173,0.2)" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  <span style={{ fontSize: "0.79rem", color: "#5b2c6f" }}>Ne communiquez jamais votre PIN à un tiers. Il est personnel et confidentiel.</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Accès au panel", "À chaque ouverture du panel Admin, une modale demande votre PIN à 4 chiffres. Sans PIN correct, l'accès est refusé."],
-                    ["Création du PIN", "Lors de l'attribution du statut admin à un utilisateur (bouton '+ Admin'), un PIN à 4 chiffres est demandé. Ce PIN est communiqué à la personne par un canal sécurisé (SMS, WhatsApp)."],
-                    ["Bouton 🔑 PIN", "Visible sur les cartes des admins existants (sauf la vôtre). Permet de réinitialiser le PIN d'un admin à tout moment."],
-                    ["Retrait du statut admin", "Le bouton '- Admin' retire les droits admin ET supprime le PIN de la personne. Elle ne peut plus accéder au panel."],
-                    ["PIN oublié", "Seul l'administrateur principal peut réinitialiser un PIN via le bouton 🔑 PIN dans l'onglet Utilisateurs. Pour votre propre PIN, modifiez-le directement dans Supabase."],
-                    ["Sécurité renforcée", "Le PIN est vérifié en temps réel dans Supabase à chaque tentative d'accès. Un mauvais PIN affiche un message d'erreur et vide le champ."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section 8 - Badges et notifications admin */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Badges et alertes admin</span>
-                </div>
-                <div style={{ background: G.creme, borderRadius: 10, padding: "12px 14px", fontSize: "0.82rem", color: G.brun, lineHeight: 1.7 }}>
-                  Le bouton <strong>⚙️ Admin</strong> dans le header affiche un badge blanc avec un nombre rouge dès qu'il y a des actions en attente. Ce badge additionne les signalements en attente et les avis non lus. Il est visible depuis n'importe quel onglet de l'application et se met à jour automatiquement toutes les quelques secondes - même si le dashboard admin n'est pas ouvert.
-                </div>
-              </div>
-
-              {/* Section 10 - Bonnes pratiques */}
-              <div style={{ background: `linear-gradient(135deg,${G.vert}14,${G.vert}06)`, borderRadius: 14, padding: "14px 16px", borderLeft: `3px solid ${G.vert}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.vert }}>Bonnes pratiques admin</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {[
-                    "Rester neutre en toutes circonstances.",
-                    "Ne jamais utiliser les droits admin pour des raisons personnelles.",
-                    "Vérifier les faits avant d'appliquer une sanction.",
-                    "Protéger les données des utilisateurs - elles sont confidentielles.",
-                    "Ne jamais partager d'informations privées avec des tiers.",
-                    "Privilégier l'avertissement avant le bannissement quand c'est possible.",
-                  ].map((rule, i) => (
-                    <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <span style={{ fontSize: "0.82rem", color: G.brun, lineHeight: 1.6 }}>{rule}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - Événement Premium */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>🎉 Événement Premium</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Activation", "Le bouton '🎉 Événement Premium - Offrir à tous' passe tous les utilisateurs en mode Premium gratuitement. À utiliser uniquement pour des événements spéciaux (lancement, promotion, fête)."],
-                    ["Date d'expiration obligatoire", "Lors de l'activation, vous devez choisir une date et heure d'expiration. Passé cette date, le Premium est retiré automatiquement aux non-abonnés."],
-                    ["Abonnés réels protégés", "Les utilisateurs ayant payé un abonnement (premium_until valide) conservent leur Premium même après l'expiration de l'événement. Seuls les bénéficiaires gratuits de l'événement sont concernés."],
-                    ["Désactivation manuelle", "Vous pouvez aussi désactiver l'événement manuellement à tout moment avec le bouton '⏹ Désactiver'. Les abonnés réels ne sont jamais affectés."],
-                    ["Vérification automatique", "Le système vérifie toutes les minutes si la date d'expiration est dépassée et désactive l'événement sans intervention de votre part."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - Diffusion générale mise à jour */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>📢 Diffusion - Date d'expiration</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Date d'expiration obligatoire", "Depuis la mise à jour, chaque message de diffusion doit avoir une date d'expiration. Le bouton 'Envoyer' est désactivé tant que vous n'avez pas choisi une date."],
-                    ["Expiration automatique", "Passé la date choisie, le message ne s'affiche plus pour personne - même pour les utilisateurs qui ne l'ont pas encore vu."],
-                    ["Nouveaux inscrits protégés", "Un utilisateur qui s'inscrit après l'envoi d'un broadcast ne reçoit pas les messages antérieurs à son inscription."],
-                    ["Corriger un broadcast actif", "Pour stopper un message déjà envoyé, allez dans Supabase → Table Editor → broadcasts → modifiez le champ expires_at avec une date passée."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - Règles de la plateforme */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>⚙️ Menu Burger - Configuration complète</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["Accès", "Le bouton burger ☰ se trouve à droite du bouton 'Aide' dans la barre du haut. ⚠️ Il est désormais réservé au Super Admin : les admins simples ne le voient pas."],
-                    ["Règles - Switch même genre", "Vert = bloqué (Homme→Homme et Femme→Femme interdits). Rouge = ouvert (tous peuvent liker tous). Sauvegarde instantanée."],
-                    ["Textes des modals", "6 modals personnalisables : message même genre Homme/Femme, titre et sous-titre du match, message Premium, message likes épuisés. Cliquer sur un modal pour éditer."],
-                    ["Limites & Quotas", "Likes gratuits/jour, messages gratuits/match, taille max des photos, message de bienvenue après match. Modifier sans redéployer."],
-                    ["Prix & Abonnement", "Prix Premium en FCFA et durée en jours. ⚠️ Le prix modifie les boutons de paiement. La durée s'applique aux nouveaux abonnements uniquement."],
-                    ["Fonctionnalités on/off", "Activer/désactiver réellement les Statuts, le Cadeau Premium et l'Assistant IA dans toute l'app. Switch vert = actif, rouge = désactivé. La modification prend effet au prochain chargement de l'app."],
-                    ["🔔 Notifications admin", "Pour chaque admin, choisir les notifications push qu'il reçoit : Signalements, Matchs, Paiements. Ex : activer 'Paiements' pour la personne qui gère les paiements → elle est prévenue à chaque nouveau paiement, même app fermée."],
-                    ["💳 Moyens de paiement", "Couper rapidement un moyen de paiement en cas de problème (MTN, Airtel, Visa/Mastercard). Une fois coupé, il apparaît grisé et 'Temporairement indisponible' partout (achat, cadeau, diaspora)."],
-                    ["🔴 Mode maintenance", "Active un écran de maintenance pour tous les utilisateurs. Seuls les admins (via ?admin=1 ou session admin active) peuvent toujours accéder au site. Personnaliser le message depuis le burger."],
-                    ["Gestion des admins", "Section visible uniquement par le Super Admin. Permet de nommer Admin (accès sans Paiements), Super Admin (accès total) ou retirer les droits. Entrez l'email de l'utilisateur dans le modal de confirmation."],
-                    ["Niveaux d'accès", "Super Admin : accès total, y compris l'onglet Paiements ET le bouton Configuration ☰. Admin simple : accès à tout sauf Paiements et Configuration."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section - Nouveautés */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>✨ Nouveautés récentes</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {([
-                    ["📝 Notes internes", "Sur chaque fiche utilisateur et chaque signalement, un bloc de notes visibles uniquement par les admins. Cliquez sur '📝 Notes internes' pour le déplier. Idéal pour se coordonner (ex : 'je m'en occupe, ne pas traiter en double'). N'importe quel admin peut supprimer une note."],
-                    ["🗂 Archives repliées", "Dans Signalements → Archivés, chaque carte est repliée en une ligne compacte. Cliquez dessus pour voir le détail, puis 'Replier' pour refermer. Évite l'encombrement."],
-                    ["🔔 Notifications utilisateur", "Les utilisateurs peuvent activer/réactiver leurs notifications depuis leur Profil (switch Notifications), même s'ils avaient refusé au départ."],
-                    ["🎁💝 Offrir / Demander Premium", "Dans une conversation : un membre Premium peut OFFRIR Premium à l'autre (bouton 🎁 doré). Un non-Premium peut DEMANDER à recevoir Premium (bouton 💝 rouge, max 2 fois/mois). La personne reçoit un message avec un bouton pour offrir en un clic."],
-                    ["💳 Paiements réorganisés", "L'onglet Paiements est maintenant en 4 sous-onglets : Demandes, Traitées, Données financières (CA par mois, réinitialisable sans rien effacer) et Archivage (suppression définitive). Archiver un paiement ne retire plus le Premium."],
-                    ["🗂 Historique : suppression multiple", "Dans Historique, le bouton 'Sélectionner' permet de cocher plusieurs actions et de les supprimer en une seule fois (Super Admin), au lieu d'une par une."],
-                    ["🎚 Interrupteurs de fonctionnalités", "Dans Configuration ⚙️ → Fonctionnalités, les switches Statuts, Cadeau Premium et Assistant IA activent/désactivent vraiment ces fonctions (effet au prochain chargement de l'app)."],
-                  ] as [string, string][]).map(([label, desc]) => (
-                    <div key={label} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                      <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Signature */}
-              <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
-                <div style={{ fontSize: "0.7rem", color: "#bbb", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>Conçu et développé par</div>
-                <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, letterSpacing: "0.01em" }}>Roméo GUEBO</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: G.rouge }}>CEO Moyo</span>
-                  {[
-                    "Chargé de communication et marketing",
-                    "Responsable marketing et développement commercial",
-                    "Chef de projet digital",
-                  ].map((role, i) => (
-                    <span key={i} style={{ fontSize: "0.71rem", color: "#888", lineHeight: 1.5 }}>· {role}</span>
-                  ))}
-                </div>
-                <a href="mailto:romeoguebo97@gmail.com" style={{ marginTop: 4, fontSize: "0.72rem", color: G.rouge, textDecoration: "none", fontWeight: 600, opacity: 0.8 }}>
-                  romeoguebo97@gmail.com
-                </a>
-                <div style={{ marginTop: 4, fontSize: "0.75rem", fontWeight: 800, color: G.brun, letterSpacing: "0.05em" }}>
-                  Moyo<span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
+      {showHelp && <AdminHelpModal onClose={() => setShowHelp(false)} />}
 
       {/* Header */}
       <div data-admtabs="" style={{ background: G.blanc, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
