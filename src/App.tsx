@@ -4914,7 +4914,7 @@ function AdminDesktopPage() {
           </div>
         </div>
       )}
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
+      <div style={{ maxWidth: 1760, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
         <div className="adm-wrap">
           <AdminPinGate auth={auth} onBack={() => window.close()} onBadgeCount={() => {}} />
         </div>
