@@ -2,40 +2,91 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="google" content="notranslate">
+    <meta name="google" content="notranslate" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- SEO -->
+    <title>Moyo Dating | Rencontrez des célibataires congolais au Congo et dans la diaspora</title>
+
+    <meta
+      name="description"
+      content="Rencontrez des célibataires congolais sérieux au Congo et dans la diaspora avec Moyo Dating. Trouvez une relation sincère, durable et sécurisée à Brazzaville, Pointe-Noire, Dolisie et partout dans le monde."
+    />
+
+    <meta
+      name="keywords"
+      content="Moyo Dating, rencontre Congo, site de rencontre Congo, célibataires congolais, rencontres congolaises, Brazzaville, Pointe-Noire, Dolisie, diaspora congolaise, rencontre sérieuse, amour Congo"
+    />
+
+    <meta name="author" content="Groupe Moyo-Congo" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="googlebot" content="index, follow" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://dating.moyo-congo.com/" />
+
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
-    <title>Moyo Dating</title>
-
-    <meta name="description" content="Moyo Dating connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora." />
-
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://dating.moyo-congo.com" />
-    <meta property="og:title" content="Moyo Dating - Rencontres congolaises" />
-    <meta property="og:description" content="Moyo Dating connecte les Congolais à la recherche d'une relation sincère et durable. Brazzaville, Pointe-Noire, Dolisie et toute la diaspora." />
+    <meta property="og:site_name" content="Moyo Dating" />
+    <meta property="og:url" content="https://dating.moyo-congo.com/" />
+    <meta property="og:title" content="Moyo Dating | Le premier site de rencontres congolais" />
+    <meta
+      property="og:description"
+      content="Rencontrez des célibataires congolais sérieux au Congo et dans la diaspora. Trouvez une relation sincère, durable et sécurisée avec Moyo Dating."
+    />
     <meta property="og:image" content="https://dating.moyo-congo.com/og-image.jpg" />
+    <meta property="og:image:secure_url" content="https://dating.moyo-congo.com/og-image.jpg" />
+    <meta property="og:image:alt" content="Moyo Dating - Rencontres congolaises sérieuses" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="fr_FR" />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Moyo Dating - Rencontres congolaises" />
-    <meta name="twitter:description" content="Moyo Dating connecte les Congolais à la recherche d'une relation sincère et durable." />
+    <meta name="twitter:title" content="Moyo Dating | Le premier site de rencontres congolais" />
+    <meta
+      name="twitter:description"
+      content="Rencontrez des célibataires congolais sérieux au Congo et dans la diaspora avec Moyo Dating."
+    />
     <meta name="twitter:image" content="https://dating.moyo-congo.com/og-image.jpg" />
+    <meta name="twitter:image:alt" content="Moyo Dating - Rencontres congolaises sérieuses" />
 
     <!-- PWA -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#FFFFFF" />
 
-    <meta name="theme-color" content="#FFFFFF">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Moyo Dating">
-    <link rel="apple-touch-icon" href="/favicon.png">
+    <!-- Apple / iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Moyo Dating" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Schema.org -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Moyo Dating",
+        "url": "https://dating.moyo-congo.com/",
+        "description": "Moyo Dating permet aux célibataires congolais au Congo et dans la diaspora de faire des rencontres sérieuses, sincères et sécurisées.",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Groupe Moyo-Congo",
+          "url": "https://moyo-congo.com/"
+        }
+      }
+    </script>
 
     <style>
       * {
@@ -87,21 +138,28 @@
     <script>
       var lastTap = 0;
 
-      document.addEventListener('touchstart', function (e) {
-        if (e.touches.length > 1) e.preventDefault();
-      }, { passive: false });
+      document.addEventListener(
+        'touchstart',
+        function (e) {
+          if (e.touches.length > 1) e.preventDefault();
+        },
+        { passive: false }
+      );
 
-      document.addEventListener('touchend', function (e) {
-        var now = Date.now();
-        if (now - lastTap < 300) e.preventDefault();
-        lastTap = now;
-      }, { passive: false });
+      document.addEventListener(
+        'touchend',
+        function (e) {
+          var now = Date.now();
+          if (now - lastTap < 300) e.preventDefault();
+          lastTap = now;
+        },
+        { passive: false }
+      );
 
       (function () {
-        var isIosPwa = (
+        var isIosPwa =
           window.navigator.standalone === true &&
-          /iphone|ipad|ipod/i.test(window.navigator.userAgent)
-        );
+          /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 
         if (!isIosPwa) return;
 
@@ -111,11 +169,7 @@
 
           var tag = el.tagName.toLowerCase();
 
-          if (
-            tag !== 'input' &&
-            tag !== 'textarea' &&
-            tag !== 'select'
-          ) return;
+          if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return;
 
           setTimeout(function () {
             if (el.scrollIntoView) {
@@ -147,10 +201,7 @@
 
             var tag = activeEl.tagName.toLowerCase();
 
-            if (
-              tag !== 'input' &&
-              tag !== 'textarea'
-            ) return;
+            if (tag !== 'input' && tag !== 'textarea') return;
 
             setTimeout(function () {
               activeEl.scrollIntoView({
@@ -170,6 +221,5 @@
         });
       }
     </script>
-
   </body>
 </html>
