@@ -210,6 +210,9 @@ let SOCIAL_FACEBOOK = "https://facebook.com/MoyoCongoOfficiel";
 let SOCIAL_INSTAGRAM = "https://www.instagram.com/moyo_congo";
 let SOCIAL_TIKTOK = "https://www.tiktok.com/@moyo_congo";
 let SOCIAL_YOUTUBE = "https://www.youtube.com/@Moyo-congo";
+// Liens de téléchargement (vide = affiche les instructions d'installation PWA à la place)
+let STORE_LINK_ANDROID = "";
+let STORE_LINK_IOS = "";
 // Page d'accueil (landing)
 let LANDING_MEMBERS = "12 000+ membres";
 // Statistiques "vitrine" de la modale Premium — saisies à la main dans l'admin (vide = compte automatique réel)
@@ -247,7 +250,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -277,6 +280,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["social_instagram"] !== undefined) SOCIAL_INSTAGRAM = map["social_instagram"];
   if (map["social_tiktok"] !== undefined) SOCIAL_TIKTOK = map["social_tiktok"];
   if (map["social_youtube"] !== undefined) SOCIAL_YOUTUBE = map["social_youtube"];
+  if (map["store_link_android"] !== undefined) STORE_LINK_ANDROID = map["store_link_android"];
+  if (map["store_link_ios"] !== undefined) STORE_LINK_IOS = map["store_link_ios"];
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
   if (map["premium_stat_couples"] !== undefined) PREMIUM_STAT_COUPLES = map["premium_stat_couples"];
   if (map["premium_stat_members"] !== undefined) PREMIUM_STAT_MEMBERS = map["premium_stat_members"];
@@ -1100,6 +1105,26 @@ const getStatusSignedFallbackUrl = async (token: string, url?: string | null): P
 //   • Un flag _isRefreshing évite les boucles infinies
 //   • onAuthFailure est injecté par App au montage via sb.setAuthFailureHandler()
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Upload avec suivi de progression réel (fetch ne le permet pas → XMLHttpRequest)
+// Utilisé pour animer l'anneau de progression lors de l'envoi d'une photo.
+// ─────────────────────────────────────────────────────────────────────────────
+function uploadFileWithProgress(url: string, token: string, file: File, onProgress: (pct: number) => void): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      xhr.setRequestHeader("Content-Type", file.type || "image/jpeg");
+      xhr.setRequestHeader("x-upsert", "true");
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+      xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { onProgress(100); resolve(true); } else resolve(false); };
+      xhr.onerror = () => resolve(false);
+      xhr.send(file);
+    } catch { resolve(false); }
+  });
+}
+
 const sb = {
   // ── Callback injecté par App pour déclencher la déconnexion propre ──
   _onAuthFailure: null as (() => void) | null,
@@ -1350,6 +1375,15 @@ const sb = {
       if (!r.ok) return null;
       return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
     } catch { return null; }
+  },
+
+  // Identique à uploadPhoto, mais rapporte la progression réelle (0-100) pour animer l'anneau de progression.
+  async uploadPhotoWithProgress(token: string, userId: string, file: File, onProgress: (pct: number) => void): Promise<string | null> {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${userId}/avatar.${ext}`;
+    const ok = await uploadFileWithProgress(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, token, file, onProgress);
+    if (!ok) return null;
+    return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
   },
 
   async markMessagesRead(token: string, matchId: string, userId: string) {
@@ -1730,6 +1764,50 @@ const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, pr
   const boxShadow = border && premium ? `0 0 0 1px ${G.or}44` : "none";
   return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (<svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>)}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>;
 });
+
+// ── Anneau de progression circulaire animé autour d'une photo en cours d'envoi ──
+// Reproduit le style "progress-ring" : cercle SVG qui se remplit en fonction de %,
+// avec badge de pourcentage en overlay. Utilisé pour l'inscription et le changement
+// de photo de profil, afin de donner un retour visuel clair (utile en connexion lente).
+function PhotoUploadRing({ preview, progress, uploading, size = 116, onClick, ringColor }: {
+  preview?: string | null; progress: number; uploading: boolean; size?: number; onClick?: () => void; ringColor?: string;
+}) {
+  const stroke = 4;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - Math.min(100, Math.max(0, progress)) / 100);
+  const color = ringColor || G.rouge;
+  return (
+    <div style={{ position: "relative", width: size, height: size, margin: "0 auto" }} onClick={onClick}>
+      <svg width={size} height={size} style={{ position: "absolute", top: 0, left: 0, transform: "rotate(-90deg)" }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={G.gris} strokeWidth={stroke} />
+        {uploading && (
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={offset} style={{ transition: "stroke-dashoffset 0.25s ease" }} />
+        )}
+      </svg>
+      <div style={{ position: "absolute", top: stroke + 3, left: stroke + 3, width: size - (stroke + 3) * 2, height: size - (stroke + 3) * 2, borderRadius: "50%", overflow: "hidden", background: G.gris, cursor: onClick ? "pointer" : "default", opacity: uploading ? 0.55 : 1, transition: "opacity 0.2s" }}>
+        {preview ? (
+          <img src={preview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg,${color},${G.rougeDark})` }}>
+            <svg width={size * 0.32} height={size * 0.32} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+            </svg>
+          </div>
+        )}
+      </div>
+      {uploading && (
+        <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", background: color, color: "#fff", borderRadius: 50, padding: "3px 11px", fontSize: "0.72rem", fontWeight: 800, boxShadow: "0 3px 10px rgba(0,0,0,0.25)", whiteSpace: "nowrap" }}>
+          {progress}%
+        </div>
+      )}
+      {!uploading && onClick && (
+        <div style={{ position: "absolute", bottom: 0, right: 0, width: size * 0.24, height: size * 0.24, borderRadius: "50%", background: G.blanc, border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.14, color, fontWeight: 900, lineHeight: 1, pointerEvents: "none" }}>+</div>
+      )}
+    </div>
+  );
+}
 
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel">("offer");
@@ -2192,6 +2270,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
   // Bouton "Google Play" → modale "Installe l'app Moyo Dating !" puis installation Android
   const installGooglePlay = () => {
+    if (STORE_LINK_ANDROID) { window.open(STORE_LINK_ANDROID, "_blank", "noopener,noreferrer"); return; }
     const isInStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
     if (isInStandalone) { setInstallModal("done"); return; }
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -2201,6 +2280,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
   // Bouton "App Store" → instructions iPhone (Safari)
   const installAppStore = () => {
+    if (STORE_LINK_IOS) { window.open(STORE_LINK_IOS, "_blank", "noopener,noreferrer"); return; }
     const isInStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
     if (isInStandalone) { setInstallModal("done"); return; }
     setInstallModal("ios");
@@ -2311,7 +2391,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "shield", titre: "Responsable du traitement", desc: `Romeo GUEBO - contact : ${CONTACT_EMAIL}` },
       { icon: "lock2", titre: "Données collectées", desc: "Nom, e-mail, photos, messages, données de connexion et abonnement. Utilisées uniquement pour le fonctionnement de Moyo Dating." },
       { icon: "lock2", titre: "Conservation & sécurité", desc: "Données conservées le temps nécessaire au service. Aucune revente. Prestataires techniques liés à l'hébergement uniquement." },
-      { icon: "verified", titre: "Vos droits (RGPD)", desc: `Accès, modification et suppression de vos données sur demande à ${CONTACT_EMAIL}` },
+      { icon: "verified", titre: "Vos droits (RGPD)", desc: `Accès et modification de vos données sur demande à ${CONTACT_EMAIL}.` },
+      { icon: "trash", titre: "Suppression de compte", desc: "Vous pouvez supprimer votre compte et vos données à tout moment, vous-même, sans passer par l'application : connectez-vous sur dating.moyo-congo.com → Profil → Supprimer mon compte. Cette action est définitive et irréversible." },
       { icon: "chat", titre: "CGU - Utilisation", desc: "Moyo Dating est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
       { icon: "alert", titre: "Contenus interdits", desc: "Faux profils, harcèlement, contenus illégaux, tentatives d'arnaque ou usurpation d'identité sont strictement interdits." },
       { icon: "shield", titre: "Sanctions & poursuites", desc: "Moyo Dating se réserve le droit de porter plainte et d'engager des poursuites judiciaires contre toute personne enfreignant les présentes conditions d'utilisation." },
@@ -2556,6 +2637,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                                   star3: <svg width="14" height="14" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
                                   thumbup: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>,
                                   couple: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+                                  trash: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
                                 };
                                 return menuIcons[item.icon] || <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
                               })()}
@@ -3529,6 +3611,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "", profession: "", hobbies: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -3692,15 +3775,12 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     if (!photoFile) { setErrorMsg("Une photo est obligatoire pour continuer."); return; }
     if (!tempToken || !tempUserId) { setErrorMsg("Session expir\u00e9e. Recommencez l'inscription."); return; }
     setUploadingPhoto(true);
+    setUploadProgress(0);
     try {
       const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${tempUserId}/avatar.${ext}`;
-      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${tempToken}`, "Content-Type": photoFile.type || "image/jpeg", "x-upsert": "true" },
-        body: photoFile,
-      });
-      if (uploadRes.ok) {
+      const ok = await uploadFileWithProgress(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, tempToken, photoFile, setUploadProgress);
+      if (ok) {
         setPhotoUrl(`${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`);
       }
     } catch {}
@@ -3842,20 +3922,8 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             reader.onload = () => setCropSrcSignup(reader.result as string);
             reader.readAsDataURL(file);
           }} style={{ display: "none" }} />
-          <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 16px" }} onClick={() => fileRef.current?.click()}>
-            {photoPreview ? (
-              <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: `3px solid ${G.rouge}`, cursor: "pointer" }}>
-                <img src={photoPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-              </div>
-            ) : (
-              <div style={{ width: 80, height: 80, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 18px rgba(192,57,43,0.4)", cursor: "pointer" }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                  <circle cx="12" cy="13" r="4"/>
-                </svg>
-              </div>
-            )}
-            <div style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", color: G.rouge, fontWeight: 900, lineHeight: 1, pointerEvents: "none" }}>+</div>
+          <div style={{ marginBottom: 16 }} onClick={() => !uploadingPhoto && fileRef.current?.click()}>
+            <PhotoUploadRing preview={photoPreview} progress={uploadProgress} uploading={uploadingPhoto} size={116} onClick={() => !uploadingPhoto && fileRef.current?.click()} />
           </div>
           {photoPreview
             ? <div onClick={() => fileRef.current?.click()} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 600 }}>Changer la photo</div>
@@ -4255,12 +4323,14 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
     } else { setModal("unavailable"); }
   };
   const onGoogle = () => {
+    if (STORE_LINK_ANDROID) { window.open(STORE_LINK_ANDROID, "_blank", "noopener,noreferrer"); return; }
     const standalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
     if (standalone) { setModal("done"); return; }
     if (/iphone|ipad|ipod/i.test(navigator.userAgent)) { setModal("ios"); return; }
     setModal("android");
   };
   const onApple = () => {
+    if (STORE_LINK_IOS) { window.open(STORE_LINK_IOS, "_blank", "noopener,noreferrer"); return; }
     const standalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
     if (standalone) { setModal("done"); return; }
     setModal("ios");
@@ -4658,6 +4728,9 @@ function AdminDesktopPage() {
             </OffCanvasSection>}
             {configTab === "contenus" && <OffCanvasSection title="Réseaux sociaux">
               <SiteInfoConfig auth={auth!} group="socials" />
+            </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Liens de téléchargement">
+              <SiteInfoConfig auth={auth!} group="app" />
             </OffCanvasSection>}
             {configTab === "contenus" && <OffCanvasSection title="Page d'accueil">
               <SiteInfoConfig auth={auth!} group="landing" />
@@ -5222,12 +5295,16 @@ function AdminPinConfig({ auth }: { auth: Auth }) {
   );
 }
 
-function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "socials" | "landing" }) {
+function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "socials" | "landing" | "app" }) {
   const fields: Record<string, [string, string][]> = {
     contacts: [
       ["contact_email", "Email de contact"],
       ["contact_whatsapp", "Numéro WhatsApp (chiffres only, ex: 242065132012)"],
       ["contact_address", "Adresse postale"],
+    ],
+    app: [
+      ["store_link_android", "Lien Google Play (vide = affiche les instructions d'installation PWA)"],
+      ["store_link_ios", "Lien App Store (vide = affiche les instructions d'installation PWA)"],
     ],
     socials: [
       ["social_facebook", "Lien Facebook (vide = masqué)"],
@@ -5254,6 +5331,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     landing_members_count: LANDING_MEMBERS, landing_title_start: LANDING_TITLE_START, landing_title_highlight: LANDING_TITLE_HIGHLIGHT, landing_title_end: LANDING_TITLE_END, landing_slogan: LANDING_SLOGAN,
     premium_stat_couples: PREMIUM_STAT_COUPLES, premium_stat_members: PREMIUM_STAT_MEMBERS,
     landing_stat_members: LANDING_STAT_MEMBERS, landing_stat_couples: LANDING_STAT_COUPLES, landing_stat_cities: LANDING_STAT_CITIES,
+    store_link_android: STORE_LINK_ANDROID, store_link_ios: STORE_LINK_IOS,
   };
   const list = fields[group];
   const [vals, setVals] = React.useState<Record<string, string>>(() => { const o: Record<string, string> = {}; list.forEach(([k]) => { o[k] = defaults[k]; }); return o; });
@@ -5292,6 +5370,8 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     if (key === "landing_stat_members") LANDING_STAT_MEMBERS = value;
     if (key === "landing_stat_couples") LANDING_STAT_COUPLES = value;
     if (key === "landing_stat_cities") LANDING_STAT_CITIES = value;
+    if (key === "store_link_android") STORE_LINK_ANDROID = value;
+    if (key === "store_link_ios") STORE_LINK_IOS = value;
   };
   const doSave = async (key: string) => {
     setConfirmKey(null);
@@ -5399,6 +5479,9 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
       </OffCanvasSection>
       <OffCanvasSection title="Réseaux sociaux">
         <SiteInfoConfig auth={auth} group="socials" />
+      </OffCanvasSection>
+      <OffCanvasSection title="Liens de téléchargement">
+        <SiteInfoConfig auth={auth} group="app" />
       </OffCanvasSection>
       <OffCanvasSection title="Page d'accueil">
         <SiteInfoConfig auth={auth} group="landing" />
@@ -6998,7 +7081,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
               <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#fff" }}>Passer à Moyo Dating Premium</span>
             </div>
             <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.78)", lineHeight: 1.5, marginBottom: 10 }}>Messages illimités · Likes illimités · Voir qui vous like</div>
-            <div style={{ fontSize: "1rem", fontWeight: 900, color: G.or }}>{PREMIUM_PRICE_FCFA.toLocaleString()} <span style={{ fontSize: "0.62rem", fontWeight: 600, opacity: 0.85 }}>FCFA/mois</span></div>
+            <div style={{ fontSize: "1rem", fontWeight: 900, color: G.or }}>À partir de {Math.min(PREMIUM_PRICE_WEEK_FCFA, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_2MONTH_FCFA).toLocaleString()} <span style={{ fontSize: "0.62rem", fontWeight: 600, opacity: 0.85 }}>FCFA</span></div>
           </div>
         )}
 
@@ -7236,7 +7319,12 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
     try {
       const res = await sb.query<LikeRecord>(auth.token, "likes", `?to_user=eq.${auth.userId}&select=from_user,created_at&order=created_at.desc`);
       const total = Array.isArray(res) ? res.length : 0;
-      setCount(total);
+      // Le compteur ne doit refléter que les likes EN ATTENTE (ni déjà matchés, ni dismissed),
+      // sinon il gonfle avec des likes qui ont déjà donné lieu à un match.
+      const pendingCount = Array.isArray(res)
+        ? res.filter(r => !matchedUserIds.has(r.from_user) && !dIds.has(r.from_user)).length
+        : 0;
+      setCount(pendingCount);
       if (isPrem && total > 0) {
         const ids = res.map(r => r.from_user).filter(Boolean).join(",");
         if (ids) {
@@ -12002,6 +12090,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [showDelete, setShowDelete] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -12172,9 +12261,10 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   const handleCropConfirm = async (blob: Blob) => {
     setCropSrc(null);
     setUploadLoading(true);
+    setUploadProgress(0);
     const ext = pendingFile?.name.split(".").pop()?.toLowerCase() || "jpg";
     const croppedFile = new File([blob], `avatar.${ext}`, { type: "image/jpeg" });
-    const url = await sb.uploadPhoto(auth.token, auth.userId, croppedFile);
+    const url = await sb.uploadPhotoWithProgress(auth.token, auth.userId, croppedFile, setUploadProgress);
     if (url) { await sb.update(auth.token, "profiles", auth.userId, { photo_url: url }); setProfile(p => p ? { ...p, photo_url: url } : null); setToast({ msg: "Photo mise à jour !" }); }
     else setErrorMsg("Erreur lors du téléchargement de la photo. Réessaie.");
     setUploadLoading(false);
@@ -12403,11 +12493,15 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
         {/* Photo ronde */}
         <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
-          <div style={{ width: 120, height: 120, borderRadius: "50%", background: profile?.is_premium ? `conic-gradient(${G.or} 0% 100%, ${G.gris} 100%)` : `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: profile?.is_premium ? `0 8px 32px rgba(212,168,67,0.35)` : `0 8px 32px rgba(192,57,43,0.25)` }}>
-            <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
-              <Avatar url={profile?.photo_url} gender={profile?.gender} size={108} premium={profile?.is_premium} />
+          {uploadLoading ? (
+            <PhotoUploadRing preview={profile?.photo_url} progress={uploadProgress} uploading={true} size={120} ringColor={profile?.is_premium ? G.or : G.rouge} />
+          ) : (
+            <div style={{ width: 120, height: 120, borderRadius: "50%", background: profile?.is_premium ? `conic-gradient(${G.or} 0% 100%, ${G.gris} 100%)` : `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: profile?.is_premium ? `0 8px 32px rgba(212,168,67,0.35)` : `0 8px 32px rgba(192,57,43,0.25)` }}>
+              <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
+                <Avatar url={profile?.photo_url} gender={profile?.gender} size={108} premium={profile?.is_premium} />
+              </div>
             </div>
-          </div>
+          )}
           {profile?.is_premium ? (
             <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>Premium</div>
           ) : (
@@ -12680,7 +12774,10 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
                   {isExpired ? "Réabonnez-vous pour retrouver tous vos avantages" : "Messages illimités · Likes illimités · Voir qui vous like"}
                 </div>
               </div>
-              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or, marginLeft: 12, flexShrink: 0 }}>{PREMIUM_PRICE_FCFA.toLocaleString()}<br/><span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA/mois</span></div>
+              <div style={{ marginLeft: 12, flexShrink: 0, textAlign: "right" }}>
+                <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>À partir de</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or }}>{Math.min(PREMIUM_PRICE_WEEK_FCFA, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_2MONTH_FCFA).toLocaleString()} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA</span></div>
+              </div>
             </div>
           );
         })()}
@@ -15151,13 +15248,19 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       });
       const matchData = await r.json().catch(() => null);
       const matchId = Array.isArray(matchData) ? matchData[0]?.id : matchData?.id;
-      if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, createSelected1.name, createSelected2.name);
+      // Ne jamais afficher un succès si l'insertion a réellement échoué
+      // (ex: policy RLS qui bloque l'admin car user1/user2 ≠ son propre auth.uid()).
+      if (!r.ok || !matchId) {
+        const errMsg = (matchData as any)?.message || (matchData as any)?.hint || (matchData as any)?.code || `HTTP ${r.status}`;
+        throw new Error(errMsg);
+      }
+      await sendMatchWelcomeMessage(auth.token, matchId, createSelected1.name, createSelected2.name);
       showToast(`✅ Match créé entre ${createSelected1.name} et ${createSelected2.name} !`, "success");
       logAdminAction(auth.token, auth.userId, auth.name, `Match créé manuellement entre ${createSelected1.name} et ${createSelected2.name}`, createSelected1.id);
       setShowCreateMatch(false);
       setCreateSelected1(null); setCreateSelected2(null);
       setCreateSearch1(""); setCreateSearch2("");
-    } catch { showToast("❌ Erreur lors de la création", "error"); }
+    } catch (e: any) { showToast(`❌ Erreur lors de la création : ${e?.message || "inconnue"}`, "error"); }
     setCreateLoading(false);
   };
   const handleCreateMatch = async () => {
@@ -22104,6 +22207,7 @@ export default function App() {
   const isUnmatchingRef = useRef(false);
   // Ref pour permettre à LikesPage de déclencher un refresh des badges
   const refreshBadgesRef = useRef<(() => void) | null>(null);
+  const checkProposalsRef = useRef<(() => void) | null>(null);
 
   // ── SESSION v2 : callback injecté dans sb pour déconnexion propre sur 401 irrécupérable ──
   // Défini ici (pas dans useEffect) pour être stable dès le premier render
@@ -22833,6 +22937,7 @@ export default function App() {
       } catch {}
     };
     checkProposals();
+    checkProposalsRef.current = checkProposals;
 
     const fallbackInterval = setInterval(() => {
       if (isUnmatchingRef.current) return;
@@ -23154,6 +23259,9 @@ export default function App() {
                     });
                   }
                   setPendingProposal(null);
+                  // Vérifier immédiatement s'il y a une autre proposition en attente
+                  // (sinon il faut attendre jusqu'à POLL_BADGES_MS avant qu'elle n'apparaisse).
+                  checkProposalsRef.current?.();
                 } catch {}
                 setProposalResponding(false);
               }}
@@ -23174,6 +23282,8 @@ export default function App() {
                   });
                   logAdminAction(auth!.token, auth!.userId, "Système", `Proposition refusée par ${auth!.name} (proposé : ${pendingProposal.proposerName})`, auth!.userId);
                   setPendingProposal(null);
+                  // Vérifier immédiatement s'il y a une autre proposition en attente
+                  checkProposalsRef.current?.();
                 } catch {}
                 setProposalResponding(false);
               }}
