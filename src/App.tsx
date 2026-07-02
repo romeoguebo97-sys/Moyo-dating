@@ -1106,23 +1106,17 @@ const getStatusSignedFallbackUrl = async (token: string, url?: string | null): P
 //   • onAuthFailure est injecté par App au montage via sb.setAuthFailureHandler()
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
-// Upload avec suivi de progression réel (fetch ne le permet pas → XMLHttpRequest)
-// Utilisé pour animer l'anneau de progression lors de l'envoi d'une photo.
+// Progression simulée pour l'anneau d'upload (fetch ne donne pas de vraie progression
+// sans risquer de casser l'upload avec XHR). Monte jusqu'à 90% pendant l'envoi,
+// puis on force 100% quand la requête fetch (classique, fiable) est terminée.
 // ─────────────────────────────────────────────────────────────────────────────
-function uploadFileWithProgress(url: string, token: string, file: File, onProgress: (pct: number) => void): Promise<boolean> {
-  return new Promise((resolve) => {
-    try {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", url);
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-      xhr.setRequestHeader("Content-Type", file.type || "image/jpeg");
-      xhr.setRequestHeader("x-upsert", "true");
-      xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
-      xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { onProgress(100); resolve(true); } else resolve(false); };
-      xhr.onerror = () => resolve(false);
-      xhr.send(file);
-    } catch { resolve(false); }
-  });
+function simulateUploadProgress(onProgress: (pct: number) => void): () => void {
+  let pct = 0;
+  const interval = setInterval(() => {
+    pct = Math.min(90, pct + Math.random() * 12 + 6);
+    onProgress(Math.round(pct));
+  }, 160);
+  return () => clearInterval(interval);
 }
 
 const sb = {
@@ -1377,13 +1371,23 @@ const sb = {
     } catch { return null; }
   },
 
-  // Identique à uploadPhoto, mais rapporte la progression réelle (0-100) pour animer l'anneau de progression.
+  // Identique à uploadPhoto (même fetch fiable), mais anime une progression simulée
+  // pour l'anneau de progression pendant l'envoi.
   async uploadPhotoWithProgress(token: string, userId: string, file: File, onProgress: (pct: number) => void): Promise<string | null> {
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${userId}/avatar.${ext}`;
-    const ok = await uploadFileWithProgress(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, token, file, onProgress);
-    if (!ok) return null;
-    return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
+    const stop = simulateUploadProgress(onProgress);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${userId}/avatar.${ext}`;
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true", "Cache-Control": "3600" },
+        body: file,
+      });
+      stop();
+      if (!r.ok) return null;
+      onProgress(100);
+      return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
+    } catch { stop(); return null; }
   },
 
   async markMessagesRead(token: string, matchId: string, userId: string) {
@@ -3776,14 +3780,21 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     if (!tempToken || !tempUserId) { setErrorMsg("Session expir\u00e9e. Recommencez l'inscription."); return; }
     setUploadingPhoto(true);
     setUploadProgress(0);
+    const stop = simulateUploadProgress(setUploadProgress);
     try {
       const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${tempUserId}/avatar.${ext}`;
-      const ok = await uploadFileWithProgress(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, tempToken, photoFile, setUploadProgress);
-      if (ok) {
+      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${tempToken}`, "Content-Type": photoFile.type || "image/jpeg", "x-upsert": "true" },
+        body: photoFile,
+      });
+      if (uploadRes.ok) {
+        setUploadProgress(100);
         setPhotoUrl(`${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`);
       }
     } catch {}
+    stop();
     setUploadingPhoto(false);
     setStep(3);
   };
