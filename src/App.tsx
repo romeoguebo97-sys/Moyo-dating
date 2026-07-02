@@ -14370,6 +14370,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     bio: string;
     is_premium: boolean;
     premium_until?: string;
+    premium_is_gift?: boolean;
     admin_pin?: string | null;
     is_admin?: boolean;
     is_verified?: boolean;
@@ -15526,7 +15527,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     // ── Paiement Premium (comportement habituel) ──
     const premiumUntil = new Date(Date.now() + premiumMsForAmount(p.amount)).toISOString();
     const targetId = p.gift_for || p.user_id;
-    await adminAction(targetId, { is_premium: true, premium_until: premiumUntil }, `Premium activé.`);
+    await adminAction(targetId, { is_premium: true, premium_until: premiumUntil, premium_is_gift: false }, `Premium activé.`);
     logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} - payé par ${p.user_id}` : `Premium activé - réf: ${p.tx_ref}`, targetId);
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
     // Met à jour la file de vérification manuelle (validation humaine).
@@ -16191,7 +16192,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         await fetch(`${SUPABASE_URL}/rest/v1/profiles?is_premium=eq.false`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
-          body: JSON.stringify({ is_premium: true }),
+          body: JSON.stringify({ is_premium: true, premium_is_gift: true }),
         });
         // Sauvegarder la date d'expiration
         if (premiumEventExpiresAt) {
@@ -16284,7 +16285,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setCampLaunching(true); setCampConfirm(false);
     try {
       const endISO = new Date(campEndDate).toISOString();
-      await fetch(`${SUPABASE_URL}/rest/v1/profiles?${campFilter(campTarget)}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_premium: true }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?${campFilter(campTarget)}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_premium: true, premium_is_gift: true }) });
       await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: "true" }) });
       await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_expires_at`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: endISO }) });
       setPremiumEventActive(true);
@@ -16787,9 +16788,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         "banned":   "is_banned.desc.nullslast,created_at.desc",
       };
       const serverSort = serverSorts[sort] || "created_at.desc";
-      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
       if (search.trim()) {
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,email,admin_level&name=ilike.*${encodeURIComponent(search.trim())}*&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&name=ilike.*${encodeURIComponent(search.trim())}*&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       setUsers(res);
@@ -16895,7 +16896,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const user = premiumGrantModal;
     if (!user) return;
     const premiumUntil = new Date(Date.now() + plan.days * 86400000).toISOString();
-    await adminAction(user.id, { is_premium: true, premium_until: premiumUntil }, `Premium activé pour ${user.name} — formule ${plan.label} (${plan.amount.toLocaleString()} FCFA, paiement WhatsApp/manuel).`);
+    await adminAction(user.id, { is_premium: true, premium_until: premiumUntil, premium_is_gift: false }, `Premium activé pour ${user.name} — formule ${plan.label} (${plan.amount.toLocaleString()} FCFA, paiement WhatsApp/manuel).`);
     fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
@@ -16912,7 +16913,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     if (!user || !grantFreeDate) return;
     const premiumUntil = new Date(`${grantFreeDate}T23:59:59`).toISOString();
     const dateLabel = new Date(premiumUntil).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
-    await adminAction(user.id, { is_premium: true, premium_until: premiumUntil }, `Premium offert gratuitement à ${user.name} jusqu'au ${dateLabel} (aucun paiement, non comptabilisé dans Budget).`);
+    await adminAction(user.id, { is_premium: true, premium_until: premiumUntil, premium_is_gift: true }, `Premium offert gratuitement à ${user.name} jusqu'au ${dateLabel} (aucun paiement, non comptabilisé dans Budget).`);
     setPremiumGrantModal(null);
     setGrantFreeDate("");
   };
@@ -17995,8 +17996,31 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={close}>
             <div style={{ background: G.blanc, borderRadius: 20, padding: 24, maxWidth: 420, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-              <h3 style={{ margin: "0 0 4px", fontSize: "1.05rem", color: G.brun }}>Rendre {u.name} Premium</h3>
-              <p style={{ margin: "0 0 18px", fontSize: "0.78rem", color: "#888" }}>Choisissez comment activer le Premium pour cet utilisateur.</p>
+              <h3 style={{ margin: "0 0 4px", fontSize: "1.05rem", color: G.brun }}>Gérer le Premium de {u.name}</h3>
+              <p style={{ margin: "0 0 18px", fontSize: "0.78rem", color: "#888" }}>{u.is_premium ? "Cet utilisateur est actuellement Premium." : "Choisissez comment activer le Premium pour cet utilisateur."}</p>
+
+              {u.is_premium && (
+                <div style={{ marginBottom: 22 }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>⛔ Retirer le Premium maintenant</div>
+                  {u.premium_is_gift ? (
+                    <>
+                      <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>
+                        {isLifetimePremium(u) ? "Cet utilisateur a le Premium à vie (offert)." : `Premium offert en cours${u.premium_until ? `, prévu jusqu'au ${new Date(u.premium_until).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}` : ""}.`} Utile si un collaborateur quitte l'équipe avant la date prévue, par exemple.
+                      </div>
+                      <button disabled={actionLoading === u.id} onClick={() => confirm(`Retirer le Premium${isLifetimePremium(u) ? " À VIE" : ""} de ${u.name} maintenant ?`, () => { adminAction(u.id, { is_premium: false, premium_until: undefined, premium_is_gift: undefined }, `Premium retiré pour ${u.name}.`); close(); })}
+                        style={{ width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: actionLoading === u.id ? "not-allowed" : "pointer" }}>
+                        Retirer le Premium
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: "0.72rem", color: "#a05a2c", background: "rgba(230,126,34,0.1)", border: "1px solid rgba(230,126,34,0.25)", borderRadius: 10, padding: "10px 12px", lineHeight: 1.5 }}>
+                      🔒 Ce Premium correspond à un <strong>abonnement réellement payé</strong> par le client (ou son statut n'est pas connu). Il ne peut pas être retiré avant la date prévue{u.premium_until ? ` (${new Date(u.premium_until).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })})` : ""}, pour protéger les clients payants.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {u.is_premium && <div style={{ height: 1, background: G.gris, margin: "0 0 22px" }} />}
 
               {/* ── Cas 1 : paiement reçu (WhatsApp, ID non capté) ── */}
               <div style={{ marginBottom: 22 }}>
@@ -18749,10 +18773,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {!u.is_premium
                             ? <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading} onClick={() => setPremiumGrantModal(u)} />
                             : isLifetimePremium(u)
-                              ? <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading} onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
-                              : <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading} onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
+                              ? <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading} onClick={() => setPremiumGrantModal(u)} />
+                              : <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading} onClick={() => setPremiumGrantModal(u)} />
                           }
-                          <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)} onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ?`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
+                          <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)} onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ?`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
                           {/* Admin */}
                           {!u.is_admin
                             ? auth.userId === SUPER_ADMIN_ID && <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading} onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
@@ -18858,13 +18882,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             onClick={() => setPremiumGrantModal(u)} />
                         ) : isLifetimePremium(u) ? (
                           <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading}
-                            onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
+                            onClick={() => setPremiumGrantModal(u)} />
                         ) : (
                           <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading}
-                            onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
+                            onClick={() => setPremiumGrantModal(u)} />
                         )}
                         <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
-                          onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
+                          onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
                         {auth.userId === SUPER_ADMIN_ID && !isSelf && (() => {
                           const isSuperAdmin = (u as any).admin_level === "superadmin";
                           if (isSuperAdmin) {
