@@ -3745,7 +3745,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     if (!photoFile) { setErrorMsg("Une photo est obligatoire pour continuer."); return; }
     if (!tempToken || !tempUserId) { setErrorMsg("Session expir\u00e9e. Recommencez l'inscription."); return; }
     setUploadingPhoto(true);
-    const minDelay = sleep(800); // garantit que l'anneau reste visible même si l'upload est très rapide
+    const minDelay = sleep(1000); // garantit que l'anneau reste visible même si l'upload est très rapide
     try {
       const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${tempUserId}/avatar.${ext}`;
@@ -3898,7 +3898,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             reader.readAsDataURL(file);
           }} style={{ display: "none" }} />
           <div style={{ width: 80, margin: "0 auto 16px" }} onClick={() => fileRef.current?.click()}>
-            <UploadRingOverlay active={uploadingPhoto} size={80} ringColor={G.rouge}>
+            <UploadRingOverlay active={uploadingPhoto} size={80} ringColor="#fff">
               {photoPreview ? (
                 <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: `3px solid ${G.rouge}`, cursor: "pointer" }}>
                   <img src={photoPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
@@ -12249,7 +12249,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   const handleCropConfirm = async (blob: Blob) => {
     setCropSrc(null);
     setUploadLoading(true);
-    const minDelay = sleep(800); // garantit que l'anneau reste visible même si l'upload est très rapide
+    const minDelay = sleep(1000); // garantit que l'anneau reste visible même si l'upload est très rapide
     const ext = pendingFile?.name.split(".").pop()?.toLowerCase() || "jpg";
     const croppedFile = new File([blob], `avatar.${ext}`, { type: "image/jpeg" });
     const url = await sb.uploadPhoto(auth.token, auth.userId, croppedFile);
@@ -12482,7 +12482,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
         {/* Photo ronde */}
         <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
-          <UploadRingOverlay active={uploadLoading} size={120} ringColor={profile?.is_premium ? G.or : G.rouge}>
+          <UploadRingOverlay active={uploadLoading} size={120} ringColor="#fff">
             <div style={{ width: 120, height: 120, borderRadius: "50%", background: profile?.is_premium ? `conic-gradient(${G.or} 0% 100%, ${G.gris} 100%)` : `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: profile?.is_premium ? `0 8px 32px rgba(212,168,67,0.35)` : `0 8px 32px rgba(192,57,43,0.25)` }}>
               <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
                 <Avatar url={profile?.photo_url} gender={profile?.gender} size={108} premium={profile?.is_premium} />
