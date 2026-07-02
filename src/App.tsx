@@ -18904,8 +18904,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)} onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ?`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
                           {/* Admin */}
                           {!u.is_admin
-                            ? auth.userId === SUPER_ADMIN_ID && <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading} onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
-                            : auth.userId === SUPER_ADMIN_ID && !isSelf && <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading || isSelf} onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null as unknown as undefined }, `Droits admin retirés pour ${u.name}.`))} />
+                            ? (auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading} onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
+                            : (auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !isSelf && <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading || isSelf} onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null as unknown as undefined }, `Droits admin retirés pour ${u.name}.`))} />
                           }
                           {/* Vérification */}
                           {!u.is_verified
@@ -19014,7 +19014,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         )}
                         <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
                           onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
-                        {auth.userId === SUPER_ADMIN_ID && !isSelf && (() => {
+                        {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !isSelf && (() => {
                           const isSuperAdmin = (u as any).admin_level === "superadmin";
                           if (isSuperAdmin) {
                             // Utilisateur déjà Super Admin → seulement "- Super Admin"
@@ -21332,12 +21332,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Historique des actions</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
               {!logSelectMode && <Btn variant="ghost" onClick={loadAdminLogs} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>}
-              {auth.userId === SUPER_ADMIN_ID && adminLogs.length > 0 && !logSelectMode && (
+              {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && adminLogs.length > 0 && !logSelectMode && (
                 <button onClick={() => { setSelectedLogIds(new Set()); setLogSelectMode(true); }} style={{ background: "rgba(142,68,173,0.08)", color: "#8e44ad", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
                   Sélectionner
                 </button>
               )}
-              {auth.userId === SUPER_ADMIN_ID && adminLogs.length > 0 && !logSelectMode && (
+              {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && adminLogs.length > 0 && !logSelectMode && (
                 <button onClick={() => confirm("Supprimer définitivement tout l'historique ? Cette action est irréversible.", clearAdminLogs)} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
                   Tout effacer
                 </button>
@@ -21433,7 +21433,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3, fontFamily: "monospace" }}>Utilisateur : {log.target_user_id.slice(0, 16)}…</div>
                     )}
                   </div>
-                  {auth.userId === SUPER_ADMIN_ID && !logSelectMode && (
+                  {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !logSelectMode && (
                     <button onClick={() => confirm("Supprimer cette action de l'historique ?", () => deleteOneAdminLog(log.id))} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                     </button>
