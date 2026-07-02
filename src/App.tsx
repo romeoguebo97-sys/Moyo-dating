@@ -13507,9 +13507,11 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
                 ? <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
                 : (p.operator === "Carte" || p.operator === "Stripe")
                 ? <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1A56DB" rx="8"/><rect x="10" y="22" width="100" height="9" fill="#fff" opacity="0.95"/><rect x="18" y="40" width="34" height="7" rx="2" fill="#fff" opacity="0.85"/><text x="92" y="18" textAnchor="end" fontFamily="Arial, sans-serif" fontWeight="800" fontSize="13" fill="#fff">CB</text></svg>
+                : p.operator === "manuel"
+                ? <span style={{ background: "rgba(139,105,20,0.12)", color: "#8B6914", borderRadius: 6, padding: "2px 7px", fontSize: "0.68rem", fontWeight: 800 }}>👤 Admin</span>
                 : <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#e30613" rx="4"/><text x="60" y="42" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="26" fill="white">AIRTEL</text></svg>
               }
-              {p.operator === "Carte" || p.operator === "Stripe" ? "Carte bancaire" : p.operator}
+              {p.operator === "Carte" || p.operator === "Stripe" ? "Carte bancaire" : p.operator === "manuel" ? "Activation manuelle (WhatsApp)" : p.operator}
               {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Cadeau pour {p.gift_for_name || "un match"}</span>}
               {p.kind === "appointment" && <span style={{ background: "rgba(26,92,58,0.12)", color: G.vert, borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>🗓 Rendez-vous agence</span>}
             </div>
@@ -18015,6 +18017,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   ) : (
                     <div style={{ fontSize: "0.72rem", color: "#a05a2c", background: "rgba(230,126,34,0.1)", border: "1px solid rgba(230,126,34,0.25)", borderRadius: 10, padding: "10px 12px", lineHeight: 1.5 }}>
                       🔒 Ce Premium correspond à un <strong>abonnement réellement payé</strong> par le client (ou son statut n'est pas connu). Il ne peut pas être retiré avant la date prévue{u.premium_until ? ` (${new Date(u.premium_until).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })})` : ""}, pour protéger les clients payants.
+                      <div style={{ marginTop: 8 }}>
+                        <button onClick={() => confirm(`Confirmez-vous que ${u.name} n'a PAS réellement payé cet abonnement (erreur de classification) ? Cela débloquera le retrait immédiat.`, () => adminAction(u.id, { premium_is_gift: true }, `${u.name} : statut Premium reclassifié en "offert" (correction manuelle).`))}
+                          style={{ background: "none", border: "none", color: "#a05a2c", textDecoration: "underline", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", padding: 0 }}>
+                          Ce n'est pas un vrai paiement → reclassifier comme offert
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
