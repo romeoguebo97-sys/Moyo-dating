@@ -16628,6 +16628,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [banModal, setBanModal] = useState<AdminProfile | null>(null);
   const [premiumGrantModal, setPremiumGrantModal] = useState<AdminProfile | null>(null);
   const [grantFreeDate, setGrantFreeDate] = useState("");
+  const [grantOperator, setGrantOperator] = useState<"MTN" | "Airtel" | null>(null);
+  const [grantTxRef, setGrantTxRef] = useState("");
   const [banHours, setBanHours] = useState("24");
   const [showHelp, setShowHelp] = useState(false);
 
@@ -16896,15 +16898,17 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // Budget/Paiements pour que le revenu soit comptabilisé correctement.
   const grantPremiumPaid = async (plan: { label: string; days: number; amount: number }) => {
     const user = premiumGrantModal;
-    if (!user) return;
+    if (!user || !grantOperator || !grantTxRef.trim()) return;
     const premiumUntil = new Date(Date.now() + plan.days * 86400000).toISOString();
-    await adminAction(user.id, { is_premium: true, premium_until: premiumUntil, premium_is_gift: false }, `Premium activé pour ${user.name} — formule ${plan.label} (${plan.amount.toLocaleString()} FCFA, paiement WhatsApp/manuel).`);
+    await adminAction(user.id, { is_premium: true, premium_until: premiumUntil, premium_is_gift: false }, `Premium activé pour ${user.name} — formule ${plan.label} (${plan.amount.toLocaleString()} FCFA, ${grantOperator}, réf. ${grantTxRef.trim()}, saisi manuellement par un admin).`);
     fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-      body: JSON.stringify({ user_id: user.id, operator: "manuel", tx_ref: `WHATSAPP-${Date.now()}`, amount: plan.amount, status: "approved", approved_at: new Date().toISOString() }),
+      body: JSON.stringify({ user_id: user.id, operator: grantOperator, tx_ref: grantTxRef.trim(), amount: plan.amount, status: "approved", approved_at: new Date().toISOString() }),
     }).catch(() => {});
     setPremiumGrantModal(null);
+    setGrantOperator(null);
+    setGrantTxRef("");
   };
 
   // ── Offrir Premium gratuitement (collaborateurs, geste commercial…) ──
@@ -17987,7 +17991,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {premiumGrantModal && (() => {
         const u = premiumGrantModal;
-        const close = () => { setPremiumGrantModal(null); setGrantFreeDate(""); };
+        const close = () => { setPremiumGrantModal(null); setGrantFreeDate(""); setGrantOperator(null); setGrantTxRef(""); };
         const plans = [
           { label: "Semaine", days: PREMIUM_DAYS_WEEK, amount: PREMIUM_PRICE_WEEK_FCFA },
           { label: "Mois", days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, amount: PREMIUM_PRICE_FCFA },
@@ -18033,16 +18037,25 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* ── Cas 1 : paiement reçu (WhatsApp, ID non capté) ── */}
               <div style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>💳 Le client a payé (capture WhatsApp)</div>
-                <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Sélectionnez la formule visible sur la preuve de paiement. Ça applique la bonne durée et enregistre le revenu dans Budget/Paiements.</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Renseignez l'opérateur et la référence visibles sur la preuve de paiement — exactement comme si le client l'avait saisi lui-même — puis choisissez la formule. Ça garantit un bilan Budget/Paiements exact (MTN vs Airtel).</div>
+
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <button onClick={() => setGrantOperator("MTN")} style={{ flex: 1, background: grantOperator === "MTN" ? "#FFCC00" : G.creme, border: `1.5px solid ${grantOperator === "MTN" ? "#FFCC00" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: "#1a1a1a", cursor: "pointer" }}>MTN MoMo</button>
+                  <button onClick={() => setGrantOperator("Airtel")} style={{ flex: 1, background: grantOperator === "Airtel" ? "#E40000" : G.creme, border: `1.5px solid ${grantOperator === "Airtel" ? "#E40000" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: grantOperator === "Airtel" ? "#fff" : G.brun, cursor: "pointer" }}>Airtel Money</button>
+                </div>
+                <input value={grantTxRef} onChange={e => setGrantTxRef(e.target.value)} placeholder="Référence de transaction (ID reçu par SMS)"
+                  style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", fontFamily: "inherit", marginBottom: 12 }} />
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, opacity: (!grantOperator || !grantTxRef.trim()) ? 0.45 : 1 }}>
                   {plans.map(plan => (
-                    <button key={plan.label} disabled={actionLoading === u.id} onClick={() => grantPremiumPaid(plan)}
-                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "10px 14px", cursor: actionLoading === u.id ? "not-allowed" : "pointer", textAlign: "left" }}>
+                    <button key={plan.label} disabled={actionLoading === u.id || !grantOperator || !grantTxRef.trim()} onClick={() => grantPremiumPaid(plan)}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "10px 14px", cursor: (actionLoading === u.id || !grantOperator || !grantTxRef.trim()) ? "not-allowed" : "pointer", textAlign: "left" }}>
                       <span style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{plan.label} <span style={{ fontWeight: 500, color: "#888" }}>({plan.days} jours)</span></span>
                       <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#D4A843" }}>{plan.amount.toLocaleString()} FCFA</span>
                     </button>
                   ))}
                 </div>
+                {(!grantOperator || !grantTxRef.trim()) && <div style={{ fontSize: "0.66rem", color: "#bbb", marginTop: 6 }}>Renseignez l'opérateur et la référence pour débloquer les formules.</div>}
               </div>
 
               <div style={{ height: 1, background: G.gris, margin: "0 0 22px" }} />
