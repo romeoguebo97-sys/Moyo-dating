@@ -1105,6 +1105,11 @@ const getStatusSignedFallbackUrl = async (token: string, url?: string | null): P
 //   • Un flag _isRefreshing évite les boucles infinies
 //   • onAuthFailure est injecté par App au montage via sb.setAuthFailureHandler()
 // ─────────────────────────────────────────────────────────────────────────────
+// Petit utilitaire de délai — sert uniquement à garantir que l'anneau de progression
+// reste visible au moins un court instant, même si l'upload est très rapide.
+// Ne touche à AUCUNE logique réseau : c'est juste un timer parallèle.
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
 const sb = {
   // ── Callback injecté par App pour déclencher la déconnexion propre ──
   _onAuthFailure: null as (() => void) | null,
@@ -3740,6 +3745,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     if (!photoFile) { setErrorMsg("Une photo est obligatoire pour continuer."); return; }
     if (!tempToken || !tempUserId) { setErrorMsg("Session expir\u00e9e. Recommencez l'inscription."); return; }
     setUploadingPhoto(true);
+    const minDelay = sleep(800); // garantit que l'anneau reste visible même si l'upload est très rapide
     try {
       const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${tempUserId}/avatar.${ext}`;
@@ -3752,6 +3758,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         setPhotoUrl(`${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`);
       }
     } catch {}
+    await minDelay;
     setUploadingPhoto(false);
     setStep(3);
   };
@@ -3890,7 +3897,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             reader.onload = () => setCropSrcSignup(reader.result as string);
             reader.readAsDataURL(file);
           }} style={{ display: "none" }} />
-          <div style={{ margin: "0 auto 16px" }} onClick={() => fileRef.current?.click()}>
+          <div style={{ width: 80, margin: "0 auto 16px" }} onClick={() => fileRef.current?.click()}>
             <UploadRingOverlay active={uploadingPhoto} size={80} ringColor={G.rouge}>
               {photoPreview ? (
                 <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: `3px solid ${G.rouge}`, cursor: "pointer" }}>
@@ -12242,11 +12249,13 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   const handleCropConfirm = async (blob: Blob) => {
     setCropSrc(null);
     setUploadLoading(true);
+    const minDelay = sleep(800); // garantit que l'anneau reste visible même si l'upload est très rapide
     const ext = pendingFile?.name.split(".").pop()?.toLowerCase() || "jpg";
     const croppedFile = new File([blob], `avatar.${ext}`, { type: "image/jpeg" });
     const url = await sb.uploadPhoto(auth.token, auth.userId, croppedFile);
     if (url) { await sb.update(auth.token, "profiles", auth.userId, { photo_url: url }); setProfile(p => p ? { ...p, photo_url: url } : null); setToast({ msg: "Photo mise à jour !" }); }
     else setErrorMsg("Erreur lors du téléchargement de la photo. Réessaie.");
+    await minDelay;
     setUploadLoading(false);
     setPendingFile(null);
   };
