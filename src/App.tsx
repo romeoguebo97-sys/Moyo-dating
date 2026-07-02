@@ -1105,20 +1105,6 @@ const getStatusSignedFallbackUrl = async (token: string, url?: string | null): P
 //   • Un flag _isRefreshing évite les boucles infinies
 //   • onAuthFailure est injecté par App au montage via sb.setAuthFailureHandler()
 // ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// Progression simulée pour l'anneau d'upload (fetch ne donne pas de vraie progression
-// sans risquer de casser l'upload avec XHR). Monte jusqu'à 90% pendant l'envoi,
-// puis on force 100% quand la requête fetch (classique, fiable) est terminée.
-// ─────────────────────────────────────────────────────────────────────────────
-function simulateUploadProgress(onProgress: (pct: number) => void): () => void {
-  let pct = 0;
-  const interval = setInterval(() => {
-    pct = Math.min(90, pct + Math.random() * 12 + 6);
-    onProgress(Math.round(pct));
-  }, 160);
-  return () => clearInterval(interval);
-}
-
 const sb = {
   // ── Callback injecté par App pour déclencher la déconnexion propre ──
   _onAuthFailure: null as (() => void) | null,
@@ -1369,25 +1355,6 @@ const sb = {
       if (!r.ok) return null;
       return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
     } catch { return null; }
-  },
-
-  // Identique à uploadPhoto (même fetch fiable), mais anime une progression simulée
-  // pour l'anneau de progression pendant l'envoi.
-  async uploadPhotoWithProgress(token: string, userId: string, file: File, onProgress: (pct: number) => void): Promise<string | null> {
-    const stop = simulateUploadProgress(onProgress);
-    try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${userId}/avatar.${ext}`;
-      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true", "Cache-Control": "3600" },
-        body: file,
-      });
-      stop();
-      if (!r.ok) return null;
-      onProgress(100);
-      return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
-    } catch { stop(); return null; }
   },
 
   async markMessagesRead(token: string, matchId: string, userId: string) {
@@ -1768,50 +1735,6 @@ const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, pr
   const boxShadow = border && premium ? `0 0 0 1px ${G.or}44` : "none";
   return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (<svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>)}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>;
 });
-
-// ── Anneau de progression circulaire animé autour d'une photo en cours d'envoi ──
-// Reproduit le style "progress-ring" : cercle SVG qui se remplit en fonction de %,
-// avec badge de pourcentage en overlay. Utilisé pour l'inscription et le changement
-// de photo de profil, afin de donner un retour visuel clair (utile en connexion lente).
-function PhotoUploadRing({ preview, progress, uploading, size = 116, onClick, ringColor }: {
-  preview?: string | null; progress: number; uploading: boolean; size?: number; onClick?: () => void; ringColor?: string;
-}) {
-  const stroke = 4;
-  const r = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * r;
-  const offset = circumference * (1 - Math.min(100, Math.max(0, progress)) / 100);
-  const color = ringColor || G.rouge;
-  return (
-    <div style={{ position: "relative", width: size, height: size, margin: "0 auto" }} onClick={onClick}>
-      <svg width={size} height={size} style={{ position: "absolute", top: 0, left: 0, transform: "rotate(-90deg)" }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={G.gris} strokeWidth={stroke} />
-        {uploading && (
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-            strokeDasharray={circumference} strokeDashoffset={offset} style={{ transition: "stroke-dashoffset 0.25s ease" }} />
-        )}
-      </svg>
-      <div style={{ position: "absolute", top: stroke + 3, left: stroke + 3, width: size - (stroke + 3) * 2, height: size - (stroke + 3) * 2, borderRadius: "50%", overflow: "hidden", background: G.gris, cursor: onClick ? "pointer" : "default", opacity: uploading ? 0.55 : 1, transition: "opacity 0.2s" }}>
-        {preview ? (
-          <img src={preview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        ) : (
-          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg,${color},${G.rougeDark})` }}>
-            <svg width={size * 0.32} height={size * 0.32} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
-            </svg>
-          </div>
-        )}
-      </div>
-      {uploading && (
-        <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", background: color, color: "#fff", borderRadius: 50, padding: "3px 11px", fontSize: "0.72rem", fontWeight: 800, boxShadow: "0 3px 10px rgba(0,0,0,0.25)", whiteSpace: "nowrap" }}>
-          {progress}%
-        </div>
-      )}
-      {!uploading && onClick && (
-        <div style={{ position: "absolute", bottom: 0, right: 0, width: size * 0.24, height: size * 0.24, borderRadius: "50%", background: G.blanc, border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.14, color, fontWeight: 900, lineHeight: 1, pointerEvents: "none" }}>+</div>
-      )}
-    </div>
-  );
-}
 
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel">("offer");
@@ -3615,7 +3538,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "", profession: "", hobbies: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -3779,8 +3701,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     if (!photoFile) { setErrorMsg("Une photo est obligatoire pour continuer."); return; }
     if (!tempToken || !tempUserId) { setErrorMsg("Session expir\u00e9e. Recommencez l'inscription."); return; }
     setUploadingPhoto(true);
-    setUploadProgress(0);
-    const stop = simulateUploadProgress(setUploadProgress);
     try {
       const ext = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${tempUserId}/avatar.${ext}`;
@@ -3790,11 +3710,9 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         body: photoFile,
       });
       if (uploadRes.ok) {
-        setUploadProgress(100);
         setPhotoUrl(`${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`);
       }
     } catch {}
-    stop();
     setUploadingPhoto(false);
     setStep(3);
   };
@@ -3933,8 +3851,20 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             reader.onload = () => setCropSrcSignup(reader.result as string);
             reader.readAsDataURL(file);
           }} style={{ display: "none" }} />
-          <div style={{ marginBottom: 16 }} onClick={() => !uploadingPhoto && fileRef.current?.click()}>
-            <PhotoUploadRing preview={photoPreview} progress={uploadProgress} uploading={uploadingPhoto} size={116} onClick={() => !uploadingPhoto && fileRef.current?.click()} />
+          <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 16px" }} onClick={() => fileRef.current?.click()}>
+            {photoPreview ? (
+              <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: `3px solid ${G.rouge}`, cursor: "pointer" }}>
+                <img src={photoPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+              </div>
+            ) : (
+              <div style={{ width: 80, height: 80, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 18px rgba(192,57,43,0.4)", cursor: "pointer" }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              </div>
+            )}
+            <div style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", color: G.rouge, fontWeight: 900, lineHeight: 1, pointerEvents: "none" }}>+</div>
           </div>
           {photoPreview
             ? <div onClick={() => fileRef.current?.click()} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 600 }}>Changer la photo</div>
@@ -12101,7 +12031,6 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [uploadLoading, setUploadLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [showDelete, setShowDelete] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -12272,10 +12201,9 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
   const handleCropConfirm = async (blob: Blob) => {
     setCropSrc(null);
     setUploadLoading(true);
-    setUploadProgress(0);
     const ext = pendingFile?.name.split(".").pop()?.toLowerCase() || "jpg";
     const croppedFile = new File([blob], `avatar.${ext}`, { type: "image/jpeg" });
-    const url = await sb.uploadPhotoWithProgress(auth.token, auth.userId, croppedFile, setUploadProgress);
+    const url = await sb.uploadPhoto(auth.token, auth.userId, croppedFile);
     if (url) { await sb.update(auth.token, "profiles", auth.userId, { photo_url: url }); setProfile(p => p ? { ...p, photo_url: url } : null); setToast({ msg: "Photo mise à jour !" }); }
     else setErrorMsg("Erreur lors du téléchargement de la photo. Réessaie.");
     setUploadLoading(false);
@@ -12504,15 +12432,11 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
         {/* Photo ronde */}
         <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
-          {uploadLoading ? (
-            <PhotoUploadRing preview={profile?.photo_url} progress={uploadProgress} uploading={true} size={120} ringColor={profile?.is_premium ? G.or : G.rouge} />
-          ) : (
-            <div style={{ width: 120, height: 120, borderRadius: "50%", background: profile?.is_premium ? `conic-gradient(${G.or} 0% 100%, ${G.gris} 100%)` : `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: profile?.is_premium ? `0 8px 32px rgba(212,168,67,0.35)` : `0 8px 32px rgba(192,57,43,0.25)` }}>
-              <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
-                <Avatar url={profile?.photo_url} gender={profile?.gender} size={108} premium={profile?.is_premium} />
-              </div>
+          <div style={{ width: 120, height: 120, borderRadius: "50%", background: profile?.is_premium ? `conic-gradient(${G.or} 0% 100%, ${G.gris} 100%)` : `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: profile?.is_premium ? `0 8px 32px rgba(212,168,67,0.35)` : `0 8px 32px rgba(192,57,43,0.25)` }}>
+            <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
+              <Avatar url={profile?.photo_url} gender={profile?.gender} size={108} premium={profile?.is_premium} />
             </div>
-          )}
+          </div>
           {profile?.is_premium ? (
             <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>Premium</div>
           ) : (
