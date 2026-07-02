@@ -1736,6 +1736,45 @@ const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, pr
   return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (<svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>)}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>;
 });
 
+// ── Anneau de progression, en overlay pur au-dessus d'une photo pendant l'envoi ──
+// Composant 100% autonome : il observe juste un booléen déjà existant (`active`) et
+// gère sa propre animation en interne. Ne touche à AUCUNE fonction d'upload ni à
+// aucun state existant — zéro risque pour la logique réseau.
+function UploadRingOverlay({ active, size, ringColor, children }: { active: boolean; size: number; ringColor?: string; children: React.ReactNode }) {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    if (!active) { setProgress(0); return; }
+    let pct = 0;
+    const id = setInterval(() => {
+      pct = Math.min(92, pct + Math.random() * 10 + 5);
+      setProgress(Math.round(pct));
+    }, 180);
+    return () => clearInterval(id);
+  }, [active]);
+  const stroke = 4;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - progress / 100);
+  const color = ringColor || G.rouge;
+  return (
+    <div style={{ position: "relative", width: size, height: size }}>
+      {children}
+      {active && (
+        <>
+          <svg width={size} height={size} style={{ position: "absolute", top: 0, left: 0, transform: "rotate(-90deg)", pointerEvents: "none" }}>
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth={stroke} />
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+              strokeDasharray={circumference} strokeDashoffset={offset} style={{ transition: "stroke-dashoffset 0.2s ease" }} />
+          </svg>
+          <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: size * 0.15, pointerEvents: "none" }}>
+            {progress}%
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel">("offer");
   const PREMIUM_PLANS = [
@@ -3851,20 +3890,22 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             reader.onload = () => setCropSrcSignup(reader.result as string);
             reader.readAsDataURL(file);
           }} style={{ display: "none" }} />
-          <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 16px" }} onClick={() => fileRef.current?.click()}>
-            {photoPreview ? (
-              <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: `3px solid ${G.rouge}`, cursor: "pointer" }}>
-                <img src={photoPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-              </div>
-            ) : (
-              <div style={{ width: 80, height: 80, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 18px rgba(192,57,43,0.4)", cursor: "pointer" }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                  <circle cx="12" cy="13" r="4"/>
-                </svg>
-              </div>
-            )}
-            <div style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", color: G.rouge, fontWeight: 900, lineHeight: 1, pointerEvents: "none" }}>+</div>
+          <div style={{ margin: "0 auto 16px" }} onClick={() => fileRef.current?.click()}>
+            <UploadRingOverlay active={uploadingPhoto} size={80} ringColor={G.rouge}>
+              {photoPreview ? (
+                <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: `3px solid ${G.rouge}`, cursor: "pointer" }}>
+                  <img src={photoPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                </div>
+              ) : (
+                <div style={{ width: 80, height: 80, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 18px rgba(192,57,43,0.4)", cursor: "pointer" }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                </div>
+              )}
+              <div style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", color: G.rouge, fontWeight: 900, lineHeight: 1, pointerEvents: "none" }}>+</div>
+            </UploadRingOverlay>
           </div>
           {photoPreview
             ? <div onClick={() => fileRef.current?.click()} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 600 }}>Changer la photo</div>
@@ -12432,11 +12473,13 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
 
         {/* Photo ronde */}
         <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
-          <div style={{ width: 120, height: 120, borderRadius: "50%", background: profile?.is_premium ? `conic-gradient(${G.or} 0% 100%, ${G.gris} 100%)` : `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: profile?.is_premium ? `0 8px 32px rgba(212,168,67,0.35)` : `0 8px 32px rgba(192,57,43,0.25)` }}>
-            <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
-              <Avatar url={profile?.photo_url} gender={profile?.gender} size={108} premium={profile?.is_premium} />
+          <UploadRingOverlay active={uploadLoading} size={120} ringColor={profile?.is_premium ? G.or : G.rouge}>
+            <div style={{ width: 120, height: 120, borderRadius: "50%", background: profile?.is_premium ? `conic-gradient(${G.or} 0% 100%, ${G.gris} 100%)` : `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: profile?.is_premium ? `0 8px 32px rgba(212,168,67,0.35)` : `0 8px 32px rgba(192,57,43,0.25)` }}>
+              <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
+                <Avatar url={profile?.photo_url} gender={profile?.gender} size={108} premium={profile?.is_premium} />
+              </div>
             </div>
-          </div>
+          </UploadRingOverlay>
           {profile?.is_premium ? (
             <div style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 50, padding: "4px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#111", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(212,168,67,0.4)" }}>Premium</div>
           ) : (
