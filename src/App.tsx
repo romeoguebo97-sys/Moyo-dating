@@ -170,6 +170,17 @@ function minEnabledPremiumPrice(): number {
   ].filter((v): v is number => typeof v === "number");
   return prices.length > 0 ? Math.min(...prices) : PREMIUM_PRICE_FCFA;
 }
+// Phrase listant uniquement les formules actuellement actives (pour les textes d'aide/FAQ)
+function activePlansText(): string {
+  const parts: string[] = [];
+  if (PLAN_WEEK_ENABLED) parts.push(`${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA pour 1 semaine`);
+  if (PLAN_MONTH_ENABLED) parts.push(`${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA pour 1 mois`);
+  if (PLAN_2MONTH_ENABLED) parts.push(`${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA pour 2 mois`);
+  if (parts.length === 0) return `${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA`;
+  if (parts.length === 1) return parts[0];
+  return parts.slice(0, -1).join(", ") + " ou " + parts[parts.length - 1];
+}
+function activePlansCount(): number { return [PLAN_WEEK_ENABLED, PLAN_MONTH_ENABLED, PLAN_2MONTH_ENABLED].filter(Boolean).length; }
 // Déduit la durée (en jours) du Premium à partir du montant payé, selon la formule choisie.
 // Le mois (et tout montant non reconnu : Stripe, cadeau…) retombe sur premium_duration_days.
 function premiumDaysForAmount(amount: number): number {
@@ -1942,7 +1953,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAllAdv ? "rotate(-90deg)" : "rotate(0)" }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
         </div>
-        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 9 }}>CHOISISSEZ VOTRE FORMULE</div>
+        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 9 }}>{PREMIUM_PLANS.length > 1 ? "CHOISISSEZ VOTRE FORMULE" : "VOTRE FORMULE PREMIUM"}</div>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           {PREMIUM_PLANS.map(pl => {
             const sel = pl.id === planId;
@@ -2315,7 +2326,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     ]},
     { id: "services", title: "Nos services", emoji: "🌟", items: [
       { icon: "hearts", titre: "Rencontres en ligne", desc: "Trouve ton âme sœur parmi des profils vérifiés.", badge: "Gratuit" },
-      { icon: "star2", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké.", badge: `Dès ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA` },
+      { icon: "star2", titre: "Abonnement Premium", desc: "Likes illimités, messages illimités, voir qui t'a liké.", badge: `Dès ${minEnabledPremiumPrice().toLocaleString()} FCFA` },
       { icon: "ring", titre: "Accompagnement mariage", desc: "Nous t'accompagnons dans l'organisation de ta cérémonie congolaise.", badge: "Sur demande" },
       { icon: "vip", titre: "Mise en relation VIP", desc: "Service personnalisé et discret dans ta recherche de l'âme sœur.", badge: "Premium" },
     ]},
@@ -2331,7 +2342,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 { icon: "thumbup", titre: "Patrick - Pointe-Noire", desc: "Simple, propre, efficace. Exactement ce qu'il fallait pour la diaspora congolaise." },
     ]},
     { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
-      { icon: "Q", titre: "Moyo Dating est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium en 3 formules : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA (1 sem.), ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA (1 mois) ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA (2 mois).` },
+      { icon: "Q", titre: "Moyo Dating est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium : ${activePlansText()}.` },
       { icon: "Q", titre: "Comment naviguer entre les profils ?", desc: "3 modes disponibles : Vue carte (swipe gauche/droite ou boutons ←→), Vue liste (défilement vertical), Plein écran (immersion totale, footer masqué). Passez d'un mode à l'autre via les boutons en haut de l'écran Découvrir." },
       { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo Dating parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
       { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: `${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché.` },
@@ -4033,7 +4044,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
 // ── FAQ pour le bot ──
 const BOT_FAQ = [
-  { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium est disponible en 3 formules : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA pour 1 semaine, ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA pour 1 mois, ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA pour 2 mois (la formule 2 mois est la plus avantageuse). Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money, Airtel Money ou carte Visa/Mastercard. Activation sous 15 minutes.` },
+  { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium est disponible${activePlansCount() > 1 ? " en plusieurs formules" : ""} : ${activePlansText()}. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money, Airtel Money ou carte Visa/Mastercard. Activation sous 15 minutes.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: `Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez des jours Premium offerts selon sa formule : ${REFERRAL_BONUS_WEEK} jours (1 semaine), ${REFERRAL_BONUS_MONTH} jours (1 mois) ou ${REFERRAL_BONUS_2MONTH} jours (2 mois). Pas de limite !` },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
   { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo Dating propose un service de mise en relation personnalisé. Tout le monde peut créer et enregistrer sa carte relationnelle depuis la page Profil (bouton rouge 'Demander une mise en relation') en décrivant qui vous êtes et ce que vous recherchez. L'envoi de la demande à notre équipe est réservé aux membres Premium : au moment d'appuyer sur 'Envoyer ma demande', si vous n'êtes pas Premium, l'option de passer Premium s'affiche. Une fois la demande envoyée, notre équipe analyse votre profil et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
@@ -4912,12 +4923,6 @@ function AdminDesktopPage() {
                   setEditingConfig(null);
                 }} />
             </OffCanvasSection>}
-            {false && <OffCanvasSection title="_old_notif">
-              <AdminNotifPrefs auth={auth!} />
-            </OffCanvasSection>}
-            {false && <OffCanvasSection title="_old_pay">
-              <PaymentMethodsConfig auth={auth!} />
-            </OffCanvasSection>}
             {configTab === "securite" && ((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
               <OffCanvasSection title="Mon code d'accès (PIN)">
                 <AdminPinConfig auth={auth!} />
@@ -5252,10 +5257,10 @@ function AdminPinConfig({ auth }: { auth: Auth }) {
     setConfirmOpen(false);
     setSaving(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, {
-        method: "PATCH",
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_own_admin_pin`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
-        body: JSON.stringify({ admin_pin: pin }),
+        body: JSON.stringify({ new_pin: pin }),
       });
       if (!r.ok) throw new Error();
       setMsg({ text: "✅ PIN modifié. Il sera demandé à la prochaine ouverture du tableau de bord.", ok: true });
@@ -5922,9 +5927,9 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Moyo Dating encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo Dating dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe.", "Partage de contacts : pour ta sécurité, le partage d'un numéro, d'un réseau social ou d'un lien n'est pas autorisé dans les messages ni dans ton profil (bio, nom…) en compte gratuit. Passe les premiers échanges sur Moyo Dating ; l'abonnement Premium débloque le partage de coordonnées en conversation privée.", "Sanctions : en cas de non-respect des règles, un compte peut être averti, suspendu temporairement (avec un décompte avant reconnexion automatique) ou banni définitivement."] },
-            { title: "Premium - 3 formules dès " + PREMIUM_PRICE_WEEK_FCFA.toLocaleString() + " FCFA", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
+            { title: `Premium${activePlansCount() > 1 ? " - " + activePlansCount() + " formules" : ""} dès ` + minEnabledPremiumPrice().toLocaleString() + " FCFA", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
               "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.",
-              `3 formules au choix : ${PREMIUM_PRICE_WEEK_FCFA.toLocaleString()} FCFA pour 1 semaine, ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA pour 1 mois (la plus populaire), ou ${PREMIUM_PRICE_2MONTH_FCFA.toLocaleString()} FCFA pour 2 mois (la plus avantageuse). Vous sélectionnez votre formule au moment du paiement, juste après avoir appuyé sur 'Passer Premium'.`,
+              `${activePlansCount() > 1 ? "Formules au choix" : "Formule disponible"} : ${activePlansText()}. Vous sélectionnez votre formule au moment du paiement, juste après avoir appuyé sur 'Passer Premium'.`,
               "Paiement via MTN Mobile Money ou Airtel Money - les deux opérateurs sont disponibles.",
               "Comment payer : appuyez sur 'Passer Premium' → choisissez MTN Mobile Money → appuyez sur le bouton jaune pour composer automatiquement le code de paiement sur votre téléphone → validez le paiement → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'.",
               "Le numéro de transaction (ID) est reçu par SMS de votre opérateur après validation du paiement (ex: PP260523.2232.A52074 pour Airtel, 7753031542 pour MTN). Entrez-le exactement tel quel dans le champ prévu.",
@@ -7155,36 +7160,6 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       </div>
     )}
   </div>;
-}
-
-function MatchProfileModal({ match, onClose, onMessage }: { match: Match; onClose: () => void; onMessage: () => void }) {
-  const p = match.partner;
-  if (!p) return null;
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-        {/* Photo */}
-        <div style={{ height: 220, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
-          {p.photo_url ? <img src={p.photo_url ?? undefined} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
-          <div onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1rem", fontWeight: 700 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-          <div style={{ position: "absolute", bottom: 14, left: 16, color: "#fff" }}>
-            <div style={{  fontSize: "1.6rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{p.name}, {p.age} ans</div>
-            <div style={{ fontSize: "0.85rem", opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{p.city}</div>
-          </div>
-        </div>
-        {/* Infos */}
-        <div style={{ padding: "20px 20px 32px" }}>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-            <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="#27ae60" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Match !</span>
-            {p.is_premium && <span style={{ background: "rgba(212,168,67,0.12)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>⭐ Premium</span>}
-            {p.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{p.religion}</span>}
-          </div>
-          {p.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{p.bio}</p>}
-          <Btn variant="primary" onClick={onMessage} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>Envoyer un message</Btn>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ─── Types enrichis pour l'historique avancé ───────────────────────────────
@@ -10166,7 +10141,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                   </div>
                 </div>
                 <div style={{ padding: "20px 20px 28px" }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>Choisissez la formule à offrir</div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>{GIFT_PLANS.length > 1 ? "Choisissez la formule à offrir" : "Formule à offrir"}</div>
                   <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
                     {GIFT_PLANS.map(pl => {
                       const sel = pl.id === giftPlanId;
@@ -10436,7 +10411,7 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
                         </div>
                       )
                     ) : (
-                      <img src={getImageUrl(m.content)} alt="img" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
+                      <img src={getImageUrl(m.content)} alt="img" loading="lazy" onClick={() => setPreviewImg(getImageUrl(m.content))} style={{ width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", cursor: "pointer", display: "block" }} />
                     )}
                     <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: isMine ? "flex-end" : "flex-start" }}>
                       <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
@@ -11403,7 +11378,7 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
   // ── Export ──
   const handleConfirm = () => {
     const img = imgRef2.current; if (!img || !img.complete) return;
-    const EXPORT_SIZE = 1200;
+    const EXPORT_SIZE = 1000;
     const ratio = EXPORT_SIZE / SIZE;
     const { scale, offset } = stateRef.current;
     const exportCanvas = document.createElement("canvas");
@@ -11411,7 +11386,7 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
     exportCanvas.height = EXPORT_SIZE;
     const ctx = exportCanvas.getContext("2d"); if (!ctx) return;
     ctx.drawImage(img, offset.x * ratio, offset.y * ratio, img.naturalWidth * scale * ratio, img.naturalHeight * scale * ratio);
-    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.95);
+    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.82);
   };
 
   return (
@@ -13789,9 +13764,13 @@ function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () =
     if (pinInput.length < 4) return;
     setPinLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=admin_pin`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-      const data = await r.json().catch(() => []);
-      if (Array.isArray(data) && data[0]?.admin_pin === pinInput) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_admin_pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+        body: JSON.stringify({ input_pin: pinInput }),
+      });
+      const ok = await r.json().catch(() => false);
+      if (r.ok && ok === true) {
         setPinVerified(true); setPinError("");
       } else {
         setPinError("PIN incorrect. Réessayez."); setPinInput("");
@@ -18044,10 +18023,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             </div>
             <div style={{ padding: "20px 20px 24px" }}>
               <input value={pinModalInput} onChange={e => setPinModalInput(e.target.value.replace(/\D/g, "").slice(0, 4))} type="password" inputMode="numeric" maxLength={4} placeholder="• • • •" style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "14px", borderRadius: 12, border: `2px solid ${pinModalInput.length === 4 ? "#8e44ad" : G.gris}`, fontSize: "1.4rem", letterSpacing: 8, outline: "none", fontFamily: "inherit" }} autoFocus />
-              <button onClick={() => {
+              <button onClick={async () => {
                 if (pinModalInput.length < 4) return;
-                if (pinModal.mode === "set") adminAction(pinModal.user.id, { is_admin: true, admin_pin: pinModalInput }, `${pinModal.user.name} est maintenant admin.`);
-                else adminAction(pinModal.user.id, { admin_pin: pinModalInput }, `PIN de ${pinModal.user.name} réinitialisé.`);
+                if (pinModal.mode === "set") await adminAction(pinModal.user.id, { is_admin: true }, `${pinModal.user.name} est maintenant admin.`);
+                try {
+                  await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_admin_pin_for`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Prefer": "return=minimal" },
+                    body: JSON.stringify({ target_user_id: pinModal.user.id, new_pin: pinModalInput }),
+                  });
+                  if (pinModal.mode === "reset") logAdminAction(auth!.token, auth!.userId, auth!.name, `PIN de ${pinModal.user.name} réinitialisé.`, pinModal.user.id);
+                } catch {}
                 setPinModal(null); setPinModalInput("");
               }} disabled={pinModalInput.length < 4} style={{ width: "100%", marginTop: 12, background: pinModalInput.length === 4 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ddd", color: pinModalInput.length === 4 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: pinModalInput.length === 4 ? "pointer" : "not-allowed" }}>
                 {pinModal.mode === "set" ? "Rendre admin avec ce PIN" : "Mettre à jour le PIN"}
