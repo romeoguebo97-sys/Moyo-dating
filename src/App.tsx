@@ -161,6 +161,8 @@ let PREMIUM_DAYS_2MONTH = 62;
 let PLAN_WEEK_ENABLED = true;
 let PLAN_MONTH_ENABLED = true;
 let PLAN_2MONTH_ENABLED = true;
+// Mode d'affichage par défaut de l'onglet Découvrir à l'ouverture de l'app ("card" = cartes à swiper, "list" = liste, "full" = plein écran)
+let DISCOVER_DEFAULT_MODE: "card" | "list" | "full" = "card";
 // Prix le plus bas parmi les formules actuellement ACTIVES (ignore les formules désactivées)
 function minEnabledPremiumPrice(): number {
   const prices = [
@@ -274,7 +276,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -309,6 +311,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["plan_week_enabled"] !== undefined) PLAN_WEEK_ENABLED = map["plan_week_enabled"] !== "false";
   if (map["plan_month_enabled"] !== undefined) PLAN_MONTH_ENABLED = map["plan_month_enabled"] !== "false";
   if (map["plan_2month_enabled"] !== undefined) PLAN_2MONTH_ENABLED = map["plan_2month_enabled"] !== "false";
+  if (map["discover_default_mode"] === "card" || map["discover_default_mode"] === "list" || map["discover_default_mode"] === "full") DISCOVER_DEFAULT_MODE = map["discover_default_mode"];
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
   if (map["premium_stat_couples"] !== undefined) PREMIUM_STAT_COUPLES = map["premium_stat_couples"];
   if (map["premium_stat_members"] !== undefined) PREMIUM_STAT_MEMBERS = map["premium_stat_members"];
@@ -4833,6 +4836,9 @@ function AdminDesktopPage() {
                 </div>
               ))}
             </OffCanvasSection>}
+            {configTab === "general" && <OffCanvasSection title="Mode Découvrir par défaut">
+              <DiscoverModeConfig auth={auth!} />
+            </OffCanvasSection>}
             {configTab === "equipe" && <OffCanvasSection title="Notifications admin">
               <AdminNotifPrefs auth={auth!} />
             </OffCanvasSection>}
@@ -5473,14 +5479,29 @@ function PremiumPlansConfig({ auth }: { auth: Auth }) {
     const next = { ...vals, [which]: !vals[which] };
     // Garde-fou : on ne peut jamais désactiver la dernière formule active
     if (activeCount(next) === 0) return;
+    const prevVals = vals;
+    const prevGlobal = { week: PLAN_WEEK_ENABLED, month: PLAN_MONTH_ENABLED, twomonth: PLAN_2MONTH_ENABLED };
     setVals(next);
     if (which === "week") PLAN_WEEK_ENABLED = next.week;
     if (which === "month") PLAN_MONTH_ENABLED = next.month;
     if (which === "twomonth") PLAN_2MONTH_ENABLED = next.twomonth;
     const key = which === "week" ? "plan_week_enabled" : which === "month" ? "plan_month_enabled" : "plan_2month_enabled";
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(next[which]) }) });
-    } catch {}
+      // POST + upsert : crée la ligne si elle n'existe pas encore, la met à jour sinon.
+      // Un simple PATCH ne fait rien (sans erreur !) si la ligne est absente — c'est ce qui causait le bug.
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key, value: String(next[which]) }),
+      });
+      if (!r.ok) throw new Error();
+    } catch {
+      // Échec réel confirmé : on annule visuellement pour ne jamais laisser croire que ça a marché
+      setVals(prevVals);
+      PLAN_WEEK_ENABLED = prevGlobal.week;
+      PLAN_MONTH_ENABLED = prevGlobal.month;
+      PLAN_2MONTH_ENABLED = prevGlobal.twomonth;
+    }
   };
 
   return (
@@ -5495,6 +5516,67 @@ function PremiumPlansConfig({ auth }: { auth: Auth }) {
           <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
             <div style={{ fontSize: "0.83rem", fontWeight: 600, color: vals[k] ? G.brun : "#aaa" }}>{label} <span style={{ fontWeight: 500, color: "#999" }}>({price.toLocaleString()} FCFA)</span>{!vals[k] && <span style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginLeft: 6 }}>(désactivée)</span>}</div>
             <SwitchBtn on={vals[k]} onToggle={() => toggle(k)} />
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// Choix du mode d'affichage par défaut de l'onglet Découvrir à l'ouverture de l'app.
+// Un seul mode actif à la fois (comportement type radio, via 3 switches).
+function DiscoverModeConfig({ auth }: { auth: Auth }) {
+  const [mode, setMode] = React.useState<"card" | "list" | "full">("card");
+  const [loading, setLoading] = React.useState(true);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.discover_default_mode&select=value`, { headers: H })
+      .then(r => r.json()).then((data: { value: string }[]) => {
+        const v = Array.isArray(data) && data[0]?.value;
+        if (v === "card" || v === "list" || v === "full") setMode(v);
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const choose = async (next: "card" | "list" | "full") => {
+    if (next === mode) return;
+    const prev = mode;
+    setMode(next);
+    DISCOVER_DEFAULT_MODE = next;
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key: "discover_default_mode", value: next }),
+      });
+      if (!r.ok) throw new Error();
+    } catch {
+      setMode(prev);
+      DISCOVER_DEFAULT_MODE = prev;
+    }
+  };
+
+  const options: ["card" | "list" | "full", string, string][] = [
+    ["card", "Cartes", "Le mode swipe classique, une carte à la fois"],
+    ["list", "Liste", "Profils empilés verticalement, façon fil"],
+    ["full", "Plein écran", "Photo en plein écran, immersif"],
+  ];
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        Mode d'affichage de l'onglet Découvrir au premier chargement de l'app. Un seul mode actif à la fois.
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+      ) : (
+        options.map(([key, label, desc]) => (
+          <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
+            <div>
+              <div style={{ fontSize: "0.83rem", fontWeight: 600, color: mode === key ? G.brun : "#aaa" }}>{label}</div>
+              <div style={{ fontSize: "0.68rem", color: "#999" }}>{desc}</div>
+            </div>
+            <SwitchBtn on={mode === key} onToggle={() => choose(key)} />
           </div>
         ))
       )}
@@ -5629,6 +5711,9 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
       </OffCanvasSection>
       <OffCanvasSection title="Formules Premium">
         <PremiumPlansConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Mode Découvrir par défaut">
+        <DiscoverModeConfig auth={auth} />
       </OffCanvasSection>
       {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
         <OffCanvasSection title="Mon code d'accès (PIN)">
@@ -6398,7 +6483,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   const [myGender, setMyGender] = useState("");
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "", religion: "" });
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<"card" | "list" | "full">("card");
+  const [viewMode, setViewMode] = useState<"card" | "list" | "full">(DISCOVER_DEFAULT_MODE);
   const [modalTexts, setModalTexts] = useState({
     sameGenderHomme: "Eh frère, reste du bon côté ! 😂",
     sameGenderFemme: "Eh sœur, reste du bon côté ! 😂",
