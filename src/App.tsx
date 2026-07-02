@@ -13940,9 +13940,10 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Profils incomplets", "Cochez 'Afficher uniquement les profils incomplets' pour filtrer les comptes dont l'inscription n'a pas été terminée (nom affiché comme '...')."],
         ["Sélection multiple", "Cochez les cases à gauche de chaque profil pour les sélectionner. Utilisez 'Tout sélectionner' pour sélectionner d'un coup tous les profils affichés."],
         ["Suppression en masse", "Une fois des profils sélectionnés, le bouton 🗑 Supprimer (X) apparaît. Cette action supprime définitivement les comptes sélectionnés. Irréversible."],
-        ["Rendre Premium / Retirer Premium", "Attribue 30 jours de Premium ou retire l'accès aux fonctionnalités payantes. Si l'utilisateur a le Premium à vie, le bouton affiche '- À vie'."],
-        ["★ À vie", "Attribue le Premium permanent (date d'expiration fixée à 2099). Réservé aux employés et collaborateurs Moyo Dating. Un badge ♾️ À vie apparaît sur sa carte. Grisé si déjà à vie."],
-        ["- À vie", "Retire le Premium à vie d'un utilisateur. Remplace '- Premium' lorsque l'utilisateur possède le Premium permanent. Il repasse en compte gratuit."],
+        ["+ Premium / - Premium", "Ouvre la fenêtre 'Gérer le Premium' à deux onglets. Onglet 💳 Paiement : renseignez opérateur (MTN/Airtel) + référence de transaction + formule (Semaine/Mois/2 mois) visibles sur la preuve WhatsApp du client, puis 'Envoyer la demande' — elle atterrit en attente dans Budget/Paiements où un Super Admin vérifie et active (le Premium n'est jamais activé directement depuis cette fenêtre). Onglet 🎁 Offrir gratuitement : pour un collaborateur ou un geste commercial, choisissez une date de fin libre (raccourcis 3j/7j/30j/1an ou date précise) — active immédiatement, sans trace dans Budget."],
+        ["Retirer le Premium (dans la même fenêtre)", "Si l'utilisateur est déjà Premium, un bouton 'Retirer le Premium maintenant' apparaît en haut de la fenêtre — mais UNIQUEMENT si ce Premium a été offert (gratuit). Un abonnement réellement payé par le client est protégé et ne peut pas être retiré avant sa date d'expiration, pour éviter de pénaliser un client payant par erreur."],
+        ["★ À vie", "Attribue le Premium permanent (date d'expiration fixée à 2099), classé automatiquement comme 'offert' donc retirable ensuite si besoin. Réservé aux employés et collaborateurs Moyo Dating. Un badge ♾️ À vie apparaît sur sa carte. Grisé si déjà à vie."],
+        ["- À vie", "Ouvre la même fenêtre 'Gérer le Premium' pour retirer le Premium à vie d'un utilisateur (bouton actif car le Premium à vie est toujours classé 'offert'). Il repasse en compte gratuit."],
         ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
         ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
         ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
@@ -14110,7 +14111,8 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Expiration automatique", "À l'échéance, le Premium repasse à gratuit dès la prochaine connexion. Le compteur affiche 'Expiré'."],
         ["Rejeter & notifier", "Marque la demande comme rejetée ET prévient l'utilisateur que sa preuve n'a pas pu être vérifiée."],
         ["Bouton ↩", "Réinitialise la vérification pour recommencer en cas d'erreur de frappe."],
-        ["Bouton archiver 🗑", "Range un paiement traité dans Archivage. Le Premium et le CA ne changent pas. Pour retirer un Premium accordé par erreur : '- Premium' dans Utilisateurs."],
+        ["Bouton archiver 🗑", "Range un paiement traité dans Archivage. Le Premium et le CA ne changent pas. Pour retirer un Premium payé accordé par erreur : ouvrez 'Gérer le Premium' sur la carte utilisateur (onglet Utilisateurs) — comme c'est classé 'payé' par défaut, utilisez d'abord le lien 'Ce n'est pas un vrai paiement → reclassifier comme offert' pour débloquer le bouton Retirer."],
+        ["Origine « 👤 Admin »", "Une demande peut aussi être créée par un admin depuis la carte utilisateur (onglet Utilisateurs → 'Gérer le Premium' → onglet 💳 Paiement), typiquement quand un client envoie sa preuve de paiement par WhatsApp au lieu de saisir son ID dans l'app. Elle arrive ici avec le même statut « En attente » qu'une demande client classique, avec un badge « 👤 Admin » pour la distinguer — seul un Super Admin peut la vérifier et l'activer, exactement comme les autres."],
         ["Statuts des demandes", "En attente = à traiter. Approuvé ✓ / Rejeté ✕ = traité. Archivé = rangé. Expiré = durée écoulée."],
       ] },
     ],
@@ -16907,19 +16909,27 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     if (!user || !grantOperator || !grantTxRef.trim() || !grantSelectedPlan) return;
     setActionLoading(user.id);
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
         body: JSON.stringify({ user_id: user.id, operator: grantOperator, tx_ref: grantTxRef.trim(), amount: grantSelectedPlan.amount, status: "pending" }),
       });
+      const data = await r.json().catch(() => null);
+      const created = Array.isArray(data) ? data[0] : data;
+      // Ne jamais afficher un succès si l'insertion a réellement échoué
+      // (ex: policy RLS qui bloque l'admin car user_id ≠ son propre auth.uid()).
+      if (!r.ok || !created?.id) {
+        const errMsg = (data as any)?.message || (data as any)?.hint || (data as any)?.code || `HTTP ${r.status}`;
+        throw new Error(errMsg);
+      }
       logAdminAction(auth.token, auth.userId, auth.name, `Demande de paiement manuelle envoyée pour ${user.name} — formule ${grantSelectedPlan.label} (${grantSelectedPlan.amount.toLocaleString()} FCFA, ${grantOperator}, réf. ${grantTxRef.trim()}), en attente de validation Super Admin.`, user.id);
       showToast(`Demande envoyée pour ${user.name}. Un Super Admin doit la valider dans Budget/Paiements.`, "success");
-    } catch { showToast("Erreur lors de l'envoi de la demande.", "error"); }
+      setPremiumGrantModal(null);
+      setGrantOperator(null);
+      setGrantTxRef("");
+      setGrantSelectedPlan(null);
+    } catch (e: any) { showToast(`❌ Échec de l'envoi : ${e?.message || "inconnue"}`, "error"); }
     setActionLoading(null);
-    setPremiumGrantModal(null);
-    setGrantOperator(null);
-    setGrantTxRef("");
-    setGrantSelectedPlan(null);
   };
 
   // ── Offrir Premium gratuitement (collaborateurs, geste commercial…) ──
