@@ -157,6 +157,19 @@ let PREMIUM_PRICE_WEEK_FCFA = 1200;
 let PREMIUM_PRICE_2MONTH_FCFA = 5900;
 let PREMIUM_DAYS_WEEK = 7;
 let PREMIUM_DAYS_2MONTH = 62;
+// Activation/désactivation de chaque formule (au moins une doit toujours rester active)
+let PLAN_WEEK_ENABLED = true;
+let PLAN_MONTH_ENABLED = true;
+let PLAN_2MONTH_ENABLED = true;
+// Prix le plus bas parmi les formules actuellement ACTIVES (ignore les formules désactivées)
+function minEnabledPremiumPrice(): number {
+  const prices = [
+    PLAN_WEEK_ENABLED && PREMIUM_PRICE_WEEK_FCFA,
+    PLAN_MONTH_ENABLED && PREMIUM_PRICE_FCFA,
+    PLAN_2MONTH_ENABLED && PREMIUM_PRICE_2MONTH_FCFA,
+  ].filter((v): v is number => typeof v === "number");
+  return prices.length > 0 ? Math.min(...prices) : PREMIUM_PRICE_FCFA;
+}
 // Déduit la durée (en jours) du Premium à partir du montant payé, selon la formule choisie.
 // Le mois (et tout montant non reconnu : Stripe, cadeau…) retombe sur premium_duration_days.
 function premiumDaysForAmount(amount: number): number {
@@ -250,7 +263,7 @@ function dedupeMatchesByCouple<T extends { user1?: string; user2?: string; creat
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -282,6 +295,9 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["social_youtube"] !== undefined) SOCIAL_YOUTUBE = map["social_youtube"];
   if (map["store_link_android"] !== undefined) STORE_LINK_ANDROID = map["store_link_android"];
   if (map["store_link_ios"] !== undefined) STORE_LINK_IOS = map["store_link_ios"];
+  if (map["plan_week_enabled"] !== undefined) PLAN_WEEK_ENABLED = map["plan_week_enabled"] !== "false";
+  if (map["plan_month_enabled"] !== undefined) PLAN_MONTH_ENABLED = map["plan_month_enabled"] !== "false";
+  if (map["plan_2month_enabled"] !== undefined) PLAN_2MONTH_ENABLED = map["plan_2month_enabled"] !== "false";
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
   if (map["premium_stat_couples"] !== undefined) PREMIUM_STAT_COUPLES = map["premium_stat_couples"];
   if (map["premium_stat_members"] !== undefined) PREMIUM_STAT_MEMBERS = map["premium_stat_members"];
@@ -1783,12 +1799,12 @@ function UploadRingOverlay({ active, size, ringColor, children }: { active: bool
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel">("offer");
   const PREMIUM_PLANS = [
-    { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA, days: PREMIUM_DAYS_WEEK },
-    { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: true },
-    { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, days: PREMIUM_DAYS_2MONTH, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
-  ];
+    PLAN_WEEK_ENABLED && { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA, days: PREMIUM_DAYS_WEEK },
+    PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: true },
+    PLAN_2MONTH_ENABLED && { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, days: PREMIUM_DAYS_2MONTH, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
+  ].filter(Boolean) as { id: string; label: string; per: string; amount: number; days: number; popular?: boolean; badge?: string | null }[];
   const [planId, setPlanId] = useState("1mois");
-  const selectedPlan = PREMIUM_PLANS.find(p => p.id === planId) || PREMIUM_PLANS[1];
+  const selectedPlan = PREMIUM_PLANS.find(p => p.id === planId) || PREMIUM_PLANS[0];
   const planAmount = selectedPlan.amount;
   const [txRef, setTxRef] = useState("");
   const [txSent, setTxSent] = useState(false);
@@ -4823,6 +4839,9 @@ function AdminDesktopPage() {
             {configTab === "tarifs" && <OffCanvasSection title="Moyens de paiement">
               <PaymentMethodsConfig auth={auth!} />
             </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Formules Premium">
+              <PremiumPlansConfig auth={auth!} />
+            </OffCanvasSection>}
             {configTab === "securite" && <OffCanvasSection title="Mode maintenance">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "rgba(231,76,60,0.07)", borderRadius: 12, border: "1px solid rgba(231,76,60,0.25)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -5422,6 +5441,62 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
   );
 }
 
+// Switches d'activation des formules Premium (Semaine / Mois / 2 mois).
+// Au moins une formule doit toujours rester active, sinon plus personne ne peut acheter le Premium.
+function PremiumPlansConfig({ auth }: { auth: Auth }) {
+  const [vals, setVals] = React.useState({ week: true, month: true, twomonth: true });
+  const [loading, setLoading] = React.useState(true);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(plan_week_enabled,plan_month_enabled,plan_2month_enabled)&select=key,value`, { headers: H })
+      .then(r => r.json()).then((data: { key: string; value: string }[]) => {
+        if (!Array.isArray(data)) return;
+        const m: Record<string, string> = {};
+        data.forEach(d => { m[d.key] = d.value; });
+        setVals({
+          week: m["plan_week_enabled"] !== "false",
+          month: m["plan_month_enabled"] !== "false",
+          twomonth: m["plan_2month_enabled"] !== "false",
+        });
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const activeCount = (v: typeof vals) => [v.week, v.month, v.twomonth].filter(Boolean).length;
+
+  const toggle = async (which: "week" | "month" | "twomonth") => {
+    const next = { ...vals, [which]: !vals[which] };
+    // Garde-fou : on ne peut jamais désactiver la dernière formule active
+    if (activeCount(next) === 0) return;
+    setVals(next);
+    if (which === "week") PLAN_WEEK_ENABLED = next.week;
+    if (which === "month") PLAN_MONTH_ENABLED = next.month;
+    if (which === "twomonth") PLAN_2MONTH_ENABLED = next.twomonth;
+    const key = which === "week" ? "plan_week_enabled" : which === "month" ? "plan_month_enabled" : "plan_2month_enabled";
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(next[which]) }) });
+    } catch {}
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        Choisissez les formules proposées aux clients (achat, cadeau, activation manuelle admin). Au moins une doit rester active.
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+      ) : (
+        ([["week", "Semaine", PREMIUM_PRICE_WEEK_FCFA], ["month", "Mois", PREMIUM_PRICE_FCFA], ["twomonth", "2 mois", PREMIUM_PRICE_2MONTH_FCFA]] as ["week" | "month" | "twomonth", string, number][]).map(([k, label, price]) => (
+          <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: vals[k] ? G.brun : "#aaa" }}>{label} <span style={{ fontWeight: 500, color: "#999" }}>({price.toLocaleString()} FCFA)</span>{!vals[k] && <span style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginLeft: 6 }}>(désactivée)</span>}</div>
+            <SwitchBtn on={vals[k]} onToggle={() => toggle(k)} />
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
@@ -5546,6 +5621,9 @@ function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void 
       </OffCanvasSection>
       <OffCanvasSection title="Moyens de paiement">
         <PaymentMethodsConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Formules Premium">
+        <PremiumPlansConfig auth={auth} />
       </OffCanvasSection>
       {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
         <OffCanvasSection title="Mon code d'accès (PIN)">
@@ -7070,7 +7148,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
               <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#fff" }}>Passer à Moyo Dating Premium</span>
             </div>
             <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.78)", lineHeight: 1.5, marginBottom: 10 }}>Messages illimités · Likes illimités · Voir qui vous like</div>
-            <div style={{ fontSize: "1rem", fontWeight: 900, color: G.or }}>À partir de {Math.min(PREMIUM_PRICE_WEEK_FCFA, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_2MONTH_FCFA).toLocaleString()} <span style={{ fontSize: "0.62rem", fontWeight: 600, opacity: 0.85 }}>FCFA</span></div>
+            <div style={{ fontSize: "1rem", fontWeight: 900, color: G.or }}>À partir de {minEnabledPremiumPrice().toLocaleString()} <span style={{ fontSize: "0.62rem", fontWeight: 600, opacity: 0.85 }}>FCFA</span></div>
           </div>
         )}
 
@@ -9793,11 +9871,11 @@ function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConv
   const [giftTxSent, setGiftTxSent] = useState(false);
   const [giftPlanId, setGiftPlanId] = useState("1mois");
   const GIFT_PLANS = [
-    { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA },
-    { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, popular: true },
-    { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
-  ];
-  const giftPlan = GIFT_PLANS.find(p => p.id === giftPlanId) || GIFT_PLANS[1];
+    PLAN_WEEK_ENABLED && { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA },
+    PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, popular: true },
+    PLAN_2MONTH_ENABLED && { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
+  ].filter(Boolean) as { id: string; label: string; per: string; amount: number; popular?: boolean; badge?: string | null }[];
+  const giftPlan = GIFT_PLANS.find(p => p.id === giftPlanId) || GIFT_PLANS[0];
   const giftAmount = giftPlan.amount;
   const [giftTxLoading, setGiftTxLoading] = useState(false);
 
@@ -12763,7 +12841,7 @@ function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpen
               </div>
               <div style={{ marginLeft: 12, flexShrink: 0, textAlign: "right" }}>
                 <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>À partir de</div>
-                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or }}>{Math.min(PREMIUM_PRICE_WEEK_FCFA, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_2MONTH_FCFA).toLocaleString()} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA</span></div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or }}>{minEnabledPremiumPrice().toLocaleString()} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA</span></div>
               </div>
             </div>
           );
@@ -18014,10 +18092,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const u = premiumGrantModal;
         const close = () => { setPremiumGrantModal(null); setGrantFreeDate(""); setGrantOperator(null); setGrantTxRef(""); setGrantTab("paid"); setGrantSelectedPlan(null); };
         const plans = [
-          { label: "Semaine", days: PREMIUM_DAYS_WEEK, amount: PREMIUM_PRICE_WEEK_FCFA },
-          { label: "Mois", days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, amount: PREMIUM_PRICE_FCFA },
-          { label: "2 mois", days: PREMIUM_DAYS_2MONTH, amount: PREMIUM_PRICE_2MONTH_FCFA },
-        ];
+          PLAN_WEEK_ENABLED && { label: "Semaine", days: PREMIUM_DAYS_WEEK, amount: PREMIUM_PRICE_WEEK_FCFA },
+          PLAN_MONTH_ENABLED && { label: "Mois", days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, amount: PREMIUM_PRICE_FCFA },
+          PLAN_2MONTH_ENABLED && { label: "2 mois", days: PREMIUM_DAYS_2MONTH, amount: PREMIUM_PRICE_2MONTH_FCFA },
+        ].filter(Boolean) as { label: string; days: number; amount: number }[];
         const todayISO = new Date().toISOString().slice(0, 10);
         const presetDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
         return (
