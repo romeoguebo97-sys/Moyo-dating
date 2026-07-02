@@ -16623,6 +16623,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [confirmModal, setConfirmModal] = useState<{ msg: string; onConfirm: () => void } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // userId en cours
   const [banModal, setBanModal] = useState<AdminProfile | null>(null);
+  const [premiumGrantModal, setPremiumGrantModal] = useState<AdminProfile | null>(null);
+  const [grantFreeDate, setGrantFreeDate] = useState("");
   const [banHours, setBanHours] = useState("24");
   const [showHelp, setShowHelp] = useState(false);
 
@@ -16886,7 +16888,34 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setActionLoading(null);
   };
 
-  // ── Suppression de compte ──
+  // ── Activer Premium suite à un paiement WhatsApp/manuel (transaction ID non captée par l'app) ──
+  // Applique la bonne durée selon la formule réellement payée ET enregistre le paiement dans
+  // Budget/Paiements pour que le revenu soit comptabilisé correctement.
+  const grantPremiumPaid = async (plan: { label: string; days: number; amount: number }) => {
+    const user = premiumGrantModal;
+    if (!user) return;
+    const premiumUntil = new Date(Date.now() + plan.days * 86400000).toISOString();
+    await adminAction(user.id, { is_premium: true, premium_until: premiumUntil }, `Premium activé pour ${user.name} — formule ${plan.label} (${plan.amount.toLocaleString()} FCFA, paiement WhatsApp/manuel).`);
+    fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+      body: JSON.stringify({ user_id: user.id, operator: "manuel", tx_ref: `WHATSAPP-${Date.now()}`, amount: plan.amount, status: "approved", approved_at: new Date().toISOString() }),
+    }).catch(() => {});
+    setPremiumGrantModal(null);
+  };
+
+  // ── Offrir Premium gratuitement (collaborateurs, geste commercial…) ──
+  // Date de fin totalement libre, choisie par l'admin. Aucune trace dans Budget/Paiements
+  // puisqu'aucun paiement n'a eu lieu.
+  const grantPremiumFree = async () => {
+    const user = premiumGrantModal;
+    if (!user || !grantFreeDate) return;
+    const premiumUntil = new Date(`${grantFreeDate}T23:59:59`).toISOString();
+    const dateLabel = new Date(premiumUntil).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+    await adminAction(user.id, { is_premium: true, premium_until: premiumUntil }, `Premium offert gratuitement à ${user.name} jusqu'au ${dateLabel} (aucun paiement, non comptabilisé dans Budget).`);
+    setPremiumGrantModal(null);
+    setGrantFreeDate("");
+  };
   const deleteAccount = async (user: AdminProfile) => {
     if (user.id === auth.userId) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
     if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
@@ -17953,6 +17982,62 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         </div>
       )}
+      {premiumGrantModal && (() => {
+        const u = premiumGrantModal;
+        const close = () => { setPremiumGrantModal(null); setGrantFreeDate(""); };
+        const plans = [
+          { label: "Semaine", days: PREMIUM_DAYS_WEEK, amount: PREMIUM_PRICE_WEEK_FCFA },
+          { label: "Mois", days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, amount: PREMIUM_PRICE_FCFA },
+          { label: "2 mois", days: PREMIUM_DAYS_2MONTH, amount: PREMIUM_PRICE_2MONTH_FCFA },
+        ];
+        const todayISO = new Date().toISOString().slice(0, 10);
+        const presetDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={close}>
+            <div style={{ background: G.blanc, borderRadius: 20, padding: 24, maxWidth: 420, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+              <h3 style={{ margin: "0 0 4px", fontSize: "1.05rem", color: G.brun }}>Rendre {u.name} Premium</h3>
+              <p style={{ margin: "0 0 18px", fontSize: "0.78rem", color: "#888" }}>Choisissez comment activer le Premium pour cet utilisateur.</p>
+
+              {/* ── Cas 1 : paiement reçu (WhatsApp, ID non capté) ── */}
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>💳 Le client a payé (capture WhatsApp)</div>
+                <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Sélectionnez la formule visible sur la preuve de paiement. Ça applique la bonne durée et enregistre le revenu dans Budget/Paiements.</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {plans.map(plan => (
+                    <button key={plan.label} disabled={actionLoading === u.id} onClick={() => grantPremiumPaid(plan)}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "10px 14px", cursor: actionLoading === u.id ? "not-allowed" : "pointer", textAlign: "left" }}>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{plan.label} <span style={{ fontWeight: 500, color: "#888" }}>({plan.days} jours)</span></span>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#D4A843" }}>{plan.amount.toLocaleString()} FCFA</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: G.gris, margin: "0 0 22px" }} />
+
+              {/* ── Cas 2 : offrir gratuitement (collaborateur, geste commercial…) ── */}
+              <div>
+                <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>🎁 Offrir gratuitement (collaborateur, etc.)</div>
+                <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Aucun paiement, aucune trace dans Budget/Paiements. Vous choisissez librement la date de fin (ex: fin de contrat).</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                  <button onClick={() => setGrantFreeDate(presetDate(3))} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>3 jours</button>
+                  <button onClick={() => setGrantFreeDate(presetDate(7))} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>7 jours</button>
+                  <button onClick={() => setGrantFreeDate(presetDate(30))} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>30 jours</button>
+                  <button onClick={() => setGrantFreeDate(presetDate(365))} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>1 an</button>
+                </div>
+                <input type="date" value={grantFreeDate} min={todayISO} onChange={e => setGrantFreeDate(e.target.value)}
+                  style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", marginBottom: 12 }} />
+                <button disabled={!grantFreeDate || actionLoading === u.id} onClick={grantPremiumFree}
+                  style={{ width: "100%", background: !grantFreeDate ? "#ccc" : `linear-gradient(135deg,${G.vert},#145c3a)`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: !grantFreeDate ? "not-allowed" : "pointer" }}>
+                  Offrir jusqu'au {grantFreeDate ? new Date(`${grantFreeDate}T12:00:00`).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "..."}
+                </button>
+              </div>
+
+              <button onClick={close} style={{ width: "100%", marginTop: 16, background: "transparent", color: "#888", border: "none", padding: "8px", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+            </div>
+          </div>
+        );
+      })()}
       {banModal && (() => {
         const u = banModal;
         const close = () => setBanModal(null);
@@ -18662,7 +18747,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginLeft: "auto", flexShrink: 0 }}>
                           {/* Premium */}
                           {!u.is_premium
-                            ? <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading} onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + PREMIUM_30_DAYS_MS).toISOString() }, `${u.name} est maintenant Premium.`))} />
+                            ? <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading} onClick={() => setPremiumGrantModal(u)} />
                             : isLifetimePremium(u)
                               ? <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading} onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
                               : <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading} onClick={() => confirm(`Retirer le Premium de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium retiré pour ${u.name}.`))} />
@@ -18770,7 +18855,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                         {!u.is_premium ? (
                           <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
-                            onClick={() => confirm(`Rendre ${u.name} Premium ?`, () => adminAction(u.id, { is_premium: true, premium_until: new Date(Date.now() + PREMIUM_30_DAYS_MS).toISOString() }, `${u.name} est maintenant Premium.`))} />
+                            onClick={() => setPremiumGrantModal(u)} />
                         ) : isLifetimePremium(u) ? (
                           <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading}
                             onClick={() => confirm(`Retirer le Premium À VIE de ${u.name} ?`, () => adminAction(u.id, { is_premium: false, premium_until: undefined }, `Premium à vie retiré pour ${u.name}.`))} />
