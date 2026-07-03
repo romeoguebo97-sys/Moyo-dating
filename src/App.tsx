@@ -3790,7 +3790,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     } catch {}
     await minDelay;
     setUploadingPhoto(false);
-    setStep(3);
+    setStep(4);
   };
 
   // Étape 3 → finaliser le profil
@@ -3879,16 +3879,18 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "#fff" }}>{step}</div>
           <span style={{ fontSize: "0.88rem", fontWeight: 700, color: G.rouge }}>
             {step === 1 && "Identifiant et mot de passe"}
-            {step === 2 && "Photo de profil"}
-            {step === 3 && "Informations personnelles"}
+            {step === 2 && "Choisis ton genre"}
+            {step === 3 && "Photo de profil"}
+            {step === 4 && "Tes informations"}
+            {step === 5 && "Informations complémentaires"}
           </span>
-          <span style={{ fontSize: "0.75rem", color: "#555", fontWeight: 500 }}>{step}/3</span>
+          <span style={{ fontSize: "0.75rem", color: "#555", fontWeight: 500 }}>{step}/5</span>
         </div>
       </div>
 
       {/* Barre de progression */}
       <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
-        {[1, 2, 3].map(s => (
+        {[1, 2, 3, 4, 5].map(s => (
           <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? G.rouge : G.gris, transition: "background 0.3s" }} />
         ))}
       </div>
@@ -3900,8 +3902,51 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         <Btn variant="primary" onClick={checkEmailAndContinue} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn>
       </>}
 
-      {/* ÉTAPE 2 - Photo */}
+      {/* ÉTAPE 2 - Genre (déplacé ici pour être choisi avant la photo) */}
       {step === 2 && <>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#222", margin: "0 0 8px" }}>Quel est ton genre ?</h3>
+          <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.5, margin: "0 0 24px" }}>Cela nous aide à te proposer les profils qui te correspondent.</p>
+        </div>
+        <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+          {(["Homme", "Femme"] as const).map(g => {
+            const selected = form.gender === g;
+            const color = g === "Homme" ? G.rouge : "#DB2777";
+            return (
+              <div key={g} onClick={() => upd("gender", g)}
+                style={{ flex: 1, padding: "22px 12px", borderRadius: 16, textAlign: "center", cursor: "pointer",
+                  border: `2.5px solid ${selected ? color : G.gris}`,
+                  background: selected ? `${color}14` : G.blanc,
+                  transition: "all 0.15s", position: "relative" }}>
+                {selected && (
+                  <div style={{ position: "absolute", top: 10, right: 10, width: 20, height: 20, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                )}
+                <div style={{ width: 76, height: 76, borderRadius: "50%", background: selected ? color : `${color}1f`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", transition: "all 0.15s" }}>
+                  {g === "Homme" ? (
+                    <svg width="34" height="34" viewBox="103 143 978 1180" fill={selected ? "#fff" : color}>
+                      <path d="M1004.175,1003.861L796.461,912.2l-61.509-27.153l-2.87-45.606c11.231-7.924,22.021-16.702,32.173-26.285c25.37-23.949,45.489-51.235,59.796-81.101c15.439-32.226,23.266-65.866,23.266-99.987v-5.712c4.064,1.619,8.461,2.487,12.995,2.487c19.334,0,35.063-15.734,35.063-35.073c0-10.03,2.162-18.198,4.449-26.846c2.175-8.223,4.425-16.725,4.425-26.336c0-13.031-6.081-24.662-15.547-32.226c35.353-200.698-64.515-320.45-172.593-334.087c-194.144-24.477-334.25-10.943-334.25,69.229c0,25.209,16.951,40.632,22.348,44.891c-22.052-5.388-117.879-23.033-117.879,78.172c0,41.094,9.06,98.095,18.364,138.504c-12.144,7.186-20.31,20.413-20.31,35.517c0,9.611,2.249,18.114,4.425,26.336c2.288,8.648,4.449,16.817,4.449,26.846c0,19.34,15.73,35.073,35.064,35.073c2.489,0,4.95-0.263,7.347-0.776v4.001c0,34.068,7.992,67.729,23.754,100.047c14.521,29.774,34.896,57.05,60.559,81.068c10.1,9.453,20.784,18.121,31.866,25.959l-2.895,45.904L387.443,912.2l-207.717,91.661c-34.156,15.075-56.226,48.942-56.226,86.28v168.084c0,24.541,19.966,44.507,44.508,44.507h847.887c24.542,0,44.509-19.966,44.509-44.507v-168.084C1060.403,1052.803,1038.332,1018.935,1004.175,1003.861z M376.572,723.751c-14.48-29.691-21.822-60.537-21.822-91.682V612.91c0-3.754-2.201-7.159-5.625-8.7c-1.255-0.565-2.589-0.841-3.915-0.841c-2.287,0-4.548,0.822-6.327,2.398c-2.908,2.575-6.66,3.994-10.563,3.994c-8.812,0-15.981-7.173-15.981-15.991c0-12.511-2.7-22.719-5.083-31.726c-2.034-7.687-3.79-14.326-3.79-21.456c0-12.221,9.943-22.164,22.164-22.164c3.765,0,7.334,0.909,10.607,2.701c3.29,1.801,7.331,1.507,10.327-0.751c2.995-2.259,4.389-6.063,3.562-9.722c-6.472-28.632-0.473-59.982,16.05-83.864c18.074-26.141,49.013-43.527,80.744-45.372c31.216-1.833,62.994,10.287,93.716,22.001c38.699,14.755,78.714,30.01,120.035,19.229c11.028-2.878,21.318-7.479,31.27-11.928c12.867-5.753,25.019-11.187,37.826-12.65c20.115-2.296,36.979,6.128,47.59,13.6c14.368,10.118,26.481,24.83,34.111,41.426c8.679,18.875,13.607,41.34,15.51,70.699c0.265,4.09,3.113,7.554,7.075,8.605c3.961,1.05,8.152-0.547,10.409-3.968c4.133-6.265,11.065-10.005,18.542-10.005c12.221,0,22.164,9.943,22.164,22.164c0,7.13-1.757,13.769-3.791,21.456c-2.382,9.007-5.083,19.216-5.083,31.727c0,8.817-7.169,15.991-15.981,15.991c-5.92,0-11.329-3.248-14.117-8.477c-2.06-3.864-6.484-5.829-10.732-4.768c-4.247,1.062-7.227,4.878-7.227,9.256v26.295c0,31.244-7.198,62.11-21.394,91.742c-13.292,27.744-32.028,53.135-55.686,75.469c-46.123,43.539-105.811,69.533-159.664,69.533c-52.692,0-111.934-26.005-158.473-69.561C409.399,777.144,389.879,751.037,376.572,723.751z M686.979,923.009c-27.047,23.501-59.017,35.418-95.023,35.418c-37.88,0-70.4-11.867-96.66-35.27c-15.928-14.195-24.656-28.602-27.498-33.772l2.411-38.227c39.075,23.504,81.768,36.737,121.284,36.737c40.184,0,83.18-13.141,122.222-36.487l2.374,37.734C712.82,894.501,703.266,908.856,686.979,923.009z"/>
+                    </svg>
+                  ) : (
+                    <svg width="34" height="34" viewBox="1157 222 940 1101" fill={selected ? "#fff" : color}>
+                      <path d="M2025.962,1009.049l-79.697-35.17h0.006c-19.145-49.362-36.133-138.644-36.133-294.553c0-91.92,18.275-131.811,6.24-210.613c-10.323-67.581-48.566-131.006-101.409-174.99c-51.399-42.761-123.803-63.397-187.839-44.298h-0.009c-64.026-19.099-136.431,1.537-187.83,44.298c-52.843,43.983-91.087,107.408-101.409,174.99c-12.035,78.802,6.24,118.693,6.24,210.613c0,155.909-16.979,245.191-36.133,294.553H1308l-79.693,35.17c-30.717,13.553-50.547,43.965-50.547,77.552v181.164c0,19.312,15.664,34.966,34.976,34.966h828.798c19.312,0,34.966-15.655,34.966-34.966v-181.164C2076.5,1053.014,2056.67,1022.602,2025.962,1009.049z M1627.186,1117.551l-114.818-158.959v-88.464c36.124,21.449,75.474,33.517,111.938,33.517c38.72,0,80.226-13.069,117.588-36.178v93.55L1627.186,1117.551z M1844.083,664.788c0,28.992-6.681,57.637-19.856,85.138c-12.341,25.76-29.738,49.337-51.708,70.076c-42.827,40.427-98.234,64.564-148.214,64.564c-48.9,0-103.893-24.147-147.107-64.592c-21.936-20.53-40.061-44.773-52.417-70.107c-13.439-27.555-20.253-56.179-20.253-85.141c-0.002-0.259-0.152-24.067,0.161-53.616c57.49-9.006,113.058-30.113,161.186-61.285c48.901-31.673,87.858-72.284,112.998-117.723c53.839,0.476,89.547,7.831,115.293,23.665c32.788,20.165,48.728,55.371,48.728,107.631c0,0.049,0,0.099,0.001,0.148l1.19,76.831V664.788z M1493.286,900.665v61.013c0,2.006,0.632,3.961,1.806,5.586l99.001,137.06l-144.149-80.752c-1.442-0.808-3.049-1.217-4.663-1.217c-1.178,0-2.36,0.218-3.483,0.658l-89.473,35.084c16.846-72.68,60.426-113.624,95.298-135.517C1466.004,911.043,1482.726,904.267,1493.286,900.665z M1660.791,1103.976l98.339-134.197c1.199-1.636,1.844-3.612,1.844-5.64v-63.474c10.561,3.603,27.282,10.378,45.664,21.916c34.872,21.893,78.452,62.838,95.298,135.517l-89.473-35.084c-2.663-1.044-5.652-0.84-8.147,0.559L1660.791,1103.976z"/>
+                    </svg>
+                  )}
+                </div>
+                <div style={{ fontWeight: 800, fontSize: "1.02rem", color: selected ? color : "#888" }}>{g}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn variant="ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Retour</Btn>
+          <Btn variant="primary" onClick={() => setStep(3)} style={{ flex: 2 }} disabled={!form.gender}>Suivant →</Btn>
+        </div>
+      </>}
+
+      {/* ÉTAPE 3 - Photo */}
+      {step === 3 && <>
         {/* CropModal pour l'inscription */}
         {cropSrcSignup && (
           <CropModal
@@ -3950,15 +3995,15 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           }
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <Btn variant="ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Retour</Btn>
+          <Btn variant="ghost" onClick={() => setStep(2)} style={{ flex: 1 }}>← Retour</Btn>
           <Btn variant="primary" onClick={handlePhotoAndContinue} loading={uploadingPhoto} style={{ flex: 2 }} disabled={!photoPreview}>
             {uploadingPhoto ? "Upload en cours..." : "Continuer →"}
           </Btn>
         </div>
       </>}
 
-      {/* ÉTAPE 3 - Infos personnelles */}
-      {step === 3 && <>
+      {/* ÉTAPE 4 - Tes informations (obligatoire) */}
+      {step === 4 && <>
         {photoPreview && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(26,92,58,0.06)", borderRadius: 12, padding: "8px 14px", marginBottom: 16 }}>
             <img src={photoPreview} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} loading="lazy" />
@@ -3967,29 +4012,8 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             </div>
           </div>
         )}
+        <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>Parle-nous un peu de toi — ces informations nous aident à te proposer les bonnes personnes.</p>
         <Input label={<>Prénom <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="user" />
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Choisis ton genre <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></label>
-          <div style={{ display: "flex", gap: 10 }}>
-            {["Homme", "Femme"].map(g => (
-              <div key={g} onClick={() => upd("gender", g)} style={{ flex: 1, padding: "12px", borderRadius: 12, textAlign: "center", cursor: "pointer", border: `2px solid ${form.gender === g ? G.rouge : G.gris}`, background: form.gender === g ? "rgba(192,57,43,0.06)" : G.blanc, fontWeight: 600, fontSize: "0.88rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                {g === "Homme" ? (
-                  <svg width="24" height="24" viewBox="0 0 60 60" fill={form.gender === g ? G.rouge : "#aaa"}>
-                    <ellipse cx="30" cy="16" rx="11" ry="12"/>
-                    <path d="M10 55 c0-18 10-24 20-24 s20 6 20 24z"/>
-                  </svg>
-                ) : (
-                  <svg width="24" height="24" viewBox="0 0 60 60" fill={form.gender === g ? G.rouge : "#aaa"}>
-                    <ellipse cx="30" cy="15" rx="11" ry="12"/>
-                    <path d="M12 55 c0-16 8-22 18-24 l0-2 l-4 0 l0-3 l8 0 l0 3 l-4 0 l0 2 c10 2 18 8 18 24z"/>
-                    <path d="M15 38 q15 10 30 0" fill="none" stroke={form.gender === g ? G.rouge : "#aaa"} strokeWidth="2.5"/>
-                  </svg>
-                )}
-                {g}
-              </div>
-            ))}
-          </div>
-        </div>
         <Input label={<>Âge <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} type="number" value={form.age} onChange={e => { const v = e.target.value.slice(0,2); upd("age", v); }} placeholder="Ex: 25" icon="cake" hint="Entre 18 et 99 ans" error={form.age && parseInt(form.age) < 18 ? "Vous devez avoir au moins 18 ans." : undefined} />
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Ville <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></label>
@@ -3998,6 +4022,15 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             {VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn variant="ghost" onClick={() => setStep(3)} style={{ flex: 1 }}>← Retour</Btn>
+          <Btn variant="primary" onClick={() => setStep(5)} style={{ flex: 2 }} disabled={!form.name.trim() || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city}>Suivant →</Btn>
+        </div>
+      </>}
+
+      {/* ÉTAPE 5 - Informations complémentaires (optionnel) puis création du compte */}
+      {step === 5 && <>
+        <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>Ces informations sont optionnelles mais elles nous aident à te proposer les meilleures personnes.</p>
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Religion <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
           <select value={form.religion} onChange={e => upd("religion", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }}>
@@ -4026,7 +4059,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           </div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <Btn variant="ghost" onClick={() => setStep(2)} style={{ flex: 1 }}>← Retour</Btn>
+          <Btn variant="ghost" onClick={() => setStep(4)} style={{ flex: 1 }}>← Retour</Btn>
           <Btn variant="primary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }} disabled={!form.name || !form.gender || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city}>Créer mon compte</Btn>
         </div>
       </>}
