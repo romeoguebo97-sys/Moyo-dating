@@ -3316,7 +3316,11 @@ function About({ onBack }: { onBack: () => void }) {
 // Le texte s'adapte légèrement selon le genre de la personne.
 function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () => void }) {
   const isFemme = gender === "Femme";
-  const e = isFemme ? "e" : "";
+  // Accord pour la personne qui lit (elle-même) : "reste discret" / "reste discrète"
+  const eSelf = isFemme ? "e" : "";
+  // Accord pour les personnes qu'elle pourrait croiser : Moyo ne montre que le genre OPPOSÉ,
+  // donc une femme croisera des hommes ("un voisin"), un homme croisera des femmes ("une voisine").
+  const eOther = isFemme ? "" : "e";
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
@@ -3328,10 +3332,10 @@ function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () 
         </div>
         <div style={{ padding: "22px 22px 24px" }}>
           <p style={{ fontSize: "0.87rem", color: "#444", lineHeight: 1.65, marginBottom: 14 }}>
-            Sur Moyo, tu pourrais tomber sur des personnes que tu connais déjà — un{e} voisin{e}, un{e} collègue, ou même un membre de ta famille. C'est fréquent, et ce n'est pas grave !
+            Sur Moyo, tu pourrais tomber sur des personnes que tu connais déjà : un{eOther} voisin{eOther}, un{eOther} collègue, ou même un membre de ta famille. C'est fréquent, et ce n'est pas grave !
           </p>
           <p style={{ fontSize: "0.87rem", color: "#444", lineHeight: 1.65, marginBottom: 14 }}>
-            Merci de rester discret{e} et de garder tes échanges et rencontres confidentiels, par respect pour toi-même et pour les autres membres.
+            Merci de rester discret{eSelf} et de garder tes échanges et rencontres confidentiels, par respect pour toi-même et pour les autres membres.
           </p>
           <p style={{ fontSize: "0.78rem", color: "#999", lineHeight: 1.6, marginBottom: 20 }}>
             Moyo met tout en œuvre pour ta sécurité, mais n'est pas responsable des interactions entre membres en dehors de l'application.
