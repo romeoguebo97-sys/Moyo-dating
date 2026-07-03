@@ -25,6 +25,7 @@ export function setCONTACT_ADDRESS(v: any) { CONTACT_ADDRESS = v; }
 export function setCONTACT_EMAIL(v: any) { CONTACT_EMAIL = v; }
 export function setCONTACT_WHATSAPP(v: any) { CONTACT_WHATSAPP = v; }
 export function setDISCOVER_DEFAULT_MODE(v: any) { DISCOVER_DEFAULT_MODE = v; }
+export function setPRIVACY_NOTICE_ENABLED(v: any) { PRIVACY_NOTICE_ENABLED = v; }
 export function setEUR_TO_FCFA(v: any) { EUR_TO_FCFA = v; }
 export function setLANDING_MEMBERS(v: any) { LANDING_MEMBERS = v; }
 export function setLANDING_SLOGAN(v: any) { LANDING_SLOGAN = v; }
@@ -213,6 +214,8 @@ export let PLAN_MONTH_ENABLED = true;
 export let PLAN_2MONTH_ENABLED = true;
 // Mode d'affichage par défaut de l'onglet Découvrir à l'ouverture de l'app ("card" = cartes à swiper, "list" = liste, "full" = plein écran)
 export let DISCOVER_DEFAULT_MODE: "card" | "list" | "full" = "card";
+// Notice de confidentialité affichée à la première connexion après inscription (activable/désactivable par l'admin)
+export let PRIVACY_NOTICE_ENABLED = true;
 // Prix le plus bas parmi les formules actuellement ACTIVES (ignore les formules désactivées)
 function minEnabledPremiumPrice(): number {
   const prices = [
@@ -313,7 +316,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -349,6 +352,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["plan_month_enabled"] !== undefined) PLAN_MONTH_ENABLED = map["plan_month_enabled"] !== "false";
   if (map["plan_2month_enabled"] !== undefined) PLAN_2MONTH_ENABLED = map["plan_2month_enabled"] !== "false";
   if (map["discover_default_mode"] === "card" || map["discover_default_mode"] === "list" || map["discover_default_mode"] === "full") DISCOVER_DEFAULT_MODE = map["discover_default_mode"];
+  if (map["privacy_notice_enabled"] !== undefined) PRIVACY_NOTICE_ENABLED = map["privacy_notice_enabled"] !== "false";
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
   if (map["premium_stat_couples"] !== undefined) PREMIUM_STAT_COUPLES = map["premium_stat_couples"];
   if (map["premium_stat_members"] !== undefined) PREMIUM_STAT_MEMBERS = map["premium_stat_members"];
@@ -3304,6 +3308,37 @@ function About({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
+    </div>
+  );
+}
+
+// Notice de confidentialité affichée une seule fois, à la première connexion après inscription.
+// Le texte s'adapte légèrement selon le genre de la personne.
+function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () => void }) {
+  const isFemme = gender === "Femme";
+  const e = isFemme ? "e" : "";
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+        <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.08rem" }}>Ta confidentialité, notre priorité</div>
+        </div>
+        <div style={{ padding: "22px 22px 24px" }}>
+          <p style={{ fontSize: "0.87rem", color: "#444", lineHeight: 1.65, marginBottom: 14 }}>
+            Sur Moyo, tu pourrais tomber sur des personnes que tu connais déjà — un{e} voisin{e}, un{e} collègue, ou même un membre de ta famille. C'est fréquent, et ce n'est pas grave !
+          </p>
+          <p style={{ fontSize: "0.87rem", color: "#444", lineHeight: 1.65, marginBottom: 14 }}>
+            Merci de rester discret{e} et de garder tes échanges et rencontres confidentiels, par respect pour toi-même et pour les autres membres.
+          </p>
+          <p style={{ fontSize: "0.78rem", color: "#999", lineHeight: 1.6, marginBottom: 20 }}>
+            Moyo met tout en œuvre pour ta sécurité, mais n'est pas responsable des interactions entre membres en dehors de l'application.
+          </p>
+          <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>J'ai compris</Btn>
+        </div>
+      </div>
     </div>
   );
 }
@@ -12525,6 +12560,21 @@ export default function App() {
     //  pour couvrir aussi les sessions restaurées et pas seulement le login.)
   };
 
+  // ── Notice de confidentialité : affichée tant qu'elle n'a pas été acquittée sur cet appareil ──
+  const [privacyNotice, setPrivacyNotice] = useState<{ gender?: string } | null>(null);
+  useEffect(() => {
+    if (!auth?.userId || !PRIVACY_NOTICE_ENABLED) return;
+    const key = `moyo_privacy_ack_${auth.userId}`;
+    try { if (localStorage.getItem(key) === "1") return; } catch {}
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=gender`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(d => setPrivacyNotice({ gender: Array.isArray(d) ? d[0]?.gender : undefined }))
+      .catch(() => setPrivacyNotice({}));
+  }, [auth?.userId]);
+  const ackPrivacyNotice = () => {
+    try { if (auth?.userId) localStorage.setItem(`moyo_privacy_ack_${auth.userId}`, "1"); } catch {}
+    setPrivacyNotice(null);
+  };
+
   // ── Notifications push : demander la permission + abonner ──
   // Se déclenche à chaque fois qu'un utilisateur est connecté (login OU session restaurée).
   useEffect(() => {
@@ -13139,6 +13189,7 @@ export default function App() {
     </AppShell>
     {auth && <RelationalNudge auth={auth} onGoProfile={() => setTab("profile")} />}
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} />}
+    {privacyNotice && <PrivacyNoticeModal gender={privacyNotice.gender} onClose={ackPrivacyNotice} />}
     {premiumSuccess && (
       <div onClick={() => setPremiumSuccess(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100000, padding: 20, backdropFilter: "blur(3px)" }}>
         <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "30px 24px 24px", maxWidth: 360, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", position: "relative", overflow: "hidden" }}>
