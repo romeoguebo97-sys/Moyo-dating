@@ -3861,6 +3861,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           phone: form.phone.trim() || null,
           photo_url: photoUrl,
           is_complete: true,
+          privacy_notice_seen: false,
           ...((() => { const ref = new URLSearchParams(window.location.search).get("ref"); return ref ? { referred_by: ref } : {}; })()),
         }),
       });
@@ -12564,19 +12565,28 @@ export default function App() {
     //  pour couvrir aussi les sessions restaurées et pas seulement le login.)
   };
 
-  // ── Notice de confidentialité : affichée tant qu'elle n'a pas été acquittée sur cet appareil ──
+  // ── Notice de confidentialité : affichée UNE SEULE FOIS aux nouveaux comptes (jamais aux anciens),
+  //    via une vraie colonne en base (privacy_notice_seen) — fiable même en changeant d'appareil,
+  //    contrairement à un simple stockage local qui ne fait pas la différence "ancien"/"nouveau" compte.
   const [privacyNotice, setPrivacyNotice] = useState<{ gender?: string } | null>(null);
   useEffect(() => {
     if (!auth?.userId || !PRIVACY_NOTICE_ENABLED) return;
-    const key = `moyo_privacy_ack_${auth.userId}`;
-    try { if (localStorage.getItem(key) === "1") return; } catch {}
-    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=gender`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
-      .then(r => r.json()).then(d => setPrivacyNotice({ gender: Array.isArray(d) ? d[0]?.gender : undefined }))
-      .catch(() => setPrivacyNotice({}));
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=gender,privacy_notice_seen`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then((d: any) => {
+        const p = Array.isArray(d) ? d[0] : null;
+        if (p && !p.privacy_notice_seen) setPrivacyNotice({ gender: p.gender });
+      }).catch(() => {});
   }, [auth?.userId]);
   const ackPrivacyNotice = () => {
-    try { if (auth?.userId) localStorage.setItem(`moyo_privacy_ack_${auth.userId}`, "1"); } catch {}
     setPrivacyNotice(null);
+    if (auth?.userId && auth?.token) {
+      fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ privacy_notice_seen: true }),
+      }).catch(() => {});
+    }
   };
 
   // ── Notifications push : demander la permission + abonner ──
