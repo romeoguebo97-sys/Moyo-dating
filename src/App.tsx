@@ -3900,6 +3900,12 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         <Input label="Email" type="email" value={form.email} onChange={e => upd("email", e.target.value)} placeholder="ton@email.com" icon="email" />
         <Input label="Veuillez définir votre mot de passe" type="password" value={form.password} onChange={e => upd("password", e.target.value)} placeholder="Minimum 6 caractères" icon="lock" hint="Au moins 6 caractères" />
         <Btn variant="primary" onClick={checkEmailAndContinue} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn>
+        <p style={{ textAlign: "center", marginTop: 14, fontSize: "0.7rem", color: "#aaa", lineHeight: 1.6, padding: "0 12px" }}>
+          En continuant, vous acceptez nos{" "}
+          <a href="https://dating.moyo-congo.com/#confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: "#888", textDecoration: "underline" }}>Conditions d'utilisation</a>
+          {" "}et confirmez avoir lu notre{" "}
+          <a href="https://dating.moyo-congo.com/#confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: "#888", textDecoration: "underline" }}>Politique de confidentialité</a>.
+        </p>
       </>}
 
       {/* ÉTAPE 2 - Genre (déplacé ici pour être choisi avant la photo) */}
@@ -4004,14 +4010,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
       {/* ÉTAPE 4 - Tes informations (obligatoire) */}
       {step === 4 && <>
-        {photoPreview && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(26,92,58,0.06)", borderRadius: 12, padding: "8px 14px", marginBottom: 16 }}>
-            <img src={photoPreview} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} loading="lazy" />
-            <div style={{ fontSize: "0.78rem", color: "#1A5C3A", fontWeight: 600 }}>
-              {photoUrl ? "✓ Photo uploadée avec succès" : "Photo en cours d'upload..."}
-            </div>
-          </div>
-        )}
         <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>Parle-nous un peu de toi — ces informations nous aident à te proposer les bonnes personnes.</p>
         <Input label={<>Prénom <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="user" />
         <Input label={<>Âge <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} type="number" value={form.age} onChange={e => { const v = e.target.value.slice(0,2); upd("age", v); }} placeholder="Ex: 25" icon="cake" hint="Entre 18 et 99 ans" error={form.age && parseInt(form.age) < 18 ? "Vous devez avoir au moins 18 ans." : undefined} />
@@ -4066,12 +4064,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
       <p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>
         Déjà un compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("login")}>Se connecter</span>
-      </p>
-      <p style={{ textAlign: "center", marginTop: 14, fontSize: "0.7rem", color: "#aaa", lineHeight: 1.6, padding: "0 12px" }}>
-        En continuant, vous acceptez nos{" "}
-        <a href="https://dating.moyo-congo.com/#confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: "#888", textDecoration: "underline" }}>Conditions d'utilisation</a>
-        {" "}et confirmez avoir lu notre{" "}
-        <a href="https://dating.moyo-congo.com/#confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: "#888", textDecoration: "underline" }}>Politique de confidentialité</a>.
       </p>
     </AuthLayout>
   );
@@ -16098,6 +16090,37 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     } catch { showToast("Erreur lors de la suppression.", "error"); }
   };
   const [pinModal, setPinModal] = useState<{ user: AdminProfile; mode: "set" | "reset" } | null>(null);
+  const [pwResetModal, setPwResetModal] = useState<AdminProfile | null>(null);
+  const [pwResetValue, setPwResetValue] = useState("");
+  const [pwResetLoading, setPwResetLoading] = useState(false);
+  const [pwResetResult, setPwResetResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const genTempPassword = () => {
+    const words = ["Moyo", "Congo", "Amour", "Coeur", "Rouge", "Zenith", "Etoile", "Douala"];
+    const w = words[Math.floor(Math.random() * words.length)];
+    const n = Math.floor(1000 + Math.random() * 9000);
+    return `${w}${n}`;
+  };
+
+  const submitPasswordReset = async (targetUser: AdminProfile, newPw: string) => {
+    if (!newPw || newPw.length < 6) { setPwResetResult({ ok: false, msg: "Le mot de passe doit contenir au moins 6 caractères." }); return; }
+    setPwResetLoading(true);
+    setPwResetResult(null);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}` },
+        body: JSON.stringify({ target_user_id: targetUser.id, new_password: newPw }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data?.success) throw new Error(data?.error || `Erreur (HTTP ${r.status})`);
+      logAdminAction(auth!.token, auth!.userId, auth!.name, `Mot de passe réinitialisé pour ${targetUser.name}.`, targetUser.id);
+      setPwResetResult({ ok: true, msg: `Nouveau mot de passe défini : ${newPw}` });
+    } catch (e: any) {
+      setPwResetResult({ ok: false, msg: e?.message || "Échec de la réinitialisation." });
+    }
+    setPwResetLoading(false);
+  };
   const [pinModalInput, setPinModalInput] = useState("");
   const [warnReason, setWarnReason] = useState(WARN_REASONS[0]);
   const [msgModal, setMsgModal] = useState<{ user: Profile } | null>(null);
@@ -18127,6 +18150,57 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {pwResetModal && (() => {
+        const u = pwResetModal;
+        const close = () => { setPwResetModal(null); setPwResetValue(""); setPwResetResult(null); };
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={close}>
+            <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+              <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
+                <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.02rem" }}>Mot de passe de {u.name}</div>
+                <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.75rem", marginTop: 2 }}>Utile si la personne n'arrive pas à réinitialiser elle-même</div>
+              </div>
+              <div style={{ padding: "20px 20px 22px" }}>
+                {!pwResetResult ? (
+                  <>
+                    <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 8 }}>Nouveau mot de passe (modifiable, 6 caractères minimum) :</div>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                      <input value={pwResetValue} onChange={e => setPwResetValue(e.target.value)} style={{ flex: 1, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 12px", fontSize: "0.95rem", outline: "none", fontFamily: "monospace", fontWeight: 700, color: "#6c3483" }} />
+                      <button onClick={() => setPwResetValue(genTempPassword())} title="Régénérer" style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "0 14px", cursor: "pointer", fontSize: "1.1rem" }}>🔄</button>
+                    </div>
+                    <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 16, lineHeight: 1.5 }}>Communiquez ce mot de passe à {u.name} (WhatsApp, Messenger...) — il pourra ensuite se connecter directement avec, sans passer par « mot de passe oublié ».</div>
+                    <button disabled={pwResetLoading || pwResetValue.length < 6} onClick={() => submitPasswordReset(u, pwResetValue)}
+                      style={{ width: "100%", background: pwResetValue.length >= 6 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ccc", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: pwResetValue.length >= 6 ? "pointer" : "not-allowed" }}>
+                      {pwResetLoading ? "Réinitialisation..." : "Réinitialiser le mot de passe"}
+                    </button>
+                    <button onClick={close} style={{ width: "100%", marginTop: 10, background: "transparent", color: "#888", border: "none", padding: "8px", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                  </>
+                ) : pwResetResult.ok ? (
+                  <>
+                    <div style={{ background: "rgba(26,92,58,0.08)", border: "1px solid rgba(26,92,58,0.25)", borderRadius: 12, padding: "14px", marginBottom: 14, textAlign: "center" }}>
+                      <div style={{ fontSize: "0.8rem", color: "#1A5C3A", fontWeight: 700, marginBottom: 6 }}>✅ Mot de passe mis à jour</div>
+                      <div style={{ fontFamily: "monospace", fontWeight: 800, fontSize: "1.15rem", color: "#1A5C3A", letterSpacing: 0.5 }}>{pwResetValue}</div>
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 16, textAlign: "center" }}>Communiquez ce mot de passe à {u.name} maintenant.</div>
+                    <button onClick={close} style={{ width: "100%", background: "linear-gradient(135deg,#1A5C3A,#134429)", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "14px", marginBottom: 16, textAlign: "center", color: G.rouge, fontSize: "0.85rem", fontWeight: 600 }}>
+                      ❌ {pwResetResult.msg}
+                    </div>
+                    <button onClick={() => setPwResetResult(null)} style={{ width: "100%", background: "linear-gradient(135deg,#8e44ad,#6c3483)", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Réessayer</button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {pinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
@@ -19025,6 +19099,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             ? (auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading} onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
                             : (auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !isSelf && <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading || isSelf} onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null as unknown as undefined }, `Droits admin retirés pour ${u.name}.`))} />
                           }
+                          {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && (
+                            <ActionBtn label="🔑 Mot de passe" color="#8e44ad" disabled={isLoading} onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
+                          )}
                           {/* Vérification */}
                           {!u.is_verified
                             ? <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading} onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
@@ -19157,6 +19234,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
                                 onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "reset" }); }} />
                             )}
+                            <ActionBtn label="🔑 Mot de passe" color="#8e44ad" disabled={isLoading}
+                              onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
                             <ActionBtn label="+ Super Admin" color="#8B008B" disabled={isLoading}
                               onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
                                 await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
