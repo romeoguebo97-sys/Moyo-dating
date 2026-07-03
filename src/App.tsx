@@ -16241,7 +16241,17 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [showMatchList, setShowMatchList] = useState(false);
   const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
   const [matchListSearch, setMatchListSearch] = useState("");
+  const [matchListViewMode, setMatchListViewMode] = useState<"list" | "grid">("list");
+  const [mmFollowViewMode, setMmFollowViewMode] = useState<"list" | "grid">("list");
+  const [archivedViewMode, setArchivedViewMode] = useState<"list" | "grid">("list");
   const [proposalsViewMode, setProposalsViewMode] = useState<"list" | "grid">("list");
+  const [proposalsStatusFilter, setProposalsStatusFilter] = useState<"pending" | "pending_response" | "accepted" | "refused" | "expired" | null>(null);
+  const propFilterCategory = (p: any): "pending" | "pending_response" | "accepted" | "refused" | "expired" => {
+    if (p.status === "accepted") return "accepted";
+    if (p.status === "refused") return "refused";
+    if (p.status === "expired") return "expired";
+    return (p.user1_response === "accepted" || p.user2_response === "accepted") ? "pending_response" : "pending";
+  };
   const [matchListLoading, setMatchListLoading] = useState(false);
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [msgSubTab, setMsgSubTab] = useState<"assistant" | "broadcast">("assistant");
@@ -21910,11 +21920,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <button onClick={loadProposals} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
               </div>
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                {[["dot_y","En attente","#f39c12"],["dot_b","En attente de réponse","#2980b9"],["dot_g","Acceptée","#27ae60"],["dot_r","Refusée","#e74c3c"],["dot_k","Expirée","#888"]].map(([e, label, color]) => (
-                  <div key={label as string} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: color as string, fontWeight: 600 }}>
+                {([["pending","En attente","#f39c12"],["pending_response","En attente de réponse","#2980b9"],["accepted","Acceptée","#27ae60"],["refused","Refusée","#e74c3c"],["expired","Expirée","#888"]] as [typeof proposalsStatusFilter, string, string][]).map(([key, label, color]) => (
+                  <div key={label as string} onClick={() => setProposalsStatusFilter(f => f === key ? null : key)}
+                    style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: color as string, fontWeight: 600, cursor: "pointer", padding: "4px 9px", borderRadius: 50, background: proposalsStatusFilter === key ? `${color}1f` : "transparent", border: `1.5px solid ${proposalsStatusFilter === key ? color : "transparent"}` }}>
                     <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={color as string}/></svg><span>{label}</span>
                   </div>
                 ))}
+                {proposalsStatusFilter && <div onClick={() => setProposalsStatusFilter(null)} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
               </div>
               {proposalsLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
@@ -21923,11 +21935,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ marginBottom: 12, color: "#8e44ad" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
                   <div style={{ color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition</div>
                 </div>
-              ) : (
+              ) : (() => {
+                const visibleProposals = proposalsStatusFilter ? proposals.filter(p => propFilterCategory(p) === proposalsStatusFilter) : proposals;
+                if (visibleProposals.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition dans cette catégorie</div>;
+                return (
                 <div style={proposalsViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
-                  {proposals.map(p => {
+                  {visibleProposals.map(p => {
                     const statusInfo = p.status === "pending"
-                      ? { label: p.user1_response === "accepted" ? `En attente de ${p.profile2?.name || "..."}` : p.user2_response === "accepted" ? `En attente de ${p.profile1?.name || "..."}` : "En attente", color: "#f39c12", bg: "rgba(243,156,18,0.08)" }
+                      ? (propFilterCategory(p) === "pending_response"
+                          ? { label: p.user1_response === "accepted" ? `En attente de ${p.profile2?.name || "..."}` : `En attente de ${p.profile1?.name || "..."}`, color: "#2980b9", bg: "rgba(41,128,185,0.08)" }
+                          : { label: "En attente", color: "#f39c12", bg: "rgba(243,156,18,0.08)" })
                       : p.status === "accepted" ? { label: "Match créé", color: "#27ae60", bg: "rgba(39,174,96,0.08)" }
                       : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? p.profile1?.name : p.profile2?.name || "..."}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
                       : { label: "Expirée", color: "#888", bg: "rgba(0,0,0,0.04)" };
@@ -21980,7 +21997,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     );
                   })}
                 </div>
-              )}
+                );
+              })()}
             </div>
           )}
 
@@ -22023,7 +22041,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ background: "rgba(22,163,74,0.07)", border: "1px solid rgba(22,163,74,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: "0.74rem", color: "#15803d", lineHeight: 1.5 }}>
                 Suivi des couples proposés via le <b>Matchmaking intelligent</b> : qui a accepté ou refusé, quand, et les actions possibles. Les propositions spontanées et les demandes restent dans l'onglet « Propositions ».
               </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12, gap: 8 }}>
+                <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}` }}>
+                  <div onClick={() => setMmFollowViewMode("grid")} style={{ padding: "7px 12px", background: mmFollowViewMode === "grid" ? "#16a34a" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={mmFollowViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  </div>
+                  <div onClick={() => setMmFollowViewMode("list")} style={{ padding: "7px 12px", background: mmFollowViewMode === "list" ? "#16a34a" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={mmFollowViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  </div>
+                </div>
                 <button onClick={loadMmFollow} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
               </div>
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
@@ -22040,7 +22066,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ color: "#aaa", fontSize: "0.88rem", lineHeight: 1.6 }}>Aucun couple matchmaking en suivi pour l'instant.<br />Propose un couple depuis « Matchmaking intelligent » et il apparaîtra ici.</div>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={mmFollowViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
                   {mmFollow.map(p => {
                     const oneAnswered = p.user1_response === "accepted" || p.user2_response === "accepted";
                     const statusInfo = p.status === "pending"
@@ -22122,6 +22148,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   )}
                 </div>
                 <button onClick={() => { loadMatchListData(); }} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}><IcoRefresh /> Actualiser</button>
+                <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}`, flexShrink: 0 }}>
+                  <div onClick={() => setMatchListViewMode("grid")} style={{ padding: "7px 12px", background: matchListViewMode === "grid" ? "#2980b9" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={matchListViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  </div>
+                  <div onClick={() => setMatchListViewMode("list")} style={{ padding: "7px 12px", background: matchListViewMode === "list" ? "#2980b9" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={matchListViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  </div>
+                </div>
               </div>
               {matchListLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
@@ -22133,8 +22167,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 const filtered = q ? deduped.filter(m => m.profile1?.name?.toLowerCase().includes(q) || m.profile2?.name?.toLowerCase().includes(q)) : deduped;
                 if (filtered.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun match pour « {matchListSearch} »</div>;
                 return (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {q && <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 2 }}>{filtered.length} match{filtered.length > 1 ? "s" : ""} avec « {matchListSearch} »</div>}
+                <div style={matchListViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 8 } : { display: "flex", flexDirection: "column", gap: 8 }}>
+                  {q && <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 2, gridColumn: "1/-1" }}>{filtered.length} match{filtered.length > 1 ? "s" : ""} avec « {matchListSearch} »</div>}
                   {filtered.map((m, i) => (
                     <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: G.blanc, borderRadius: 14, boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
@@ -22279,6 +22313,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </button>
                   )}
                   <button onClick={loadArchivedItems} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "7px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+                  <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}` }}>
+                    <div onClick={() => setArchivedViewMode("grid")} style={{ padding: "7px 12px", background: archivedViewMode === "grid" ? "#555" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={archivedViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    </div>
+                    <div onClick={() => setArchivedViewMode("list")} style={{ padding: "7px 12px", background: archivedViewMode === "list" ? "#555" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={archivedViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    </div>
+                  </div>
                 </div>
               </div>
               {matchArchiveLoading ? (
@@ -22289,7 +22331,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ fontSize: "0.75rem", color: "#ccc" }}>Les propositions et demandes archivées apparaissent ici</div>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={archivedViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 } : { display: "flex", flexDirection: "column", gap: 8 }}>
                   {archivedItems.map(item => (
                     <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, background: G.blanc, borderRadius: 14, padding: "12px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)", border: `1px solid ${G.gris}` }}>
                       <div style={{ width: 36, height: 36, borderRadius: "50%", background: item.type === "proposal" ? "rgba(142,68,173,0.1)" : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
