@@ -2150,6 +2150,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [token, setToken] = useState("");
+  const [linkExpired, setLinkExpired] = useState(false);
 
   useEffect(() => {
     // Lire le access_token dans le hash de l'URL
@@ -2157,10 +2158,15 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
     const params = new URLSearchParams(hash.replace("#", "?"));
     const t = params.get("access_token");
     const type = params.get("type");
+    const err = params.get("error") || params.get("error_code") || params.get("error_description");
     if (t && type === "recovery") {
       setToken(t);
+    } else if (err) {
+      // Lien déjà utilisé ou expiré (Supabase renvoie une erreur dans le hash) → on le dit clairement,
+      // au lieu de renvoyer silencieusement vers l'accueil comme si de rien n'était.
+      setLinkExpired(true);
     } else {
-      // Pas de token valide → rediriger vers login
+      // Pas de token ni d'erreur → probablement une ouverture directe de la page, pas un vrai lien
       onNav("login");
     }
   }, []);
@@ -2178,6 +2184,26 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
     }
     setLoading(false);
   };
+
+  if (linkExpired) {
+    return (
+      <AuthLayout onBack={() => onNav("landing")}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
+            <span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+          </div>
+        </div>
+        <div style={{ textAlign: "center", padding: "12px 8px 24px" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#222", margin: "0 0 10px" }}>Ce lien n'est plus valide</h2>
+          <p style={{ color: "#666", fontSize: "0.88rem", lineHeight: 1.6, margin: "0 0 4px" }}>Il a déjà été utilisé, ou il a expiré (les liens de réinitialisation ne sont valables qu'une seule fois, pendant un temps limité).</p>
+        </div>
+        <Btn variant="primary" onClick={() => onNav("login")} style={{ width: "100%" }}>Redemander un lien →</Btn>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout onBack={() => onNav("landing")}>
@@ -3444,7 +3470,7 @@ function AuthLayout({ children, onBack }: { children: React.ReactNode; onBack: (
 }
 
 // Écran de bannissement : message permanent OU décompte pour un bannissement temporaire.
-function BanScreen({ until, onExpire, onBack }: { until?: string | null; onExpire?: () => void; onBack?: () => void }) {
+function BanScreen({ until, onExpire, onBack, name, email }: { until?: string | null; onExpire?: () => void; onBack?: () => void; name?: string; email?: string }) {
   const target = until ? new Date(until).getTime() : 0;
   const [remaining, setRemaining] = React.useState(() => Math.max(0, target - Date.now()));
   React.useEffect(() => {
@@ -3464,6 +3490,24 @@ function BanScreen({ until, onExpire, onBack }: { until?: string | null; onExpir
   const m = Math.floor((remaining % 3600000) / 60000);
   const s = Math.floor((remaining % 60000) / 1000);
   const pad = (n: number) => String(n).padStart(2, "0");
+
+  // Message WhatsApp prérempli, adapté selon bannissement temporaire ou définitif
+  const waMessage = (() => {
+    const idLines = `Nom : ${name || "(non renseigné)"}\nEmail : ${email || "(non renseigné)"}`;
+    if (isTemp && !expired) {
+      const durLabel = h > 0 ? `${h}h${m > 0 ? ` ${pad(m)}min` : ""}` : `${m} min`;
+      return `Bonjour, j'ai été banni(e) pour ${durLabel} sur Moyo Dating et je souhaite en discuter.\n\n${idLines}`;
+    }
+    return `Bonjour, j'ai été banni(e) sur Moyo Dating et je souhaite en discuter.\n\n${idLines}`;
+  })();
+  const waLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(waMessage)}`;
+  const ContactSupportBtn = () => (
+    <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 10 }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d=".057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+      Contacter le service support
+    </a>
+  );
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: `linear-gradient(160deg, ${G.rouge}, ${G.rougeDark})` }}>
       <div style={{ background: G.blanc, borderRadius: 24, maxWidth: 420, width: "100%", padding: "32px 26px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
@@ -3480,7 +3524,7 @@ function BanScreen({ until, onExpire, onBack }: { until?: string | null; onExpir
           ) : (
             <>
               <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Tu as enfreint nos règles d'utilisation. Ton compte est temporairement bloqué. Tu pourras te reconnecter automatiquement à la fin du décompte.</p>
-              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 20 }}>
                 {[[h, "h"], [m, "min"], [s, "s"]].map(([v, lbl], i) => (
                   <div key={i} style={{ background: "rgba(192,57,43,0.08)", borderRadius: 14, padding: "12px 14px", minWidth: 64 }}>
                     <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.rouge, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{pad(v as number)}</div>
@@ -3488,12 +3532,14 @@ function BanScreen({ until, onExpire, onBack }: { until?: string | null; onExpir
                   </div>
                 ))}
               </div>
-              <p style={{ fontSize: "0.74rem", color: "#aaa", marginTop: 14 }}>Reconnexion possible automatiquement à la fin du décompte.</p>
+              <ContactSupportBtn />
+              <p style={{ fontSize: "0.74rem", color: "#aaa", marginTop: 6 }}>Reconnexion possible automatiquement à la fin du décompte.</p>
             </>
           )
         ) : (
           <>
-            <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo Dating. Pour toute réclamation, contacte-nous à {CONTACT_EMAIL} ou sur WhatsApp au {formatWhatsApp(CONTACT_WHATSAPP)}.</p>
+            <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo Dating. Pour toute réclamation, contacte-nous à {CONTACT_EMAIL} ou via le bouton ci-dessous.</p>
+            <ContactSupportBtn />
             {onBack && <button onClick={onBack} style={{ width: "100%", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Retour à l'accueil</button>}
           </>
         )}
@@ -3507,7 +3553,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [tempBanUntil, setTempBanUntil] = useState<string | null>(null);
+  const [banInfo, setBanInfo] = useState<{ until: string | null; name: string; email: string } | null>(null);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
@@ -3541,13 +3587,13 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
       }
       if ((profiles[0] as any).is_banned) {
         await sb.signOut(res.access_token);
-        setErrorMsg(`Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo Dating. Pour toute réclamation, contacte-nous à ${CONTACT_EMAIL} ou sur WhatsApp au ${formatWhatsApp(CONTACT_WHATSAPP)}`);
+        setBanInfo({ until: null, name: profiles[0].name || "", email: res.user.email || form.email.trim() });
         setLoading(false); return;
       }
       const banUntil = (profiles[0] as any).ban_until as string | null | undefined;
       if (banUntil && new Date(banUntil).getTime() > Date.now()) {
         await sb.signOut(res.access_token);
-        setTempBanUntil(banUntil);
+        setBanInfo({ until: banUntil, name: profiles[0].name || "", email: res.user.email || form.email.trim() });
         setLoading(false); return;
       }
       if (banUntil && new Date(banUntil).getTime() <= Date.now()) {
@@ -3592,7 +3638,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     setForgotSent(true);
   };
 
-  if (tempBanUntil) return <BanScreen until={tempBanUntil} onExpire={() => setTempBanUntil(null)} />;
+  if (banInfo) return <BanScreen until={banInfo.until} name={banInfo.name} email={banInfo.email} onExpire={() => setBanInfo(null)} onBack={() => setBanInfo(null)} />;
   if (showForgot) return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 24 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div><h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2></div>{forgotSent ? <div style={{ textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><p style={{ color: "#555", fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p><Btn variant="ghost" onClick={() => { setShowForgot(false); setForgotSent(false); }}>← Retour à la connexion</Btn></div> : <><Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" /><Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowForgot(false)} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div></>}</AuthLayout>;
 
   return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
@@ -22582,7 +22628,8 @@ export default function App() {
     // Si l'app s'ouvre depuis un lien de réinitialisation de mot de passe (email), on va
     // directement au formulaire "nouveau mot de passe" au lieu de la page d'accueil par défaut.
     try {
-      if (window.location.hash.includes("type=recovery")) return "reset-password";
+      const hash = window.location.hash;
+      if (hash.includes("type=recovery") || hash.includes("error_code=") || hash.includes("error=")) return "reset-password";
     } catch {}
     return "landing";
   });
@@ -22622,7 +22669,7 @@ export default function App() {
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [userGender, setUserGender] = useState<string>("");
-  const [selfBan, setSelfBan] = useState<{ until: string | null } | null>(null);
+  const [selfBan, setSelfBan] = useState<{ until: string | null; name?: string; email?: string } | null>(null);
   const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string; pairKey?: string } | null>(null);
   // ── Sondages (côté membre) ──
   const [activeSurvey, setActiveSurvey] = useState<any | null>(null);
@@ -22829,7 +22876,8 @@ export default function App() {
     } catch {}
     const type = params.get("type");
     const accessToken = params.get("access_token");
-    if (type === "recovery") {
+    const authError = params.get("error") || params.get("error_code");
+    if (type === "recovery" || authError) {
       setPage("reset-password");
       setSessionLoaded(true);
       return;
@@ -23033,7 +23081,7 @@ export default function App() {
         if (!p) return;
         const tempActive = p.ban_until && new Date(p.ban_until).getTime() > Date.now();
         if (p.is_banned || tempActive) {
-          setSelfBan({ until: p.is_banned ? null : p.ban_until });
+          setSelfBan({ until: p.is_banned ? null : p.ban_until, name: auth.name, email: auth.email });
           setAuth(null);
           try { localStorage.removeItem("moyo_session"); } catch {}
         }
@@ -23501,7 +23549,7 @@ export default function App() {
   if (!sessionLoaded) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: G.blanc }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>;
 
   // ── Écran de bannissement (éjection en direct) : prioritaire sur tout le reste ──
-  if (selfBan) return <BanScreen until={selfBan.until} onExpire={() => { setSelfBan(null); setPage("login"); }} onBack={() => { setSelfBan(null); setPage("landing"); }} />;
+  if (selfBan) return <BanScreen until={selfBan.until} name={selfBan.name} email={selfBan.email} onExpire={() => { setSelfBan(null); setPage("login"); }} onBack={() => { setSelfBan(null); setPage("landing"); }} />;
 
   // ── Mode Admin Desktop : ?admin=1 dans l'URL ──
   if (new URLSearchParams(window.location.search).get("admin") === "1") {
