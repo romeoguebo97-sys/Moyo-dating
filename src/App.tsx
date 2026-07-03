@@ -22578,7 +22578,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 }
 
 export default function App() {
-  const [page, setPage] = useState("landing");
+  const [page, setPage] = useState(() => {
+    // Si l'app s'ouvre depuis un lien de réinitialisation de mot de passe (email), on va
+    // directement au formulaire "nouveau mot de passe" au lieu de la page d'accueil par défaut.
+    try {
+      if (window.location.hash.includes("type=recovery")) return "reset-password";
+    } catch {}
+    return "landing";
+  });
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("moyo_dark") === "1");
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
