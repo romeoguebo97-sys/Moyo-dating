@@ -2200,7 +2200,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
           <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#222", margin: "0 0 10px" }}>Ce lien n'est plus valide</h2>
           <p style={{ color: "#666", fontSize: "0.88rem", lineHeight: 1.6, margin: "0 0 4px" }}>Il a déjà été utilisé, ou il a expiré (les liens de réinitialisation ne sont valables qu'une seule fois, pendant un temps limité).</p>
         </div>
-        <Btn variant="primary" onClick={() => onNav("login")} style={{ width: "100%" }}>Redemander un lien →</Btn>
+        <Btn variant="primary" onClick={() => { try { sessionStorage.setItem("moyo_auto_forgot", "1"); } catch {} onNav("login"); }} style={{ width: "100%" }}>Redemander un lien →</Btn>
       </AuthLayout>
     );
   }
@@ -3554,8 +3554,18 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [banInfo, setBanInfo] = useState<{ until: string | null; name: string; email: string } | null>(null);
-  const [showForgot, setShowForgot] = useState(false);
+  const [showForgot, setShowForgot] = useState(() => {
+    try {
+      if (sessionStorage.getItem("moyo_auto_forgot") === "1") {
+        sessionStorage.removeItem("moyo_auto_forgot");
+        return true;
+      }
+    } catch {}
+    return false;
+  });
+  const [forgotMethod, setForgotMethod] = useState<"choice" | "email" | "whatsapp">("choice");
   const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotName, setForgotName] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
 
   const handleLogin = async () => {
@@ -3639,7 +3649,77 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   };
 
   if (banInfo) return <BanScreen until={banInfo.until} name={banInfo.name} email={banInfo.email} onExpire={() => setBanInfo(null)} onBack={() => setBanInfo(null)} />;
-  if (showForgot) return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 24 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div><h2 style={{  fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2></div>{forgotSent ? <div style={{ textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><p style={{ color: "#555", fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p><Btn variant="ghost" onClick={() => { setShowForgot(false); setForgotSent(false); }}>← Retour à la connexion</Btn></div> : <><Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" /><Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien</Btn><div style={{ textAlign: "center" }}><span onClick={() => setShowForgot(false)} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div></>}</AuthLayout>;
+  if (showForgot) {
+    const closeForgot = () => { setShowForgot(false); setForgotMethod("choice"); setForgotSent(false); setForgotEmail(""); setForgotName(""); };
+    const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}\n\nPouvez-vous m'aider à le changer ?`)}`;
+    return (
+      <AuthLayout onBack={forgotMethod === "choice" ? () => onNav("login") : () => setForgotMethod("choice")}>
+        <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
+        {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2>
+        </div>
+
+        {forgotMethod === "choice" && (
+          <>
+            <p style={{ color: "#666", fontSize: "0.85rem", textAlign: "center", marginBottom: 22, lineHeight: 1.5 }}>Comment veux-tu récupérer l'accès à ton compte ?</p>
+            <div onClick={() => setForgotMethod("email")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px", borderRadius: 16, border: `2px solid ${G.gris}`, cursor: "pointer", marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#222" }}>Recevoir un lien par email</div>
+                <div style={{ fontSize: "0.76rem", color: "#888", marginTop: 2 }}>Rapide, tu changes toi-même ton mot de passe</div>
+              </div>
+            </div>
+            <div onClick={() => setForgotMethod("whatsapp")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px", borderRadius: 16, border: `2px solid ${G.gris}`, cursor: "pointer", marginBottom: 8 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(37,211,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366"><path d=".057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#222" }}>Demander au support de le faire</div>
+                <div style={{ fontSize: "0.76rem", color: "#888", marginTop: 2 }}>Utile si tu n'es pas à l'aise avec l'email</div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {forgotMethod === "email" && (
+          forgotSent ? (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              </div>
+              <p style={{ color: "#555", fontSize: "0.88rem", marginBottom: 20 }}>Email envoyé ! Vérifie ta boîte mail.</p>
+              <Btn variant="ghost" onClick={closeForgot}>← Retour à la connexion</Btn>
+            </div>
+          ) : (
+            <>
+              <Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" />
+              <Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien</Btn>
+              <div style={{ textAlign: "center" }}><span onClick={() => setForgotMethod("choice")} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div>
+            </>
+          )
+        )}
+
+        {forgotMethod === "whatsapp" && (
+          <>
+            <p style={{ color: "#666", fontSize: "0.82rem", lineHeight: 1.5, marginBottom: 18 }}>Renseigne ton email pour qu'on retrouve ton compte, puis envoie ta demande sur WhatsApp — on te répond avec un nouveau mot de passe.</p>
+            <Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" />
+            <Input label={<>Ton prénom <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 500 }}>(optionnel, aide à te retrouver plus vite)</span></>} value={forgotName} onChange={e => setForgotName(e.target.value)} placeholder="Ex: Faïda" icon="user" />
+            <a href={forgotEmail.trim() ? waSupportLink : undefined} target="_blank" rel="noopener noreferrer"
+              onClick={e => { if (!forgotEmail.trim()) { e.preventDefault(); setErrorMsg("Entre ton email d'abord."); } }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: forgotEmail.trim() ? "#25D366" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 12 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d=".057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+              Envoyer la demande via WhatsApp
+            </a>
+            <div style={{ textAlign: "center" }}><span onClick={() => setForgotMethod("choice")} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div>
+          </>
+        )}
+      </AuthLayout>
+    );
+  }
 
   return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
@@ -17054,7 +17134,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       const serverSort = serverSorts[sort] || "created_at.desc";
       let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
       if (search.trim()) {
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&name=ilike.*${encodeURIComponent(search.trim())}*&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
+        const q = encodeURIComponent(search.trim());
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&or=(name.ilike.*${q}*,email.ilike.*${q}*)&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       setUsers(res);
@@ -18996,7 +19077,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               value={userSearch}
               onChange={e => setUserSearch(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort); } }}
-              placeholder="Rechercher par nom…"
+              placeholder="Rechercher par nom ou email…"
               style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
             />
           </div>
