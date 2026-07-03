@@ -1,0 +1,10669 @@
+import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
+import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
+import {
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS,
+} from "./App";
+
+async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}`, { method: "PATCH", headers: { ...H, "Prefer": "return=representation" }, body: JSON.stringify({ value }) });
+    const updated = await r.json().catch(() => []);
+    if (!Array.isArray(updated) || updated.length === 0) {
+      const ins = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Prefer": "return=minimal" }, body: JSON.stringify({ key, value }) });
+      return ins.ok;
+    }
+    return true;
+  } catch { return false; }
+}
+
+function premiumDaysForAmount(amount: number): number {
+  const monthDays = Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31;
+  if (amount === PREMIUM_PRICE_WEEK_FCFA) return PREMIUM_DAYS_WEEK;
+  if (amount === PREMIUM_PRICE_2MONTH_FCFA) return PREMIUM_DAYS_2MONTH;
+  return monthDays;
+}
+function premiumMsForAmount(amount: number): number { return premiumDaysForAmount(amount) * 86400000; }
+
+function referralBonusForAmount(amount: number): number {
+  if (amount >= PREMIUM_PRICE_2MONTH_FCFA) return REFERRAL_BONUS_2MONTH;
+  if (amount >= PREMIUM_PRICE_FCFA) return REFERRAL_BONUS_MONTH;
+  if (amount >= PREMIUM_PRICE_WEEK_FCFA) return REFERRAL_BONUS_WEEK;
+  return 0;
+}
+
+function DateTimeModal({ title, initialISO, confirmLabel, onConfirm, onClose }: { title: string; initialISO?: string; confirmLabel?: string; onConfirm: (iso: string) => void; onClose: () => void }) {
+  const init = initialISO ? new Date(initialISO) : null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const [date, setDate] = useState(init ? `${init.getFullYear()}-${pad(init.getMonth() + 1)}-${pad(init.getDate())}` : "");
+  const initH = init ? init.getHours() : null;
+  const [hour, setHour] = useState(initH !== null && initH >= APPT_HOUR_MIN && initH <= APPT_HOUR_MAX ? pad(initH) : "");
+  const [minute, setMinute] = useState(init ? pad(Math.round(init.getMinutes() / 15) % 4 * 15) : "");
+  const [err, setErr] = useState("");
+  const submit = () => {
+    if (!date) { setErr("Choisissez une date dans le calendrier."); return; }
+    if (!hour) { setErr("Choisissez l'heure."); return; }
+    onConfirm(new Date(`${date}T${hour}:${minute || "00"}:00`).toISOString());
+  };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10010, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 380, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 16 }}>{title}</div>
+        <DateTimePicker date={date} hour={hour} minute={minute} onChange={(d, h, m) => { setDate(d); setHour(h); setMinute(m); setErr(""); }} />
+        {err && <div style={{ color: "#c0392b", fontSize: "0.78rem", marginTop: 10, fontWeight: 600 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <button onClick={onClose} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+          <button onClick={submit} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>{confirmLabel || "Confirmer"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: string, t?: string) => void }) {
+  const [filter, setFilter] = useState<"en_attente" | "confirme" | "today" | "passes" | "annule" | "archive">("en_attente");
+  const [scheduling, setScheduling] = useState<{ a: any; mode: "confirme" | "reporte" } | null>(null);
+  const [list, setList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<any>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [noteTarget, setNoteTarget] = useState<any>(null);
+  const [noteText, setNoteText] = useState("");
+  const [delTarget, setDelTarget] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments?order=created_at.desc&limit=400`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => null);
+      if (!Array.isArray(d)) { showToast("Erreur chargement des rendez-vous : " + (d?.message || d?.code || "vérifie la table appointments"), "error"); setList([]); setLoading(false); return; }
+      const ids = [...new Set(d.map((a: any) => a.user_id))];
+      const profs: Record<string, any> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,photo_url`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } });
+        const pd = await pr.json().catch(() => []); if (Array.isArray(pd)) pd.forEach((p: any) => { profs[p.id] = p; });
+      }
+      setList(d.map((a: any) => ({ ...a, user: profs[a.user_id] })));
+    } catch (e: any) { showToast("Erreur réseau (rendez-vous) : " + (e?.message || ""), "error"); }
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const patch = async (id: string, fields: any, okMsg?: string) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments?id=eq.${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ ...fields, updated_at: new Date().toISOString() }) });
+      const b = await r.json().catch(() => null);
+      if (!r.ok || (Array.isArray(b) && b.length === 0)) { showToast("Action refusée par la base (vérifie la contrainte status ou les policies UPDATE).", "error"); return; }
+      setList(prev => prev.map(a => a.id === id ? { ...a, ...fields } : a));
+      if (okMsg) showToast(okMsg, "success");
+    } catch { showToast("Erreur", "error"); }
+  };
+  const confirmAppt = (a: any) => setScheduling({ a, mode: "confirme" });
+  const rescheduleAppt = (a: any) => setScheduling({ a, mode: "reporte" });
+  const openCancel = (a: any) => { setCancelReason(a.admin_note || ""); setCancelTarget(a); };
+  const doCancel = () => { if (!cancelTarget) return; patch(cancelTarget.id, { status: "annule", admin_note: cancelReason.trim() || cancelTarget.admin_note || "" }, "Rendez-vous annulé"); setCancelTarget(null); };
+  const openNote = (a: any) => { setNoteText(a.admin_note || ""); setNoteTarget(a); };
+  const doNote = () => { if (!noteTarget) return; patch(noteTarget.id, { admin_note: noteText.trim() }, "Note enregistrée"); setNoteTarget(null); };
+  const archiveAppt = (a: any) => patch(a.id, { archived: true }, "📦 Rendez-vous archivé");
+  const unarchiveAppt = (a: any) => patch(a.id, { archived: false }, "Rendez-vous désarchivé");
+  const deleteAppt = async (a: any) => {
+    setBusy(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments?id=eq.${a.id}`, { method: "DELETE", headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" } });
+      if (!r.ok) { showToast("Suppression refusée par la base (vérifie la policy DELETE).", "error"); }
+      else { setList(prev => prev.filter(x => x.id !== a.id)); showToast("🗑 Rendez-vous supprimé", "success"); }
+    } catch { showToast("Erreur réseau.", "error"); }
+    setBusy(false); setDelTarget(null);
+  };
+
+  const now = Date.now();
+  const filtered = list.filter(a => {
+    if (filter === "archive") return a.archived === true;
+    if (a.archived) return false;
+    if (filter === "today") return a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule";
+    if (filter === "passes") return a.status === "effectue" || a.status === "absent" || (a.scheduled_at && new Date(a.scheduled_at).getTime() < now && a.status !== "annule" && a.status !== "en_attente");
+    if (filter === "confirme") return a.status === "confirme" || a.status === "reporte";
+    if (filter === "annule") return a.status === "annule";
+    return a.status === "en_attente";
+  });
+  const isPastOrDone = (a: any) => a.status === "annule" || a.status === "effectue" || a.status === "absent" || (a.scheduled_at && new Date(a.scheduled_at).getTime() < now && a.status !== "en_attente");
+  const counts = {
+    en_attente: list.filter(a => !a.archived && a.status === "en_attente").length,
+    today: list.filter(a => !a.archived && a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule").length,
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        {([["en_attente", "En attente", counts.en_attente], ["confirme", "Confirmés", 0], ["today", "Aujourd'hui", counts.today], ["passes", "Passés", 0], ["annule", "Annulés", 0], ["archive", "Archivés", 0]] as [string, string, number][]).map(([k, lbl, badge]) => (
+          <button key={k} onClick={() => setFilter(k as any)} style={{ padding: "7px 14px", borderRadius: 50, border: `2px solid ${filter === k ? G.vert : G.gris}`, background: filter === k ? G.vert : G.blanc, color: filter === k ? "#fff" : "#666", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            {lbl}{badge > 0 && <span style={{ background: filter === k ? "#fff" : G.rouge, color: filter === k ? G.vert : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px" }}>{badge}</span>}
+          </button>
+        ))}
+        <button onClick={load} style={{ marginLeft: "auto", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "7px 12px", cursor: "pointer", color: "#555", fontSize: "0.74rem", fontWeight: 700 }}>↻ Actualiser</button>
+      </div>
+      {loading ? <div style={{ textAlign: "center", padding: 40, color: "#999" }}>Chargement…</div>
+        : filtered.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun rendez-vous dans cette catégorie.</div>
+        : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {filtered.map(a => { const si = apptStatusInfo(a.status); return (
+            <div key={a.id} style={{ background: G.blanc, borderRadius: 16, padding: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${si.color}22` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{a.user?.photo_url && <img src={a.user.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>{a.user?.name || "Utilisateur"}</div>
+                  <div style={{ fontSize: "0.7rem", color: "#888" }}>{a.type === "physique" ? "🏢 À l'agence" : "📞 Téléphonique"}{a.phone ? ` · ${a.phone}` : ""}{a.city ? ` · ${a.city}` : ""}</div>
+                </div>
+                <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, flexShrink: 0 }}>{si.label}</span>
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#555", marginBottom: 6 }}>{a.topic}</div>
+              {a.type === "physique" && a.price && <div style={{ fontSize: "0.74rem", color: "#b9770e", fontWeight: 700, marginBottom: 6 }}>💳 {Number(a.price).toLocaleString("fr-FR")} FCFA{a.tx_ref ? ` · réf ${a.tx_ref}` : ""} — à valider dans l'onglet Budget</div>}
+              {a.message && <div style={{ fontSize: "0.74rem", color: "#777", fontStyle: "italic", marginBottom: 6 }}>« {a.message} »</div>}
+              {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700, marginBottom: 6 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
+              {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 6 }}>Créneaux souhaités : {a.preferred_slots.map(fmtApptDT).join(" · ")}</div>}
+              {a.admin_note && <div style={{ fontSize: "0.72rem", color: "#8a6d2a", background: "rgba(212,168,67,0.1)", borderRadius: 8, padding: "5px 8px", marginBottom: 6 }}>Note : {a.admin_note}</div>}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                {(a.status === "en_attente" || a.status === "reporte") && <button onClick={() => confirmAppt(a)} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#1a8c4a", cursor: "pointer" }}>Confirmer</button>}
+                {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => rescheduleAppt(a)} style={{ background: "rgba(41,128,185,0.1)", border: "1.5px solid rgba(41,128,185,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>Autre créneau</button>}
+                {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "effectue" }, "✅ Marqué effectué")} style={{ background: "rgba(142,68,173,0.1)", border: "1.5px solid rgba(142,68,173,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#7d3c98", cursor: "pointer" }}>Effectué</button>}
+                {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "absent" }, "Marqué absent")} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Absent</button>}
+                {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => openCancel(a)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer" }}>Annuler</button>}
+                <button onClick={() => openNote(a)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Note interne</button>
+                {isPastOrDone(a) && !a.archived && <button onClick={() => archiveAppt(a)} style={{ background: "rgba(230,126,34,0.1)", border: "1.5px solid rgba(230,126,34,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#cf7012", cursor: "pointer" }}>📦 Archiver</button>}
+                {a.archived && <button onClick={() => unarchiveAppt(a)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>↩ Désarchiver</button>}
+                {isPastOrDone(a) && <button onClick={() => setDelTarget(a)} style={{ background: "rgba(192,57,43,0.08)", border: "1.5px solid rgba(192,57,43,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#c0392b", cursor: "pointer" }}>🗑 Supprimer</button>}
+              </div>
+            </div>
+          ); })}
+        </div>}
+      {scheduling && <DateTimeModal
+        title={scheduling.mode === "confirme" ? "Confirmer le rendez-vous" : "Proposer un nouveau créneau"}
+        initialISO={scheduling.a.scheduled_at || undefined}
+        confirmLabel={scheduling.mode === "confirme" ? "Confirmer" : "Reporter"}
+        onConfirm={(iso) => { patch(scheduling.a.id, { status: scheduling.mode, scheduled_at: iso }, scheduling.mode === "confirme" ? "✅ Rendez-vous confirmé" : "🔁 Nouveau créneau proposé"); setScheduling(null); }}
+        onClose={() => setScheduling(null)}
+      />}
+      {cancelTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setCancelTarget(null)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 400, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 6 }}>Annuler le rendez-vous</div>
+          <div style={{ fontSize: "0.8rem", color: "#666", marginBottom: 12 }}>Motif d'annulation (visible par l'utilisateur, facultatif) :</div>
+          <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="Ex. créneau indisponible, à reprogrammer…" autoFocus style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", minHeight: 70, resize: "vertical", background: G.blanc, color: G.brun }} />
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <button onClick={() => setCancelTarget(null)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Retour</button>
+            <button onClick={doCancel} style={{ flex: 1, background: "#e74c3c", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>Annuler le RDV</button>
+          </div>
+        </div>
+      </div>}
+      {noteTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setNoteTarget(null)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 400, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 12 }}>Note interne</div>
+          <textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Note visible uniquement par l'équipe…" autoFocus style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", minHeight: 70, resize: "vertical", background: G.blanc, color: G.brun }} />
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <button onClick={() => setNoteTarget(null)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+            <button onClick={doNote} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>Enregistrer</button>
+          </div>
+        </div>
+      </div>}
+      {delTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !busy && setDelTarget(null)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 380, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 8 }}>Supprimer ce rendez-vous ?</div>
+          <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Le rendez-vous de {delTarget.user?.name || "cet utilisateur"} sera définitivement supprimé. Cette action est irréversible.</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => setDelTarget(null)} disabled={busy} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+            <button onClick={() => deleteAppt(delTarget)} disabled={busy} style={{ flex: 1, background: busy ? "#d99" : "#c0392b", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}>{busy ? "Suppression…" : "Supprimer"}</button>
+          </div>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+function SwitchBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button onClick={onToggle} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: on ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
+      <div style={{ position: "absolute", top: 3, left: on ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+    </button>
+  );
+}
+function OffCanvasSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ breakInside: "avoid" } as React.CSSProperties}>
+      <div style={{ padding: "14px 20px 10px", borderTop: "1px solid #eee" }}>
+        <div style={{ fontWeight: 700, fontSize: "0.7rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>{title}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+function EditableRow({ label, value, open, onOpen, editValue, onEdit, onSave, hint, type = "text" }: { label: string; value: string; open: boolean; onOpen: () => void; editValue: string; onEdit: (v: string) => void; onSave: () => void; hint?: string; type?: "text" | "number" }) {
+  const G2 = { rouge: "#C0392B", gris: "#E8E0D8", blanc: "#FFFFFF", creme: "#F7F3EF" };
+  return (
+    <div>
+      <div onClick={onOpen} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: open ? "rgba(192,57,43,0.06)" : G2.creme, cursor: "pointer", border: `1px solid ${open ? G2.rouge : "transparent"}` }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#2C1A0E" }}>{label}</div>
+          <div style={{ fontSize: "0.7rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+        </div>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G2.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </div>
+      {open && (
+        <div style={{ marginTop: 4, padding: "10px", background: G2.blanc, borderRadius: 8, border: `1px solid ${G2.gris}` }}>
+          {type === "number"
+            ? <input type="number" value={editValue} onChange={e => onEdit(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(192,57,43,0.3)", fontSize: "0.84rem", outline: "none" }} />
+            : <textarea value={editValue} onChange={e => onEdit(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(192,57,43,0.3)", fontSize: "0.8rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+          }
+          {hint && <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3 }}>💡 {hint}</div>}
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <button onClick={onOpen} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${G2.gris}`, background: G2.creme, fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+            <button onClick={onSave} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: G2.rouge, color: G2.blanc, fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}>Sauvegarder</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AdminDesktopPage() {
+  const [auth, setAuth] = React.useState<Auth | null>(null);
+  const [checked, setChecked] = React.useState(false);
+  const [rulesMenuOpen, setRulesMenuOpen] = React.useState(false);
+  const [rules, setRules] = React.useState({ blockSameGenderLike: true });
+  const [modalTexts, setModalTexts] = React.useState({
+    sameGenderHomme: "Eh frère, reste du bon côté ! 😂",
+    sameGenderFemme: "Eh sœur, reste du bon côté ! 😂",
+    matchTitle: "C'est un Match !",
+    matchSubtitle: "Toi et {name} vous plaisez mutuellement !",
+    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !",
+    likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
+    sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄",
+    signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.",
+  });
+  const [editingModal, setEditingModal] = React.useState<string | null>(null);
+  const [editingValue, setEditingValue] = React.useState("");
+  const [appConfig, setAppConfig] = React.useState({
+    limitLikes: "5",
+    limitMessages: "3",
+    limitMatchRequests: "2",
+    limitStatusBoosts: "2",
+    limitPhotoSizeMb: "5",
+    matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋",
+    premiumPriceFcfa: "3500",
+    premiumPriceEur: "10",
+    eurToFcfaRate: "655.957",
+    likesNotifDelayHours: "24",
+    premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62",
+    featureStatuses: "true",
+    featureGiftPremium: "true",
+    featureAssistant: "true",
+    appointmentsEnabled: "true",
+    phoneAppointmentsEnabled: "true",
+    physicalAppointmentsEnabled: "true",
+    appointmentPhysicalPrice: "10000",
+    maintenanceMode: "false",
+    maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧",
+    customBannedWords: "",
+    contactBannedWords: "",
+    autoModContactReply: AUTO_MOD_CONTACT_REPLY,
+  });
+  const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
+  const [editingConfigValue, setEditingConfigValue] = React.useState("");
+  const [configTab, setConfigTab] = React.useState<"general" | "contenus" | "tarifs" | "equipe" | "securite">("general");
+  const [adminActionModal, setAdminActionModal] = React.useState<{ level: string | null; label: string; color: string } | null>(null);
+  const [adminActionEmail, setAdminActionEmail] = React.useState("");
+
+  React.useEffect(() => {
+    if (!auth) return;
+    const allKeys = [
+      "rule_block_same_gender_like",
+      "modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises",
+      "limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
+      "premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days",
+      "feature_statuses","feature_gift_premium","feature_assistant",
+      "appointments_enabled","phone_appointments_enabled","physical_appointments_enabled",
+      "appointment_physical_price",
+      "maintenance_mode","maintenance_message",
+      "custom_banned_words",
+      "contact_banned_words",
+      "auto_mod_contact_reply",
+    ];
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+    }).then(r => r.json()).then(data => {
+      if (!Array.isArray(data)) return;
+      const map: Record<string, string> = {};
+      data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
+      if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
+      setModalTexts(t => ({
+        sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme,
+        sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme,
+        matchTitle: map["modal_match_title"] || t.matchTitle,
+        matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle,
+        premiumDefault: map["modal_premium_default"] || t.premiumDefault,
+        likesEpuises: map["modal_likes_epuises"] || t.likesEpuises,
+        sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub,
+        signupSuccess: map["modal_signup_success"] || t.signupSuccess,
+      }));
+      setAppConfig(c => ({
+        limitLikes: map["limit_likes_free"] || c.limitLikes,
+        limitMessages: map["limit_messages_free"] || c.limitMessages,
+        limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests,
+        limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts,
+        limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb,
+        matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage,
+        premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month,
+        premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur,
+        eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate,
+        premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays,
+        likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours,
+        featureStatuses: map["feature_statuses"] || c.featureStatuses,
+        featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium,
+        featureAssistant: map["feature_assistant"] || c.featureAssistant,
+        appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
+        phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
+        physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
+        appointmentPhysicalPrice: map["appointment_physical_price"] || c.appointmentPhysicalPrice,
+        maintenanceMode: map["maintenance_mode"] || c.maintenanceMode,
+        maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage,
+        customBannedWords: map["custom_banned_words"] || c.customBannedWords,
+        contactBannedWords: map["contact_banned_words"] || c.contactBannedWords,
+        autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply,
+      }));
+    }).catch(() => {});
+  }, [auth]);
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("moyo_session");
+      if (saved) {
+        const a: Auth = JSON.parse(saved);
+        if (a?.token && a?.userId && a?.isAdmin) setAuth(a);
+      }
+    } catch {}
+    setChecked(true);
+  }, []);
+
+  if (!checked) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F0F1F5" }}>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+    </div>
+  );
+
+  if (!auth) return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#F0F1F5", gap: 16 }}>
+      <div style={{ width: 72, height: 72, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: "1.5rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Accès refusé</div>
+        <div style={{ fontSize: "0.9rem", color: "#777", marginBottom: 24 }}>Connectez-vous en tant qu'administrateur.</div>
+        <button onClick={() => window.close()} style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "12px 32px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ height: "100vh", overflowY: "auto", overflowX: "hidden", background: "#F0F1F5" }}>
+      <style>{`
+        /* ── Desktop Admin overrides ── */
+        .adm-wrap { --adm-bg: #F0F1F5; }
+
+        /* Header mobile de Admin caché - remplacé par la topbar ci-dessus */
+        .adm-wrap [data-admhdr] { display: none !important; }
+
+        /* Le bandeau d'onglets reste fixe, collé juste sous la topbar desktop (60px) */
+        .adm-wrap [data-admtabs] { position: sticky !important; top: 60px !important; z-index: 150 !important; }
+
+        /* Stats grille principale : 4 colonnes */
+        @media (min-width: 900px) {
+          .adm-wrap [data-admgrid="main"] { grid-template-columns: repeat(4,1fr) !important; gap: 18px !important; }
+          .adm-wrap [data-admgrid="adv"]  { grid-template-columns: repeat(4,1fr) !important; gap: 16px !important; }
+          .adm-wrap [data-admgrid="row"]  { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
+          .adm-wrap [data-admlist]        { display: grid !important; grid-template-columns: repeat(2,1fr) !important; gap: 14px !important; }
+          .adm-wrap [data-admlist] > * { margin-bottom: 0 !important; }
+        }
+        @media (min-width: 1200px) {
+          .adm-wrap [data-admlist] { grid-template-columns: repeat(3,1fr) !important; }
+        }
+      `}</style>
+
+      {/* Topbar desktop */}
+      <div style={{ position: "sticky", top: 0, zIndex: 200, background: G.blanc, borderBottom: `1px solid ${G.gris}`, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", padding: "0 32px", display: "flex", alignItems: "center", gap: 14, height: 60 }}>
+        <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.rouge }}>Moyo<span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+        <div style={{ width: 1, height: 28, background: G.gris, flexShrink: 0 }} />
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</div>
+        <div style={{ fontSize: "0.8rem", color: "#bbb" }}>- espace de modération</div>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{auth.name}</div>
+        </div>
+        <button
+          onClick={() => {
+            // Déclencher le modal d'aide dans le composant Admin via un event custom
+            const el = document.querySelector("[data-admhelp]") as HTMLButtonElement | null;
+            if (el) el.click();
+          }}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: G.brunLight, transition: "background 0.15s" }}
+          onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.cremeDark; }}
+          onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Aide
+        </button>
+        <button onClick={() => window.close()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: "#888" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Fermer
+        </button>
+        {/* ── BURGER - OFF-CANVAS DROIT (Super Admin uniquement) ── */}
+        {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setRulesMenuOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: rulesMenuOpen ? G.rouge : G.creme, border: `1.5px solid ${rulesMenuOpen ? G.rouge : G.gris}`, borderRadius: 20, cursor: "pointer", transition: "all 0.2s" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={rulesMenuOpen ? G.blanc : "#555"} strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+        </div>
+        )}
+        {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && rulesMenuOpen && <div onClick={() => setRulesMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "min(97vw, 1340px)", height: "min(94vh, 980px)", background: G.blanc, borderRadius: 18, zIndex: 9999, boxShadow: "0 24px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>⚙️ Configuration</div>
+            <button onClick={() => setRulesMenuOpen(false)} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+            {/* ── Menu latéral ── */}
+            <div style={{ width: 240, flexShrink: 0, borderRight: `1px solid ${G.gris}`, background: "#FAFAFB", padding: "14px 10px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
+              {([
+                ["general", "Général & Règles", "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"],
+                ["contenus", "Contenus & Modals", "M4 7V4h16v3 M9 20h6 M12 4v16"],
+                ["tarifs", "Tarifs & Paiements", "M1 4h22v16H1z M1 10h22"],
+                ["equipe", "Équipe & Alertes", "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"],
+                ["securite", "Sécurité & Système", "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"],
+              ] as [typeof configTab, string, string][]).map(([key, label, icon]) => {
+                const active = configTab === key;
+                return (
+                  <button key={key} onClick={() => setConfigTab(key)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 13px", borderRadius: 10, border: "none", background: active ? "rgba(192,57,43,0.1)" : "transparent", cursor: "pointer", textAlign: "left", width: "100%", transition: "background 0.15s" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={active ? G.rouge : "#777"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d={icon}/></svg>
+                    <span style={{ fontSize: "0.84rem", fontWeight: active ? 700 : 500, color: active ? G.rouge : "#444" }}>{label}</span>
+                  </button>
+                );
+              })}
+              <div style={{ flex: 1 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderTop: `1px solid ${G.gris}`, marginTop: 8 }}>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: G.rouge, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.85rem", flexShrink: 0 }}>{(auth?.name || "A").charAt(0)}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{auth?.name || "Admin"}</div>
+                  <div style={{ fontSize: "0.66rem", color: "#999" }}>Super Admin</div>
+                </div>
+              </div>
+            </div>
+            {/* ── Zone contenu ── */}
+            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "10px 26px 30px", minWidth: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0 22px", alignItems: "start", alignContent: "start" }}>
+            {configTab === "general" && <OffCanvasSection title="Règles">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+                <div>
+                  <div style={{ fontSize: "0.83rem", fontWeight: 600 }}>Bloquer like même genre</div>
+                  <div style={{ fontSize: "0.72rem", color: "#888" }}>Homme - Homme / Femme - Femme</div>
+                </div>
+                <SwitchBtn on={rules.blockSameGenderLike} onToggle={async () => {
+                  if (!auth) return;
+                  const v = !rules.blockSameGenderLike;
+                  setRules(r => ({ ...r, blockSameGenderLike: v }));
+                  setBLOCK_SAME_GENDER(v);
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
+                }} />
+              </div>
+            </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Textes des modals">
+              {([
+                ["modal_same_gender_homme", "Même genre (Homme)", modalTexts.sameGenderHomme],
+                ["modal_same_gender_femme", "Même genre (Femme)", modalTexts.sameGenderFemme],
+                ["modal_same_gender_sub", "Même genre - sous-texte", modalTexts.sameGenderSub],
+                ["modal_match_title", "Match - Titre", modalTexts.matchTitle],
+                ["modal_match_subtitle", "Match - Sous-titre", modalTexts.matchSubtitle],
+                ["modal_premium_default", "Premium - Message", modalTexts.premiumDefault],
+                ["modal_likes_epuises", "Likes épuisés", modalTexts.likesEpuises],
+              ] as [string, string, string][]).map(([key, label, value]) => (
+                <EditableRow key={key} label={label} value={value} open={editingModal === key}
+                  onOpen={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }}
+                  editValue={editingValue} onEdit={setEditingValue}
+                  hint={key.includes("subtitle") ? "Utilise {name} pour le prénom" : key.includes("likes") ? "Utilise {n} pour le nombre" : undefined}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingValue }) });
+                    const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_signup_success: "signupSuccess", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" };
+                    setModalTexts(t => ({ ...t, [km[key]]: editingValue }));
+                    setEditingModal(null);
+                  }} />
+              ))}
+            </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Contacts">
+              <SiteInfoConfig auth={auth!} group="contacts" />
+            </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Réseaux sociaux">
+              <SiteInfoConfig auth={auth!} group="socials" />
+            </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Liens de téléchargement">
+              <SiteInfoConfig auth={auth!} group="app" />
+            </OffCanvasSection>}
+            {configTab === "contenus" && <OffCanvasSection title="Page d'accueil">
+              <SiteInfoConfig auth={auth!} group="landing" />
+            </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Limites & Quotas">
+              {([
+                ["limit_likes_free", "limitLikes" as keyof typeof appConfig, "Likes gratuits/jour", appConfig.limitLikes, "number"],
+                ["limit_messages_free", "limitMessages" as keyof typeof appConfig, "Messages gratuits/match", appConfig.limitMessages, "number"],
+                ["limit_photo_size_mb", "limitPhotoSizeMb" as keyof typeof appConfig, "Taille max photo (Mo)", appConfig.limitPhotoSizeMb, "number"],
+                ["match_welcome_message", "matchWelcomeMessage" as keyof typeof appConfig, "Message bienvenue match", appConfig.matchWelcomeMessage, "text"],
+              ] as [string, keyof typeof appConfig, string, string, string][]).map(([key, ck, label, value, type]) => (
+                <EditableRow key={key} label={label} value={value} open={editingConfig === key} type={type as "text"|"number"}
+                  onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+                  editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                    setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
+                    setEditingConfig(null);
+                  }} />
+              ))}
+              {([
+                ["limit_match_requests", "limitMatchRequests" as keyof typeof appConfig, "Demandes mise en relation/mois", appConfig.limitMatchRequests],
+                ["limit_status_boosts", "limitStatusBoosts" as keyof typeof appConfig, "Boosts statut/mois", appConfig.limitStatusBoosts],
+              ] as [string, keyof typeof appConfig, string, string][]).map(([key, ck, label, value]) => (
+                <EditableRow key={key} label={label} value={value} open={editingConfig === key} type="number"
+                  onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+                  editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await saveSetting(key, editingConfigValue, auth.token);
+                    setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
+                    if (key === "limit_match_requests") FREE_LIMITS.matchRequests = parseInt(editingConfigValue) || 2;
+                    if (key === "limit_status_boosts") FREE_LIMITS.statusBoosts = parseInt(editingConfigValue) || 2;
+                    setEditingConfig(null);
+                  }} />
+              ))}
+            </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Prix & Abonnement">
+              {([
+                ["premium_price_fcfa", "premiumPriceFcfa" as keyof typeof appConfig, "Prix 1 mois (FCFA)", appConfig.premiumPriceFcfa],
+                ["premium_price_week_fcfa", "premiumPriceWeekFcfa" as keyof typeof appConfig, "Prix 1 semaine (FCFA)", appConfig.premiumPriceWeekFcfa],
+                ["premium_price_2month_fcfa", "premiumPrice2monthFcfa" as keyof typeof appConfig, "Prix 2 mois (FCFA)", appConfig.premiumPrice2monthFcfa],
+                ["premium_price_eur", "premiumPriceEur" as keyof typeof appConfig, "Prix Premium Diaspora (€)", appConfig.premiumPriceEur],
+                ["eur_to_fcfa_rate", "eurToFcfaRate" as keyof typeof appConfig, "Taux 1 € en FCFA", appConfig.eurToFcfaRate],
+                ["premium_duration_days", "premiumDurationDays" as keyof typeof appConfig, "Durée 1 mois (jours)", appConfig.premiumDurationDays],
+                ["premium_days_week", "premiumDaysWeek" as keyof typeof appConfig, "Durée 1 semaine (jours)", appConfig.premiumDaysWeek],
+                ["premium_days_2month", "premiumDays2month" as keyof typeof appConfig, "Durée 2 mois (jours)", appConfig.premiumDays2month],
+                ["likes_notification_delay_hours", "likesNotifDelayHours" as keyof typeof appConfig, "Notif likes après (heures)", appConfig.likesNotifDelayHours],
+                ["appointment_physical_price", "appointmentPhysicalPrice" as keyof typeof appConfig, "Prix rendez-vous agence (FCFA)", appConfig.appointmentPhysicalPrice],
+              ] as [string, keyof typeof appConfig, string, string][]).map(([key, ck, label, value]) => (
+                <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} open={editingConfig === key} type="number"
+                  onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+                  editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                    setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
+                    if (key === "premium_price_fcfa") setPREMIUM_PRICE_FCFA(parseInt(editingConfigValue) || 3500); if (key === "premium_price_week_fcfa") setPREMIUM_PRICE_WEEK_FCFA(parseInt(editingConfigValue) || 1200); if (key === "premium_price_2month_fcfa") setPREMIUM_PRICE_2MONTH_FCFA(parseInt(editingConfigValue) || 5900); if (key === "premium_days_week") setPREMIUM_DAYS_WEEK(parseInt(editingConfigValue) || 7); if (key === "premium_days_2month") setPREMIUM_DAYS_2MONTH(parseInt(editingConfigValue) || 62);
+                    if (key === "premium_price_eur") setPREMIUM_PRICE_EUR(parseFloat(editingConfigValue) || 10);
+                    if (key === "eur_to_fcfa_rate") setEUR_TO_FCFA(parseFloat(editingConfigValue) || 655.957);
+                    if (key === "premium_duration_days") setPREMIUM_30_DAYS_MS((parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000);
+                    setEditingConfig(null);
+                  }} />
+              ))}
+            </OffCanvasSection>}
+            {configTab === "general" && <OffCanvasSection title="Fonctionnalités">
+              {([
+                ["feature_statuses", "featureStatuses" as keyof typeof appConfig, "Statuts (Stories)"],
+                ["appointments_enabled", "appointmentsEnabled" as keyof typeof appConfig, "Rendez-vous activés"],
+                ["phone_appointments_enabled", "phoneAppointmentsEnabled" as keyof typeof appConfig, "Rendez-vous téléphoniques"],
+                ["physical_appointments_enabled", "physicalAppointmentsEnabled" as keyof typeof appConfig, "Rendez-vous physiques (agence)"],
+                ["feature_gift_premium", "featureGiftPremium" as keyof typeof appConfig, "Cadeau Premium"],
+                ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
+              ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
+                <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>{label}</div>
+                  <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => {
+                    if (!auth) return;
+                    const v = appConfig[ck] !== "true" ? "true" : "false";
+                    setAppConfig(c => ({ ...c, [ck]: v }));
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+                  }} />
+                </div>
+              ))}
+            </OffCanvasSection>}
+            {configTab === "general" && <OffCanvasSection title="Mode Découvrir par défaut">
+              <DiscoverModeConfig auth={auth!} />
+            </OffCanvasSection>}
+            {configTab === "equipe" && <OffCanvasSection title="Notifications admin">
+              <AdminNotifPrefs auth={auth!} />
+            </OffCanvasSection>}
+            {configTab === "equipe" && <OffCanvasSection title="Relance notifications">
+              <EditableRow label="Notif likes après (heures)" value={appConfig.likesNotifDelayHours} type="number" open={editingConfig === "likes_notification_delay_hours"}
+                onOpen={() => { setEditingConfig(editingConfig === "likes_notification_delay_hours" ? null : "likes_notification_delay_hours"); setEditingConfigValue(appConfig.likesNotifDelayHours); }}
+                editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                onSave={async () => {
+                  if (!auth) return;
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.likes_notification_delay_hours`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                  setAppConfig(c => ({ ...c, likesNotifDelayHours: editingConfigValue }));
+                  setEditingConfig(null);
+                }} />
+            </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Moyens de paiement">
+              <PaymentMethodsConfig auth={auth!} />
+            </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Formules Premium">
+              <PremiumPlansConfig auth={auth!} />
+            </OffCanvasSection>}
+            {configTab === "securite" && <OffCanvasSection title="Mode maintenance">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "rgba(231,76,60,0.07)", borderRadius: 12, border: "1px solid rgba(231,76,60,0.25)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span style={{ fontSize: "0.83rem", fontWeight: 700, color: G.rouge }}>Mode maintenance</span>
+                </div>
+                <SwitchBtn on={appConfig.maintenanceMode === "true"} onToggle={async () => {
+                  if (!auth) return;
+                  const v = appConfig.maintenanceMode !== "true" ? "true" : "false";
+                  setAppConfig(c => ({ ...c, maintenanceMode: v }));
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_mode`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+                }} />
+              </div>
+              {appConfig.maintenanceMode === "true" && (
+                <EditableRow label="Message de maintenance" value={appConfig.maintenanceMessage} open={editingConfig === "maintenance_message"}
+                  onOpen={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }}
+                  editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                  onSave={async () => {
+                    if (!auth) return;
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_message`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                    setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue }));
+                    setEditingConfig(null);
+                  }} />
+              )}
+            </OffCanvasSection>}
+            {configTab === "securite" && <OffCanvasSection title="Mots interdits (modération)">
+              <div style={{ fontSize: "0.74rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+                Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
+              </div>
+              <EditableRow label="Liste des mots interdits" value={appConfig.customBannedWords || "(aucun)"} open={editingConfig === "custom_banned_words"}
+                onOpen={() => { setEditingConfig(editingConfig === "custom_banned_words" ? null : "custom_banned_words"); setEditingConfigValue(appConfig.customBannedWords); }}
+                editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                hint="Ex : mot1, expression deux, mot3"
+                onSave={async () => {
+                  if (!auth) return;
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.custom_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                  setAppConfig(c => ({ ...c, customBannedWords: editingConfigValue }));
+                  buildCustomBannedRegex(editingConfigValue);
+                  setEditingConfig(null);
+                }} />
+              <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
+                <b>Mots « contacts » — membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
+              </div>
+              <EditableRow label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords || "(aucun)"} open={editingConfig === "contact_banned_words"}
+                onOpen={() => { setEditingConfig(editingConfig === "contact_banned_words" ? null : "contact_banned_words"); setEditingConfigValue(appConfig.contactBannedWords); }}
+                editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                hint="Ex : messenger, signal, mon réseau"
+                onSave={async () => {
+                  if (!auth) return;
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.contact_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                  setAppConfig(c => ({ ...c, contactBannedWords: editingConfigValue }));
+                  buildContactBannedRegex(editingConfigValue);
+                  setEditingConfig(null);
+                }} />
+              <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
+                <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
+              </div>
+              <EditableRow label="Message auto (tentative de contact)" value={appConfig.autoModContactReply || "(par défaut)"} open={editingConfig === "auto_mod_contact_reply"}
+                onOpen={() => { setEditingConfig(editingConfig === "auto_mod_contact_reply" ? null : "auto_mod_contact_reply"); setEditingConfigValue(appConfig.autoModContactReply); }}
+                editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                hint="Le message envoyé automatiquement à l'auteur"
+                onSave={async () => {
+                  if (!auth) return;
+                  const v = editingConfigValue.trim();
+                  await saveSetting("auto_mod_contact_reply", v, auth.token);
+                  setAppConfig(c => ({ ...c, autoModContactReply: v }));
+                  setAUTO_MOD_CONTACT_REPLY(v || AUTO_MOD_CONTACT_REPLY);
+                  setEditingConfig(null);
+                }} />
+            </OffCanvasSection>}
+            {configTab === "securite" && ((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+              <OffCanvasSection title="Mon code d'accès (PIN)">
+                <AdminPinConfig auth={auth!} />
+              </OffCanvasSection>
+            )}
+            {configTab === "securite" && ((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+              <>
+              <OffCanvasSection title="Intervalles de polling (ms)">
+                <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>Valeurs en millisecondes. Ex: 8000 = 8s. Min: 3000ms.</div>
+                {([
+                  ["poll_badges_ms", "Badges (likes/vues/matchs/messages)", String(POLL_BADGES_MS)],
+                  ["poll_admin_badge_ms", "Badge admin (tableau de bord)", String(POLL_ADMIN_BADGE_MS)],
+                  ["poll_stats_ms", "Stats tableau de bord", String(POLL_STATS_MS)],
+                  ["poll_broadcast_ms", "Broadcasts / diffusions", String(POLL_BROADCAST_MS)],
+                  ["poll_support_ms", "Messages support", String(POLL_SUPPORT_MS)],
+                ] as [string, string, string][]).map(([key, label, value]) => (
+                  <EditableRow key={key} label={label} value={value + " ms"} type="number"
+                    open={editingConfig === key}
+                    onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+                    editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                    onSave={async () => {
+                      if (!auth) return;
+                      const v = Math.max(3000, parseInt(editingConfigValue) || 8000);
+                      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
+                      if (key === "poll_badges_ms") setPOLL_BADGES_MS(v);
+                      if (key === "poll_admin_badge_ms") setPOLL_ADMIN_BADGE_MS(v);
+                      if (key === "poll_stats_ms") setPOLL_STATS_MS(v);
+                      if (key === "poll_broadcast_ms") setPOLL_BROADCAST_MS(v);
+                      if (key === "poll_support_ms") setPOLL_SUPPORT_MS(v);
+                      setEditingConfig(null);
+                    }} />
+                ))}
+              </OffCanvasSection>
+              </>
+            )}
+            </div>
+          </div>
+          </div>
+          </div>
+        </div>}
+      </div>
+
+      {/* Contenu Admin dans wrapper desktop */}
+      {/* ── MODAL GESTION ADMINS ── */}
+      {adminActionModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 380, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 6 }}>{adminActionModal.label}</div>
+            <div style={{ fontSize: "0.83rem", color: "#888", marginBottom: 18, lineHeight: 1.5 }}>Entrez l'adresse email de l'utilisateur à qui vous souhaitez attribuer ce rôle.</div>
+            <input
+              type="email"
+              value={adminActionEmail}
+              onChange={e => setAdminActionEmail(e.target.value)}
+              placeholder="email@exemple.com"
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === "Enter" && adminActionEmail.trim()) {
+                  (window as any).__adminActionResolve?.(adminActionEmail.trim());
+                  setAdminActionModal(null);
+                }
+              }}
+              style={{ width: "100%", boxSizing: "border-box", padding: "11px 14px", borderRadius: 12, border: `2px solid ${adminActionModal.color}30`, fontSize: "0.88rem", outline: "none", marginBottom: 16, fontFamily: "inherit" }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { (window as any).__adminActionResolve?.(null); setAdminActionModal(null); }} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `1.5px solid ${G.gris}`, background: G.creme, fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", color: "#555" }}>
+                Annuler
+              </button>
+              <button
+                disabled={!adminActionEmail.trim()}
+                onClick={() => { (window as any).__adminActionResolve?.(adminActionEmail.trim()); setAdminActionModal(null); }}
+                style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: adminActionEmail.trim() ? adminActionModal.color : "#ccc", color: "#fff", fontSize: "0.85rem", fontWeight: 700, cursor: adminActionEmail.trim() ? "pointer" : "not-allowed" }}>
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{ maxWidth: 1760, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
+        <div className="adm-wrap">
+          <AdminPinGate auth={auth} onBack={() => window.close()} onBadgeCount={() => {}} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminNotifPrefs({ auth }: { auth: Auth }) {
+  type Admin = { id: string; name: string };
+  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean };
+  const [admins, setAdmins] = React.useState<Admin[]>([]);
+  const [prefs, setPrefs] = React.useState<Record<string, Prefs>>({});
+  const [loading, setLoading] = React.useState(true);
+  const [notifError, setNotifError] = React.useState<string | null>(null);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const [ar, pr] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/profiles?is_admin=eq.true&select=id,name&order=name.asc`, { headers: H }).then(r => r.json()).catch(() => []),
+          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation`, { headers: H }).then(r => r.json()).catch(() => []),
+        ]);
+        if (Array.isArray(ar)) setAdmins(ar.filter((a: any) => a.id !== SUPPORT_TEAM_ID));
+        const map: Record<string, Prefs> = {};
+        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation }; });
+        setPrefs(map);
+      } catch {}
+      setLoading(false);
+    })();
+  }, [auth.token]);
+
+  const toggle = async (adminId: string, key: keyof Prefs) => {
+    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false };
+    const updated = { ...current, [key]: !current[key] };
+    setPrefs(p => ({ ...p, [adminId]: updated }));
+    try {
+      // upsert (insert ou update) sur la clé admin_id
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?on_conflict=admin_id`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ admin_id: adminId, ...updated, updated_at: new Date().toISOString() }),
+      });
+      if (!r.ok) throw new Error("save failed");
+      setNotifError(null);
+    } catch {
+      // La sauvegarde a échoué : on remet l'état précédent pour ne pas tromper l'admin
+      setPrefs(p => ({ ...p, [adminId]: current }));
+      setNotifError("Impossible d'enregistrer. Vérifiez la configuration de la base (colonne « mises_relation »).");
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        Active les notifications push qu'un admin doit recevoir. Ex : active « Paiements » pour la personne qui gère les paiements → elle sera prévenue à chaque nouveau paiement.
+      </div>
+      {notifError && <div style={{ background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.25)", color: G.rouge, borderRadius: 10, padding: "9px 12px", fontSize: "0.76rem", fontWeight: 600, marginBottom: 10 }}>{notifError}</div>}
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 20, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+      ) : admins.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 20, color: "#aaa", fontSize: "0.8rem", fontStyle: "italic" }}>Aucun admin trouvé.</div>
+      ) : admins.map(a => {
+        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false };
+        return (
+          <div key={a.id} style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+            <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{a.name}{a.id === auth.userId ? " (vous)" : ""}</div>
+            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["paiements", "💳 Paiements"]] as [keyof Prefs, string][]).map(([k, label]) => (
+              <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0" }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#444" }}>{label}</div>
+                <SwitchBtn on={p[k]} onToggle={() => toggle(a.id, k)} />
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PaymentMethodsConfig({ auth }: { auth: Auth }) {
+  const [vals, setVals] = React.useState({ mtn: true, airtel: true, cb: true });
+  const [loading, setLoading] = React.useState(true);
+  const [coords, setCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "" });
+  const [savedCoords, setSavedCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "" });
+  const [editingField, setEditingField] = React.useState<string | null>(null);
+  const [savingCoord, setSavingCoord] = React.useState<string | null>(null);
+  const [confirmData, setConfirmData] = React.useState<{ key: string; field: keyof typeof coords; value: string; label: string } | null>(null);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable)&select=key,value`, { headers: H })
+      .then(r => r.json()).then((data: { key: string; value: string }[]) => {
+        if (!Array.isArray(data)) return;
+        const m: Record<string, string> = {};
+        data.forEach(d => { m[d.key] = d.value; });
+        setVals({
+          mtn: m["pay_mtn_enabled"] !== "false",
+          airtel: m["pay_airtel_enabled"] !== "false",
+          cb: m["pay_cb_enabled"] !== "false",
+        });
+        setCoords({
+          mtnNum: m["pay_mtn_number"] || PAY_MTN_NUMBER,
+          mtnResp: m["pay_mtn_responsable"] || PAY_MTN_RESPONSABLE,
+          airtelNum: m["pay_airtel_number"] || PAY_AIRTEL_NUMBER,
+          airtelResp: m["pay_airtel_responsable"] || PAY_AIRTEL_RESPONSABLE,
+        });
+        setSavedCoords({
+          mtnNum: m["pay_mtn_number"] || PAY_MTN_NUMBER,
+          mtnResp: m["pay_mtn_responsable"] || PAY_MTN_RESPONSABLE,
+          airtelNum: m["pay_airtel_number"] || PAY_AIRTEL_NUMBER,
+          airtelResp: m["pay_airtel_responsable"] || PAY_AIRTEL_RESPONSABLE,
+        });
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const toggle = async (which: "mtn" | "airtel" | "cb") => {
+    const v = !vals[which];
+    setVals(s => ({ ...s, [which]: v }));
+    if (which === "mtn") setPAY_MTN_ENABLED(v);
+    if (which === "airtel") setPAY_AIRTEL_ENABLED(v);
+    if (which === "cb") setPAY_CB_ENABLED(v);
+    const key = which === "mtn" ? "pay_mtn_enabled" : which === "airtel" ? "pay_airtel_enabled" : "pay_cb_enabled";
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
+    } catch {}
+  };
+
+  const saveCoord = (key: string, field: keyof typeof coords, value: string, label: string) => {
+    setConfirmData({ key, field, value, label });
+  };
+  const doSaveCoord = async (key: string, field: keyof typeof coords, value: string) => {
+    setConfirmData(null);
+    setSavingCoord(key);
+    // Mise à jour immédiate des variables globales
+    if (key === "pay_mtn_number") setPAY_MTN_NUMBER(value);
+    if (key === "pay_mtn_responsable") setPAY_MTN_RESPONSABLE(value);
+    if (key === "pay_airtel_number") setPAY_AIRTEL_NUMBER(value);
+    if (key === "pay_airtel_responsable") setPAY_AIRTEL_RESPONSABLE(value);
+    try {
+      // Méthode robuste : on met à jour la ligne existante (PATCH), et on l'insère seulement si elle n'existe pas.
+      // Ne dépend d'AUCUNE contrainte d'unicité sur app_settings.key.
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ value }) });
+      const updated = await r.json().catch(() => []);
+      if (!Array.isArray(updated) || updated.length === 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ key, value }) });
+      }
+      setSavedCoords(s => ({ ...s, [field]: value }));
+      setEditingField(null);
+    } catch {}
+    setSavingCoord(null);
+  };
+  const cancelEdit = (field: keyof typeof coords) => {
+    setCoords(c => ({ ...c, [field]: savedCoords[field] }));
+    setEditingField(null);
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        Désactive un moyen de paiement en cas de problème (ex : numéro indisponible). Une fois coupé, il apparaît grisé et « Temporairement indisponible » partout (achat, cadeau, diaspora).
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+      ) : (<>
+        {([["mtn", "MTN MoMo"], ["airtel", "Airtel Money"], ["cb", "Visa / Mastercard (CB)"]] as ["mtn" | "airtel" | "cb", string][]).map(([k, label]) => (
+          <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: vals[k] ? G.brun : G.rouge }}>{label}{!vals[k] && <span style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginLeft: 6 }}>(coupé)</span>}</div>
+            <SwitchBtn on={vals[k]} onToggle={() => toggle(k)} />
+          </div>
+        ))}
+
+        {/* Coordonnées des comptes de réception */}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${G.gris}` }}>
+          <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+            Numéro qui reçoit l'argent et nom du responsable. Modifiable à tout moment — appliqué partout immédiatement.
+          </div>
+          {([
+            ["pay_mtn_number", "le nouveau numéro MTN", "mtnNum", "tel"],
+            ["pay_mtn_responsable", "le nouveau responsable MTN", "mtnResp", "text"],
+            ["pay_airtel_number", "le nouveau numéro Airtel", "airtelNum", "tel"],
+            ["pay_airtel_responsable", "le nouveau responsable Airtel", "airtelResp", "text"],
+          ] as [string, string, keyof typeof coords, string][]).map(([key, label, field, type]) => {
+            const isEditing = editingField === key;
+            const displayLabel = field === "mtnNum" ? "Numéro MTN (reçoit l'argent)" : field === "mtnResp" ? "Responsable MTN" : field === "airtelNum" ? "Numéro Airtel (reçoit l'argent)" : "Responsable Airtel";
+            return (
+              <div key={key} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{displayLabel}</div>
+                {!isEditing ? (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <div style={{ flex: 1, padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: "#f7f7f7", color: "#555", display: "flex", alignItems: "center", gap: 6, boxSizing: "border-box" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      {coords[field]}
+                    </div>
+                    <button onClick={() => setEditingField(key)} style={{ flexShrink: 0, background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "0 12px", height: 38, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      Modifier
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type={type}
+                      autoFocus
+                      value={coords[field]}
+                      onChange={e => setCoords(c => ({ ...c, [field]: e.target.value }))}
+                      style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `2px solid ${G.vert}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 6 }}
+                    />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => saveCoord(key, field, coords[field], label)} disabled={savingCoord === key || !coords[field].trim()} style={{ flex: 1, background: savingCoord === key ? "#bbb" : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", border: "none", borderRadius: 9, padding: "9px 0", fontSize: "0.78rem", fontWeight: 700, cursor: savingCoord === key ? "wait" : "pointer" }}>
+                        {savingCoord === key ? "…" : "Enregistrer"}
+                      </button>
+                      <button onClick={() => cancelEdit(field)} style={{ flex: 1, background: G.creme, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "9px 0", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </>)}
+      {confirmData && (
+        <ConfirmModal
+          msg={`Confirmer ${confirmData.label} :\n${confirmData.value} ?`}
+          confirmLabel="Enregistrer"
+          onConfirm={() => doSaveCoord(confirmData.key, confirmData.field, confirmData.value)}
+          onCancel={() => setConfirmData(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function AdminPinConfig({ auth }: { auth: Auth }) {
+  const [editing, setEditing] = React.useState(false);
+  const [pin, setPin] = React.useState("");
+  const [confirmPin, setConfirmPin] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [msg, setMsg] = React.useState<{ text: string; ok: boolean } | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  const save = () => {
+    setMsg(null);
+    if (pin.length !== 4) { setMsg({ text: "Le PIN doit faire exactement 4 chiffres.", ok: false }); return; }
+    if (pin !== confirmPin) { setMsg({ text: "Les deux PIN ne correspondent pas.", ok: false }); return; }
+    setConfirmOpen(true);
+  };
+  const doSave = async () => {
+    setConfirmOpen(false);
+    setSaving(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_own_admin_pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ new_pin: pin }),
+      });
+      if (!r.ok) throw new Error();
+      setMsg({ text: "✅ PIN modifié. Il sera demandé à la prochaine ouverture du tableau de bord.", ok: true });
+      setEditing(false); setPin(""); setConfirmPin("");
+    } catch { setMsg({ text: "Erreur lors de la modification.", ok: false }); }
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      <div style={{ background: "#f9f0ff", borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: "0.78rem", color: "#5b2c6f", border: "1px solid rgba(142,68,173,0.2)", lineHeight: 1.5 }}>
+        🔒 Ce code à 4 chiffres vous est demandé à chaque ouverture du tableau de bord. Ne le communiquez à personne.
+      </div>
+      {!editing ? (
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ flex: 1, padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.95rem", background: "#f7f7f7", color: "#555", display: "flex", alignItems: "center", gap: 6, letterSpacing: 4 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            • • • •
+          </div>
+          <button onClick={() => { setEditing(true); setMsg(null); }} style={{ flexShrink: 0, background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "0 12px", height: 38, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Modifier
+          </button>
+        </div>
+      ) : (
+        <div>
+          <input type="password" inputMode="numeric" maxLength={4} autoFocus value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="Nouveau PIN (4 chiffres)" style={{ width: "100%", padding: "10px 11px", borderRadius: 9, border: `2px solid ${G.vert}`, fontSize: "1rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 6, textAlign: "center", letterSpacing: 6 }} />
+          <input type="password" inputMode="numeric" maxLength={4} value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="Confirmer le PIN" style={{ width: "100%", padding: "10px 11px", borderRadius: 9, border: `2px solid ${G.gris}`, fontSize: "1rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 6, textAlign: "center", letterSpacing: 6 }} />
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={save} disabled={saving} style={{ flex: 1, background: saving ? "#bbb" : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", border: "none", borderRadius: 9, padding: "10px 0", fontSize: "0.82rem", fontWeight: 700, cursor: saving ? "wait" : "pointer" }}>{saving ? "…" : "Enregistrer"}</button>
+            <button onClick={() => { setEditing(false); setPin(""); setConfirmPin(""); setMsg(null); }} style={{ flex: 1, background: G.creme, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "10px 0", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+          </div>
+        </div>
+      )}
+      {msg && <div style={{ marginTop: 8, fontSize: "0.78rem", color: msg.ok ? G.vert : G.rouge, fontWeight: 600 }}>{msg.text}</div>}
+      {confirmOpen && (
+        <ConfirmModal
+          msg={`Confirmer votre nouveau PIN d'accès :\n${pin}`}
+          confirmLabel="Enregistrer"
+          onConfirm={doSave}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "socials" | "landing" | "app" }) {
+  const fields: Record<string, [string, string][]> = {
+    contacts: [
+      ["contact_email", "Email de contact"],
+      ["contact_whatsapp", "Numéro WhatsApp (chiffres only, ex: 242065132012)"],
+      ["contact_address", "Adresse postale"],
+    ],
+    app: [
+      ["store_link_android", "Lien Google Play (vide = affiche les instructions d'installation PWA)"],
+      ["store_link_ios", "Lien App Store (vide = affiche les instructions d'installation PWA)"],
+    ],
+    socials: [
+      ["social_facebook", "Lien Facebook (vide = masqué)"],
+      ["social_instagram", "Lien Instagram (vide = masqué)"],
+      ["social_tiktok", "Lien TikTok (vide = masqué)"],
+      ["social_youtube", "Lien YouTube (vide = masqué)"],
+    ],
+    landing: [
+      ["landing_members_count", "Compteur de membres (ex: 12 000+ membres)"],
+      ["landing_title_start", "Titre — début (ex: Trouve ton)"],
+      ["landing_title_highlight", "Titre — mot coloré (ex: âme sœur)"],
+      ["landing_title_end", "Titre — fin (ex: Congolais.e)"],
+      ["landing_slogan", "Slogan sous le titre"],
+      ["landing_stat_members", "Bandeau accueil — Membres inscrits (ex: 12 000+)"],
+      ["landing_stat_couples", "Bandeau accueil — Couples formés (ex: 850+)"],
+      ["landing_stat_cities", "Bandeau accueil — Villes & diasporas (ex: 19)"],
+      ["premium_stat_couples", "Modale Premium — couples formés cette semaine (vide = calcul auto)"],
+      ["premium_stat_members", "Modale Premium — membres Premium actifs (vide = calcul auto)"],
+    ],
+  };
+  const defaults: Record<string, string> = {
+    contact_email: CONTACT_EMAIL, contact_whatsapp: CONTACT_WHATSAPP, contact_address: CONTACT_ADDRESS,
+    social_facebook: SOCIAL_FACEBOOK, social_instagram: SOCIAL_INSTAGRAM, social_tiktok: SOCIAL_TIKTOK, social_youtube: SOCIAL_YOUTUBE,
+    landing_members_count: LANDING_MEMBERS, landing_title_start: LANDING_TITLE_START, landing_title_highlight: LANDING_TITLE_HIGHLIGHT, landing_title_end: LANDING_TITLE_END, landing_slogan: LANDING_SLOGAN,
+    premium_stat_couples: PREMIUM_STAT_COUPLES, premium_stat_members: PREMIUM_STAT_MEMBERS,
+    landing_stat_members: LANDING_STAT_MEMBERS, landing_stat_couples: LANDING_STAT_COUPLES, landing_stat_cities: LANDING_STAT_CITIES,
+    store_link_android: STORE_LINK_ANDROID, store_link_ios: STORE_LINK_IOS,
+  };
+  const list = fields[group];
+  const [vals, setVals] = React.useState<Record<string, string>>(() => { const o: Record<string, string> = {}; list.forEach(([k]) => { o[k] = defaults[k]; }); return o; });
+  const [saved, setSaved] = React.useState<Record<string, string>>(() => ({ ...vals }));
+  const [editing, setEditing] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState<string | null>(null);
+  const [confirmKey, setConfirmKey] = React.useState<string | null>(null);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    const keys = list.map(([k]) => k).join(",");
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys})&select=key,value`, { headers: H })
+      .then(r => r.json()).then((data: { key: string; value: string }[]) => {
+        if (!Array.isArray(data)) return;
+        const o: Record<string, string> = { ...vals };
+        data.forEach(d => { o[d.key] = d.value; });
+        setVals(o); setSaved(o);
+      }).catch(() => {});
+  }, [auth.token]);
+
+  const applyGlobal = (key: string, value: string) => {
+    if (key === "contact_email") setCONTACT_EMAIL(value);
+    if (key === "contact_whatsapp") setCONTACT_WHATSAPP(value);
+    if (key === "contact_address") setCONTACT_ADDRESS(value);
+    if (key === "social_facebook") setSOCIAL_FACEBOOK(value);
+    if (key === "social_instagram") setSOCIAL_INSTAGRAM(value);
+    if (key === "social_tiktok") setSOCIAL_TIKTOK(value);
+    if (key === "social_youtube") setSOCIAL_YOUTUBE(value);
+    if (key === "landing_members_count") setLANDING_MEMBERS(value);
+    if (key === "landing_title_start") setLANDING_TITLE_START(value);
+    if (key === "landing_title_highlight") setLANDING_TITLE_HIGHLIGHT(value);
+    if (key === "landing_title_end") setLANDING_TITLE_END(value);
+    if (key === "landing_slogan") setLANDING_SLOGAN(value);
+    if (key === "premium_stat_couples") setPREMIUM_STAT_COUPLES(value);
+    if (key === "premium_stat_members") setPREMIUM_STAT_MEMBERS(value);
+    if (key === "landing_stat_members") setLANDING_STAT_MEMBERS(value);
+    if (key === "landing_stat_couples") setLANDING_STAT_COUPLES(value);
+    if (key === "landing_stat_cities") setLANDING_STAT_CITIES(value);
+    if (key === "store_link_android") setSTORE_LINK_ANDROID(value);
+    if (key === "store_link_ios") setSTORE_LINK_IOS(value);
+  };
+  const doSave = async (key: string) => {
+    setConfirmKey(null);
+    setSaving(key);
+    const value = vals[key];
+    applyGlobal(key, value);
+    try {
+      // Méthode robuste : PATCH la ligne existante, et POST seulement si elle n'existe pas (ne dépend d'aucun upsert).
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ value }) });
+      const updated = await r.json().catch(() => []);
+      if (!Array.isArray(updated) || updated.length === 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ key, value }) });
+      }
+      setSaved(s => ({ ...s, [key]: value }));
+      setEditing(null);
+    } catch {}
+    setSaving(null);
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        {group === "contacts" ? "Coordonnées affichées dans l'app (À propos, mentions légales). Modifiable à tout moment." : group === "socials" ? "Liens vers tes réseaux. Laisse vide pour masquer un réseau de la page d'accueil." : "Textes de la page d'accueil. Le mot coloré reste en rouge."}
+      </div>
+      {list.map(([key, label]) => {
+        const isEditing = editing === key;
+        return (
+          <div key={key} style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
+            {!isEditing ? (
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div style={{ flex: 1, padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", background: "#f7f7f7", color: "#555", display: "flex", alignItems: "center", gap: 6, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  {vals[key] || <span style={{ fontStyle: "italic", color: "#bbb" }}>(vide)</span>}
+                </div>
+                <button onClick={() => setEditing(key)} style={{ flexShrink: 0, background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "0 12px", height: 38, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>
+              </div>
+            ) : (
+              <div>
+                <input value={vals[key]} autoFocus onChange={e => setVals(v => ({ ...v, [key]: e.target.value }))} style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `2px solid ${G.vert}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 6 }} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => setConfirmKey(key)} disabled={saving === key} style={{ flex: 1, background: saving === key ? "#bbb" : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", border: "none", borderRadius: 9, padding: "9px 0", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{saving === key ? "…" : "Enregistrer"}</button>
+                  <button onClick={() => { setVals(v => ({ ...v, [key]: saved[key] })); setEditing(null); }} style={{ flex: 1, background: G.creme, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 9, padding: "9px 0", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {confirmKey && (
+        <ConfirmModal
+          msg={`Confirmer la modification :\n${vals[confirmKey] || "(vide)"}`}
+          confirmLabel="Enregistrer"
+          onConfirm={() => doSave(confirmKey)}
+          onCancel={() => setConfirmKey(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PremiumPlansConfig({ auth }: { auth: Auth }) {
+  const [vals, setVals] = React.useState({ week: true, month: true, twomonth: true });
+  const [loading, setLoading] = React.useState(true);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(plan_week_enabled,plan_month_enabled,plan_2month_enabled)&select=key,value`, { headers: H })
+      .then(r => r.json()).then((data: { key: string; value: string }[]) => {
+        if (!Array.isArray(data)) return;
+        const m: Record<string, string> = {};
+        data.forEach(d => { m[d.key] = d.value; });
+        setVals({
+          week: m["plan_week_enabled"] !== "false",
+          month: m["plan_month_enabled"] !== "false",
+          twomonth: m["plan_2month_enabled"] !== "false",
+        });
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const activeCount = (v: typeof vals) => [v.week, v.month, v.twomonth].filter(Boolean).length;
+
+  const toggle = async (which: "week" | "month" | "twomonth") => {
+    const next = { ...vals, [which]: !vals[which] };
+    // Garde-fou : on ne peut jamais désactiver la dernière formule active
+    if (activeCount(next) === 0) return;
+    const prevVals = vals;
+    const prevGlobal = { week: PLAN_WEEK_ENABLED, month: PLAN_MONTH_ENABLED, twomonth: PLAN_2MONTH_ENABLED };
+    setVals(next);
+    if (which === "week") setPLAN_WEEK_ENABLED(next.week);
+    if (which === "month") setPLAN_MONTH_ENABLED(next.month);
+    if (which === "twomonth") setPLAN_2MONTH_ENABLED(next.twomonth);
+    const key = which === "week" ? "plan_week_enabled" : which === "month" ? "plan_month_enabled" : "plan_2month_enabled";
+    try {
+      // POST + upsert : crée la ligne si elle n'existe pas encore, la met à jour sinon.
+      // Un simple PATCH ne fait rien (sans erreur !) si la ligne est absente — c'est ce qui causait le bug.
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key, value: String(next[which]) }),
+      });
+      if (!r.ok) throw new Error();
+    } catch {
+      // Échec réel confirmé : on annule visuellement pour ne jamais laisser croire que ça a marché
+      setVals(prevVals);
+      setPLAN_WEEK_ENABLED(prevGlobal.week);
+      setPLAN_MONTH_ENABLED(prevGlobal.month);
+      setPLAN_2MONTH_ENABLED(prevGlobal.twomonth);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        Choisissez les formules proposées aux clients (achat, cadeau, activation manuelle admin). Au moins une doit rester active.
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+      ) : (
+        ([["week", "Semaine", PREMIUM_PRICE_WEEK_FCFA], ["month", "Mois", PREMIUM_PRICE_FCFA], ["twomonth", "2 mois", PREMIUM_PRICE_2MONTH_FCFA]] as ["week" | "month" | "twomonth", string, number][]).map(([k, label, price]) => (
+          <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: vals[k] ? G.brun : "#aaa" }}>{label} <span style={{ fontWeight: 500, color: "#999" }}>({price.toLocaleString()} FCFA)</span>{!vals[k] && <span style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginLeft: 6 }}>(désactivée)</span>}</div>
+            <SwitchBtn on={vals[k]} onToggle={() => toggle(k)} />
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function DiscoverModeConfig({ auth }: { auth: Auth }) {
+  const [mode, setMode] = React.useState<"card" | "list" | "full">("card");
+  const [loading, setLoading] = React.useState(true);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.discover_default_mode&select=value`, { headers: H })
+      .then(r => r.json()).then((data: { value: string }[]) => {
+        const v = Array.isArray(data) && data[0]?.value;
+        if (v === "card" || v === "list" || v === "full") setMode(v);
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const choose = async (next: "card" | "list" | "full") => {
+    if (next === mode) return;
+    const prev = mode;
+    setMode(next);
+    setDISCOVER_DEFAULT_MODE(next);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key: "discover_default_mode", value: next }),
+      });
+      if (!r.ok) throw new Error();
+    } catch {
+      setMode(prev);
+      setDISCOVER_DEFAULT_MODE(prev);
+    }
+  };
+
+  const options: ["card" | "list" | "full", string, string][] = [
+    ["card", "Cartes", "Le mode swipe classique, une carte à la fois"],
+    ["list", "Liste", "Profils empilés verticalement, façon fil"],
+    ["full", "Plein écran", "Photo en plein écran, immersif"],
+  ];
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        Mode d'affichage de l'onglet Découvrir au premier chargement de l'app. Un seul mode actif à la fois.
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+      ) : (
+        options.map(([key, label, desc]) => (
+          <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
+            <div>
+              <div style={{ fontSize: "0.83rem", fontWeight: 600, color: mode === key ? G.brun : "#aaa" }}>{label}</div>
+              <div style={{ fontSize: "0.68rem", color: "#999" }}>{desc}</div>
+            </div>
+            <SwitchBtn on={mode === key} onToggle={() => choose(key)} />
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
+  const [rules, setRules] = React.useState({ blockSameGenderLike: true });
+  const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
+  const [editingModal, setEditingModal] = React.useState<string | null>(null);
+  const [editingValue, setEditingValue] = React.useState("");
+  const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
+  const [editingConfigValue, setEditingConfigValue] = React.useState("");
+
+  React.useEffect(() => {
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(data => {
+        if (!Array.isArray(data)) return;
+        const map: Record<string, string> = {};
+        data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
+        if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
+        setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
+        if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
+        if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
+      }).catch(() => {});
+  }, [auth.token]);
+
+  const patch = async (key: string, value: string) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+  };
+
+  return (
+    <div>
+      <OffCanvasSection title="Règles">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+          <div><div style={{ fontSize: "0.83rem", fontWeight: 600 }}>Bloquer like même genre</div><div style={{ fontSize: "0.72rem", color: "#888" }}>Homme - Homme / Femme - Femme</div></div>
+          <SwitchBtn on={rules.blockSameGenderLike} onToggle={async () => { const v = !rules.blockSameGenderLike; setRules(r => ({ ...r, blockSameGenderLike: v })); setBLOCK_SAME_GENDER(v); await patch("rule_block_same_gender_like", String(v)); }} />
+        </div>
+      </OffCanvasSection>
+      <OffCanvasSection title="Textes des modals">
+        {([["modal_same_gender_homme","Même genre (Homme)",modalTexts.sameGenderHomme],["modal_same_gender_femme","Même genre (Femme)",modalTexts.sameGenderFemme],["modal_same_gender_sub","Même genre - sous-texte",modalTexts.sameGenderSub],["modal_signup_success","Inscription - Message succès",modalTexts.signupSuccess],["modal_match_title","Match - Titre",modalTexts.matchTitle],["modal_match_subtitle","Match - Sous-titre",modalTexts.matchSubtitle],["modal_premium_default","Premium - Message",modalTexts.premiumDefault],["modal_likes_epuises","Likes épuisés",modalTexts.likesEpuises]] as [string,string,string][]).map(([key,label,value]) => (
+          <EditableRow key={key} label={label} value={value} open={editingModal === key} onOpen={() => { setEditingModal(editingModal === key ? null : key); setEditingValue(value); }} editValue={editingValue} onEdit={setEditingValue} hint={key.includes("subtitle") ? "Utilise {name} pour le prénom" : key.includes("likes") ? "Utilise {n} pour le nombre" : undefined} onSave={async () => { await patch(key, editingValue); const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_signup_success: "signupSuccess", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" }; setModalTexts(t => ({ ...t, [km[key]]: editingValue })); setEditingModal(null); }} />
+        ))}
+      </OffCanvasSection>
+      <OffCanvasSection title="Contacts">
+        <SiteInfoConfig auth={auth} group="contacts" />
+      </OffCanvasSection>
+      <OffCanvasSection title="Réseaux sociaux">
+        <SiteInfoConfig auth={auth} group="socials" />
+      </OffCanvasSection>
+      <OffCanvasSection title="Liens de téléchargement">
+        <SiteInfoConfig auth={auth} group="app" />
+      </OffCanvasSection>
+      <OffCanvasSection title="Page d'accueil">
+        <SiteInfoConfig auth={auth} group="landing" />
+      </OffCanvasSection>
+      <OffCanvasSection title="Limites & Quotas">
+        {([["limit_likes_free","limitLikes" as keyof typeof appConfig,"Likes gratuits/jour",appConfig.limitLikes,"number"],["limit_messages_free","limitMessages" as keyof typeof appConfig,"Messages gratuits/match",appConfig.limitMessages,"number"],["limit_photo_size_mb","limitPhotoSizeMb" as keyof typeof appConfig,"Taille max photo (Mo)",appConfig.limitPhotoSizeMb,"number"],["match_welcome_message","matchWelcomeMessage" as keyof typeof appConfig,"Message bienvenue match",appConfig.matchWelcomeMessage,"text"]] as [string, keyof typeof appConfig, string, string, string][]).map(([key,ck,label,value,type]) => (
+          <EditableRow key={key} label={label} value={value} type={type as "text"|"number"} open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setEditingConfig(null); }} />
+        ))}
+        {([["limit_match_requests","limitMatchRequests" as keyof typeof appConfig,"Demandes mise en relation/mois",appConfig.limitMatchRequests],["limit_status_boosts","limitStatusBoosts" as keyof typeof appConfig,"Boosts statut/mois",appConfig.limitStatusBoosts]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
+          <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await saveSetting(key, editingConfigValue, auth.token); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "limit_match_requests") FREE_LIMITS.matchRequests = parseInt(editingConfigValue) || 2; if (key === "limit_status_boosts") FREE_LIMITS.statusBoosts = parseInt(editingConfigValue) || 2; setEditingConfig(null); }} />
+        ))}
+      </OffCanvasSection>
+      <OffCanvasSection title="Prix & Abonnement">
+        {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix 1 mois (FCFA)",appConfig.premiumPriceFcfa],["premium_price_week_fcfa","premiumPriceWeekFcfa" as keyof typeof appConfig,"Prix 1 semaine (FCFA)",appConfig.premiumPriceWeekFcfa],["premium_price_2month_fcfa","premiumPrice2monthFcfa" as keyof typeof appConfig,"Prix 2 mois (FCFA)",appConfig.premiumPrice2monthFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["eur_to_fcfa_rate","eurToFcfaRate" as keyof typeof appConfig,"Taux 1 € en FCFA",appConfig.eurToFcfaRate],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée 1 mois (jours)",appConfig.premiumDurationDays],["premium_days_week","premiumDaysWeek" as keyof typeof appConfig,"Durée 1 semaine (jours)",appConfig.premiumDaysWeek],["premium_days_2month","premiumDays2month" as keyof typeof appConfig,"Durée 2 mois (jours)",appConfig.premiumDays2month],["likes_notification_delay_hours","likesNotifDelayHours" as keyof typeof appConfig,"Notif likes après (heures)",appConfig.likesNotifDelayHours]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
+          <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") setPREMIUM_PRICE_FCFA(parseInt(editingConfigValue) || 3500); if (key === "premium_price_week_fcfa") setPREMIUM_PRICE_WEEK_FCFA(parseInt(editingConfigValue) || 1200); if (key === "premium_price_2month_fcfa") setPREMIUM_PRICE_2MONTH_FCFA(parseInt(editingConfigValue) || 5900); if (key === "premium_days_week") setPREMIUM_DAYS_WEEK(parseInt(editingConfigValue) || 7); if (key === "premium_days_2month") setPREMIUM_DAYS_2MONTH(parseInt(editingConfigValue) || 62); if (key === "premium_price_eur") setPREMIUM_PRICE_EUR(parseFloat(editingConfigValue) || 10); if (key === "eur_to_fcfa_rate") setEUR_TO_FCFA(parseFloat(editingConfigValue) || 655.957); if (key === "premium_duration_days") setPREMIUM_30_DAYS_MS((parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000); if (key === "appointment_physical_price") setAPPOINTMENT_PHYSICAL_PRICE(parseInt(editingConfigValue) || 10000); setEditingConfig(null); }} />
+        ))}
+      </OffCanvasSection>
+      <OffCanvasSection title="Fonctionnalités">
+        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
+          <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
+            <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => { const v = appConfig[ck] !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, [ck]: v })); await patch(key, v); }} />
+          </div>
+        ))}
+        {appConfig.maintenanceMode === "true" && (
+          <EditableRow label="Message de maintenance" value={appConfig.maintenanceMessage} open={editingConfig === "maintenance_message"} onOpen={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch("maintenance_message", editingConfigValue); setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue })); setEditingConfig(null); }} />
+        )}
+      </OffCanvasSection>
+      <OffCanvasSection title="Mots interdits (modération)">
+        <div style={{ fontSize: "0.74rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+          Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
+        </div>
+        <EditableRow label="Liste des mots interdits" value={appConfig.customBannedWords || "(aucun)"} open={editingConfig === "custom_banned_words"}
+          onOpen={() => { setEditingConfig(editingConfig === "custom_banned_words" ? null : "custom_banned_words"); setEditingConfigValue(appConfig.customBannedWords); }}
+          editValue={editingConfigValue} onEdit={setEditingConfigValue}
+          hint="Ex : mot1, expression deux, mot3"
+          onSave={async () => {
+            await patch("custom_banned_words", editingConfigValue);
+            setAppConfig(c => ({ ...c, customBannedWords: editingConfigValue }));
+            buildCustomBannedRegex(editingConfigValue);
+            setEditingConfig(null);
+          }} />
+        <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
+          <b>Mots « contacts » — membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
+        </div>
+        <EditableRow label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords || "(aucun)"} open={editingConfig === "contact_banned_words"}
+          onOpen={() => { setEditingConfig(editingConfig === "contact_banned_words" ? null : "contact_banned_words"); setEditingConfigValue(appConfig.contactBannedWords); }}
+          editValue={editingConfigValue} onEdit={setEditingConfigValue}
+          hint="Ex : messenger, signal, mon réseau"
+          onSave={async () => {
+            await patch("contact_banned_words", editingConfigValue);
+            setAppConfig(c => ({ ...c, contactBannedWords: editingConfigValue }));
+            buildContactBannedRegex(editingConfigValue);
+            setEditingConfig(null);
+          }} />
+        <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
+          <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
+        </div>
+        <EditableRow label="Message auto (tentative de contact)" value={appConfig.autoModContactReply || "(par défaut)"} open={editingConfig === "auto_mod_contact_reply"}
+          onOpen={() => { setEditingConfig(editingConfig === "auto_mod_contact_reply" ? null : "auto_mod_contact_reply"); setEditingConfigValue(appConfig.autoModContactReply); }}
+          editValue={editingConfigValue} onEdit={setEditingConfigValue}
+          hint="Le message envoyé automatiquement à l'auteur"
+          onSave={async () => {
+            const v = editingConfigValue.trim();
+            await patch("auto_mod_contact_reply", v);
+            setAppConfig(c => ({ ...c, autoModContactReply: v }));
+            setAUTO_MOD_CONTACT_REPLY(v || AUTO_MOD_CONTACT_REPLY);
+            setEditingConfig(null);
+          }} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Notifications admin">
+        <AdminNotifPrefs auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Moyens de paiement">
+        <PaymentMethodsConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Formules Premium">
+        <PremiumPlansConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Mode Découvrir par défaut">
+        <DiscoverModeConfig auth={auth} />
+      </OffCanvasSection>
+      {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+        <OffCanvasSection title="Mon code d'accès (PIN)">
+          <AdminPinConfig auth={auth} />
+        </OffCanvasSection>
+      )}
+      {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+        <>
+        <OffCanvasSection title="Intervalles de polling (ms)">
+          <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 8, lineHeight: 1.5 }}>
+            Valeurs en millisecondes. Ex: 8000 = 8 secondes. Min recommande: 3000ms.
+          </div>
+          {([
+            ["poll_badges_ms", "Badges (likes/vues/matchs)", String(POLL_BADGES_MS)],
+            ["poll_admin_badge_ms", "Badge admin", String(POLL_ADMIN_BADGE_MS)],
+            ["poll_stats_ms", "Stats tableau de bord", String(POLL_STATS_MS)],
+            ["poll_broadcast_ms", "Broadcasts", String(POLL_BROADCAST_MS)],
+            ["poll_support_ms", "Messages support", String(POLL_SUPPORT_MS)],
+          ] as [string, string, string][]).map(([key, label, value]) => (
+            <EditableRow key={key} label={label} value={value + " ms"} type="number"
+              open={editingConfig === key}
+              onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+              editValue={editingConfigValue} onEdit={setEditingConfigValue}
+              onSave={async () => {
+                const v = Math.max(3000, parseInt(editingConfigValue) || 8000);
+                await patch(key, String(v));
+                if (key === "poll_badges_ms") setPOLL_BADGES_MS(v);
+                if (key === "poll_admin_badge_ms") setPOLL_ADMIN_BADGE_MS(v);
+                if (key === "poll_stats_ms") setPOLL_STATS_MS(v);
+                if (key === "poll_broadcast_ms") setPOLL_BROADCAST_MS(v);
+                if (key === "poll_support_ms") setPOLL_SUPPORT_MS(v);
+                setEditingConfigValue(String(v));
+                setEditingConfig(null);
+              }} />
+          ))}
+        </OffCanvasSection>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RelationalProfilesCard({ auth }: { auth: Auth }) {
+  const [list, setList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [view, setView] = useState<any>(null);
+  const [tab, setTab] = useState<"with" | "without">("with");
+  const [counts, setCounts] = useState<{ total: number; withRel: number } | null>(null);
+  const [nudgeOn, setNudgeOn] = useState(false);
+  const [nudgeBusy, setNudgeBusy] = useState(false);
+  const H: Record<string, string> = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+  const countOf = async (extra: string) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id${extra}`, { headers: { ...H, "Prefer": "count=exact", "Range": "0-0" } });
+      const t = parseInt(((r.headers.get("content-range") || "").split("/")[1]) || "");
+      return isNaN(t) ? 0 : t;
+    } catch { return 0; }
+  };
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [withList, total, withRel, nudge] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?relational_profile=not.is.null&select=id,name,age,city,gender,photo_url,is_premium,relational_profile&order=name.asc&limit=300`, { headers: H }).then(r => r.json()).catch(() => []),
+        countOf(""),
+        countOf("&relational_profile=not.is.null"),
+        fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.relational_nudge&select=value`, { headers: H }).then(r => r.json()).catch(() => []),
+      ]);
+      setList(Array.isArray(withList) ? withList : []);
+      setCounts({ total, withRel });
+      setNudgeOn(Array.isArray(nudge) && nudge[0]?.value === "true");
+    } catch { setList([]); }
+    setLoading(false); setLoaded(true);
+  };
+  const toggleNudge = async () => {
+    setNudgeBusy(true);
+    const next = !nudgeOn;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "relational_nudge", value: next ? "true" : "false" }) });
+      setNudgeOn(next);
+    } catch {}
+    setNudgeBusy(false);
+  };
+  const arr = (v: any) => Array.isArray(v) ? v.filter(Boolean) : [];
+  const withoutCount = counts ? Math.max(0, counts.total - counts.withRel) : 0;
+  return (
+    <div style={{ background: G.blanc, borderRadius: 16, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun }}>Profils relationnels</div>
+            <div style={{ fontSize: "0.78rem", color: "#888" }}>{loaded ? "Vivier pour le matchmaking" : "Voir qui a rempli sa carte relationnelle"}</div>
+          </div>
+        </div>
+        <button onClick={load} disabled={loading} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "9px 15px", fontSize: "0.78rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer" }}>{loading ? "Chargement…" : loaded ? "Actualiser" : "Charger"}</button>
+      </div>
+
+      {loaded && counts && (
+        <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+          {([["Avec carte", counts.withRel, G.vert], ["Sans carte", withoutCount, "#e67e22"], ["Total membres", counts.total, "#7c3aed"]] as [string, number, string][]).map(([l, n, c]) => (
+            <div key={l} style={{ flex: "1 1 110px", background: G.creme, borderRadius: 12, padding: "12px 14px", borderLeft: `3px solid ${c}` }}>
+              <div style={{ fontSize: "1.4rem", fontWeight: 900, color: c }}>{n.toLocaleString("fr-FR")}</div>
+              <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 600 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {loaded && counts && (
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          {([["with", "Avec carte"], ["without", "Sans carte"]] as [string, string][]).map(([k, l]) => (
+            <button key={k} onClick={() => setTab(k as "with" | "without")} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${tab === k ? G.rouge : G.gris}`, background: tab === k ? "rgba(192,57,43,0.08)" : G.blanc, color: tab === k ? G.rouge : "#888", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>{l}</button>
+          ))}
+        </div>
+      )}
+
+      {tab === "without" && loaded && (
+        <div style={{ marginTop: 14, background: G.creme, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: "0.9rem", color: G.brun, fontWeight: 800, marginBottom: 4 }}>{withoutCount.toLocaleString("fr-FR")} membre{withoutCount > 1 ? "s" : ""} sans carte relationnelle</div>
+          <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.55, marginBottom: 12 }}>Activez l'invitation : à leur prochaine ouverture de l'app, ces membres verront un message les incitant à remplir leur carte, avec deux boutons « Remplir maintenant » et « Plus tard ».</div>
+          <button onClick={toggleNudge} disabled={nudgeBusy} style={{ width: "100%", background: nudgeOn ? G.vert : G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "12px", fontSize: "0.83rem", fontWeight: 800, cursor: nudgeBusy ? "not-allowed" : "pointer" }}>{nudgeBusy ? "…" : nudgeOn ? "✓ Invitation active — Appuyez pour désactiver" : "Activer l'invitation"}</button>
+        </div>
+      )}
+
+      {tab === "with" && loaded && list.length === 0 && !loading && <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 14, textAlign: "center", padding: "10px 0" }}>Aucun profil relationnel pour le moment.</div>}
+
+      {tab === "with" && list.length > 0 && (
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 10 }}>
+          {list.map(u => (
+            <div key={u.id} style={{ border: `1px solid ${G.gris}`, borderRadius: 12, padding: 10, display: "flex", alignItems: "center", gap: 10 }}>
+              <Avatar url={u.photo_url} gender={u.gender} size={40} premium={u.is_premium} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.name}{u.age ? `, ${u.age}` : ""}</div>
+                <div style={{ fontSize: "0.72rem", color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{[u.gender, u.city].filter(Boolean).join(" · ") || "—"}</div>
+              </div>
+              <button onClick={() => setView(u)} style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, border: `1px solid ${G.rouge}`, borderRadius: 8, padding: "6px 10px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Voir</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view && (() => {
+        const rp = view.relational_profile || {};
+        const self = rp.self || rp; const search = rp.search || rp;
+        const rows: [string, string][] = [];
+        if (self.project || rp.project) rows.push(["Projet de vie", self.project || rp.project]);
+        if (self.religion || rp.religion) rows.push(["Religion", self.religion || rp.religion]);
+        if (self.wants_children) rows.push(["Veut des enfants", self.wants_children]);
+        if (arr(self.values || rp.qualities).length) rows.push(["Valeurs / qualités", arr(self.values || rp.qualities).join(", ")]);
+        if (arr(self.interests || rp.interests).length) rows.push(["Centres d'intérêt", arr(self.interests || rp.interests).join(", ")]);
+        if (arr(self.lifestyle).length) rows.push(["Style de vie", arr(self.lifestyle).join(", ")]);
+        const srows: [string, string][] = [];
+        if (search.gender) srows.push(["Genre recherché", search.gender]);
+        if (search.city || rp.city) srows.push(["Ville", search.city || rp.city]);
+        if ((search.age_min ?? rp.age_min) || (search.age_max ?? rp.age_max)) srows.push(["Âge", `${search.age_min ?? rp.age_min ?? "?"} – ${search.age_max ?? rp.age_max ?? "?"} ans`]);
+        if (search.religion) srows.push(["Religion souhaitée", search.religion]);
+        if (arr(search.values).length) srows.push(["Valeurs recherchées", arr(search.values).join(", ")]);
+        if (arr(search.interests).length) srows.push(["Intérêts recherchés", arr(search.interests).join(", ")]);
+        return (
+          <div onClick={() => setView(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+              <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "18px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+                <Avatar url={view.photo_url} gender={view.gender} size={46} premium={view.is_premium} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#fff" }}>{view.name}{view.age ? `, ${view.age} ans` : ""}</div>
+                  <div style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.85)" }}>{[view.gender, view.city].filter(Boolean).join(" · ") || "—"}</div>
+                </div>
+                <button onClick={() => setView(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff", flexShrink: 0, fontSize: "1rem" }}>✕</button>
+              </div>
+              <div style={{ padding: "16px 20px 22px" }}>
+                <div style={{ fontWeight: 800, fontSize: "0.82rem", color: G.rouge, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>Qui je suis</div>
+                {rows.length ? rows.map(([k, v]) => <div key={k} style={{ fontSize: "0.83rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 3 }}>{k} : <b style={{ color: G.brun }}>{v}</b></div>) : <div style={{ fontSize: "0.8rem", color: "#999" }}>Non renseigné</div>}
+                <div style={{ fontWeight: 800, fontSize: "0.82rem", color: G.rouge, margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>Ce que je recherche</div>
+                {srows.length ? srows.map(([k, v]) => <div key={k} style={{ fontSize: "0.83rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 3 }}>{k} : <b style={{ color: G.brun }}>{v}</b></div>) : <div style={{ fontSize: "0.8rem", color: "#999" }}>Non renseigné</div>}
+                {rp.note && <><div style={{ fontWeight: 800, fontSize: "0.82rem", color: G.rouge, margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>Note</div><div style={{ fontSize: "0.83rem", color: G.brun, lineHeight: 1.6, fontStyle: "italic" }}>{rp.note}</div></>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+function getPremiumCountdown(approvedAt?: string, amount?: number): { label: string; color: string; expired: boolean } {
+  if (!approvedAt) return { label: "", color: "#888", expired: false };
+  const ms = typeof amount === "number" ? premiumMsForAmount(amount) : PREMIUM_30_DAYS_MS;
+  const expiry = new Date(new Date(approvedAt).getTime() + ms);
+  const diffMs = expiry.getTime() - Date.now();
+  if (diffMs <= 0) return { label: "Expiré", color: "#e74c3c", expired: true };
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  return { label: days > 0 ? `${days}j ${hours}h restants` : `${hours}h restantes`, color: days <= 3 ? "#e67e22" : "#27ae60", expired: false };
+}
+function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onReject, onDelete, onViewProfile }: { p: PaymentRequest; isPending: boolean; isApproved: boolean; isRejected: boolean; onActivate: (p: PaymentRequest) => void; onReject: (p: PaymentRequest) => void; onDelete: (p: PaymentRequest) => void; onViewProfile: (userId: string) => void }) {
+  const [adminRef, setAdminRef] = useState("");
+  const [verified, setVerified] = useState<null | "match" | "mismatch">(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const match = adminRef.trim().toLowerCase() === p.tx_ref.trim().toLowerCase();
+  const countdown = getPremiumCountdown(p.approved_at, p.amount);
+  const isExpired = isApproved && countdown.expired;
+  return (
+    <div style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", boxShadow: isPending ? "0 2px 10px rgba(39,174,96,0.12)" : "0 1px 6px rgba(0,0,0,0.05)", border: `1.5px solid ${isPending ? "rgba(39,174,96,0.3)" : isExpired ? "rgba(231,76,60,0.3)" : isApproved ? "rgba(39,174,96,0.15)" : "rgba(231,76,60,0.15)"}` }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div onClick={() => onViewProfile(p.user_id)} title="Voir le profil" style={{ width: 36, height: 36, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", border: "2px solid transparent" }} onMouseOver={e => (e.currentTarget as HTMLDivElement).style.borderColor = G.rouge} onMouseOut={e => (e.currentTarget as HTMLDivElement).style.borderColor = "transparent"}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, display: "flex", alignItems: "center", gap: 6 }}>
+              {p.operator === "MTN"
+                ? <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
+                : (p.operator === "Carte" || p.operator === "Stripe")
+                ? <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1A56DB" rx="8"/><rect x="10" y="22" width="100" height="9" fill="#fff" opacity="0.95"/><rect x="18" y="40" width="34" height="7" rx="2" fill="#fff" opacity="0.85"/><text x="92" y="18" textAnchor="end" fontFamily="Arial, sans-serif" fontWeight="800" fontSize="13" fill="#fff">CB</text></svg>
+                : p.operator === "manuel"
+                ? <span style={{ background: "rgba(139,105,20,0.12)", color: "#8B6914", borderRadius: 6, padding: "2px 7px", fontSize: "0.68rem", fontWeight: 800 }}>👤 Admin</span>
+                : <svg viewBox="0 0 120 60" width="36" height="18" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#e30613" rx="4"/><text x="60" y="42" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="26" fill="white">AIRTEL</text></svg>
+              }
+              {p.operator === "Carte" || p.operator === "Stripe" ? "Carte bancaire" : p.operator === "manuel" ? "Activation manuelle (WhatsApp)" : p.operator}
+              {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Cadeau pour {p.gift_for_name || "un match"}</span>}
+              {p.kind === "appointment" && <span style={{ background: "rgba(26,92,58,0.12)", color: G.vert, borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>🗓 Rendez-vous agence</span>}
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {formatMoney(p.amount, paymentCurrency(p))}</div>
+            <div style={{ fontSize: "0.62rem", color: "#bbb", fontFamily: "monospace", marginTop: 2 }}>{p.user_id}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {isApproved && countdown.label && <div style={{ background: isExpired ? "rgba(231,76,60,0.1)" : "rgba(39,174,96,0.08)", color: countdown.color, borderRadius: 50, padding: "3px 8px", fontSize: "0.68rem", fontWeight: 700, border: `1px solid ${isExpired ? "rgba(231,76,60,0.2)" : "rgba(39,174,96,0.2)"}` }}>{isExpired ? "⏰ Expiré" : `⏱ ${countdown.label}`}</div>}
+          <div style={{ background: isPending ? "rgba(39,174,96,0.1)" : isExpired ? "rgba(231,76,60,0.08)" : isApproved ? "rgba(39,174,96,0.08)" : "rgba(231,76,60,0.08)", color: isPending ? "#27ae60" : isExpired ? "#e74c3c" : isApproved ? "#27ae60" : "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{isPending ? "En attente" : isExpired ? "Expiré" : isApproved ? "Approuvé ✓" : "Rejeté ✕"}</div>
+          <button onClick={() => setConfirmDelete(true)} title="Archiver" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row", gap: 8, marginBottom: isPending ? 10 : 0 }}>
+        <div style={{ flex: 1, background: G.creme, borderRadius: 8, padding: "8px 10px" }}>
+          <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. client</div>
+          <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#888", letterSpacing: 0.5, wordBreak: "break-all" }}>{p.tx_ref}</div>
+        </div>
+        {!isApproved && !isRejected && (
+          <div style={{ flex: 1, background: verified === "match" ? "rgba(39,174,96,0.07)" : verified === "mismatch" ? "rgba(231,76,60,0.07)" : G.creme, borderRadius: 8, padding: "10px 12px", border: `1.5px solid ${verified === "match" ? "rgba(39,174,96,0.3)" : verified === "mismatch" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
+            <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>{p.operator === "Carte" || p.operator === "Stripe" ? "Réf. transaction Stripe" : `Réf. ${p.operator} reçue`}</div>
+            <input value={adminRef} onChange={e => { setAdminRef(e.target.value); setVerified(null); }} placeholder="Entrez ici…" style={{ width: "100%", border: "none", background: "transparent", fontSize: "0.95rem", fontWeight: 700, outline: "none", color: G.brun, letterSpacing: 0.5, fontFamily: "inherit", padding: window.innerWidth < 768 ? "4px 0" : 0 }} />
+          </div>
+        )}
+      </div>
+      {verified === "match" && <div style={{ background: "rgba(39,174,96,0.08)", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#27ae60" }}>✅ Les références correspondent - vous pouvez activer</div>}
+      {verified === "mismatch" && <div style={{ background: "rgba(231,76,60,0.07)", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#e74c3c" }}>❌ Les références ne correspondent pas</div>}
+      {isPending && (
+        <div style={{ display: "flex", gap: 8 }}>
+          {verified === null && <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim()} style={{ flex: 1, background: adminRef.trim() ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: adminRef.trim() ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: adminRef.trim() ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>}
+          {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>{p.kind === "appointment" ? "✓ Valider le paiement RDV" : "✓ Activer Premium"}</button>}
+          {verified === "mismatch" && <button onClick={() => onReject(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter & notifier</button>}
+          {verified !== null && <button onClick={() => { setVerified(null); setAdminRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>}
+        </div>
+      )}
+      {confirmDelete && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            <div style={{ background: "linear-gradient(135deg,#fdecea,#fbd0cc)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(231,76,60,0.15)" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(231,76,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#c0392b" }}>Archiver ce paiement</div>
+            </div>
+            <div style={{ padding: "16px 20px 20px" }}>
+              <div style={{ background: "rgba(231,76,60,0.06)", border: "1px solid rgba(231,76,60,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#c0392b", marginBottom: 6 }}>Ce qui va se passer :</div>
+                <ul style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.7, paddingLeft: 16, margin: 0 }}>
+                  <li>Ce paiement sera déplacé dans l'onglet <strong>Archivage</strong></li>
+                  <li>Le Premium de l'utilisateur n'est <strong>pas</strong> modifié</li>
+                  <li>Le chiffre d'affaires reste inchangé</li>
+                  <li>Vous pourrez le supprimer définitivement depuis Archivage</li>
+                </ul>
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 14, textAlign: "center" }}>
+                Réf: <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{p.tx_ref}</span>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                <button onClick={() => { setConfirmDelete(false); onDelete(p); }} style={{ flex: 1, background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>
+                  Archiver
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function categorizeAction(action: string): string {
+  const a = (action || "").toLowerCase();
+  if (a.includes("proposition")) return "Propositions";
+  if (a.includes("match")) return "Matchs";
+  if (a.includes("mise en relation") || a.includes("demande")) return "Mises en relation";
+  if (a.includes("avertissement")) return "Avertissements";
+  if (a.includes("diffus") || a.includes("broadcast")) return "Diffusions";
+  if (a.includes("premium") || a.includes("paiement")) return "Premium / Paiements";
+  if (a.includes("signalement") || a.includes("banni") || a.includes("rejet") || a.includes("modér")) return "Modération";
+  if (a.includes("supprim")) return "Suppressions";
+  return "Autres";
+}
+
+function AdminNotes({ auth, targetType, targetId }: { auth: Auth; targetType: "user" | "report"; targetId: string }) {
+  type Note = { id: string; author_id: string; author_name: string; note: string; created_at: string };
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_notes?target_type=eq.${targetType}&target_id=eq.${encodeURIComponent(targetId)}&select=id,author_id,author_name,note,created_at&order=created_at.desc`, { headers: H });
+      const d = await r.json().catch(() => []);
+      if (Array.isArray(d)) setNotes(d);
+    } catch {}
+    setLoading(false);
+  };
+  useEffect(() => { if (targetId) load(); /* eslint-disable-next-line */ }, [targetId, targetType]);
+
+  const addNote = async () => {
+    const v = text.trim();
+    if (!v || saving) return;
+    setSaving(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_notes`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "return=representation" },
+        body: JSON.stringify({ target_type: targetType, target_id: targetId, author_id: auth.userId, author_name: auth.name, note: v }),
+      });
+      const d = await r.json().catch(() => null);
+      const created = Array.isArray(d) ? d[0] : d;
+      if (created && created.id) { setNotes(n => [created, ...n]); setText(""); }
+    } catch {}
+    setSaving(false);
+  };
+
+  const delNote = async (id: string) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/admin_notes?id=eq.${id}`, { method: "DELETE", headers: H });
+      setNotes(n => n.filter(x => x.id !== id));
+    } catch {}
+  };
+
+  const fmt = (d: string) => { try { return new Date(d).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+
+  return (
+    <div style={{ marginTop: 10, background: "rgba(142,68,173,0.04)", border: "1px solid rgba(142,68,173,0.18)", borderRadius: 12 }}>
+      {/* En-tête cliquable (replie / déplie) */}
+      <div onClick={() => setExpanded(v => !v)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 12px", cursor: "pointer", userSelect: "none" }}>
+        <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#8e44ad" }}>📝 Notes internes</span>
+        {!loading && notes.length > 0 && (
+          <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#fff", background: "#8e44ad", borderRadius: 50, padding: "1px 7px", minWidth: 16, textAlign: "center" }}>{notes.length}</span>
+        )}
+        <span style={{ marginLeft: "auto", color: "#8e44ad", fontSize: "0.7rem", transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▾</span>
+      </div>
+      {/* Contenu déplié */}
+      {expanded && (
+        <div style={{ padding: "0 12px 12px" }}>
+          {loading ? (
+            <div style={{ fontSize: "0.78rem", color: "#aaa", textAlign: "center", padding: "8px 0" }}>Chargement…</div>
+          ) : notes.length === 0 ? (
+            <div style={{ fontSize: "0.78rem", color: "#aaa", fontStyle: "italic", textAlign: "center", padding: "8px 0" }}>Aucune note pour l'instant.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
+              {notes.map(n => (
+                <div key={n.id} style={{ background: G.blanc, border: "1px solid rgba(142,68,173,0.18)", borderRadius: 10, padding: "9px 11px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                    <span style={{ fontWeight: 700, fontSize: "0.74rem", color: G.brun }}>{n.author_name}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: "0.64rem", color: "#aaa" }}>{fmt(n.created_at)}</span>
+                      <button onClick={() => delNote(n.id)} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: "0.66rem", fontWeight: 600 }}>supprimer</button>
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#444", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{n.note}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ marginTop: 10 }}>
+            <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Ajouter une note pour les autres admins…" style={{ width: "100%", border: "1.5px solid #E8DDD0", borderRadius: 10, padding: "9px 11px", fontSize: "0.82rem", resize: "none", minHeight: 52, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+              <button onClick={addNote} disabled={saving || !text.trim()} style={{ background: saving || !text.trim() ? "#bbb" : "linear-gradient(135deg,#8e44ad,#6d2c87)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: saving || !text.trim() ? "not-allowed" : "pointer" }}>
+                {saving ? "Ajout…" : "Ajouter la note"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount: (n: number) => void }) {
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [pinLoading, setPinLoading] = useState(false);
+  const verifyPin = async () => {
+    if (pinInput.length < 4) return;
+    setPinLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_admin_pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+        body: JSON.stringify({ input_pin: pinInput }),
+      });
+      const ok = await r.json().catch(() => false);
+      if (r.ok && ok === true) {
+        setPinVerified(true); setPinError("");
+      } else {
+        setPinError("PIN incorrect. Réessayez."); setPinInput("");
+      }
+    } catch { setPinError("Erreur réseau. Réessayez."); }
+    setPinLoading(false);
+  };
+  if (pinVerified) return <Admin auth={auth} onBack={() => { setPinVerified(false); onBack(); }} onBadgeCount={onBadgeCount} />;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+        <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
+          <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>Accès Admin</div>
+          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.75rem", marginTop: 4 }}>Entrez votre PIN à 4 chiffres</div>
+        </div>
+        <div style={{ padding: "20px 20px 24px" }}>
+          <input value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4)); setPinError(""); }} onKeyDown={e => e.key === "Enter" && verifyPin()} type="password" inputMode="numeric" maxLength={4} placeholder="• • • •" style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "14px", borderRadius: 12, border: `2px solid ${pinError ? "#e74c3c" : pinInput.length === 4 ? G.rouge : G.gris}`, fontSize: "1.4rem", letterSpacing: 8, outline: "none", fontFamily: "inherit" }} autoFocus />
+          {pinError && <div style={{ color: "#e74c3c", fontSize: "0.78rem", fontWeight: 600, textAlign: "center", marginTop: 8 }}>{pinError}</div>}
+          <button onClick={verifyPin} disabled={pinInput.length < 4 || pinLoading} style={{ width: "100%", marginTop: 14, background: pinInput.length === 4 ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "#ddd", color: pinInput.length === 4 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.92rem", fontWeight: 700, cursor: pinInput.length === 4 ? "pointer" : "not-allowed" }}>
+            {pinLoading ? "Vérification…" : "Accéder au panel"}
+          </button>
+          <button onClick={onBack} style={{ width: "100%", marginTop: 8, background: "transparent", color: "#888", border: "none", fontSize: "0.82rem", cursor: "pointer", padding: "8px" }}>Annuler</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, msgTab, setMsgTab, onClose, onSend, onDeleteHistory, G, auth }: {
+  user: Profile; msgText: string; setMsgText: (v: string) => void;
+  msgHistory: { id: string; reason: string; created_at: string }[];
+  msgHistoryLoading: boolean; msgTab: "modeles" | "historique";
+  setMsgTab: (v: "modeles" | "historique") => void;
+  onClose: () => void; onSend: () => void;
+  onDeleteHistory: (id: string) => void;
+  G: any; auth: Auth;
+}) {
+  const isWide = window.innerWidth >= 768;
+  const msgTemplates = [
+    `${user.name}, bienvenue sur Moyo Dating ! Nous vous conseillons de liker les profils qui vous intéressent. Si une personne vous like en retour, le match se débloque automatiquement pour discuter et voir ses stories. Moyo Dating 100% Congolais !!!!`,
+    "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟",
+    "Votre abonnement Premium expire dans [X] jours.",
+    "Votre demande de vérification est en cours d'examen. Merci de patienter.",
+    "Votre profil a été vérifié avec succès ! ✓",
+    "Votre photo de profil ne respecte pas nos conditions d'utilisation. Merci d'utiliser une photo claire de votre visage, sinon votre compte sera supprimé dans 24h.",
+    "Les photos contenant des images téléchargées sur internet, célébrités, dessins ou contenus inappropriés sont interdites. Merci de mettre votre vraie photo.",
+    "Votre photo de profil est floue ou non identifiable. Merci d'ajouter une photo claire de votre visage pour continuer à utiliser votre compte.",
+    "Votre nom de profil ne respecte pas nos règles d'utilisation. Merci d'utiliser votre vrai prénom ou un nom conforme.",
+    "Les adresses e-mail, numéros de téléphone et liens sont interdits dans les noms de profil. Merci de modifier votre profil.",
+    "Votre compte a été suspendu car votre nom de profil n'est pas conforme. Vous pouvez créer un nouveau compte gratuitement avec des informations valides.",
+    "Les insultes, menaces et comportements irrespectueux sont interdits sur la plateforme. Toute récidive entraînera une suppression définitive du compte.",
+    "Pour garantir la sécurité des utilisateurs, les faux profils sont supprimés automatiquement.",
+    "Votre compte a été signalé. Merci de respecter les règles de la communauté Moyo Dating.",
+    "Profitez de -50% sur le Premium ce weekend uniquement !",
+  ];
+
+  const formatDate = (str: string) => {
+    try {
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch { return ""; }
+  };
+
+  // ── Bloc de saisie inliné (évite le re-mount à chaque frappe) ──
+  const renderSaisieBlock = (compact?: boolean) => (
+    <div style={{ padding: compact ? "16px" : "24px", borderTop: compact ? `1px solid ${G.gris}` : "none", flexShrink: 0, background: G.blanc, display: "flex", flexDirection: "column", flex: compact ? "none" : 1 }}>
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#555", marginBottom: 8 }}>Message personnalisé</div>
+      <textarea
+        value={msgText}
+        onChange={e => setMsgText(e.target.value)}
+        placeholder={compact ? "Écrivez votre message ici ou sélectionnez un modèle ci-dessus…" : "Écrivez votre message ici ou sélectionnez un modèle à gauche…"}
+        style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: 12, border: "2px solid rgba(41,128,185,0.3)", fontSize: "0.88rem", resize: "none", outline: "none", fontFamily: "inherit", lineHeight: 1.6, minHeight: compact ? 90 : undefined, flex: compact ? "none" : 1 }}
+      />
+      {msgText && <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 4, textAlign: "right" }}>{msgText.length} caractères</div>}
+      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+        <button onClick={onClose} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+        <button onClick={onSend} style={{ flex: 2, background: "linear-gradient(135deg,#2980b9,#1a6091)", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer" }}>Envoyer le message</button>
+      </div>
+    </div>
+  );
+
+  // ── Contenu historique inliné (évite le re-mount) ──
+  const renderHistoriqueContent = () => (
+    <div style={{ padding: "10px 16px 6px" }}>
+      <div style={{ fontSize: "0.63rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 6 }}>
+        Historique ({msgHistory.length} message{msgHistory.length > 1 ? "s" : ""} envoyé{msgHistory.length > 1 ? "s" : ""})
+      </div>
+      {msgHistoryLoading ? (
+        <div style={{ textAlign: "center", padding: "8px 0", color: "#aaa", fontSize: "0.75rem" }}>Chargement…</div>
+      ) : msgHistory.length === 0 ? (
+        <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun message envoyé pour le moment</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {msgHistory.map(m => (
+            <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFB", borderRadius: 8, padding: "7px 10px", border: "1px solid #E8F0F8" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {formatDate(m.created_at) && <div style={{ fontSize: "0.68rem", color: "#2980b9", fontWeight: 600, marginBottom: 2 }}>{formatDate(m.created_at)}</div>}
+                <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4 }}>{m.reason || ""}</div>
+              </div>
+              <button onClick={() => onDeleteHistory(m.id)} title="Supprimer" style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: G.blanc, width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: isWide ? "row" : "column" }}>
+        {/* Colonne gauche / onglets mobile */}
+        <div style={{ width: isWide ? "50%" : "100%", borderRight: isWide ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", background: G.blanc, height: isWide ? "100%" : "auto", flex: isWide ? "none" : "1 1 auto", overflow: "hidden" }}>
+          {/* Header */}
+          <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: isWide ? "20px 20px 0" : "0 20px 0", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(41,128,185,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div style={{ width: isWide ? 44 : 40, height: isWide ? 44 : 40, borderRadius: "50%", background: "rgba(41,128,185,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Message à {user.name}</div>
+                <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un modèle ou écris un message personnalisé</div>
+              </div>
+            </div>
+            {/* Onglets */}
+            <div style={{ display: "flex" }}>
+              {(["modeles", "historique"] as const).map(tab => (
+                <button key={tab} onClick={() => setMsgTab(tab)} style={{ flex: 1, background: "transparent", border: "none", borderBottom: `3px solid ${msgTab === tab ? "#2980b9" : "transparent"}`, padding: "8px 0", fontSize: "0.82rem", fontWeight: msgTab === tab ? 700 : 500, color: msgTab === tab ? "#2980b9" : "#888", cursor: "pointer", transition: "all 0.15s", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  {tab === "modeles" ? "Modèles de messages" : `Historique (${msgHistory.length})`}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Contenu onglet Modèles */}
+          {msgTab === "modeles" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px", display: "flex", flexDirection: "column", gap: 5 }}>
+              {msgTemplates.map((t, i) => (
+                <div key={i} onClick={() => setMsgText(t)} style={{ padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: msgText === t ? "rgba(41,128,185,0.1)" : G.creme, border: `1.5px solid ${msgText === t ? "#2980b9" : "transparent"}`, fontSize: "0.8rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", flexShrink: 0 }}>
+                  {t.length > 75 ? t.slice(0, 75) + "…" : t}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Contenu onglet Historique */}
+          {msgTab === "historique" && (
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              {renderHistoriqueContent()}
+            </div>
+          )}
+          {/* Saisie mobile */}
+          {!isWide && renderSaisieBlock(true)}
+        </div>
+        {/* Colonne droite desktop */}
+        {isWide && <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>{renderSaisieBlock()}</div>}
+      </div>
+    </div>
+  );
+}
+
+type HelpBlock =
+  | { kind: "callout"; tone: "warn" | "info" | "purple"; text: React.ReactNode }
+  | { kind: "rows"; color?: string; items: [string, string][] }
+  | { kind: "statusRows"; items: [string, string, string][] }
+  | { kind: "bullets"; box?: string; color?: string; items: string[] }
+  | { kind: "paragraph"; text: React.ReactNode }
+  | { kind: "subhead"; text: string };
+type HelpSection = { id: string; label: string; color: string; icon: React.ReactNode; blocks: HelpBlock[] };
+
+const helpIco = (paths: React.ReactNode, stroke = "currentColor", fill = "none") => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths}</svg>
+);
+
+const HELP_SECTIONS: HelpSection[] = [
+  {
+    id: "role", label: "Rôle & bonnes pratiques", color: G.rouge,
+    icon: helpIco(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />, G.rouge),
+    blocks: [
+      { kind: "paragraph", text: "Un admin supervise la plateforme, protège les utilisateurs, vérifie les signalements et applique les décisions de modération. Il agit avec neutralité, sans jamais utiliser ses droits à des fins personnelles." },
+      { kind: "subhead", text: "Bonnes pratiques admin" },
+      { kind: "bullets", box: G.vert, items: [
+        "Rester neutre en toutes circonstances.",
+        "Ne jamais utiliser les droits admin pour des raisons personnelles.",
+        "Vérifier les faits avant d'appliquer une sanction.",
+        "Protéger les données des utilisateurs - elles sont confidentielles.",
+        "Ne jamais partager d'informations privées avec des tiers.",
+        "Privilégier l'avertissement avant le bannissement quand c'est possible.",
+      ] },
+    ],
+  },
+  {
+    id: "stats", label: "Statistiques", color: G.vert,
+    icon: helpIco(<><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>, G.vert),
+    blocks: [
+      { kind: "rows", color: G.vert, items: [
+        ["Membres total", "Nombre total de comptes créés sur la plateforme."],
+        ["Matchs", "Nombre de paires qui se sont mutuellement likées."],
+        ["Messages", "Volume total de messages échangés."],
+        ["Signalements", "Nombre de signalements reçus toutes sources confondues."],
+        ["Nouveaux membres", "Inscriptions du jour en cours."],
+        ["Premium actifs", "Utilisateurs ayant un abonnement Premium actif."],
+        ["Profils vérifiés", "Comptes ayant obtenu le badge de vérification."],
+        ["Profils bannis", "Comptes actuellement bannis de la plateforme."],
+      ] },
+    ],
+  },
+  {
+    id: "users", label: "Utilisateurs", color: G.rouge,
+    icon: helpIco(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>, G.brun),
+    blocks: [
+      { kind: "callout", tone: "warn", text: "Les actions sensibles doivent toujours être utilisées avec prudence et discernement." },
+      { kind: "rows", color: G.rouge, items: [
+        ["Vue grille / Vue liste", "Basculez entre la vue grille (cartes détaillées) et la vue liste (lignes compactes) via les icônes en haut à droite. La vue liste affiche 500 utilisateurs par page avec numérotation, la vue grille en affiche 20."],
+        ["Tri", "15 options de tri disponibles : Plus récents/anciens, A→Z/Z→A, Dernière connexion, En ligne d'abord, Âge croissant/décroissant, Premium d'abord, ♾️ À vie d'abord, Admin d'abord, Vérifiés d'abord, Bannis d'abord, Hommes/Femmes d'abord. Les tris par statut s'appliquent instantanément sans rechargement."],
+        ["Voir le profil complet", "Cliquez sur la silhouette/avatar d'un utilisateur pour ouvrir sa fiche complète : photo, bio, religion, profession, centres d'intérêt, date d'inscription."],
+        ["Profils incomplets", "Cochez 'Afficher uniquement les profils incomplets' pour filtrer les comptes dont l'inscription n'a pas été terminée (nom affiché comme '...')."],
+        ["Sélection multiple", "Cochez les cases à gauche de chaque profil pour les sélectionner. Utilisez 'Tout sélectionner' pour sélectionner d'un coup tous les profils affichés."],
+        ["Suppression en masse", "Une fois des profils sélectionnés, le bouton 🗑 Supprimer (X) apparaît. Cette action supprime définitivement les comptes sélectionnés. Irréversible."],
+        ["+ Premium / - Premium", "Ouvre la fenêtre 'Gérer le Premium' à deux onglets. Onglet 💳 Paiement : renseignez opérateur (MTN/Airtel) + référence de transaction + formule (Semaine/Mois/2 mois) visibles sur la preuve WhatsApp du client, puis 'Envoyer la demande' — elle atterrit en attente dans Budget/Paiements où un Super Admin vérifie et active (le Premium n'est jamais activé directement depuis cette fenêtre). Onglet 🎁 Offrir gratuitement : pour un collaborateur ou un geste commercial, choisissez une date de fin libre (raccourcis 3j/7j/30j/1an ou date précise) — active immédiatement, sans trace dans Budget."],
+        ["Retirer le Premium (dans la même fenêtre)", "Si l'utilisateur est déjà Premium, un bouton 'Retirer le Premium maintenant' apparaît en haut de la fenêtre — mais UNIQUEMENT si ce Premium a été offert (gratuit). Un abonnement réellement payé par le client est protégé et ne peut pas être retiré avant sa date d'expiration, pour éviter de pénaliser un client payant par erreur."],
+        ["★ À vie", "Attribue le Premium permanent (date d'expiration fixée à 2099), classé automatiquement comme 'offert' donc retirable ensuite si besoin. Réservé aux employés et collaborateurs Moyo Dating. Un badge ♾️ À vie apparaît sur sa carte. Grisé si déjà à vie."],
+        ["- À vie", "Ouvre la même fenêtre 'Gérer le Premium' pour retirer le Premium à vie d'un utilisateur (bouton actif car le Premium à vie est toujours classé 'offert'). Il repasse en compte gratuit."],
+        ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
+        ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
+        ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
+        ["Bannir (3 options)", "(1) Bannissement définitif — accès bloqué jusqu'à débannissement ; (2) Éjection immédiate — la session active est coupée sur-le-champ ; (3) Bannissement temporaire — durée au choix (1h à 7j ou libre), avec décompte et reconnexion automatique."],
+        ["Supprimer", "Efface définitivement le compte et toutes ses données."],
+      ] },
+      { kind: "subhead", text: "✉ Envoyer un message individuel" },
+      { kind: "rows", color: "#2980b9", items: [
+        ["Bouton ✉ Message", "Dans chaque carte utilisateur (section Modération), un bouton bleu permet d'envoyer un message privé directement à cette personne."],
+        ["Raccourcis disponibles", "Messages pré-rédigés : expiration Premium, activation Premium, vérification en cours, profil vérifié, promotion -50%, signalement. Cliquez pour pré-remplir puis modifiez."],
+        ["Champ libre", "Vous pouvez aussi rédiger un message entièrement personnalisé."],
+        ["Réception côté utilisateur", "Le message apparaît sous forme de modal bleu 'Information Moyo Dating' à sa prochaine connexion. Il doit cliquer 'OK, J'AI COMPRIS'."],
+        ["Cas d'usage typiques", "Informer qu'un Premium est actif, qu'il faut se reconnecter, qu'un compte a été signalé, ou toute communication officielle."],
+      ] },
+      { kind: "subhead", text: "📢 Diffusion générale" },
+      { kind: "rows", color: "#e67e22", items: [
+        ["Accès", "Le bouton orange '📢 Diffusion générale' se trouve au-dessus de la liste des utilisateurs."],
+        ["Fonctionnement", "Un seul message est enregistré. À leur prochaine connexion, tous ceux qui ne l'ont pas encore vu reçoivent le modal bleu 'Information Moyo Dating'."],
+        ["Raccourcis", "Maintenance, mise à jour, incident résolu, promotions, rappels de bienveillance, sécurité. Cliquez pour pré-remplir."],
+        ["À utiliser pour", "Annonces de maintenance, nouvelles fonctionnalités, promotions temporaires, rappels communautaires importants."],
+        ["Important", "Chaque nouvelle diffusion écrase la précédente. Un utilisateur déjà connecté après la diffusion ne la reverra pas."],
+      ] },
+    ],
+  },
+  {
+    id: "reports", label: "Signalements", color: G.rouge,
+    icon: helpIco(<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>, G.rouge),
+    blocks: [
+      { kind: "rows", color: G.rouge, items: [
+        ["En attente (tous)", "Vue par défaut. Affiche tous les signalements non encore traités. Le badge rouge indique le nombre en attente."],
+        ["Profils", "Filtre les signalements manuels d'utilisateurs contre d'autres profils. À examiner en priorité."],
+        ["Système", "Signalements générés automatiquement par la modération (insultes, arnaques, contenus sexuels, alertes techniques)."],
+        ["Messagerie", "Boîte de réception regroupant tous les échanges avec les utilisateurs (signalements + support), groupés par utilisateur. Le bouton Répondre arrive sous le nom Assistance Moyo Dating."],
+        ["Archives", "Tous les signalements traités, rejetés, ou archivés. Recherche, filtres par type et par action, regroupement par date et pagination. Chaque ligne se déplie ou se supprime."],
+        ["Modération auto des contacts", "Quand un utilisateur gratuit tente de partager un numéro, un réseau ou un lien (message OU profil), l'envoi est bloqué et un signalement [AUTO-MOD CONTACT] est créé en catégorie Système."],
+      ] },
+      { kind: "subhead", text: "Traitement des signalements" },
+      { kind: "statusRows", items: [
+        ["En attente", "#e67e22", "Pas encore examiné par un administrateur."],
+        ["Traité", G.vert, "Signalement vérifié et pris en charge par un admin."],
+        ["Rejeté", "#999", "Signalement examiné mais non retenu (sans suite)."],
+        ["Banni", G.rouge, "Sanction appliquée suite au signalement."],
+      ] },
+      { kind: "subhead", text: "Carte de signalement — Profil" },
+      { kind: "rows", color: G.rouge, items: [
+        ["Signalé par (bleu)", "Bloc bleu en haut : photo + nom + âge + ville de la personne qui a signalé. Le bouton 'Répondre' lui envoie un message dans sa messagerie Assistance Moyo Dating."],
+        ["Profil signalé (rouge)", "Bloc rouge : photo + nom + âge + ville du profil accusé. Badge ⚠️ x/3 si avertissements, badge 'Banni' s'il est déjà banni."],
+        ["Bouton Répondre", "Sur le bloc 'Signalé par' — écrire un message à la personne qui a signalé."],
+        ["Bouton Voir profil", "Ouvre la fiche complète du profil concerné."],
+        ["Bouton Avertir", "Envoie un avertissement officiel au profil signalé."],
+        ["Bouton Traité / Rejeter / Bannir", "Actions finales. Traité = pris en charge. Rejeter = sans suite. Bannir = interdit d'accès."],
+      ] },
+      { kind: "subhead", text: "Avertissements utilisateurs" },
+      { kind: "paragraph", text: <>Un avertissement est une étape préventive avant bannissement. L'utilisateur voit une modal officielle MOYO à sa prochaine connexion. Lorsqu'il clique <strong>"OK, j'ai compris"</strong>, la plateforme enregistre qu'il a pris connaissance de l'avertissement. L'admin peut suivre le 1er, 2e ou 3e avertissement et adapter la décision.</> },
+    ],
+  },
+  {
+    id: "matches", label: "Matchs & Matchmaking", color: "#7c3aed",
+    icon: helpIco(<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />, "#7c3aed"),
+    blocks: [
+      { kind: "rows", color: "#7c3aed", items: [
+        ["📂 Sous-onglets", "L'onglet Matchs regroupe 7 vues : Demandes, Matchmaking intelligent, Suivi couples Matchmaking, Propositions, Voir les matchs, Archivés et Créer un match."],
+        ["Demandes de mise en relation", "Liste des demandes envoyées par les membres (genre, ville, âge recherchés). La carte relationnelle est ouverte à tous ; l'envoi de la demande est réservé aux Premium."],
+        ["Matchmaking intelligent", "Suggestions de couples générées automatiquement selon les critères et la compatibilité. Filtres pour exclure refus, matchs existants, comptes signalés/bannis. Depuis une suggestion, vous proposez le couple : il part en suivi."],
+        ["Profils relationnels créés", "Carte en haut du Matchmaking : compteur et liste consultable. Bouton 'Voir' pour la fiche détaillée (Qui je suis / Ce que je recherche / Note)."],
+        ["Inviter à remplir la carte", "Filtrez les membres SANS profil relationnel et activez l'invitation : ils verront un message les incitant à remplir leur carte à leur prochaine ouverture."],
+        ["💚 Suivi couples Matchmaking", "Suit chaque couple proposé via le Matchmaking : la réponse de chaque personne (accepté/refusé avec l'heure) et le statut global — En attente, Un seul a répondu, Les deux ont accepté (match créé), Refusée, ou Expirée. Indique qui a proposé et la date d'expiration."],
+        ["Actions du suivi", "Voir chaque profil. Si les deux acceptent → « Voir le match » + « 💌 Encourager le couple ». Prolonger (+1j/+3j/+7j) ou Réactiver une expirée. Annuler une proposition en attente. « Reproposer un autre profil » après refus/expiration. Archiver. Note interne par couple."],
+        ["Propositions vs Suivi", "L'onglet « Propositions » regroupe les propositions spontanées et celles issues d'une demande. Les couples créés depuis le Matchmaking sont suivis séparément dans « Suivi couples Matchmaking »."],
+        ["Créer / Proposer un match", "Créez un match direct entre deux membres, ou proposez-leur une mise en relation qu'ils peuvent accepter ou refuser."],
+      ] },
+    ],
+  },
+  {
+    id: "messagerie", label: "Messagerie", color: G.rouge,
+    icon: helpIco(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />, G.rouge),
+    blocks: [
+      { kind: "rows", color: G.rouge, items: [
+        ["Assistant Moyo Dating", "Centre de support. À gauche : la conversation avec l'utilisateur. À droite : la bibliothèque de Modèles de réponse."],
+        ["Modèles de réponse", "Réponses prédéfinies pour répondre plus vite. Créez (titre, catégorie, contenu), modifiez/supprimez, recherchez et filtrez. Le bouton Copier place le texte dans le presse-papiers. Modèles partagés entre tous les admins."],
+        ["Diffusion générale", "Envoie une annonce aux utilisateurs : message, modèle rapide, cible (genre × abonnement) et date d'expiration. L'audience estimée et les diffusions actives sont affichées."],
+      ] },
+    ],
+  },
+  {
+    id: "marketing", label: "Marketing", color: "#E67E22",
+    icon: helpIco(<><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>, "#E67E22"),
+    blocks: [
+      { kind: "rows", color: "#E67E22", items: [
+        ["Statuts Moyo Dating", "Publiez des statuts officiels (sponsorisés) visibles par les membres, avec un bouton d'action (lien ou WhatsApp/appel). Gérez les statuts actifs et leur durée."],
+        ["Mises en avant", "Validez les demandes de mise en avant des profils Premium (24h dans les Statuts, visibles par le genre opposé). Suivez vues, likes, réponses et retirez-les si besoin."],
+        ["Événement Premium", "Offrez le Premium gratuitement à tous pour un événement. Les vrais abonnés ne sont pas affectés ; à la date d'expiration, le Premium est retiré automatiquement aux non-abonnés."],
+      ] },
+      { kind: "subhead", text: "🎉 Événement Premium (détail)" },
+      { kind: "rows", color: G.or, items: [
+        ["Activation", "Le bouton '🎉 Événement Premium - Offrir à tous' passe tous les utilisateurs en Premium gratuitement. Uniquement pour des événements spéciaux."],
+        ["Date d'expiration obligatoire", "À l'activation, choisissez une date/heure d'expiration. Passé cette date, le Premium est retiré automatiquement aux non-abonnés."],
+        ["Abonnés réels protégés", "Les utilisateurs ayant payé conservent leur Premium même après l'événement. Seuls les bénéficiaires gratuits sont concernés."],
+        ["Désactivation manuelle", "Désactivable à tout moment via '⏹ Désactiver'. Les abonnés réels ne sont jamais affectés."],
+        ["Vérification automatique", "Le système vérifie chaque minute si la date est dépassée et désactive l'événement sans intervention."],
+      ] },
+      { kind: "subhead", text: "📢 Diffusion - Date d'expiration" },
+      { kind: "rows", color: "#e67e22", items: [
+        ["Date d'expiration obligatoire", "Chaque message de diffusion doit avoir une date d'expiration. 'Envoyer' est désactivé tant qu'aucune date n'est choisie."],
+        ["Expiration automatique", "Passé la date, le message ne s'affiche plus pour personne — même pour ceux qui ne l'ont pas vu."],
+        ["Nouveaux inscrits protégés", "Un utilisateur inscrit après l'envoi ne reçoit pas les messages antérieurs à son inscription."],
+        ["Corriger un broadcast actif", "Pour stopper un message envoyé : Supabase → Table broadcasts → mettez expires_at à une date passée."],
+      ] },
+    ],
+  },
+  {
+    id: "reviews", label: "Réputation / Avis", color: "#B8860B",
+    icon: helpIco(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />, "#B8860B", "#B8860B"),
+    blocks: [
+      { kind: "rows", color: "#B8860B", items: [
+        ["Avis non lus", "Les avis avec une bordure rouge sont non lus. 'Marquer lu' les acquitte et réduit le badge compteur de l'onglet."],
+        ["Masquer / Afficher", "Masquer un avis le rend discret sans le supprimer. Utile pour les avis déjà traités."],
+        ["Supprimer un avis", "Supprime définitivement l'avis. Action irréversible."],
+        ["Badge compteur", "Le badge doré indique le nombre d'avis non lus. Il disparaît quand tous sont marqués comme lus."],
+      ] },
+    ],
+  },
+  {
+    id: "appointments", label: "Rendez-vous", color: G.vert,
+    icon: helpIco(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>, G.vert),
+    blocks: [
+      { kind: "callout", tone: "info", text: "Gère les demandes de rendez-vous (téléphoniques et à l'agence) envoyées par les membres depuis leur Profil." },
+      { kind: "rows", color: G.vert, items: [
+        ["Badge vert", "Le badge vert sur l'onglet Rendez-vous indique le nombre de demandes en attente à traiter."],
+        ["Filtres", "En attente, Confirmés (créneau fixé / reporté), Aujourd'hui, Passés (effectués, absents ou dépassés), Annulés, et Archivés."],
+        ["Confirmer", "Ouvre un calendrier Moyo pour fixer le créneau. L'utilisateur est prévenu. Dates passées et dimanches indisponibles ; horaires de 9h à 19h."],
+        ["Autre créneau", "Propose une nouvelle date/heure quand le créneau demandé ne convient pas (statut « reporté »)."],
+        ["Effectué / Absent", "Sur un RDV confirmé : marquez-le « effectué » s'il a eu lieu, ou « absent » si la personne ne s'est pas présentée."],
+        ["Annuler", "Ouvre un modal Moyo pour saisir un motif d'annulation (facultatif, visible par l'utilisateur)."],
+        ["Note interne", "Ouvre un modal Moyo pour ajouter une note visible uniquement par l'équipe."],
+        ["📦 Archiver", "Sur un RDV passé ou annulé : le range dans le filtre « Archivés ». Réversible via « Désarchiver »."],
+        ["🗑 Supprimer", "Sur un RDV passé ou annulé : supprime définitivement le rendez-vous (irréversible)."],
+        ["💳 Paiement agence", "Un RDV à l'agence est payant (" + APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR") + " FCFA). Le paiement apparaît dans Budget avec le badge « 🗓 Rendez-vous agence » et se valide là-bas — paiement DISTINCT du Premium : le valider n'active aucun abonnement."],
+        ["Côté utilisateur", "Dans « Mes rendez-vous », le membre suit l'état de sa demande et peut supprimer lui-même un RDV annulé ou déjà passé."],
+      ] },
+    ],
+  },
+  {
+    id: "payments", label: "Budget / Paiements", color: "#27ae60",
+    icon: helpIco(<><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" /><path d="M21 12v-2a2 2 0 0 0-2-2H6" /><circle cx="16" cy="12" r="1" /></>, "#27ae60"),
+    blocks: [
+      { kind: "callout", tone: "info", text: "Vérifiez toujours le paiement sur votre téléphone MTN avant d'activer le Premium." },
+      { kind: "rows", color: "#27ae60", items: [
+        ["Badge vert", "Le badge vert sur l'onglet (et sur Demandes) indique le nombre de demandes en attente de validation."],
+        ["📂 4 sous-onglets", "Demandes (en attente), Traitées (approuvées/refusées), Données financières et Archivage."],
+        ["Sous-onglet Demandes", "Les paiements pas encore traités. Vérifiez la référence puis Activez ou Rejetez. Une fois traité, il bascule dans Traitées."],
+        ["Sous-onglet Traitées", "Les demandes approuvées ✓ et refusées ✕. La corbeille y archive le paiement."],
+        ["Données financières", "Chiffre d'affaires total et par mois. Le bouton ↺ Réinitialiser repart de zéro à partir d'aujourd'hui SANS rien supprimer. Un paiement archivé reste compté dans le CA."],
+        ["🧪 Exclure du CA (tests)", "Dépliez un mois pour voir chaque paiement. '🧪 Exclure du CA' retire un paiement de test sans le supprimer. Réversible via '↩ Réintégrer'."],
+        ["📊 Tableau de bord financier", "Indicateurs de conversion, dernier paiement, graphique d'évolution, répartition Premium / Cadeaux, classement des meilleurs contributeurs."],
+        ["⬇ Exporter", "Télécharge un CSV (Excel) de tous les paiements : date, utilisateur, type, opérateur, référence, montant, exclusion du CA."],
+        ["Sous-onglet Archivage", "Les paiements rangés. Ici la corbeille et 'Tout supprimer' effacent DÉFINITIVEMENT."],
+        ["Silhouette cliquable", "Cliquez sur la silhouette pour voir le profil complet de l'utilisateur. L'ID est affiché grisé."],
+        ["Réf. client", "Numéro de transaction saisi par l'utilisateur après son paiement MTN ou Airtel."],
+        ["Réf. MTN reçue", "Numéro que vous entrez après vérification de votre SMS/app MTN. Doit correspondre à la réf. client."],
+        ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert (« Activer Premium » ou « Valider le paiement RDV »). Sinon → bouton rouge 'Rejeter & notifier'."],
+        ["Activer Premium", "Pour un paiement Premium : active l'abonnement pour la durée configurée ET envoie un message à l'utilisateur. Le compteur démarre immédiatement."],
+        ["🗓 Paiement Rendez-vous agence", "Un paiement de rendez-vous porte le badge « 🗓 Rendez-vous agence ». Le valider marque le RDV comme payé et prévient l'utilisateur — SANS activer aucun Premium. Le montant compte dans le CA. La confirmation du créneau se fait dans l'onglet Rendez-vous."],
+        ["Compteur ⏱", "Affiché après activation : '28j 14h restants'. Orange sous 3 jours. '⏰ Expiré' en rouge à l'échéance."],
+        ["Expiration automatique", "À l'échéance, le Premium repasse à gratuit dès la prochaine connexion. Le compteur affiche 'Expiré'."],
+        ["Rejeter & notifier", "Marque la demande comme rejetée ET prévient l'utilisateur que sa preuve n'a pas pu être vérifiée."],
+        ["Bouton ↩", "Réinitialise la vérification pour recommencer en cas d'erreur de frappe."],
+        ["Bouton archiver 🗑", "Range un paiement traité dans Archivage. Le Premium et le CA ne changent pas. Pour retirer un Premium payé accordé par erreur : ouvrez 'Gérer le Premium' sur la carte utilisateur (onglet Utilisateurs) — comme c'est classé 'payé' par défaut, utilisez d'abord le lien 'Ce n'est pas un vrai paiement → reclassifier comme offert' pour débloquer le bouton Retirer."],
+        ["Origine « 👤 Admin »", "Une demande peut aussi être créée par un admin depuis la carte utilisateur (onglet Utilisateurs → 'Gérer le Premium' → onglet 💳 Paiement), typiquement quand un client envoie sa preuve de paiement par WhatsApp au lieu de saisir son ID dans l'app. Elle arrive ici avec le même statut « En attente » qu'une demande client classique, avec un badge « 👤 Admin » pour la distinguer — seul un Super Admin peut la vérifier et l'activer, exactement comme les autres."],
+        ["Statuts des demandes", "En attente = à traiter. Approuvé ✓ / Rejeté ✕ = traité. Archivé = rangé. Expiré = durée écoulée."],
+      ] },
+    ],
+  },
+  {
+    id: "logs", label: "Historique", color: "#8e44ad",
+    icon: helpIco(<><polyline points="12 8 12 12 14 14" /><circle cx="12" cy="12" r="10" /></>, "#8e44ad"),
+    blocks: [
+      { kind: "rows", color: "#8e44ad", items: [
+        ["Activité par admin", "Récapitulatif du nombre d'actions par admin, filtrable par période (Aujourd'hui, 7 jours, 30 jours, Tout)."],
+        ["Détail des actions", "Liste chronologique de toutes les actions admin (la plus récente en haut)."],
+        ["Sélectionner (multi)", "Réservé au Super Admin. Cochez plusieurs entrées (ou 'Tout sélectionner') puis 'Supprimer (N)' pour les effacer d'un coup."],
+        ["Corbeille (une par une)", "Hors mode sélection, chaque ligne garde sa corbeille pour supprimer une seule action."],
+        ["Tout effacer", "Vide tout l'historique d'un coup. Action définitive et irréversible."],
+      ] },
+    ],
+  },
+  {
+    id: "security", label: "Sécurité & accès admin", color: "#8e44ad",
+    icon: helpIco(<><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>, "#8e44ad"),
+    blocks: [
+      { kind: "subhead", text: "Accès Admin - PIN de sécurité" },
+      { kind: "callout", tone: "purple", text: "Ne communiquez jamais votre PIN à un tiers. Il est personnel et confidentiel." },
+      { kind: "rows", color: "#8e44ad", items: [
+        ["Accès au panel", "À chaque ouverture du panel Admin, une modale demande votre PIN à 4 chiffres. Sans PIN correct, l'accès est refusé."],
+        ["Création du PIN", "Lors de l'attribution du statut admin ('+ Admin'), un PIN à 4 chiffres est demandé et communiqué par un canal sécurisé (SMS, WhatsApp)."],
+        ["Bouton 🔑 PIN", "Sur les cartes des autres admins : permet de réinitialiser leur PIN à tout moment."],
+        ["Retrait du statut admin", "'- Admin' retire les droits ET supprime le PIN. La personne ne peut plus accéder au panel."],
+        ["PIN oublié", "Seul l'administrateur principal peut réinitialiser un PIN. Pour votre propre PIN : modifiez-le dans Supabase."],
+        ["Sécurité renforcée", "Le PIN est vérifié en temps réel à chaque tentative. Un mauvais PIN affiche une erreur et vide le champ."],
+      ] },
+      { kind: "subhead", text: "Badges et alertes admin" },
+      { kind: "paragraph", text: <>Le bouton <strong>⚙️ Admin</strong> du header affiche un badge dès qu'il y a des actions en attente (signalements + avis non lus + paiements + rendez-vous). Visible depuis n'importe quel onglet, il se met à jour automatiquement toutes les quelques secondes, même si le dashboard admin n'est pas ouvert.</> },
+    ],
+  },
+  {
+    id: "config", label: "Configuration ☰ (Super Admin)", color: "#555",
+    icon: helpIco(<><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>, "#555"),
+    blocks: [
+      { kind: "rows", color: "#555", items: [
+        ["Accès", "Le bouton burger ☰ se trouve à droite de 'Aide'. ⚠️ Réservé au Super Admin : les admins simples ne le voient pas."],
+        ["Règles - Switch même genre", "Vert = bloqué (H→H et F→F interdits). Rouge = ouvert. Sauvegarde instantanée."],
+        ["Textes des modals", "6 modals personnalisables : message même genre H/F, titre et sous-titre du match, message Premium, message likes épuisés."],
+        ["Limites & Quotas", "Likes gratuits/jour, messages gratuits/match, taille max des photos, message de bienvenue après match. Modifiable sans redéployer."],
+        ["Prix & Abonnement", "Prix Premium en FCFA et durée en jours. ⚠️ Le prix modifie les boutons de paiement. La durée s'applique aux nouveaux abonnements."],
+        ["Fonctionnalités on/off", "Activer/désactiver Statuts, Cadeau Premium et Assistant IA. Effet au prochain chargement de l'app."],
+        ["🔔 Notifications admin", "Pour chaque admin, choisir ses notifications push : Signalements, Matchs, Paiements. Ex : activer 'Paiements' pour le responsable des paiements."],
+        ["💳 Moyens de paiement", "Couper rapidement un moyen de paiement (MTN, Airtel, Visa/Mastercard). Une fois coupé : grisé et 'Temporairement indisponible' partout."],
+        ["🔴 Mode maintenance", "Active un écran de maintenance pour tous. Seuls les admins peuvent encore accéder. Message personnalisable."],
+        ["Gestion des admins", "Visible par le Super Admin uniquement : nommer Admin, Super Admin ou retirer les droits via l'email."],
+        ["Niveaux d'accès", "Super Admin : accès total (Paiements + Configuration ☰). Admin simple : tout sauf Paiements et Configuration."],
+      ] },
+    ],
+  },
+  {
+    id: "news", label: "✨ Nouveautés récentes", color: G.or,
+    icon: helpIco(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />, G.or),
+    blocks: [
+      { kind: "rows", color: G.or, items: [
+        ["📝 Notes internes", "Sur chaque fiche utilisateur et signalement, un bloc de notes visibles uniquement par les admins. Idéal pour se coordonner. N'importe quel admin peut supprimer une note."],
+        ["🗂 Archives repliées", "Dans Signalements → Archivés, chaque carte est repliée. Cliquez pour le détail, 'Replier' pour refermer."],
+        ["🔔 Notifications utilisateur", "Les utilisateurs peuvent (ré)activer leurs notifications depuis leur Profil, même après un refus initial."],
+        ["🎁💝 Offrir / Demander Premium", "En conversation : un Premium peut OFFRIR Premium (🎁), un non-Premium peut DEMANDER (💝, max 2/mois)."],
+        ["💳 Paiements réorganisés", "4 sous-onglets : Demandes, Traitées, Données financières (réinitialisable) et Archivage. Archiver ne retire plus le Premium."],
+        ["🗂 Historique : suppression multiple", "Le bouton 'Sélectionner' permet de cocher et supprimer plusieurs actions d'un coup (Super Admin)."],
+        ["🎚 Interrupteurs de fonctionnalités", "Configuration ⚙️ → Fonctionnalités : Statuts, Cadeau Premium et Assistant IA s'activent/désactivent réellement."],
+      ] },
+    ],
+  },
+];
+
+function AdminHelpModal({ onClose }: { onClose: () => void }) {
+  const [isWide, setIsWide] = useState(typeof window !== "undefined" ? window.innerWidth >= 860 : true);
+  const [q, setQ] = useState("");
+  const [active, setActive] = useState(HELP_SECTIONS[0].id);
+  const [openId, setOpenId] = useState<string>(HELP_SECTIONS[0].id);
+
+  useEffect(() => {
+    const onR = () => setIsWide(window.innerWidth >= 860);
+    window.addEventListener("resize", onR);
+    return () => window.removeEventListener("resize", onR);
+  }, []);
+  useEffect(() => {
+    const y = window.scrollY; const body = document.body;
+    const prev = { position: body.style.position, top: body.style.top, width: body.style.width, overflow: body.style.overflow };
+    body.style.position = "fixed"; body.style.top = `-${y}px`; body.style.width = "100%"; body.style.overflow = "hidden";
+    return () => { body.style.position = prev.position; body.style.top = prev.top; body.style.width = prev.width; body.style.overflow = prev.overflow; window.scrollTo(0, y); };
+  }, []);
+
+  const blockText = (b: HelpBlock): string => {
+    if (b.kind === "rows") return b.items.map(r => r[0] + " " + r[1]).join(" ");
+    if (b.kind === "statusRows") return b.items.map(r => r[0] + " " + r[2]).join(" ");
+    if (b.kind === "bullets") return b.items.join(" ");
+    if (b.kind === "subhead") return b.text;
+    if (b.kind === "callout" || b.kind === "paragraph") return typeof b.text === "string" ? b.text : "";
+    return "";
+  };
+  const nq = q.trim().toLowerCase();
+  const matches = (s: HelpSection) => !nq || s.label.toLowerCase().includes(nq) || s.blocks.some(b => blockText(b).toLowerCase().includes(nq));
+  const visible = HELP_SECTIONS.filter(matches);
+  useEffect(() => { if (nq && visible.length && !visible.find(s => s.id === active)) setActive(visible[0].id); }, [nq]);
+
+  const activeSection = visible.find(s => s.id === active) || visible[0];
+
+  const renderBlock = (b: HelpBlock, i: number): React.ReactNode => {
+    if (b.kind === "subhead") return <div key={i} style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginTop: i === 0 ? 0 : 8, marginBottom: 2 }}>{b.text}</div>;
+    if (b.kind === "paragraph") return <div key={i} style={{ background: G.creme, borderRadius: 10, padding: "11px 13px", fontSize: "0.82rem", color: G.brun, lineHeight: 1.7 }}>{b.text}</div>;
+    if (b.kind === "callout") {
+      const tones: Record<string, { bg: string; col: string; bd: string }> = {
+        warn: { bg: "#FFF8F0", col: "#7a5500", bd: "rgba(212,168,67,0.3)" },
+        info: { bg: "#f0faf4", col: "#1a5c3a", bd: "rgba(26,92,58,0.2)" },
+        purple: { bg: "#f9f0ff", col: "#5b2c6f", bd: "rgba(142,68,173,0.2)" },
+      };
+      const t = tones[b.tone];
+      return <div key={i} style={{ background: t.bg, color: t.col, border: `1px solid ${t.bd}`, borderRadius: 10, padding: "10px 13px", fontSize: "0.8rem", lineHeight: 1.55 }}>{b.text}</div>;
+    }
+    if (b.kind === "bullets") {
+      const inner = b.items.map((r, j) => (
+        <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={b.box || G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12" /></svg>
+          <span style={{ fontSize: "0.82rem", color: G.brun, lineHeight: 1.6 }}>{r}</span>
+        </div>
+      ));
+      return <div key={i} style={b.box ? { background: `${b.box}10`, borderLeft: `3px solid ${b.box}`, borderRadius: 12, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 7 } : { display: "flex", flexDirection: "column", gap: 7 }}>{inner}</div>;
+    }
+    if (b.kind === "statusRows") {
+      return <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>{b.items.map(([label, color, desc], j) => (
+        <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, marginTop: 4, flexShrink: 0 }} />
+          <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+        </div>
+      ))}</div>;
+    }
+    // rows
+    return <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>{b.items.map(([label, desc], j) => (
+      <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: G.creme, borderRadius: 10, padding: "9px 12px" }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={b.color || G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}><polyline points="20 6 9 17 4 12" /></svg>
+        <div><span style={{ fontWeight: 700, fontSize: "0.8rem", color: G.brun }}>{label} : </span><span style={{ fontSize: "0.8rem", color: "#555" }}>{desc}</span></div>
+      </div>
+    ))}</div>;
+  };
+
+  const Signature = (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, textAlign: "center" }}>
+      <div style={{ fontSize: "0.68rem", color: "#bbb", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>Conçu et développé par</div>
+      <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Roméo GUEBO</div>
+      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: G.rouge }}>CEO Moyo</span>
+      <a href="mailto:romeoguebo97@gmail.com" style={{ fontSize: "0.72rem", color: G.rouge, textDecoration: "none", fontWeight: 600, opacity: 0.8 }}>romeoguebo97@gmail.com</a>
+    </div>
+  );
+
+  const searchBox = (
+    <div style={{ position: "relative" }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+      <input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher dans le guide…" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px 9px 34px", fontSize: "0.82rem", fontFamily: "inherit", background: G.blanc, color: G.brun, outline: "none" }} />
+    </div>
+  );
+
+  const navBtn = (s: HelpSection, onClick: () => void, isActive: boolean) => (
+    <button key={s.id} onClick={onClick} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", borderRadius: 10, border: "none", cursor: "pointer", textAlign: "left", background: isActive ? G.blanc : "transparent", boxShadow: isActive ? "0 1px 6px rgba(0,0,0,0.06)" : "none" }}>
+      <span style={{ width: 28, height: 28, borderRadius: 8, background: `${s.color}16`, color: s.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.icon}</span>
+      <span style={{ flex: 1, fontWeight: isActive ? 800 : 600, fontSize: "0.82rem", color: isActive ? G.brun : "#666" }}>{s.label}</span>
+    </button>
+  );
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: isWide ? "center" : "flex-end", justifyContent: "center", padding: isWide ? 24 : 0, animation: "fadeIn 0.2s ease", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: isWide ? 20 : "24px 24px 0 0", width: "100%", maxWidth: isWide ? 1040 : 560, height: isWide ? "86vh" : "auto", maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 -8px 40px rgba(0,0,0,0.2)", animation: "fadeUp 0.28s ease" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+            </div>
+            <div>
+              <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun }}>Guide Admin</div>
+              <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 1 }}>Tableau de bord MOYO</div>
+            </div>
+          </div>
+          <div onClick={onClose} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </div>
+        </div>
+
+        {isWide ? (
+          <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+            {/* Sidebar */}
+            <div style={{ width: 268, borderRight: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", background: "#FAFAFB", flexShrink: 0 }}>
+              <div style={{ padding: "12px 12px 8px" }}>{searchBox}</div>
+              <div style={{ overflowY: "auto", padding: "0 8px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
+                {visible.map(s => navBtn(s, () => setActive(s.id), s.id === activeSection?.id))}
+                {visible.length === 0 && <div style={{ padding: "20px 12px", fontSize: "0.8rem", color: "#aaa", textAlign: "center" }}>Aucun résultat.</div>}
+              </div>
+            </div>
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "22px 26px 28px", overscrollBehavior: "contain" }}>
+              {activeSection && <>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  <span style={{ width: 34, height: 34, borderRadius: 9, background: `${activeSection.color}16`, color: activeSection.color, display: "flex", alignItems: "center", justifyContent: "center" }}>{activeSection.icon}</span>
+                  <span style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun }}>{activeSection.label}</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{activeSection.blocks.map(renderBlock)}</div>
+              </>}
+              {Signature}
+            </div>
+          </div>
+        ) : (
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px 22px", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+            <div style={{ marginBottom: 10 }}>{searchBox}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {visible.map(s => {
+                const open = openId === s.id;
+                return (
+                  <div key={s.id} style={{ border: `1px solid ${G.gris}`, borderRadius: 14, overflow: "hidden", background: G.blanc }}>
+                    <button onClick={() => setOpenId(open ? "" : s.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 13px", background: open ? G.creme : G.blanc, border: "none", cursor: "pointer", textAlign: "left" }}>
+                      <span style={{ width: 30, height: 30, borderRadius: 8, background: `${s.color}16`, color: s.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.icon}</span>
+                      <span style={{ flex: 1, fontWeight: 800, fontSize: "0.88rem", color: G.brun }}>{s.label}</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+                    </button>
+                    {open && <div style={{ padding: "6px 13px 15px", display: "flex", flexDirection: "column", gap: 10 }}>{s.blocks.map(renderBlock)}</div>}
+                  </div>
+                );
+              })}
+              {visible.length === 0 && <div style={{ padding: "26px 12px", fontSize: "0.85rem", color: "#aaa", textAlign: "center" }}>Aucun résultat pour « {q} ».</div>}
+            </div>
+            {Signature}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void }) {
+  // ── Sécurité : redirection si non-admin ──
+  useEffect(() => {
+    if (!auth.isAdmin) {
+      console.warn("[Moyo][Admin] Accès refusé - non-admin");
+      onBack();
+    }
+  }, [auth.isAdmin]);
+
+  type ReportRow = {
+    id?: string;
+    reason: string;
+    reporter_id: string;
+    reported_id: string | null;
+    status: string;
+    created_at?: string;
+  };
+
+  type AdminProfile = {
+    id: string;
+    name: string;
+    age: number;
+    city: string;
+    gender: string;
+    bio: string;
+    is_premium: boolean;
+    premium_until?: string;
+    premium_is_gift?: boolean;
+    admin_pin?: string | null;
+    is_admin?: boolean;
+    is_verified?: boolean;
+    is_banned?: boolean;
+    ban_until?: string | null;
+    is_visible?: boolean;
+    created_at?: string;
+    last_seen?: string;
+    warning_count?: number;
+    email?: string;
+    photo_url?: string | null;
+    admin_level?: string | null;
+  };
+
+  // ── Onglet actif ──
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing" | "appointments">("stats");
+  const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage">("avis");
+  // ── SONDAGES ──
+  const DEFAULT_SURVEY_QUESTIONS = [
+    { id: "q1", text: "Êtes-vous satisfait(e) de votre expérience sur Moyo Dating ?", type: "single", options: ["Très satisfait(e)", "Satisfait(e)", "Moyen", "Insatisfait(e)"] },
+    { id: "q2", text: "Quelles fonctionnalités utilisez-vous le plus ?", type: "multi", options: ["Découvrir", "Messagerie", "Statuts", "Mise en relation", "Premium"] },
+    { id: "q3", text: "Recommanderiez-vous Moyo Dating à un ami ?", type: "single", options: ["Oui, sûrement", "Peut-être", "Non"] },
+  ];
+  const [surveys, setSurveys] = useState<any[]>([]);
+  const [surveysLoading, setSurveysLoading] = useState(false);
+  const [surveyCounts, setSurveyCounts] = useState<Record<string, number>>({});
+  const [surveyEditor, setSurveyEditor] = useState<any | null>(null);
+  const [surveyResults, setSurveyResults] = useState<any | null>(null);
+  const [savingSurvey, setSavingSurvey] = useState(false);
+  const loadSurveys = async () => {
+    setSurveysLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/surveys?order=created_at.desc&select=*`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      setSurveys(Array.isArray(data) ? data : []);
+      const rc = await fetch(`${SUPABASE_URL}/rest/v1/survey_responses?select=survey_id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const resp = await rc.json().catch(() => []);
+      const counts: Record<string, number> = {};
+      if (Array.isArray(resp)) resp.forEach((x: any) => { counts[x.survey_id] = (counts[x.survey_id] || 0) + 1; });
+      setSurveyCounts(counts);
+    } catch { showToast("Erreur de chargement des sondages.", "error"); }
+    setSurveysLoading(false);
+  };
+  const newSurveyDraft = () => setSurveyEditor({ title: "", intro_message: "Votre avis nous intéresse ! Aidez-nous à améliorer Moyo Dating en répondant à quelques questions rapides.", target: "all|all", status: "active", questions: [] });
+  const loadDefaultSurvey = () => setSurveyEditor({ title: "Votre satisfaction Moyo Dating", intro_message: "Votre avis nous intéresse ! Aidez-nous à améliorer Moyo Dating en répondant à quelques questions rapides.", target: "all|all", status: "active", questions: JSON.parse(JSON.stringify(DEFAULT_SURVEY_QUESTIONS)) });
+  const saveSurvey = async () => {
+    if (!surveyEditor) return;
+    if (!surveyEditor.title.trim()) { showToast("Donnez un titre au sondage.", "error"); return; }
+    const valid = (surveyEditor.questions || []).filter((q: any) => q.text.trim() && (q.type === "text" || q.options.filter((o: string) => o.trim()).length >= 2));
+    if (valid.length === 0) { showToast("Ajoutez au moins une question avec 2 options.", "error"); return; }
+    setSavingSurvey(true);
+    const payload = { title: surveyEditor.title.trim(), intro_message: surveyEditor.intro_message.trim(), target: surveyEditor.target, status: surveyEditor.status, questions: valid.map((q: any, i: number) => ({ id: q.id || `q${i + 1}`, text: q.text.trim(), type: q.type, options: q.options.filter((o: string) => o.trim()) })) };
+    try {
+      if (surveyEditor.id) {
+        await fetch(`${SUPABASE_URL}/rest/v1/surveys?id=eq.${surveyEditor.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify(payload) });
+      } else {
+        await fetch(`${SUPABASE_URL}/rest/v1/surveys`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ ...payload, created_by: auth.userId }) });
+      }
+      showToast("Sondage enregistré !", "success");
+      setSurveyEditor(null);
+      loadSurveys();
+    } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
+    setSavingSurvey(false);
+  };
+  const toggleSurveyStatus = async (s: any) => {
+    const ns = s.status === "active" ? "inactive" : "active";
+    setSurveys(prev => prev.map(x => x.id === s.id ? { ...x, status: ns } : x));
+    try { await fetch(`${SUPABASE_URL}/rest/v1/surveys?id=eq.${s.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ status: ns }) }); } catch {}
+  };
+  const deleteSurvey = async (s: any) => {
+    setSurveys(prev => prev.filter(x => x.id !== s.id));
+    try { await fetch(`${SUPABASE_URL}/rest/v1/surveys?id=eq.${s.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }); } catch {}
+  };
+  const loadSurveyResults = async (s: any) => {
+    setSurveyResults({ survey: s, loading: true, responses: [] });
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/survey_responses?survey_id=eq.${s.id}&select=answers,created_at`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const responses = await r.json().catch(() => []);
+      setSurveyResults({ survey: s, loading: false, responses: Array.isArray(responses) ? responses : [] });
+    } catch { setSurveyResults({ survey: s, loading: false, responses: [] }); }
+  };
+
+  // ── Match Proposals ──
+  type MatchProposal = {
+    id: string;
+    user1_id: string;
+    user2_id: string;
+    status: "pending" | "accepted" | "refused" | "expired";
+    user1_response: "accepted" | "refused" | null;
+    user2_response: "accepted" | "refused" | null;
+    refused_by: string | null;
+    expires_at: string;
+    created_by: string;
+    created_at: string;
+    profile1?: AdminProfile;
+    profile2?: AdminProfile;
+  };
+  const [proposals, setProposals] = useState<MatchProposal[]>([]);
+  const [mmFollow, setMmFollow] = useState<any[]>([]);
+  const [mmFollowLoading, setMmFollowLoading] = useState(false);
+  const [mmAdminNames, setMmAdminNames] = useState<Record<string, string>>({});
+  const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [matchSubTab, setMatchSubTab] = useState<"create" | "propose" | "matchmaking" | "mmfollow" | "list" | "requests" | "archived">("requests");
+  const [showCreateMatch, setShowCreateMatch] = useState(false);
+  const [showProposeMatch, setShowProposeMatch] = useState(false);
+
+  // ── Match Requests (demandes utilisateurs) ──
+  type MatchRequest = {
+    id: string;
+    user_id: string;
+    target_city?: string;
+    target_age_min?: number;
+    target_age_max?: number;
+    target_gender?: string;
+    message?: string;
+    status: "pending" | "processing" | "done" | "cancelled";
+    created_at: string;
+    profile?: AdminProfile;
+    compatibleProfiles?: AdminProfile[];
+    showCompatible?: boolean;
+    compatibleNote?: string;
+  };
+  const [matchRequests, setMatchRequests] = useState<MatchRequest[]>([]);
+  const [matchRequestsLoading, setMatchRequestsLoading] = useState(false);
+  const [matchRequestsBadge, setMatchRequestsBadge] = useState(0);
+  const [archivedItems, setArchivedItems] = useState<{ id: string; type: "proposal" | "request"; created_at: string; label: string; detail: string }[]>([]);
+  const [matchArchiveLoading, setMatchArchiveLoading] = useState(false);
+
+  // ══ MATCHMAKING INTELLIGENT ══
+  const [mmLoading, setMmLoading] = useState(false);
+  const [mmSuggestions, setMmSuggestions] = useState<any[]>([]);
+  const [mmLastUpdate, setMmLastUpdate] = useState("");
+  const [mmIgnored, setMmIgnored] = useState<Set<string>>(new Set());
+  const [mmArchived, setMmArchived] = useState<Set<string>>(() => { try { return new Set<string>(JSON.parse(localStorage.getItem("moyo_mm_archived") || "[]")); } catch { return new Set<string>(); } });
+  const [mmProposedKeys, setMmProposedKeys] = useState<Set<string>>(new Set());
+  const [showMmArchived, setShowMmArchived] = useState(false);
+  const persistMmArchived = (set: Set<string>) => { try { localStorage.setItem("moyo_mm_archived", JSON.stringify([...set])); } catch {} };
+  const mmArchive = (key: string) => setMmArchived(prev => { const n = new Set(prev).add(key); persistMmArchived(n); return n; });
+  const mmUnarchive = (key: string) => setMmArchived(prev => { const n = new Set(prev); n.delete(key); persistMmArchived(n); return n; });
+  const [mmStats, setMmStats] = useState({ created: 0, pending: 0, avg: 0 });
+  const [mmView, setMmView] = useState<any | null>(null);
+  const [mmFilters, setMmFilters] = useState({ pastRefusals: true, existingMatches: true, reported: true, banned: true, teamRefused: true, activeOnly: false });
+  const pairKey = (a: string, b: string) => [a, b].sort().join("_");
+  // ── Contraintes OBLIGATOIRES (vérifiées avant tout score) ──
+  const mmEligible = (a: any, b: any) => {
+    const ra = a.relational_profile || {}, rb = b.relational_profile || {};
+    // Âge recherché respecté des DEUX côtés (si une tranche est définie)
+    const inRange = (person: any, range: any) => {
+      if (!range || !range.age_min || !range.age_max || !person.age) return true; // pas de critère → on n'élimine pas
+      return person.age >= range.age_min && person.age <= range.age_max;
+    };
+    if (!inRange(b, ra)) return false; // B doit entrer dans la tranche cherchée par A
+    if (!inRange(a, rb)) return false; // A doit entrer dans la tranche cherchée par B
+    // Localisation recherchée respectée des DEUX côtés (si une ville est définie)
+    if (ra.city && b.city && ra.city !== b.city) return false; // A cherche une ville ≠ celle de B
+    if (rb.city && a.city && rb.city !== a.city) return false; // B cherche une ville ≠ celle de A
+    return true;
+  };
+  const mmScore = (a: any, b: any) => {
+    // (l'âge et la localisation cherchée sont déjà garantis par mmEligible)
+    const ra = a.relational_profile || {}, rb = b.relational_profile || {};
+    let s = 0; const reasons: string[] = [];
+    if (a.religion && b.religion && a.religion === b.religion) { s += 25; reasons.push(`Même religion : ${a.religion}`); }
+    else if (ra.religion === "Sans importance" || rb.religion === "Sans importance") s += 10;
+    if (ra.project && rb.project && ra.project === rb.project) { s += 25; reasons.push(`Même objectif : ${ra.project}`); }
+    if (a.city && b.city && a.city === b.city) { s += 15; reasons.push(`Même ville : ${a.city}`); }
+    else if (/diaspora/i.test(a.city || "") && /diaspora/i.test(b.city || "")) { s += 8; reasons.push("Tous deux en diaspora"); }
+    const ci = (Array.isArray(ra.interests) ? ra.interests : []).filter((x: string) => (Array.isArray(rb.interests) ? rb.interests : []).includes(x));
+    if (ci.length) { s += Math.min(ci.length * 5, 20); reasons.push(`${ci.length} centre${ci.length > 1 ? "s" : ""} d'intérêt commun${ci.length > 1 ? "s" : ""}`); }
+    const cq = (Array.isArray(ra.qualities) ? ra.qualities : []).filter((x: string) => (Array.isArray(rb.qualities) ? rb.qualities : []).includes(x));
+    if (cq.length) { s += Math.min(cq.length * 4, 20); reasons.push(`${cq.length} valeur${cq.length > 1 ? "s" : ""} commune${cq.length > 1 ? "s" : ""}`); }
+    return { score: Math.min(s, 99), reasons };
+  };
+  const mmLevel = (score: number) => score >= 90 ? { label: "Compatibilité élevée", color: "#8e44ad" } : score >= 75 ? { label: "Bonne compatibilité", color: "#e67e22" } : score >= 50 ? { label: "Compatibilité moyenne", color: "#2980b9" } : { label: "Faible compatibilité", color: "#9aa0a6" };
+  const loadMatchmaking = async () => {
+    setMmLoading(true);
+    try {
+      const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+      const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?relational_profile=not.is.null&is_banned=eq.false&select=id,name,age,gender,city,religion,profession,photo_url,is_verified,is_premium,relational_profile&limit=400`, { headers: H });
+      const people = (await pr.json().catch(() => [])).filter((p: any) => p && p.gender && p.relational_profile);
+      const rq = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=in.(pending,processing)&select=user_id`, { headers: H }).then(r => r.json()).catch(() => []);
+      const activeReqIds = new Set((Array.isArray(rq) ? rq : []).map((r: any) => r.user_id));
+      const pp = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?select=user1_id,user2_id,status,created_at,expires_at&order=created_at.desc&limit=1000`, { headers: H }).then(r => r.json()).catch(() => []);
+      const proposalsByPair = new Map<string, any>(); const refusedPairs = new Set<string>(); const matchedPairs = new Set<string>();
+      (Array.isArray(pp) ? pp : []).forEach((p: any) => {
+        const k = pairKey(p.user1_id, p.user2_id);
+        if (!proposalsByPair.has(k)) proposalsByPair.set(k, p);
+        if (["refused", "declined", "rejected"].includes(p.status)) refusedPairs.add(k);
+        if (["accepted", "matched"].includes(p.status)) matchedPairs.add(k);
+      });
+      let reportedIds = new Set<string>();
+      try { const rep = await fetch(`${SUPABASE_URL}/rest/v1/reports?status=eq.pending&reported_id=not.is.null&select=reported_id&limit=500`, { headers: H }).then(r => r.json()); if (Array.isArray(rep)) reportedIds = new Set(rep.map((r: any) => r.reported_id)); } catch {}
+      const seen = new Set<string>(); const pairs: any[] = [];
+      for (let i = 0; i < people.length; i++) {
+        for (let j = i + 1; j < people.length; j++) {
+          const a = people[i], b = people[j];
+          if (a.gender === b.gender) continue;
+          const k = pairKey(a.id, b.id);
+          if (seen.has(k)) continue; seen.add(k);
+          if (mmIgnored.has(k)) continue;
+          if (mmFilters.activeOnly && !activeReqIds.has(a.id) && !activeReqIds.has(b.id)) continue;
+          if (mmFilters.existingMatches && matchedPairs.has(k)) continue;
+          if ((mmFilters.pastRefusals || mmFilters.teamRefused) && refusedPairs.has(k)) continue;
+          if (mmFilters.reported && (reportedIds.has(a.id) || reportedIds.has(b.id))) continue;
+          if (!mmEligible(a, b)) continue;
+          const { score, reasons } = mmScore(a, b);
+          if (score < 50) continue;
+          const man = a.gender === "Homme" ? a : b, woman = a.gender === "Femme" ? a : b;
+          pairs.push({ key: k, man, woman, score, reasons, prop: proposalsByPair.get(k) || null, hasActive: activeReqIds.has(a.id) || activeReqIds.has(b.id) });
+        }
+      }
+      pairs.sort((x, y) => y.score - x.score);
+      const top = pairs.slice(0, 40);
+      setMmSuggestions(top);
+      setMmStats({ created: mmStats.created, pending: top.filter(p => p.prop && (!p.prop.expires_at || new Date(p.prop.expires_at) > new Date())).length, avg: top.length ? Math.round(top.reduce((s, p) => s + p.score, 0) / top.length) : 0 });
+      setMmLastUpdate(new Date().toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }));
+    } catch { showToast("Erreur lors de la génération des suggestions.", "error"); }
+    setMmLoading(false);
+  };
+  // ── Garde anti-doublon intelligente : vérifie l'historique d'un couple avant de proposer ──
+  // Retourne { kind: "block" | "warn" | "ok", message? }
+  const coupleGuard = async (id1: string, id2: string, name1: string, name2: string): Promise<{ kind: "block" | "warn" | "ok"; reason?: "match" | "pending" | "history"; message?: string }> => {
+    const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+    const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }); } catch { return ""; } };
+    const nameById = (uid: string | null) => uid === id1 ? name1 : uid === id2 ? name2 : "quelqu'un";
+    try {
+      // 1) Match déjà existant entre les deux ?
+      const mR = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${id1},user2.eq.${id2}),and(user1.eq.${id2},user2.eq.${id1}))&select=id&limit=1`, { headers: H });
+      const m = await mR.json().catch(() => []);
+      if (Array.isArray(m) && m.length > 0) return { kind: "block", reason: "match", message: `⛔ ${name1} et ${name2} sont déjà en relation (un match existe entre eux).` };
+      // 2) Propositions entre les deux (non archivées)
+      const pR = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(and(user1_id.eq.${id1},user2_id.eq.${id2}),and(user1_id.eq.${id2},user2_id.eq.${id1}))&order=created_at.desc&select=id,status,refused_by,user1_response,user2_response,expires_at,archived,created_at`, { headers: H });
+      const props = (await pR.json().catch(() => [])).filter((p: any) => !p.archived);
+      const now = Date.now();
+      const isRefused = (p: any) => p.status === "refused" || !!p.refused_by || p.user1_response === "refused" || p.user2_response === "refused";
+      const isExpired = (p: any) => !isRefused(p) && p.status !== "accepted" && p.status !== "matched" && p.expires_at && new Date(p.expires_at).getTime() < now;
+      const isPendingActive = (p: any) => !isRefused(p) && !isExpired(p) && p.status !== "accepted" && p.status !== "matched";
+      // En attente active → blocage ferme
+      if (props.some(isPendingActive)) return { kind: "block", reason: "pending", message: `⛔ Une proposition est déjà en cours pour ${name1} et ${name2}. Attendez leur réponse avant d'en créer une nouvelle.` };
+      // Historique refusé / expiré → avertissement (on peut forcer)
+      const refusedList = props.filter(isRefused), expiredList = props.filter(isExpired);
+      if (refusedList.length > 0 || expiredList.length > 0) {
+        const parts: string[] = [];
+        if (refusedList.length > 0) parts.push(`${refusedList.length} refus`);
+        if (expiredList.length > 0) parts.push(`${expiredList.length} proposition${expiredList.length > 1 ? "s" : ""} expirée${expiredList.length > 1 ? "s" : ""} sans réponse`);
+        const lines = [...refusedList, ...expiredList].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 6)
+          .map((p: any) => isRefused(p) ? `• Refusée par ${nameById(p.refused_by)} le ${fmtDate(p.created_at)}` : `• Expirée sans réponse le ${fmtDate(p.created_at)}`).join("\n");
+        return { kind: "warn", reason: "history", message: `⚠️ ${name1} et ${name2} ont déjà été proposés : ${parts.join(" et ")}.\n\n${lines}\n\nReproposer quand même ?` };
+      }
+      return { kind: "ok" };
+    } catch { return { kind: "ok" }; }
+  };
+  const mmDoPropose = async (s: any) => {
+    try {
+      const expiresAt = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId, source: "request", origin: "matchmaking" }) });
+      logAdminAction(auth.token, auth.userId, auth.name, `Couple proposé (matchmaking) : ${s.man.name} ↔ ${s.woman.name} - ${s.score}%`, s.man.id);
+      showToast("Couple proposé !", "success");
+      setMmProposedKeys(prev => new Set(prev).add(s.key));
+      setMmStats(st => ({ ...st, created: st.created + 1 }));
+    } catch { showToast("Erreur lors de la proposition.", "error"); }
+  };
+  const mmProposeCouple = async (s: any) => {
+    const v = await coupleGuard(s.man.id, s.woman.id, s.man.name, s.woman.name);
+    if (v.kind === "block") { showToast(v.message!, "error"); return; }
+    if (v.kind === "warn") { setConfirmModal({ msg: v.message!, onConfirm: () => mmDoPropose(s) }); return; }
+    mmDoPropose(s);
+  };
+  const mmIgnore = (s: any) => { setMmIgnored(prev => new Set(prev).add(s.key)); setMmSuggestions(prev => prev.filter(x => x.key !== s.key)); };
+
+  // ── Fiche de compatibilité relationnelle (génération + impression/PDF) ──
+  const generateFiche = (s: any) => {
+    const man = s.man, woman = s.woman;
+    const ra = man.relational_profile || {}, rb = woman.relational_profile || {};
+    const get = (rp: any, k: string, legacy?: string) => rp?.self?.[k] ?? rp?.[legacy ?? k] ?? "";
+    const arr = (rp: any, k: string, legacy?: string) => { const v = rp?.self?.[k] ?? rp?.[legacy ?? k]; return Array.isArray(v) ? v : []; };
+    const projA = get(ra, "project"), projB = get(rb, "project");
+    const relA = man.religion || get(ra, "religion"), relB = woman.religion || get(rb, "religion");
+    const intA = arr(ra, "interests"), intB = arr(rb, "interests");
+    const valA = arr(ra, "values", "qualities"), valB = arr(rb, "values", "qualities");
+    const childA = get(ra, "wants_children"), childB = get(rb, "wants_children");
+    const lifeA = arr(ra, "lifestyle"), lifeB = arr(rb, "lifestyle");
+    const inter = (x: string[], y: string[]) => x.filter(v => y.includes(v));
+    const commonInt = inter(intA, intB), commonVal = inter(valA, valB);
+    const ageGap = (man.age && woman.age) ? Math.abs(man.age - woman.age) : null;
+    const isDiaspora = (c: string) => /diaspora|france|belg|canada|usa|états|europe/i.test(c || "");
+    // Sous-scores par critère (0-100)
+    const scObjectif = projA && projB ? (projA === projB ? 100 : 55) : 60;
+    const scLoc = man.city && woman.city ? (man.city === woman.city ? 100 : (isDiaspora(man.city) && isDiaspora(woman.city) ? 70 : 40)) : 55;
+    const indiff = ra?.search?.religion === "Indifférent" || rb?.search?.religion === "Indifférent" || relA === "Sans importance" || relB === "Sans importance";
+    const scReligion = relA && relB ? (relA === relB ? 100 : (indiff ? 80 : 45)) : 60;
+    const scAge = ageGap === null ? 70 : Math.max(45, 100 - ageGap * 6);
+    const denomInt = Math.max(intA.length, intB.length, 1), denomVal = Math.max(valA.length, valB.length, 1);
+    const scInt = (intA.length && intB.length) ? Math.max(40, Math.round(commonInt.length / denomInt * 100)) : 50;
+    const scVal = (valA.length && valB.length) ? Math.max(40, Math.round(commonVal.length / denomVal * 100)) : 50;
+    const childMatch = childA && childB ? (childA === childB ? 100 : 55) : null;
+    const lifeOverlap = (lifeA.length && lifeB.length) ? Math.round(inter(lifeA, lifeB).length / Math.max(lifeA.length, lifeB.length, 1) * 100) : null;
+    const visionParts = [childMatch, lifeOverlap, scReligion].filter(x => x !== null) as number[];
+    const scVision = visionParts.length ? Math.round(visionParts.reduce((a, b) => a + b, 0) / visionParts.length) : 65;
+    const criteria = [
+      { label: "Objectif relationnel", score: scObjectif }, { label: "Localisation", score: scLoc },
+      { label: "Religion / Confession", score: scReligion }, { label: "Tranche d'âge", score: scAge },
+      { label: "Centres d'intérêt", score: scInt }, { label: "Valeurs personnelles", score: scVal },
+      { label: "Vision de vie", score: scVision },
+    ];
+    const global = Math.round(criteria.reduce((a, c) => a + c.score, 0) / criteria.length);
+    const stars = Math.max(1, Math.min(5, Math.round(global / 20)));
+    const level = global >= 85 ? "EXCELLENTE COMPATIBILITÉ" : global >= 70 ? "BONNE COMPATIBILITÉ" : global >= 55 ? "COMPATIBILITÉ MOYENNE" : "COMPATIBILITÉ À APPROFONDIR";
+    // Points forts
+    const forts: string[] = [];
+    if (man.city && man.city === woman.city) forts.push("Même ville de résidence");
+    else if (isDiaspora(man.city) && isDiaspora(woman.city)) forts.push("Tous deux en diaspora");
+    if (relA && relA === relB) forts.push("Même confession religieuse");
+    if (projA && projA === projB) forts.push("Même objectif relationnel");
+    if (commonInt.length) forts.push(`${commonInt.length} centre${commonInt.length > 1 ? "s" : ""} d'intérêt commun${commonInt.length > 1 ? "s" : ""}`);
+    if (commonVal.length) forts.push(`${commonVal.length} valeur${commonVal.length > 1 ? "s" : ""} commune${commonVal.length > 1 ? "s" : ""}`);
+    if (childA && childA === childB) forts.push("Même vision sur les enfants");
+    if (ageGap !== null && ageGap <= 5) forts.push("Écart d'âge faible");
+    if (!forts.length) forts.push("Profils compatibles selon les critères Moyo Dating");
+    const ref = s.prop?.id ? `MOYO-MI-${String(s.prop.id).slice(0, 8).toUpperCase()}` : `MOYO-MI-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const today = new Date().toLocaleDateString("fr-FR");
+    const esc = (t: any) => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+    const R = "#C0392B"; const GOLD = "#D4A843";
+    const safeName = `${man.name || "homme"}_${woman.name || "femme"}`.replace(/[^a-zA-Z0-9]+/g, "_");
+    const profileCard = (p: any, label: string, proj: string, ints: string[], vals: string[]) => `
+      <div class="pcard">
+        <div class="ptag">${label}</div>
+        <div class="phead">
+          <div class="pphoto">${p.photo_url ? `<img src="${esc(p.photo_url)}" crossorigin="anonymous"/>` : ""}</div>
+          <div class="pinfo">
+            <div class="pname">${esc(p.name)} ${p.is_verified ? "✔" : ""}</div>
+            <div class="pmeta">🎂 ${esc(p.age || "—")} ans</div>
+            <div class="pmeta">📍 ${esc(p.city || "—")}</div>
+            <div class="pmeta">✝ ${esc(p.religion || "—")}</div>
+            <div class="pobj"><b>Objectif :</b> ${esc(proj || "—")}</div>
+          </div>
+        </div>
+        <div class="pdiv"></div>
+        <div class="pline">Profession : <span>${esc(p.profession || "")}</span></div>
+        <div class="pline">Situation familiale : <span></span></div>
+        <div class="ptwo">
+          <div><div class="pst">❤ CENTRES D'INTÉRÊT</div>${(ints.length ? ints : ["—"]).map(i => `<div class="pli">• ${esc(i)}</div>`).join("")}</div>
+          <div><div class="pst">🛡 VALEURS</div>${(vals.length ? vals : ["—"]).map(v => `<div class="pli">• ${esc(v)}</div>`).join("")}</div>
+        </div>
+      </div>`;
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Fiche de compatibilité - ${esc(man.name)} & ${esc(woman.name)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}
+  body{background:#eceef3;color:#1a1a1a;padding:18px;overflow-x:auto}
+  .sheet{width:1040px;margin:0 auto;background:#fff;border:2px solid #1a1a1a;border-radius:14px;overflow:hidden}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 26px 14px}
+  .logo{font-size:1.8rem;font-weight:900;letter-spacing:-1px;display:flex;align-items:center;gap:7px}.logo small{display:block;font-size:.58rem;font-weight:600;color:#888;letter-spacing:0;margin-top:2px}
+  .title{text-align:center;flex:1}.title h1{color:${R};font-size:1.5rem;font-weight:900;letter-spacing:1px}.title h2{color:#888;font-size:.9rem;font-weight:600;letter-spacing:3px}
+  .meta{text-align:right;font-size:.72rem;color:#555;line-height:1.7}.meta b{color:#1a1a1a}
+  .row{display:flex;gap:16px;padding:0 26px}
+  .pcard{flex:1;border:1.5px solid #dcdcdc;border-radius:12px;padding:14px;position:relative}
+  .ptag{position:absolute;top:-11px;left:14px;background:#1a1a1a;color:#fff;font-size:.64rem;font-weight:800;padding:3px 12px;border-radius:50px;letter-spacing:.5px}
+  .phead{display:flex;gap:12px;margin-top:6px}
+  .pphoto{width:78px;height:78px;border-radius:50%;overflow:hidden;background:#eee;border:2px solid #1a1a1a;flex-shrink:0}.pphoto img{width:100%;height:100%;object-fit:cover}
+  .pname{font-size:1.15rem;font-weight:900;color:#1a1a1a}.pmeta{font-size:.74rem;color:#555;margin-top:2px}.pobj{font-size:.74rem;color:#222;margin-top:4px}.pobj b{color:${R}}
+  .pdiv{border-top:1px dashed #d5d5d5;margin:12px 0}
+  .pline{font-size:.74rem;color:#555;margin-bottom:7px}.pline span{display:inline-block;border-bottom:1px solid #ccc;min-width:140px}
+  .ptwo{display:flex;gap:14px;margin-top:6px}.pst{font-size:.66rem;font-weight:800;color:#1a1a1a;margin-bottom:5px}.pli{font-size:.74rem;color:#333;margin-bottom:3px}
+  .center{width:230px;text-align:center;padding-top:8px}
+  .cglobal{font-size:.78rem;font-weight:800;color:#1a1a1a;letter-spacing:1px}
+  .circle{width:130px;height:130px;border-radius:50%;margin:8px auto;display:flex;flex-direction:column;align-items:center;justify-content:center;background:conic-gradient(${R} ${global}%,#eee 0);}
+  .circle .inner{width:104px;height:104px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .circle .pct{font-size:2rem;font-weight:900;color:${R}}
+  .clevel{font-weight:900;color:${R};font-size:.95rem;margin-top:6px}
+  .stars{font-size:1.1rem;color:${R};margin:4px 0}
+  .cnote{font-size:.68rem;color:#888;font-style:italic;margin-top:8px;line-height:1.5;padding:0 6px}
+  .sec{padding:18px 26px 0}
+  .grid2{display:flex;gap:16px}
+  .box{flex:1;border:1.5px solid #dcdcdc;border-radius:12px;padding:14px;margin-top:14px}
+  .box h3{color:#1a1a1a;font-size:.82rem;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:7px;border-left:3px solid ${R};padding-left:8px}
+  .crit{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:.76rem;color:#1a1a1a}
+  .crit .lab{flex:1}.crit .bar{width:120px;height:7px;background:#eee;border-radius:5px;overflow:hidden}.crit .bar i{display:block;height:100%;background:${R}}.crit .sc{width:38px;text-align:right;font-weight:800;color:${R}}
+  .chk{font-size:.78rem;color:#1a1a1a;margin-bottom:7px;display:flex;align-items:center;gap:8px}.chk .ic{color:${R};font-weight:900}
+  .approf{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.approf div{font-size:.74rem;color:#1a1a1a;display:flex;gap:6px;align-items:center}.approf .sq{width:11px;height:11px;border:1.5px solid #aaa;border-radius:3px;flex-shrink:0}
+  .lines div{border-bottom:1px dotted #ccc;height:20px}
+  .dec div{font-size:.76rem;color:#1a1a1a;margin-bottom:7px;display:flex;gap:8px;align-items:center}.dec .sq{width:12px;height:12px;border:1.5px solid #aaa;border-radius:3px}
+  .footer{background:#1a1a1a;color:#fff;text-align:center;padding:12px;font-size:.78rem;font-weight:600;margin-top:18px;display:flex;justify-content:space-between;padding-left:26px;padding-right:26px;border-top:3px solid ${R}}
+  .conf{border:1.5px solid #dcdcdc;border-radius:12px;padding:12px;font-size:.68rem;color:#666;line-height:1.5}.conf b{color:${R};display:block;margin-bottom:4px}
+  .bar-actions{max-width:1040px;margin:0 auto 14px;display:flex;gap:10px;justify-content:flex-end}
+  .btn{background:${R};color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:.85rem;font-weight:700;cursor:pointer}
+  .btn2{background:#fff;color:#1a1a1a;border:1.5px solid #1a1a1a;border-radius:8px;padding:10px 16px;font-size:.85rem;font-weight:700;cursor:pointer}
+  @media print{.bar-actions{display:none}body{background:#fff;padding:0}.sheet{border:none}}
+</style></head><body>
+<div class="bar-actions"><button id="dlbtn" class="btn" onclick="dl()">📥 Télécharger la fiche (PDF)</button><button class="btn2" onclick="window.print()">Imprimer</button></div>
+<div class="sheet" id="sheet">
+  <div class="top">
+    <div class="logo">
+      <div><span style="color:${R}">Moyo</span><span style="color:#1a1a1a;font-size:0.62em;font-weight:600"> Dating</span><small>Construisons des relations qui durent</small></div>
+    </div>
+    <div class="title"><h1>FICHE DE COMPATIBILITÉ</h1><h2>RELATIONNELLE</h2></div>
+    <div class="meta">Date de génération : <b>${today}</b><br/>Référence : <b>${ref}</b></div>
+  </div>
+  <div class="row">
+    ${profileCard(man, "PROFIL HOMME", projA, intA, valA)}
+    <div class="center">
+      <div class="cglobal">COMPATIBILITÉ GLOBALE</div>
+      <div class="circle"><div class="inner"><div class="pct">${global}%</div><div style="font-size:1.1rem">❤</div></div></div>
+      <div class="clevel">${level}</div>
+      <div class="stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</div>
+      <div class="cnote">Cette analyse est basée sur les informations renseignées par les deux profils et les critères de compatibilité Moyo Dating.</div>
+    </div>
+    ${profileCard(woman, "PROFIL FEMME", projB, intB, valB)}
+  </div>
+  <div class="sec"><div class="grid2">
+    <div class="box" style="margin-top:0">
+      <h3>📊 ANALYSE DE COMPATIBILITÉ</h3>
+      ${criteria.map(c => `<div class="crit"><span class="lab">${c.label}</span><span class="bar"><i style="width:${c.score}%"></i></span><span class="sc">${c.score}%</span></div>`).join("")}
+    </div>
+    <div style="flex:1">
+      <div class="box" style="margin-top:0"><h3>✅ POINTS FORTS DU COUPLE</h3>${forts.map(f => `<div class="chk"><span class="ic">✓</span>${esc(f)}</div>`).join("")}</div>
+      <div class="box"><h3>⚠ POINTS À APPROFONDIR</h3><div class="approf">
+        ${["Vision du mariage", "Gestion financière", "Projet de vie commun", "Distance géographique future", "Désir d'enfants", "Compatibilité des caractères"].map(x => `<div><span class="sq"></span>${x}</div>`).join("")}
+      </div></div>
+    </div>
+  </div></div>
+  <div class="sec"><div class="grid2">
+    <div class="box"><h3>✎ OBSERVATIONS DE L'ADMINISTRATEUR</h3><div class="lines"><div></div><div></div><div></div><div></div></div></div>
+    <div class="box"><h3>⚖ DÉCISION MOYO</h3><div class="dec">
+      <div><span class="sq"></span>Mise en relation validée</div>
+      <div><span class="sq"></span>Entretien complémentaire recommandé</div>
+      <div><span class="sq"></span>Mise en relation refusée</div>
+      <div style="margin-top:6px">Commentaire :</div></div>
+      <div class="lines"><div></div><div></div></div>
+    </div>
+  </div></div>
+  <div class="sec"><div class="grid2">
+    <div class="conf" style="flex:1"><b>🔒 CONFIDENTIEL</b>Ce document est strictement confidentiel et destiné uniquement à l'usage interne de Moyo Dating. Ne pas partager avec des tiers sans autorisation.<br/><br/>ID Proposition : <b style="color:${R}">${ref}</b></div>
+    <div class="conf" style="flex:1"><b>✍ SIGNATURE</b>Administrateur Moyo Dating : ____________________<br/><br/>Date : ____ / ____ / ________</div>
+  </div></div>
+  <div class="footer"><span>♥ Moyo</span><span>Construisons des relations qui durent · dating.moyo-congo.com</span><span>Page 1/1</span></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+  function dl(){
+    var btn=document.getElementById('dlbtn');
+    if(typeof html2pdf==='undefined'){ alert("Le module de téléchargement charge encore, réessayez dans 2 secondes (ou utilisez Imprimer)."); return; }
+    var el=document.getElementById('sheet');
+    var prev=btn.textContent; btn.textContent='⏳ Génération du PDF...'; btn.disabled=true;
+    var w=1040, h=el.offsetHeight;
+    html2pdf().set({margin:0, filename:'Fiche_compatibilite_${safeName}.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:1040,width:1040,scrollX:0,scrollY:0}, jsPDF:{unit:'px',format:[w,h],orientation:'p'}}).from(el).save().then(function(){ btn.textContent=prev; btn.disabled=false; }).catch(function(){ btn.textContent=prev; btn.disabled=false; alert("Échec du téléchargement. Utilisez le bouton Imprimer puis « Enregistrer en PDF »."); });
+  }
+</script>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { showToast("Autorisez les pop-ups pour générer la fiche.", "error"); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  };
+
+  const loadArchivedItems = async () => {
+    setMatchArchiveLoading(true);
+    try {
+      // Charger propositions archivées
+      const rProps = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?archived=eq.true&order=created_at.desc&limit=100`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const props = await rProps.json().catch(() => []);
+      // Charger demandes archivées
+      const rReqs = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?archived=eq.true&order=created_at.desc&limit=100`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const reqs = await rReqs.json().catch(() => []);
+      // Charger les profils des demandes
+      const reqUserIds = Array.isArray(reqs) ? reqs.map((r: any) => r.user_id) : [];
+      const profiles: Record<string, string> = {};
+      if (reqUserIds.length > 0) {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${reqUserIds.join(",")})&select=id,name`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await pr.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: any) => { profiles[p.id] = p.name; });
+      }
+      // Charger les profils des propositions
+      const propUserIds = Array.isArray(props) ? [...new Set(props.flatMap((p: any) => [p.user1_id, p.user2_id]))] : [];
+      const propProfiles: Record<string, string> = {};
+      if (propUserIds.length > 0) {
+        const pr2 = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${propUserIds.join(",")})&select=id,name`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata2 = await pr2.json().catch(() => []);
+        if (Array.isArray(pdata2)) pdata2.forEach((p: any) => { propProfiles[p.id] = p.name; });
+      }
+      const items = [
+        ...(Array.isArray(props) ? props.map((p: any) => ({
+          id: p.id, type: "proposal" as const, created_at: p.created_at,
+          label: "Proposition",
+          detail: `${propProfiles[p.user1_id] || "?"} ↔ ${propProfiles[p.user2_id] || "?"} · ${p.status}`
+        })) : []),
+        ...(Array.isArray(reqs) ? reqs.map((r: any) => ({
+          id: r.id, type: "request" as const, created_at: r.created_at,
+          label: "Demande",
+          detail: `${profiles[r.user_id] || "?"} · ${r.target_gender || "?"} · ${r.target_city || "toute ville"}`
+        })) : []),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setArchivedItems(items);
+    } catch {}
+    setMatchArchiveLoading(false);
+  };
+
+  const deleteArchivedItem = async (id: string, type: "proposal" | "request") => {
+    try {
+      const table = type === "proposal" ? "match_proposals" : "match_requests";
+      await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+      });
+      setArchivedItems(prev => prev.filter(i => i.id !== id));
+    } catch { showToast("❌ Erreur suppression", "error"); }
+  };
+
+  const deleteAllArchived = async () => {
+    try {
+      await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/match_proposals?archived=eq.true`, {
+          method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+        }),
+        fetch(`${SUPABASE_URL}/rest/v1/match_requests?archived=eq.true`, {
+          method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+        }),
+      ]);
+      setArchivedItems([]);
+      showToast("✅ Archives vidées", "success");
+    } catch { showToast("❌ Erreur suppression", "error"); }
+  };
+
+  const loadMatchRequests = async () => {
+    setMatchRequestsLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?archived=not.eq.true&order=created_at.desc&limit=100`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      if (!Array.isArray(data)) { setMatchRequestsLoading(false); return; }
+      const ids = [...new Set(data.map((r: any) => r.user_id))];
+      const profiles: Record<string, AdminProfile> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url,gender`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await pr.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
+      }
+      const mapped = data.map((r: any) => ({ ...r, profile: profiles[r.user_id], compatibleProfiles: [], showCompatible: false }));
+      setMatchRequests(mapped);
+      const lastSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
+      setMatchRequestsBadge(mapped.filter((r: any) => new Date(r.created_at) > new Date(lastSeen) && r.status === "pending").length);
+    } catch {}
+    setMatchRequestsLoading(false);
+  };
+
+  const loadCompatibleProfiles = async (req: MatchRequest) => {
+    try {
+      const ageMin = (req.target_age_min || 18) - 2;
+      const ageMax = (req.target_age_max || 99) + 2;
+
+      // Construire les filtres
+      const params: string[] = [
+        `select=id,name,age,city,photo_url,gender`,
+        `age=gte.${ageMin}`,
+        `age=lte.${ageMax}`,
+        `id=neq.${req.user_id}`,
+        `limit=20`,
+      ];
+
+      // Filtrer par genre : genre cible ou opposé du demandeur par défaut
+      if (req.target_gender) {
+        params.push(`gender=eq.${encodeURIComponent(req.target_gender)}`);
+      } else if (req.profile?.gender) {
+        const opposite = req.profile.gender === "Homme" ? "Femme" : "Homme";
+        params.push(`gender=eq.${encodeURIComponent(opposite)}`);
+      }
+
+      // Filtrer STRICTEMENT par ville si précisée
+      if (req.target_city) {
+        params.push(`city=eq.${encodeURIComponent(req.target_city)}`);
+      }
+
+      const query = `${SUPABASE_URL}/rest/v1/profiles?${params.join("&")}`;
+      const r = await fetch(query, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (!Array.isArray(data)) return;
+
+      // Si aucun résultat avec la ville exacte, relancer sans filtre ville (résultats approx)
+      if (Array.isArray(data) && data.length === 0 && req.target_city) {
+        const paramsNoCity = params.filter(p => !p.startsWith("city="));
+        const queryNoCity = `${SUPABASE_URL}/rest/v1/profiles?${paramsNoCity.join("&")}`;
+        const r2 = await fetch(queryNoCity, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data2 = await r2.json().catch(() => []);
+        if (Array.isArray(data2) && data2.length > 0) {
+          // Trier par âge le plus proche
+          const targetAge = req.target_age_min ? (req.target_age_min + (req.target_age_max || req.target_age_min)) / 2 : 25;
+          const sorted2 = [...data2].sort((a: any, b: any) => Math.abs(a.age - targetAge) - Math.abs(b.age - targetAge));
+          setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: sorted2, showCompatible: true, compatibleNote: `Aucun profil à ${req.target_city}, voici des profils similaires` } : mr));
+          return;
+        }
+      }
+
+      // Trier par âge le plus proche de la cible
+      const targetAge = req.target_age_min ? (req.target_age_min + (req.target_age_max || req.target_age_min)) / 2 : 25;
+      const sorted = [...data].sort((a: any, b: any) => Math.abs(a.age - targetAge) - Math.abs(b.age - targetAge));
+
+      setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: sorted, showCompatible: true, compatibleNote: undefined } : mr));
+    } catch {}
+  };
+
+  const updateRequestStatus = async (reqId: string, status: MatchRequest["status"]) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/match_requests?id=eq.${reqId}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ status })
+      });
+      setMatchRequests(prev => prev.map(r => r.id === reqId ? { ...r, status } : r));
+      logAdminAction(auth.token, auth.userId, auth.name, `Demande de mise en relation ${status === "processing" ? "prise en charge" : status === "done" ? "traitée" : "annulée"}`, reqId);
+    } catch {}
+  };
+  const [createSearch1, setCreateSearch1] = useState("");
+  const [createSearch2, setCreateSearch2] = useState("");
+  const [createResults1, setCreateResults1] = useState<AdminProfile[]>([]);
+  const [createResults2, setCreateResults2] = useState<AdminProfile[]>([]);
+  const [createSelected1, setCreateSelected1] = useState<AdminProfile | null>(null);
+  const [createSelected2, setCreateSelected2] = useState<AdminProfile | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [proposeSearch1, setProposeSearch1] = useState("");
+  const [proposeSearch2, setProposeSearch2] = useState("");
+  const [proposeResults1, setProposeResults1] = useState<AdminProfile[]>([]);
+  const [proposeResults2, setProposeResults2] = useState<AdminProfile[]>([]);
+  const [proposeSelected1, setProposeSelected1] = useState<AdminProfile | null>(null);
+  const [proposeSelected2, setProposeSelected2] = useState<AdminProfile | null>(null);
+  const [proposeP1Locked, setProposeP1Locked] = useState(false);
+  const [proposeDuration, setProposeDuration] = useState("48");
+  const [proposeLoading, setProposeLoading] = useState(false);
+
+  // Charge la liste générale des profils (pour Personne 1, dès l'ouverture de la modale)
+  const loadAllProfilesForMatch = async (): Promise<AdminProfile[]> => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,name,age,city,photo_url,gender&is_complete=eq.true&order=last_seen.desc.nullslast&limit=300`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
+  };
+
+  // Ouvre la modale en mode "Nouvelle proposition" : Personne 1 = liste complète, Personne 2 = vide tant que P1 non choisie
+  const openProposeNew = async () => {
+    setProposeSelected1(null);
+    setProposeSelected2(null);
+    setProposeSearch1("");
+    setProposeSearch2("");
+    setProposeResults2([]);
+    setProposeP1Locked(false);
+    setShowProposeMatch(true);
+    const list = await loadAllProfilesForMatch();
+    setProposeResults1(list);
+  };
+
+  // Charge jusqu'à 200 profils du genre opposé (pour le raccourci "Proposer" depuis une carte)
+  const loadOppositeGenderProfiles = async (gender: string, excludeId: string): Promise<AdminProfile[]> => {
+    try {
+      const opposite = gender === "Homme" ? "Femme" : gender === "Femme" ? "Homme" : null;
+      const genderFilter = opposite ? `&gender=eq.${encodeURIComponent(opposite)}` : "";
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,name,age,city,photo_url,gender&id=neq.${excludeId}${genderFilter}&is_complete=eq.true&order=last_seen.desc.nullslast&limit=200`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
+  };
+
+  // Raccourci : ouvre la modale de proposition avec Personne 1 pré-remplie (depuis une carte utilisateur)
+  const openProposeFromCard = async (u: AdminProfile) => {
+    setProposeSelected1(u);
+    setProposeSelected2(null);
+    setProposeSearch1("");
+    setProposeSearch2("");
+    setProposeResults1([]);
+    setProposeP1Locked(true);
+    setShowProposeMatch(true);
+    const list = await loadOppositeGenderProfiles(u.gender, u.id);
+    setProposeResults2(list);
+  };
+
+  const searchProfilesForMatch = async (query: string): Promise<AdminProfile[]> => {
+    if (!query.trim()) return [];
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(query)}*&select=id,name,age,city,photo_url&limit=6`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    });
+    const data = await r.json().catch(() => []);
+    return Array.isArray(data) ? data : [];
+  };
+
+  // Annuler (dissoudre) un match côté admin — supprime match, messages, likes mutuels et vues
+  const adminCancelMatch = async (m: { id: string; user1?: string; user2?: string }) => {
+    const u1 = m.user1, u2 = m.user2;
+    try {
+      // Supprimer les messages de ce match
+      await fetch(`${SUPABASE_URL}/rest/v1/messages?match_id=eq.${m.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      // Supprimer le match (dans les deux sens par sécurité), puis likes et vues mutuels
+      const reqs: Promise<any>[] = [
+        fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${m.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" } }),
+      ];
+      if (u1 && u2) {
+        reqs.push(
+          fetch(`${SUPABASE_URL}/rest/v1/likes?from_user=eq.${u1}&to_user=eq.${u2}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+          fetch(`${SUPABASE_URL}/rest/v1/likes?from_user=eq.${u2}&to_user=eq.${u1}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+          fetch(`${SUPABASE_URL}/rest/v1/profile_views?viewer_id=eq.${u1}&viewed_id=eq.${u2}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+          fetch(`${SUPABASE_URL}/rest/v1/profile_views?viewer_id=eq.${u2}&viewed_id=eq.${u1}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+        );
+      }
+      const [matchDel] = await Promise.all(reqs);
+      const deleted = await matchDel.json().catch(() => []);
+      if (!matchDel.ok || !Array.isArray(deleted) || deleted.length === 0) {
+        showToast("Annulation impossible (droits insuffisants côté Supabase).", "error");
+        return;
+      }
+      setMatchList(prev => prev.filter(x => x.id !== m.id));
+      logAdminAction(auth.token, auth.userId, auth.name, `Match annulé : ${m.user1 || "?"} ↔ ${m.user2 || "?"}`, m.user1);
+      showToast("Match annulé. Les deux personnes ne sont plus en relation.", "success");
+    } catch {
+      showToast("Erreur réseau lors de l'annulation.", "error");
+    }
+  };
+
+  const loadMatchListData = async () => {
+    setMatchListLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,created_at,user1,user2&order=created_at.desc&limit=200`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      if (!Array.isArray(data)) { setMatchListLoading(false); return; }
+      const ids = [...new Set(data.flatMap((m: any) => [m.user1, m.user2]))];
+      const profiles: Record<string, AdminProfile> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await pr.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
+      }
+      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, user1: m.user1, user2: m.user2, profile1: profiles[m.user1], profile2: profiles[m.user2] })));
+    } catch {}
+    setMatchListLoading(false);
+  };
+
+  const loadProposals = async () => {
+    setProposalsLoading(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&expires_at=lt.${new Date().toISOString()}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ status: "expired" })
+      });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?archived=not.eq.true&order=created_at.desc&limit=100`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      if (!Array.isArray(data)) { setProposalsLoading(false); return; }
+      const ids = [...new Set(data.flatMap((p: any) => [p.user1_id, p.user2_id]))];
+      const profiles: Record<string, AdminProfile> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await pr.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
+      }
+      const mapped = data.filter((p: any) => p.origin !== "matchmaking").map((p: any) => ({ ...p, profile1: profiles[p.user1_id], profile2: profiles[p.user2_id] }));
+      setProposals(mapped);
+      // Badge = propositions ayant reçu une réponse (acceptée ou refusée) non encore vues
+      const lastSeen = localStorage.getItem("moyo_proposals_seen") || "1970-01-01";
+      const newResponses = mapped.filter((p: any) =>
+        (p.status === "accepted" || p.status === "refused") &&
+        (p.user1_response || p.user2_response)
+      ).filter((p: any) => {
+        // Considérer comme "nouveau" si la proposition est plus récente que la dernière visite
+        const refDate = p.updated_at || p.created_at;
+        return new Date(refDate) > new Date(lastSeen);
+      }).length;
+      setProposalsBadgeCount(newResponses);
+    } catch {}
+    setProposalsLoading(false);
+  };
+
+  // ── Suivi des couples issus du MATCHMAKING (origin = "matchmaking") ──
+  const loadMmFollow = async () => {
+    setMmFollowLoading(true);
+    try {
+      // Expirer les propositions matchmaking échues
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&origin=eq.matchmaking&expires_at=lt.${new Date().toISOString()}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ status: "expired" })
+      });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?origin=eq.matchmaking&or=(archived.is.null,archived.eq.false)&order=created_at.desc&limit=200`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => null);
+      if (!Array.isArray(data)) {
+        showToast("Erreur chargement du suivi : " + (data?.message || data?.code || "réponse inattendue de la base (vérifie la colonne 'origin')"), "error");
+        setMmFollowLoading(false); return;
+      }
+      const ids = [...new Set(data.flatMap((p: any) => [p.user1_id, p.user2_id]))];
+      const profiles: Record<string, AdminProfile> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const pdata = await pr.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
+      }
+      // Noms des admins ayant proposé (created_by)
+      const adminIds = [...new Set(data.map((p: any) => p.created_by).filter(Boolean))] as string[];
+      const names: Record<string, string> = {};
+      if (adminIds.length) {
+        const ar = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${adminIds.join(",")})&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const adata = await ar.json().catch(() => []);
+        if (Array.isArray(adata)) adata.forEach((a: any) => { names[a.id] = a.name; });
+      }
+      setMmAdminNames(names);
+      setMmFollow(data.map((p: any) => ({ ...p, profile1: profiles[p.user1_id], profile2: profiles[p.user2_id] })));
+    } catch (e: any) { showToast("Erreur réseau (suivi) : " + (e?.message || "inconnue"), "error"); }
+    setMmFollowLoading(false);
+  };
+  const isSameGenderBlocked = async (): Promise<boolean> => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like&select=value&limit=1`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      return Array.isArray(data) && data[0]?.value === "true";
+    } catch { return false; }
+  };
+
+  const getGenders = async (id1: string, id2: string): Promise<{ g1: string; g2: string }> => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${id1},${id2})&select=id,gender`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      });
+      const data = await r.json().catch(() => []);
+      const map: Record<string, string> = {};
+      if (Array.isArray(data)) data.forEach((p: any) => { map[p.id] = p.gender; });
+      return { g1: map[id1] || "", g2: map[id2] || "" };
+    } catch { return { g1: "", g2: "" }; }
+  };
+
+  const doCreateMatchFinal = async () => {
+    if (!createSelected1 || !createSelected2) return;
+    setCreateLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+        body: JSON.stringify({ user1: createSelected1.id, user2: createSelected2.id })
+      });
+      const matchData = await r.json().catch(() => null);
+      const matchId = Array.isArray(matchData) ? matchData[0]?.id : matchData?.id;
+      // Ne jamais afficher un succès si l'insertion a réellement échoué
+      // (ex: policy RLS qui bloque l'admin car user1/user2 ≠ son propre auth.uid()).
+      if (!r.ok || !matchId) {
+        const errMsg = (matchData as any)?.message || (matchData as any)?.hint || (matchData as any)?.code || `HTTP ${r.status}`;
+        throw new Error(errMsg);
+      }
+      await sendMatchWelcomeMessage(auth.token, matchId, createSelected1.name, createSelected2.name);
+      showToast(`✅ Match créé entre ${createSelected1.name} et ${createSelected2.name} !`, "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Match créé manuellement entre ${createSelected1.name} et ${createSelected2.name}`, createSelected1.id);
+      setShowCreateMatch(false);
+      setCreateSelected1(null); setCreateSelected2(null);
+      setCreateSearch1(""); setCreateSearch2("");
+    } catch (e: any) { showToast(`❌ Erreur lors de la création : ${e?.message || "inconnue"}`, "error"); }
+    setCreateLoading(false);
+  };
+  const handleCreateMatch = async () => {
+    if (!createSelected1 || !createSelected2) return;
+    if (createSelected1.id === createSelected2.id) { showToast("❌ Impossible de matcher quelqu'un avec lui-même", "error"); return; }
+    // Vérifier même genre si toggle activé
+    const { g1, g2 } = await getGenders(createSelected1.id, createSelected2.id);
+    if (g1 && g2 && g1 === g2 && await isSameGenderBlocked()) {
+      showToast(`❌ Même genre (${g1}). Désactivez "Bloquer like même genre" dans Configuration pour créer ce match.`, "error");
+      return;
+    }
+    setCreateLoading(true);
+    const v = await coupleGuard(createSelected1.id, createSelected2.id, createSelected1.name, createSelected2.name);
+    setCreateLoading(false);
+    // Déjà en relation → blocage ferme
+    if (v.reason === "match") { showToast(v.message!, "error"); return; }
+    // Proposition en cours ou historique → on avertit mais on autorise la création directe (action manuelle volontaire)
+    if (v.kind === "block" || v.kind === "warn") {
+      const msg = v.reason === "pending"
+        ? `⚠️ Une proposition est déjà en cours pour ${createSelected1.name} et ${createSelected2.name}.\n\nCréer quand même le match directement ?`
+        : v.message!;
+      setConfirmModal({ msg, onConfirm: () => doCreateMatchFinal() });
+      return;
+    }
+    doCreateMatchFinal();
+  };
+
+  // Création effective de la proposition (appelée directement ou après confirmation)
+  const doCreateProposal = async () => {
+    if (!proposeSelected1 || !proposeSelected2) return;
+    setProposeLoading(true);
+    try {
+      const expiresAt = new Date(Date.now() + parseInt(proposeDuration) * 3600 * 1000).toISOString();
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ user1_id: proposeSelected1.id, user2_id: proposeSelected2.id, expires_at: expiresAt, created_by: auth.userId, source: "moyo" })
+      });
+      showToast("✅ Proposition envoyée !", "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Proposition de match envoyée : ${proposeSelected1.name} ↔ ${proposeSelected2.name} (expire dans ${proposeDuration}h)`, proposeSelected1.id);
+      setShowProposeMatch(false);
+      setProposeSelected1(null); setProposeSelected2(null);
+      setProposeSearch1(""); setProposeSearch2("");
+      loadProposals();
+    } catch { showToast("❌ Erreur lors de la proposition", "error"); }
+    setProposeLoading(false);
+  };
+
+  const handleProposeMatch = async () => {
+    if (!proposeSelected1 || !proposeSelected2) return;
+    if (proposeSelected1.id === proposeSelected2.id) { showToast("❌ Impossible de proposer quelqu'un avec lui-même", "error"); return; }
+    // Vérifier même genre si toggle activé
+    const { g1, g2 } = await getGenders(proposeSelected1.id, proposeSelected2.id);
+    if (g1 && g2 && g1 === g2 && await isSameGenderBlocked()) {
+      showToast(`❌ Même genre (${g1}). Désactivez "Bloquer like même genre" dans Configuration pour proposer ce match.`, "error");
+      return;
+    }
+    setProposeLoading(true);
+    const v = await coupleGuard(proposeSelected1.id, proposeSelected2.id, proposeSelected1.name, proposeSelected2.name);
+    setProposeLoading(false);
+    if (v.kind === "block") { showToast(v.message!, "error"); return; }
+    if (v.kind === "warn") { setConfirmModal({ msg: v.message!, onConfirm: () => doCreateProposal() }); return; }
+    doCreateProposal();
+  };
+
+  // ── Supprimer une proposition (refusée/expirée/acceptée) ──
+  const handleDeleteProposal = async (proposalId: string) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${proposalId}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+      });
+      setProposals(prev => prev.filter(p => p.id !== proposalId));
+      showToast("✅ Proposition supprimée", "success");
+    } catch { showToast("❌ Erreur suppression", "error"); }
+  };
+
+  // ── Annuler une proposition côté admin ──
+  const handleCancelProposal = async (proposalId: string) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${proposalId}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ status: "expired" })
+      });
+      showToast("✅ Proposition annulée", "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Proposition de match annulée (id: ${proposalId.slice(0,8)}...)`, undefined);
+      loadProposals();
+    } catch { showToast("❌ Erreur lors de l'annulation", "error"); }
+  };
+
+  // ── Vue & tri utilisateurs admin ──
+  const [usersViewMode, setUsersViewMode] = useState<"grid" | "list">("grid");
+  const [usersSort, setUsersSort] = useState<"created_at.desc" | "created_at.asc" | "name.asc" | "name.desc" | "last_seen.desc" | "age.asc" | "age.desc" | "online" | "premium" | "lifetime" | "admin" | "verified" | "banned" | "male" | "female">("created_at.desc");
+  const [adminViewedProfile, setAdminViewedProfile] = useState<Profile | null>(null);
+  const openAdminProfile = async (userId: string) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies,created_at,last_seen`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data) && data[0]) setAdminViewedProfile(data[0]);
+    } catch {}
+  };
+  // ── Sélection multiple ──
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [showIncomplete, setShowIncomplete] = useState(false);
+  const toggleSelectUser = (id: string) => setSelectedUsers(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const selectAll = (userList: AdminProfile[]) => setSelectedUsers(new Set(userList.filter(u => u.id !== auth.userId).map(u => u.id)));
+  const deselectAll = () => setSelectedUsers(new Set());
+  const bulkDelete = async () => {
+    if (selectedUsers.size === 0) return;
+    const iAmSuperAdmin = (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID;
+    setBulkDeleting(true);
+    let count = 0, skipped = 0;
+    for (const id of Array.from(selectedUsers)) {
+      const u = users.find(x => x.id === id);
+      if (!u) continue;
+      // Un admin simple ne peut pas supprimer un Super Admin
+      if ((u as any).admin_level === "superadmin" && !iAmSuperAdmin) { skipped++; continue; }
+      try { await deleteAccount(u); count++; } catch {}
+    }
+    setSelectedUsers(new Set());
+    setBulkDeleting(false);
+    showToast(`${count} profil(s) supprimé(s).${skipped > 0 ? ` ${skipped} Super Admin(s) ignoré(s).` : ""}`, "success");
+    loadUsers(userSearch, userPage, usersSort, userSearchEmail);
+  };
+
+
+  // ── Avis utilisateurs ──
+  type ReviewRow = { id: string; user_id: string; rating: number; comment?: string; is_read?: boolean; is_featured?: boolean; created_at: string; updated_at: string; profile?: { name: string; city?: string; gender?: string } };
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [payments, setPayments] = useState<PaymentRequest[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [archivedPayments, setArchivedPayments] = useState<PaymentRequest[]>([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [paymentSubTab, setPaymentSubTab] = useState<"pending" | "treated" | "finance" | "archive">("pending");
+  const [financeRows, setFinanceRows] = useState<PaymentRequest[]>([]);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeResetAt, setFinanceResetAt] = useState("");
+  const [financeExcluded, setFinanceExcluded] = useState<Set<string>>(new Set());
+  const [financeOpenMonth, setFinanceOpenMonth] = useState("");
+  const [financeCounts, setFinanceCounts] = useState<{ pending: number; approved: number; rejected: number }>({ pending: 0, approved: 0, rejected: 0 });
+  const [financeCurrency, setFinanceCurrency] = useState<"XAF" | "EUR">("XAF");
+  const [financeNames, setFinanceNames] = useState<Record<string, string>>({});
+  const [archiveSelectMode, setArchiveSelectMode] = useState(false);
+  const [selectedArchiveIds, setSelectedArchiveIds] = useState<Set<string>>(new Set());
+
+  // ════════ BUDGET : sous-onglet principal (Recettes / Dépenses / Résultat net) ════════
+  // "Recettes" = ancien module Paiements (inchangé). "Dépenses" et "Résultat net" = nouveaux.
+  type BudgetTab = "recettes" | "depenses" | "resultat";
+  const [budgetTab, setBudgetTab] = useState<BudgetTab>("recettes");
+  type FeeType = "ponctuel" | "quotidien";
+  type Expense = { id: string; date: string; category: string; label: string; amount: number; currency: string; fee_type: FeeType; entered_by?: string; comment?: string; created_at?: string };
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expensesLoading, setExpensesLoading] = useState(false);
+  // Formulaire d'ajout / modification (null = fermé)
+  const emptyExpenseForm = (): Expense => ({ id: "", date: new Date().toISOString().slice(0, 10), category: "Marketing", label: "", amount: 0, currency: "EUR", fee_type: "ponctuel", entered_by: auth.name, comment: "" });
+  const [expenseForm, setExpenseForm] = useState<Expense | null>(null);
+  const [expenseSaving, setExpenseSaving] = useState(false);
+  // Filtres Dépenses
+  const [expFrom, setExpFrom] = useState("");
+  const [expTo, setExpTo] = useState("");
+  const [expCatFilter, setExpCatFilter] = useState("");
+  // Résultat net : période + devise d'affichage
+  const [budgetCurrency, setBudgetCurrency] = useState<"EUR" | "XAF">("EUR");
+  const [resultPeriod, setResultPeriod] = useState<"today" | "month" | "year" | "all" | "custom">("month");
+  const [resultFrom, setResultFrom] = useState("");
+  const [resultTo, setResultTo] = useState("");
+  type AdminLog = { id: string; admin_id: string; admin_name: string; action: string; target_user_id?: string; target_user_name?: string; created_at: string };
+  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsPeriod, setLogsPeriod] = useState<"today" | "7d" | "30d" | "all">("7d");
+  const [logSelectMode, setLogSelectMode] = useState(false);
+  const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set());
+  const loadAdminLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/admin_logs?select=id,admin_id,admin_name,action,target_user_id,created_at&order=created_at.desc&limit=1000`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data)) setAdminLogs(data);
+    } catch {}
+    setLogsLoading(false);
+  };
+  const clearAdminLogs = async () => {
+    try {
+      // Supprimer tous les logs un par un depuis le state local
+      const ids = adminLogs.map(l => l.id);
+      await Promise.all(ids.map(id =>
+        fetch(`${SUPABASE_URL}/rest/v1/admin_logs?id=eq.${id}`, {
+          method: "DELETE",
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+        })
+      ));
+      setAdminLogs([]);
+      showToast("Historique admin effacé.", "success");
+    } catch {
+      showToast("Erreur lors de la suppression des logs.", "error");
+    }
+  };
+  const deleteOneAdminLog = async (id: string) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/admin_logs?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+      });
+      setAdminLogs(prev => prev.filter(l => l.id !== id));
+      showToast("Action supprimée de l'historique.", "success");
+    } catch {
+      showToast("Erreur lors de la suppression.", "error");
+    }
+  };
+  const toggleLogSelect = (id: string) => setSelectedLogIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelectAllLogs = () => setSelectedLogIds(prev => prev.size === adminLogs.length ? new Set() : new Set(adminLogs.map(l => l.id)));
+  const deleteSelectedAdminLogs = async () => {
+    const ids = Array.from(selectedLogIds);
+    if (ids.length === 0) return;
+    try {
+      // Suppression par lots (1 requête pour 50 ids) au lieu d'un appel par ligne
+      const CHUNK = 50;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const batch = ids.slice(i, i + CHUNK).join(",");
+        await fetch(`${SUPABASE_URL}/rest/v1/admin_logs?id=in.(${batch})`, {
+          method: "DELETE",
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }
+        });
+      }
+      setAdminLogs(prev => prev.filter(l => !selectedLogIds.has(l.id)));
+      const n = ids.length;
+      setSelectedLogIds(new Set());
+      setLogSelectMode(false);
+      showToast(`${n} action${n > 1 ? "s" : ""} supprimée${n > 1 ? "s" : ""}.`, "success");
+    } catch {
+      showToast("Erreur lors de la suppression groupée.", "error");
+    }
+  };
+  const [viewPaymentProfile, setViewPaymentProfile] = useState<Profile | null>(null);
+  const openPaymentProfile = async (userId: string) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data) && data[0]) setViewPaymentProfile(data[0]);
+    } catch {}
+  };
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+  const [featurePendingCount, setFeaturePendingCount] = useState(0);
+  const [proposalsBadgeCount, setProposalsBadgeCount] = useState(0);
+  const [appointmentsPendingCount, setAppointmentsPendingCount] = useState(0);
+
+  const loadPayments = async () => {
+    setPaymentsLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name,archived,currency,kind,appointment_id&status=neq.deleted&archived=eq.false&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data)) {
+        setPayments(data);
+        setPendingPaymentsCount(data.filter((p: PaymentRequest) => p.status === "pending").length);
+      }
+    } catch {}
+    setPaymentsLoading(false);
+  };
+  const activatePayment = async (p: PaymentRequest) => {
+    // ── Paiement d'un RENDEZ-VOUS à l'agence : on NE touche PAS au Premium ──
+    if (p.kind === "appointment") {
+      if (p.appointment_id) {
+        await fetch(`${SUPABASE_URL}/rest/v1/appointments?id=eq.${p.appointment_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ payment_status: "valide", updated_at: new Date().toISOString() }) }).catch(() => {});
+      }
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
+      fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?transaction_id=eq.${encodeURIComponent(p.tx_ref)}&status=eq.pending`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "verified_manually" }) }).catch(() => {});
+      logAdminAction(auth.token, auth.userId, auth.name, `Paiement RDV agence validé - réf: ${p.tx_ref}`, p.user_id);
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre paiement pour le rendez-vous à l'agence a bien été reçu. Notre équipe vous confirmera un créneau prochainement. 🗓", warning_number: 0, acknowledged: false }) });
+      showToast("Paiement du rendez-vous validé.", "success");
+      loadPayments();
+      return;
+    }
+    // ── Paiement Premium (comportement habituel) ──
+    const premiumUntil = new Date(Date.now() + premiumMsForAmount(p.amount)).toISOString();
+    const targetId = p.gift_for || p.user_id;
+    await adminAction(targetId, { is_premium: true, premium_until: premiumUntil, premium_is_gift: false }, `Premium activé.`);
+    logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} - payé par ${p.user_id}` : `Premium activé - réf: ${p.tx_ref}`, targetId);
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
+    // Met à jour la file de vérification manuelle (validation humaine).
+    fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?transaction_id=eq.${encodeURIComponent(p.tx_ref)}&status=eq.pending`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "verified_manually" }) }).catch(() => {});
+    try {
+      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${targetId}&select=referred_by,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const profileData = await profileRes.json().catch(() => []);
+      if (Array.isArray(profileData) && profileData[0]?.referred_by) {
+        const parrain = profileData[0].referred_by;
+        const filleulName = profileData[0].name || "votre filleul";
+        const parrainRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}&select=premium_until,is_premium`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const parrainData = await parrainRes.json().catch(() => []);
+        if (Array.isArray(parrainData) && parrainData[0]) {
+          const bonusDays = referralBonusForAmount(p.amount);
+          if (bonusDays > 0) {
+            const base = parrainData[0].premium_until && new Date(parrainData[0].premium_until) > new Date() ? new Date(parrainData[0].premium_until) : new Date();
+            const newUntil = new Date(base.getTime() + bonusDays * 24 * 60 * 60 * 1000).toISOString();
+            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: true, premium_until: newUntil }) });
+            await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: parrain, admin_id: auth.userId, reason: `Votre filleul ${filleulName} vient de passer Premium ! Vous gagnez ${bonusDays} jour${bonusDays > 1 ? "s" : ""} de Premium offert${bonusDays > 1 ? "s" : ""}. Actualisez l'application pour en profiter 🌟`, warning_number: 0, acknowledged: false }) });
+          }
+        }
+      }
+    } catch {}
+    // Notifier le destinataire
+    // Récupérer le nom de l'acheteur pour personnaliser le message cadeau
+    let giftSenderName = p.gift_for_name ? "" : "";
+    if (p.gift_for) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${p.user_id}&select=name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const d = await r.json().catch(() => []);
+        if (Array.isArray(d) && d[0]?.name) giftSenderName = d[0].name;
+      } catch {}
+    }
+    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `🎁 Vous avez reçu 1 mois de Premium en cadeau offert par ${giftSenderName || "un membre Moyo Dating"} ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟` : "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟", warning_number: 0, acknowledged: false }) });
+    // Si cadeau, notifier aussi l'acheteur
+    if (p.gift_for) {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: `Votre cadeau Premium pour ${p.gift_for_name || "votre match"} a bien été activé !`, warning_number: 0, acknowledged: false }) });
+    }
+    loadPayments();
+  };
+  const rejectPayment = async (p: PaymentRequest) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "rejected" }) });
+    fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?transaction_id=eq.${encodeURIComponent(p.tx_ref)}&status=eq.pending`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "rejected" }) }).catch(() => {});
+    logAdminAction(auth.token, auth.userId, auth.name, `Paiement rejeté - réf: ${p.tx_ref} - ${p.operator}`, p.user_id);
+    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre preuve de paiement n'a pas pu être vérifiée. Le numéro de transaction ne correspond pas. Veuillez vérifier vos informations de paiement.", warning_number: 0, acknowledged: false }) });
+    loadPayments();
+  };
+  // Archiver = ranger dans l'onglet Archivage. Le statut (approved/rejected) et le Premium restent INCHANGÉS,
+  // pour que le chiffre d'affaires reste exact. Le retrait de Premium se fait depuis l'onglet Utilisateurs.
+  const archivePayment = async (p: PaymentRequest) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ archived: true }) });
+    logAdminAction(auth.token, auth.userId, auth.name, `Paiement archivé - réf: ${p.tx_ref}`, p.user_id);
+    showToast("Paiement archivé.", "success");
+    loadPayments();
+  };
+  const loadArchived = async () => {
+    setArchivedLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,currency&or=(status.eq.deleted,archived.eq.true)&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data)) setArchivedPayments(data);
+    } catch {}
+    setArchivedLoading(false);
+  };
+  const deleteArchivedOne = async (p: PaymentRequest) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" } });
+      const deleted = await r.json().catch(() => []);
+      if (!r.ok || !Array.isArray(deleted) || deleted.length === 0) {
+        showToast("Suppression impossible (droits insuffisants). Vérifiez l'autorisation DELETE sur payment_requests dans Supabase.", "error");
+        return;
+      }
+      setArchivedPayments(prev => prev.filter(a => a.id !== p.id));
+      showToast("Entrée supprimée définitivement.", "success");
+    } catch {
+      showToast("Erreur réseau lors de la suppression.", "error");
+    }
+  };
+  const deleteArchivedAll = async () => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?or=(status.eq.deleted,archived.eq.true)`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" } });
+      const deleted = await r.json().catch(() => []);
+      if (!r.ok || !Array.isArray(deleted)) { showToast("Suppression impossible.", "error"); return; }
+      if (deleted.length === 0) { showToast("Aucune entrée supprimée (droits insuffisants côté Supabase).", "error"); await loadArchived(); return; }
+      setArchivedPayments([]);
+      setArchiveSelectMode(false); setSelectedArchiveIds(new Set());
+      showToast(`${deleted.length} entrée${deleted.length > 1 ? "s" : ""} supprimée${deleted.length > 1 ? "s" : ""} définitivement.`, "success");
+    } catch {
+      showToast("Erreur réseau lors de la suppression.", "error");
+    }
+  };
+  const toggleArchiveSelect = (id: string) => setSelectedArchiveIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelectAllArchive = () => setSelectedArchiveIds(prev => prev.size === archivedPayments.length ? new Set() : new Set(archivedPayments.map(a => a.id)));
+  const deleteSelectedArchived = async () => {
+    const ids = Array.from(selectedArchiveIds);
+    if (ids.length === 0) return;
+    try {
+      let totalDeleted = 0;
+      const CHUNK = 50;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const batch = ids.slice(i, i + CHUNK).join(",");
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=in.(${batch})`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" } });
+        const del = await r.json().catch(() => []);
+        if (Array.isArray(del)) totalDeleted += del.length;
+      }
+      if (totalDeleted === 0) {
+        showToast("Aucune entrée supprimée (droits DELETE manquants sur Supabase).", "error");
+        await loadArchived();
+        return;
+      }
+      setArchivedPayments(prev => prev.filter(a => !selectedArchiveIds.has(a.id)));
+      setSelectedArchiveIds(new Set());
+      setArchiveSelectMode(false);
+      showToast(`${totalDeleted} entrée${totalDeleted > 1 ? "s" : ""} supprimée${totalDeleted > 1 ? "s" : ""} définitivement.`, "success");
+    } catch {
+      showToast("Erreur réseau lors de la suppression groupée.", "error");
+    }
+  };
+  const loadFinance = async () => {
+    setFinanceLoading(true);
+    try {
+      const rs = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(finance_reset_at,finance_excluded_ids)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const sd = await rs.json().catch(() => []);
+      const smap: Record<string, string> = {};
+      if (Array.isArray(sd)) sd.forEach((row: any) => { if (row?.key) smap[row.key] = row.value; });
+      setFinanceResetAt(smap["finance_reset_at"] || "");
+      try { const ex = smap["finance_excluded_ids"] ? JSON.parse(smap["finance_excluded_ids"]) : []; setFinanceExcluded(new Set(Array.isArray(ex) ? ex : [])); } catch { setFinanceExcluded(new Set()); }
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,tx_ref,amount,approved_at,created_at,operator,gift_for,gift_for_name,currency&status=eq.approved&order=approved_at.desc&limit=1000`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const data = await r.json().catch(() => []);
+      if (Array.isArray(data)) {
+        setFinanceRows(data);
+        // Noms des payeurs (pour le bloc récent + le classement), via une requête groupée par IDs
+        const ids = Array.from(new Set(data.map((d: any) => d.user_id).filter(Boolean)));
+        if (ids.length > 0) {
+          try {
+            const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+            const pd = await pr.json().catch(() => []);
+            const nm: Record<string, string> = {};
+            if (Array.isArray(pd)) pd.forEach((u: any) => { if (u?.id) nm[u.id] = u.name || ""; });
+            setFinanceNames(nm);
+          } catch {}
+        }
+      }
+      // Indicateurs de conversion : comptage de tous les statuts (requête légère, head only)
+      try {
+        const counts: any = { pending: 0, approved: 0, rejected: 0 };
+        for (const st of ["pending", "approved", "rejected"]) {
+          const cr = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id&status=eq.${st}`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range-Unit": "items", "Range": "0-0" } });
+          const cr_range = cr.headers.get("content-range");
+          counts[st] = cr_range && cr_range.includes("/") ? parseInt(cr_range.split("/")[1]) || 0 : 0;
+        }
+        setFinanceCounts(counts);
+      } catch {}
+    } catch {}
+    setFinanceLoading(false);
+  };
+  const resetFinance = async () => {
+    const now = new Date().toISOString();
+    await saveSetting("finance_reset_at", now, auth.token);
+    setFinanceResetAt(now);
+    logAdminAction(auth.token, auth.userId, auth.name, "Statistiques financières réinitialisées", auth.userId);
+    showToast("Données financières réinitialisées à partir d'aujourd'hui.", "success");
+  };
+  const toggleFinanceExclude = async (pid: string, txRef: string) => {
+    const next = new Set(financeExcluded);
+    const willExclude = !next.has(pid);
+    if (willExclude) next.add(pid); else next.delete(pid);
+    setFinanceExcluded(next);
+    await saveSetting("finance_excluded_ids", JSON.stringify(Array.from(next)), auth.token);
+    logAdminAction(auth.token, auth.userId, auth.name, willExclude ? `Paiement exclu du CA (test) - réf: ${txRef}` : `Paiement réintégré au CA - réf: ${txRef}`, auth.userId);
+    showToast(willExclude ? "Paiement exclu du chiffre d'affaires." : "Paiement réintégré au chiffre d'affaires.", "success");
+  };
+  const exportFinanceCSV = () => {
+    const reset = financeResetAt ? new Date(financeResetAt).getTime() : 0;
+    const rows = financeRows.filter(r => new Date(r.approved_at || r.created_at).getTime() >= reset);
+    const esc = (v: any) => { const str = String(v ?? ""); return /[",;\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str; };
+    const header = ["Date", "Utilisateur", "Type", "Operateur", "Devise", "Reference", "Montant", "Exclu_du_CA"];
+    const lines = rows.map(r => [
+      new Date(r.approved_at || r.created_at).toLocaleDateString("fr-FR"),
+      financeNames[r.user_id] || r.user_id,
+      r.gift_for ? "Cadeau" : "Premium",
+      r.operator,
+      paymentCurrency(r) === "EUR" ? "EUR" : "FCFA",
+      r.tx_ref,
+      r.amount || 0,
+      financeExcluded.has(r.id) ? "oui" : "non",
+    ].map(esc).join(";"));
+    const csv = "\uFEFF" + [header.join(";"), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `moyo-finances-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`${rows.length} paiement${rows.length > 1 ? "s" : ""} exporté${rows.length > 1 ? "s" : ""}.`, "success");
+  };
+
+  // ════════ BUDGET — DÉPENSES (table Supabase : budget_expenses) ════════
+  const loadExpenses = async () => {
+    setExpensesLoading(true);
+    try {
+      const data = await sb.query<Expense>(auth.token, "budget_expenses", "?select=id,date,category,label,amount,currency,fee_type,entered_by,comment,created_at&order=date.desc&limit=1000");
+      setExpenses(Array.isArray(data) ? data : []);
+    } catch { setExpenses([]); }
+    setExpensesLoading(false);
+  };
+  const saveExpense = async () => {
+    if (!expenseForm) return;
+    const f = expenseForm;
+    if (!f.label.trim()) { showToast("Le libellé est obligatoire.", "error"); return; }
+    if (!f.amount || f.amount <= 0) { showToast("Le montant doit être supérieur à 0.", "error"); return; }
+    setExpenseSaving(true);
+    const payload = {
+      date: f.date, category: f.category, label: f.label.trim(), amount: f.amount,
+      currency: f.currency, fee_type: f.fee_type, entered_by: f.entered_by || auth.name, comment: (f.comment || "").trim() || null,
+    };
+    try {
+      if (f.id) {
+        await sb.update(auth.token, "budget_expenses", f.id, payload);
+        logAdminAction(auth.token, auth.userId, auth.name, `Dépense modifiée : ${f.label} (${formatMoney(f.amount, f.currency)})`, auth.userId);
+        showToast("Dépense modifiée.", "success");
+      } else {
+        await sb.insert(auth.token, "budget_expenses", payload);
+        logAdminAction(auth.token, auth.userId, auth.name, `Dépense ajoutée : ${f.label} (${formatMoney(f.amount, f.currency)})`, auth.userId);
+        showToast("Dépense ajoutée.", "success");
+      }
+      setExpenseForm(null);
+      loadExpenses();
+    } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
+    setExpenseSaving(false);
+  };
+  const deleteExpense = async (exp: Expense) => {
+    try {
+      await sb.delete(auth.token, "budget_expenses", `?id=eq.${exp.id}`);
+      logAdminAction(auth.token, auth.userId, auth.name, `Dépense supprimée : ${exp.label} (${formatMoney(exp.amount, exp.currency)})`, auth.userId);
+      showToast("Dépense supprimée.", "success");
+      loadExpenses();
+    } catch { showToast("Erreur lors de la suppression.", "error"); }
+  };
+  // Conversion vers la devise d'affichage choisie (EUR ou XAF/FCFA) via le taux EUR_TO_FCFA.
+  const toBudgetCurrency = (amount: number, cur: string): number => {
+    const rate = EUR_TO_FCFA || 655.957;
+    const from = cur === "EUR" ? "EUR" : "XAF";
+    if (from === budgetCurrency) return amount || 0;
+    return budgetCurrency === "EUR" ? (amount || 0) / rate : (amount || 0) * rate;
+  };
+  // Formatage dans la devise d'affichage (€ avec 2 décimales, FCFA sans décimale).
+  const fmtBudget = (v: number): string => budgetCurrency === "EUR"
+    ? `${(v || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+    : `${Math.round(v || 0).toLocaleString("fr-FR")} FCFA`;
+  // Bornes [start, end] (en ms) de la période choisie pour le Résultat net.
+  const resultPeriodRange = (): { start: number; end: number; label: string } => {
+    const now = new Date();
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+    if (resultPeriod === "today") return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), end: endOfToday, label: "Aujourd'hui" };
+    if (resultPeriod === "month") return { start: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), end: endOfToday, label: "Ce mois" };
+    if (resultPeriod === "year") return { start: new Date(now.getFullYear(), 0, 1).getTime(), end: endOfToday, label: "Cette année" };
+    if (resultPeriod === "custom") {
+      const s = resultFrom ? new Date(resultFrom + "T00:00:00").getTime() : 0;
+      const e = resultTo ? new Date(resultTo + "T23:59:59").getTime() : endOfToday;
+      return { start: s, end: e, label: "Période choisie" };
+    }
+    return { start: 0, end: endOfToday, label: "Depuis le lancement" };
+  };
+  // Montant d'une dépense imputable à une période. Les frais quotidiens sont reconduits
+  // automatiquement chaque jour à partir de leur date, jusqu'à la fin de la période (max aujourd'hui).
+  const expenseAmountForPeriod = (exp: Expense, start: number, end: number): number => {
+    const conv = toBudgetCurrency(exp.amount, exp.currency);
+    const day = new Date(exp.date + "T00:00:00").getTime();
+    if (exp.fee_type === "quotidien") {
+      const effStart = Math.max(day, start);
+      const effEnd = Math.min(end, Date.now());
+      if (effEnd < effStart) return 0;
+      const days = Math.floor((new Date(effEnd).setHours(0, 0, 0, 0) - new Date(effStart).setHours(0, 0, 0, 0)) / 86400000) + 1;
+      return conv * Math.max(0, days);
+    }
+    return day >= start && day <= end ? conv : 0;
+  };
+  // Export CSV des dépenses (selon les filtres affichés).
+  const exportExpensesCSV = (rows: Expense[]) => {
+    const esc = (v: any) => { const s = String(v ?? ""); return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const header = ["Date", "Categorie", "Libelle", "Montant", "Devise", "Type_de_frais", "Saisi_par", "Commentaire"];
+    const lines = rows.map(r => [
+      new Date(r.date).toLocaleDateString("fr-FR"), r.category, r.label, r.amount,
+      r.currency === "EUR" ? "EUR" : "FCFA", r.fee_type === "quotidien" ? "Frais quotidiens" : "Frais ponctuels",
+      r.entered_by || "", r.comment || "",
+    ].map(esc).join(";"));
+    const csv = "\uFEFF" + [header.join(";"), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `moyo-depenses-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`${rows.length} dépense${rows.length > 1 ? "s" : ""} exportée${rows.length > 1 ? "s" : ""}.`, "success");
+  };
+  const [reviewsStats, setReviewsStats] = useState<{ total: number; avg: number } | null>(null);
+  const [hiddenReviews, setHiddenReviews] = useState<Set<string>>(new Set());
+
+  const loadReviews = async () => {
+    setReviewsLoading(true);
+    try {
+      const rows = await sb.query<ReviewRow>(auth.token, "app_ratings", "?select=id,user_id,rating,comment,is_read,is_featured,created_at,updated_at&order=created_at.desc&limit=200");
+      const enriched = await Promise.all(rows.map(async r => {
+        const prof = await sb.query<{ name: string; city?: string; gender?: string }>(auth.token, "profiles", `?id=eq.${r.user_id}&select=name,city,gender`);
+        return { ...r, profile: prof[0] };
+      }));
+      setReviews(enriched);
+      if (enriched.length) {
+        const avg = enriched.reduce((s, r) => s + r.rating, 0) / enriched.length;
+        setReviewsStats({ total: enriched.length, avg: Math.round(avg * 10) / 10 });
+      } else {
+        setReviewsStats({ total: 0, avg: 0 });
+      }
+    } catch {}
+    setReviewsLoading(false);
+  };
+
+  const deleteReview = async (id: string) => {
+    await sb.delete(auth.token, "app_ratings", `?id=eq.${id}`);
+    setReviews(prev => prev.filter(r => r.id !== id));
+    setReviewsStats(prev => {
+      if (!prev || prev.total <= 1) return { total: 0, avg: 0 };
+      const remaining = reviews.filter(r => r.id !== id);
+      const avg = remaining.length ? remaining.reduce((s, r) => s + r.rating, 0) / remaining.length : 0;
+      return { total: remaining.length, avg: Math.round(avg * 10) / 10 };
+    });
+  };
+
+  const markReviewRead = async (id: string) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/app_ratings?id=eq.${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+      body: JSON.stringify({ is_read: true }),
+    });
+    setReviews(prev => prev.map(r => r.id === id ? { ...r, is_read: true } : r));
+  };
+
+  const toggleHideReview = (id: string) => {
+    setHiddenReviews(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  const toggleFeatureReview = async (id: string, current: boolean) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/app_ratings?id=eq.${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+      body: JSON.stringify({ is_featured: !current }),
+    });
+    setReviews(prev => prev.map(r => r.id === id ? { ...r, is_featured: !current } : r));
+  };
+
+  // ── Avertissements ──
+  type WarnModal = { user: AdminProfile } | null;
+  const WARN_REASONS = [
+    "Utilisation de mots/propos interdits",
+    "Propos insultants ou irrespectueux",
+    "Harcèlement envers un autre membre",
+    "Partage de coordonnées (téléphone, email, réseaux)",
+    "Photo de profil inappropriée",
+    "Suspicion de faux profil",
+    "Suspicion d'arnaque",
+    "Contenu à caractère sexuel",
+    "Comportement inapproprié",
+    "Non-respect des règles de la communauté",
+    "Autre motif",
+  ];
+  const [warnModal, setWarnModal] = useState<WarnModal>(null);
+  const [existingWarnings, setExistingWarnings] = useState<{ id: string; reason: string; created_at: string }[]>([]);
+  const [existingWarningsLoading, setExistingWarningsLoading] = useState(false);
+  const loadExistingWarnings = async (userId: string) => {
+    setExistingWarningsLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings?user_id=eq.${userId}&warning_number=gte.1&select=id,reason,created_at&order=created_at.asc`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json();
+      if (Array.isArray(d)) setExistingWarnings(d);
+    } catch {}
+    setExistingWarningsLoading(false);
+  };
+  const deleteOneWarning = async (warnId: string, user: AdminProfile) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${warnId}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" } });
+      const newCount = Math.max(0, (user.warning_count || 0) - 1);
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ warning_count: newCount }) });
+      setExistingWarnings(prev => prev.filter(w => w.id !== warnId));
+      setWarnModal(m => m ? { ...m, user: { ...m.user, warning_count: newCount } } : m);
+      logAdminAction(auth.token, auth.userId, auth.name, `Avertissement supprimé pour ${user.name} (reste ${newCount}/3)`, user.id);
+      showToast(`Avertissement supprimé. Il reste ${newCount}/3.`, "success");
+      loadUsers(userSearch, userPage, usersSort, userSearchEmail);
+    } catch { showToast("Erreur lors de la suppression.", "error"); }
+  };
+  const [pinModal, setPinModal] = useState<{ user: AdminProfile; mode: "set" | "reset" } | null>(null);
+  const [pwResetModal, setPwResetModal] = useState<AdminProfile | null>(null);
+  const [pwResetValue, setPwResetValue] = useState("");
+  const [pwResetLoading, setPwResetLoading] = useState(false);
+  const [pwResetResult, setPwResetResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const genTempPassword = () => {
+    const words = ["Moyo", "Congo", "Amour", "Coeur", "Rouge", "Zenith", "Etoile", "Douala"];
+    const w = words[Math.floor(Math.random() * words.length)];
+    const n = Math.floor(1000 + Math.random() * 9000);
+    return `${w}${n}`;
+  };
+
+  const submitPasswordReset = async (targetUser: AdminProfile, newPw: string) => {
+    if (!newPw || newPw.length < 6) { setPwResetResult({ ok: false, msg: "Le mot de passe doit contenir au moins 6 caractères." }); return; }
+    setPwResetLoading(true);
+    setPwResetResult(null);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}` },
+        body: JSON.stringify({ target_user_id: targetUser.id, new_password: newPw }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data?.success) throw new Error(data?.error || `Erreur (HTTP ${r.status})`);
+      logAdminAction(auth!.token, auth!.userId, auth!.name, `Mot de passe réinitialisé pour ${targetUser.name}.`, targetUser.id);
+      setPwResetResult({ ok: true, msg: `Nouveau mot de passe défini : ${newPw}` });
+    } catch (e: any) {
+      setPwResetResult({ ok: false, msg: e?.message || "Échec de la réinitialisation." });
+    }
+    setPwResetLoading(false);
+  };
+  const [pinModalInput, setPinModalInput] = useState("");
+  const [warnReason, setWarnReason] = useState(WARN_REASONS[0]);
+  const [msgModal, setMsgModal] = useState<{ user: Profile } | null>(null);
+  const [msgText, setMsgText] = useState("");
+  const [mailModal, setMailModal] = useState<{ user: AdminProfile } | null>(null);
+  const [mailHistory, setMailHistory] = useState<{ id: string; reason: string; created_at: string }[]>([]);
+  const [mailHistoryLoading, setMailHistoryLoading] = useState(false);
+  const [mailCustomSubject, setMailCustomSubject] = useState("");
+  const [mailCustomBody, setMailCustomBody] = useState("");
+  const [mailTab, setMailTab] = useState<"modeles" | "historique">("modeles");
+  const [msgHistory, setMsgHistory] = useState<{ id: string; reason: string; created_at: string }[]>([]);
+  const [msgHistoryLoading, setMsgHistoryLoading] = useState(false);
+  const [msgTab, setMsgTab] = useState<"modeles" | "historique">("modeles");
+
+  const loadMsgHistory = async (userId: string) => {
+    setMsgHistoryLoading(true);
+    try {
+      const res = await sb.query<{ id: string; reason: string; created_at: string }>(
+        auth.token, "user_warnings",
+        `?user_id=eq.${userId}&warning_number=eq.0&order=created_at.desc&limit=50`
+      );
+      setMsgHistory(Array.isArray(res) ? res : []);
+    } catch { setMsgHistory([]); }
+    setMsgHistoryLoading(false);
+  };
+
+  const deleteMsgHistory = async (id: string, userId: string) => {
+    // Supprimer optimistiquement d'abord
+    setMsgHistory(prev => prev.filter(m => m.id !== id));
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }
+      });
+    } catch {
+      // Si erreur, recharger pour remettre le bon état
+      loadMsgHistory(userId);
+    }
+  };
+
+  const loadMailHistory = async (userId: string) => {
+    setMailHistoryLoading(true);
+    try {
+      const res = await sb.query<{ id: string; reason: string; created_at: string }>(
+        auth.token, "user_warnings",
+        `?user_id=eq.${userId}&warning_number=eq.99&order=created_at.desc&limit=50`
+      );
+      setMailHistory(Array.isArray(res) ? res : []);
+    } catch { setMailHistory([]); }
+    setMailHistoryLoading(false);
+  };
+
+  const deleteMailHistory = async (id: string) => {
+    setMailHistory(prev => prev.filter(m => m.id !== id));
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }
+      });
+    } catch { if (mailModal) loadMailHistory(mailModal.user.id); }
+  };
+
+  const [mailSending, setMailSending] = useState<string | null>(null);
+  // Envoi d'un modèle à contenu fixe via la fonction fiable send-custom-email
+  const sendMailTemplate = async (key: string, label: string, subject: string, message: string, user: AdminProfile) => {
+    if (mailSending) return;
+    if (!user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
+    setMailSending(key);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/send-custom-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
+        body: JSON.stringify({ email: user.email, name: user.name, subject, message }),
+      });
+      if (!r.ok) { const t = await r.text().catch(() => ""); throw new Error(`Erreur ${r.status}${t ? " : " + t.slice(0, 120) : ""}`); }
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+        body: JSON.stringify({ user_id: user.id, admin_id: auth.userId, reason: `[EMAIL] ${label}`, warning_number: 99, acknowledged: true }),
+      });
+      showToast(`✅ Email "${label}" envoyé à ${user.name} !`, "success");
+      setMailTab("historique");
+      loadMailHistory(user.id);
+    } catch (e: any) { showToast(`❌ ${e?.message || "Erreur lors de l'envoi"}`, "error"); }
+    setMailSending(null);
+  };
+  const sendMailFunction = async (fnName: string, label: string, user: AdminProfile) => {
+    if (mailSending) return;
+    if (!user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
+    setMailSending(fnName);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
+        body: JSON.stringify({ email: user.email, name: user.name }),
+      });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        throw new Error(`Erreur ${r.status}${txt ? " : " + txt.slice(0, 120) : ""}`);
+      }
+      // Enregistrer dans l'historique seulement si l'envoi a réussi
+      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+        body: JSON.stringify({ user_id: user.id, admin_id: auth.userId, reason: `[EMAIL] ${label}`, warning_number: 99, acknowledged: true }),
+      });
+      showToast(`✅ Email "${label}" envoyé à ${user.name} !`, "success");
+      setMailTab("historique");
+      loadMailHistory(user.id);
+    } catch (e: any) { showToast(`❌ ${e?.message || "Erreur lors de l'envoi"}`, "error"); }
+    setMailSending(null);
+  };
+  const [showPremiumList, setShowPremiumList] = useState(false);
+  const [premiumProfiles, setPremiumProfiles] = useState<AdminProfile[]>([]);
+  const [premiumListLoading, setPremiumListLoading] = useState(false);
+
+  // ── Liste des matchs ──
+  const [showMatchList, setShowMatchList] = useState(false);
+  const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
+  const [matchListSearch, setMatchListSearch] = useState("");
+  const [matchListViewMode, setMatchListViewMode] = useState<"list" | "grid">("list");
+  const [mmFollowViewMode, setMmFollowViewMode] = useState<"list" | "grid">("list");
+  const [archivedViewMode, setArchivedViewMode] = useState<"list" | "grid">("list");
+  const [proposalsViewMode, setProposalsViewMode] = useState<"list" | "grid">("list");
+  const [proposalsStatusFilter, setProposalsStatusFilter] = useState<"pending" | "pending_response" | "accepted" | "refused" | "expired" | null>(null);
+  const propFilterCategory = (p: any): "pending" | "pending_response" | "accepted" | "refused" | "expired" => {
+    if (p.status === "accepted") return "accepted";
+    if (p.status === "refused") return "refused";
+    if (p.status === "expired") return "expired";
+    return (p.user1_response === "accepted" || p.user2_response === "accepted") ? "pending_response" : "pending";
+  };
+  const [matchListLoading, setMatchListLoading] = useState(false);
+  const [broadcastModal, setBroadcastModal] = useState(false);
+  const [msgSubTab, setMsgSubTab] = useState<"assistant" | "broadcast">("assistant");
+  const [broadcastText, setBroadcastText] = useState("");
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastExpiresAt, setBroadcastExpiresAt] = useState("");
+  const [broadcastResult, setBroadcastResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [broadcastTarget, setBroadcastTarget] = useState<"all" | "femmes" | "hommes" | "premium" | "gratuit">("all");
+  const [broadcastGender, setBroadcastGender] = useState<"all" | "femmes" | "hommes">("all");
+  const [broadcastPlan, setBroadcastPlan] = useState<"all" | "premium" | "gratuit">("all");
+  const [broadcastList, setBroadcastList] = useState<{ id: string; message: string; target?: string; created_at?: string; expires_at?: string }[]>([]);
+  const [broadcastDeleting, setBroadcastDeleting] = useState<string | null>(null);
+  const [broadcastShowAll, setBroadcastShowAll] = useState(false);
+  const [audienceCount, setAudienceCount] = useState<number | null>(null);
+  const [broadcastDate, setBroadcastDate] = useState("");
+  const [broadcastTime, setBroadcastTime] = useState("");
+  const [broadcastPreview, setBroadcastPreview] = useState<string | null>(null);
+  const loadBroadcasts = React.useCallback(async () => {
+    if (!auth) return;
+    try {
+      const now = new Date().toISOString();
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/broadcasts?expires_at=gt.${now}&order=created_at.desc&limit=50`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      if (!r.ok) return;
+      const d = await r.json().catch(() => []);
+      if (Array.isArray(d)) setBroadcastList(d);
+    } catch {}
+  }, [auth]);
+  const deleteBroadcast = async (id: string) => {
+    if (!auth) return;
+    setBroadcastDeleting(id);
+    try {
+      // On "arrête" la diffusion en la faisant expirer immédiatement (robuste même sans droit DELETE)
+      await fetch(`${SUPABASE_URL}/rest/v1/broadcasts?id=eq.${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ expires_at: new Date(Date.now() - 1000).toISOString() }) });
+      setBroadcastList(prev => prev.filter(b => b.id !== id));
+    } catch {}
+    setBroadcastDeleting(null);
+  };
+  // Audience estimée (compte des profils correspondant au ciblage Genre × Abonnement)
+  React.useEffect(() => {
+    if (!auth || activeTab !== "messagerie" || msgSubTab !== "broadcast") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        let q = "?select=id";
+        if (broadcastGender === "femmes") q += "&gender=eq.Femme";
+        else if (broadcastGender === "hommes") q += "&gender=eq.Homme";
+        if (broadcastPlan === "premium") q += "&is_premium=eq.true";
+        else if (broadcastPlan === "gratuit") q += "&is_premium=eq.false";
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles${q}`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
+        const cr = r.headers.get("content-range") || "";
+        const total = cr.includes("/") ? parseInt(cr.split("/")[1]) : NaN;
+        if (!cancelled) setAudienceCount(isNaN(total) ? null : total);
+      } catch { if (!cancelled) setAudienceCount(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [auth, activeTab, msgSubTab, broadcastGender, broadcastPlan]);
+  // Charger la liste des diffusions actives en entrant dans le sous-onglet
+  React.useEffect(() => {
+    if (activeTab === "messagerie" && msgSubTab === "broadcast") loadBroadcasts();
+  }, [activeTab, msgSubTab, loadBroadcasts]);
+
+  useEffect(() => {
+    if (!showPremiumList) return;
+    setPremiumListLoading(true);
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?is_premium=eq.true&select=id,name,age,city,gender,photo_url,premium_until,created_at&order=premium_until.desc&limit=100`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    }).then(r => r.json()).then(data => { setPremiumProfiles(Array.isArray(data) ? data : []); setPremiumListLoading(false); }).catch(() => setPremiumListLoading(false));
+  }, [showPremiumList]);
+
+  // ── Charger la liste des matchs avec les profils des deux partenaires ──
+  useEffect(() => {
+    if (!showMatchList) return;
+    setMatchListLoading(true);
+    fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,created_at,user1,user2&order=created_at.desc&limit=200`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    }).then(r => r.json()).then(async (data) => {
+      if (!Array.isArray(data)) { setMatchListLoading(false); return; }
+      // Récupérer tous les IDs uniques
+      const ids = [...new Set(data.flatMap((m: any) => [m.user1, m.user2]))];
+      const profiles: Record<string, AdminProfile> = {};
+      // Charger les profils par batch de 50
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const pdata = await r.json().catch(() => []);
+        if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
+      }
+      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, user1: m.user1, user2: m.user2, profile1: profiles[m.user1], profile2: profiles[m.user2] })));
+      setMatchListLoading(false);
+    }).catch(() => setMatchListLoading(false));
+  }, [showMatchList]);
+
+  // ── ÉVÉNEMENT PREMIUM ──
+  const [premiumEventActive, setPremiumEventActive] = useState(false);
+  const [premiumEventLoading, setPremiumEventLoading] = useState(false);
+  const [premiumEventConfirm, setPremiumEventConfirm] = useState(false);
+  const [premiumEventExpiresAt, setPremiumEventExpiresAt] = useState("");
+
+  useEffect(() => {
+    // Charger l'état de l'événement premium depuis app_settings
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active&select=value`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+    }).then(r => r.json()).then(data => {
+      if (Array.isArray(data) && data.length > 0) setPremiumEventActive(data[0].value === "true");
+    }).catch(() => {});
+
+    // Vérifier automatiquement si l'événement premium a expiré
+    const checkPremiumEventExpiry = async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_expires_at&select=value`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+        });
+        const data = await r.json().catch(() => []);
+        if (!Array.isArray(data) || !data[0]?.value) return;
+        const expiresAt = new Date(data[0].value);
+        if (expiresAt < new Date()) {
+          // Événement expiré - désactiver automatiquement
+          await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+            body: JSON.stringify({ value: "false" }),
+          });
+          const now = new Date().toISOString();
+          await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(premium_until.is.null,premium_until.lt.${now})`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+            body: JSON.stringify({ is_premium: false }),
+          });
+          setPremiumEventActive(false);
+        }
+      } catch {}
+    };
+    checkPremiumEventExpiry();
+    const interval = setInterval(checkPremiumEventExpiry, 60000); // vérifier chaque minute
+    return () => clearInterval(interval);
+  }, []);
+
+  const togglePremiumEvent = async () => {
+    setPremiumEventLoading(true);
+    const newState = !premiumEventActive;
+    try {
+      // 1. Mettre à jour app_settings
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ value: newState ? "true" : "false" }),
+      });
+      if (newState) {
+        // 2. Activer : passer tous les profils en is_premium = true
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?is_premium=eq.false`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ is_premium: true, premium_is_gift: true }),
+        });
+        // Sauvegarder la date d'expiration
+        if (premiumEventExpiresAt) {
+          await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_expires_at`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+            body: JSON.stringify({ value: new Date(premiumEventExpiresAt).toISOString() }),
+          });
+        }
+        showToast("🎉 Événement Premium activé pour tous les utilisateurs !", "success");
+      } else {
+        // 3. Désactiver : remettre is_premium = false uniquement pour ceux sans premium_until valide
+        const now = new Date().toISOString();
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(premium_until.is.null,premium_until.lt.${now})`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ is_premium: false }),
+        });
+        showToast("Événement Premium désactivé. Les abonnés réels conservent leur statut.", "success");
+      }
+      setPremiumEventActive(newState);
+    } catch {
+      showToast("Erreur lors de la modification de l'événement Premium.", "error");
+    } finally {
+      setPremiumEventLoading(false);
+    }
+  };
+  const [warnCustom, setWarnCustom] = useState("");
+  // ── CAMPAGNES PREMIUM (ciblage) ──
+  const CAMP_TARGETS: { key: string; label: string; badge?: string }[] = [
+    { key: "all", label: "Tous les utilisateurs gratuits", badge: "Recommandé" },
+    { key: "femmes", label: "Femmes uniquement" },
+    { key: "hommes", label: "Hommes uniquement" },
+    { key: "nouveaux", label: "Nouveaux inscrits (moins de 30 jours)" },
+    { key: "inactifs", label: "Utilisateurs inactifs depuis 30 jours" },
+    { key: "actifs", label: "Utilisateurs actifs cette semaine" },
+    { key: "verifies", label: "Comptes vérifiés" },
+  ];
+  const [campTarget, setCampTarget] = useState("all");
+  const [campDays, setCampDays] = useState(7);
+  const [campEndDate, setCampEndDate] = useState("");
+  const [campMessage, setCampMessage] = useState("");
+  const [campCount, setCampCount] = useState<number | null>(null);
+  const [campCountLoading, setCampCountLoading] = useState(false);
+  const [campLaunching, setCampLaunching] = useState(false);
+  const [campConfirm, setCampConfirm] = useState(false);
+  const [campaignsHistory, setCampaignsHistory] = useState<any[]>([]);
+  const [campShowAll, setCampShowAll] = useState(false);
+  const campFilter = (t: string) => {
+    const d30 = new Date(Date.now() - 30 * 86400000).toISOString();
+    const d7 = new Date(Date.now() - 7 * 86400000).toISOString();
+    const base = "is_premium=eq.false";
+    switch (t) {
+      case "femmes": return `${base}&gender=eq.Femme`;
+      case "hommes": return `${base}&gender=eq.Homme`;
+      case "nouveaux": return `${base}&created_at=gte.${d30}`;
+      case "inactifs": return `${base}&last_seen=lt.${d30}`;
+      case "actifs": return `${base}&last_seen=gte.${d7}`;
+      case "verifies": return `${base}&is_verified=eq.true`;
+      default: return base;
+    }
+  };
+    const [mktTab, setMktTab] = useState<"statuts" | "features" | "event">("statuts");
+  const campTargetLabel = (t: string) => CAMP_TARGETS.find(x => x.key === t)?.label || "Tous les utilisateurs gratuits";
+  const campName = (t: string) => ({ all: "Premium pour tous", femmes: "Premium spécial femmes", hommes: "Premium spécial hommes", nouveaux: "Bienvenue nouveaux inscrits", inactifs: "Campagne de réengagement", actifs: "Premium membres actifs", verifies: "Premium comptes vérifiés" } as Record<string, string>)[t] || "Campagne Premium";
+  useEffect(() => {
+    if (activeTab !== "marketing" || mktTab !== "event") return;
+    let cancelled = false;
+    setCampCountLoading(true);
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${campFilter(campTarget)}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
+        const cr = r.headers.get("content-range"); const total = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0;
+        if (!cancelled) setCampCount(isNaN(total) ? 0 : total);
+      } catch { if (!cancelled) setCampCount(null); }
+      finally { if (!cancelled) setCampCountLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [campTarget, activeTab, mktTab]);
+  const loadCampaigns = async () => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_campaigns&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => []);
+      if (Array.isArray(d) && d[0]?.value) { const p = JSON.parse(d[0].value); if (Array.isArray(p)) setCampaignsHistory(p); }
+    } catch {}
+  };
+  useEffect(() => { if (auth) loadCampaigns(); }, [auth]);
+  const launchCampaign = async () => {
+    if (!campEndDate) { showToast("Choisis une date de fin.", "error"); return; }
+    setCampLaunching(true); setCampConfirm(false);
+    try {
+      const endISO = new Date(campEndDate).toISOString();
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?${campFilter(campTarget)}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_premium: true, premium_is_gift: true }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: "true" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_expires_at`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: endISO }) });
+      setPremiumEventActive(true);
+      const rec = { id: `c_${Date.now()}`, name: campName(campTarget), sub: campMessage.trim() ? campMessage.trim().slice(0, 60) : `${campDays} jours offerts`, target: campTarget, targetLabel: campTargetLabel(campTarget), days: campDays, beneficiaries: campCount || 0, start: new Date().toISOString(), end: endISO, message: campMessage.trim() };
+      const next = [rec, ...campaignsHistory].slice(0, 50);
+      setCampaignsHistory(next);
+      await saveSetting("premium_campaigns", JSON.stringify(next), auth.token);
+      if (campMessage.trim()) {
+        const genderPart = campTarget === "femmes" ? "femmes" : campTarget === "hommes" ? "hommes" : "all";
+        await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ message: campMessage.trim(), created_by: auth.userId, expires_at: endISO, target: `${genderPart}|all` }) });
+      }
+      showToast(`Campagne lancée : ${campCount || 0} bénéficiaires.`, "success");
+      setCampMessage("");
+    } catch { showToast("Erreur lors du lancement de la campagne.", "error"); }
+    finally { setCampLaunching(false); }
+  };
+  const [warnLoading, setWarnLoading] = useState(false);
+
+  // ── Stats ──
+  const [stats, setStats] = useState({
+    users: 0, matches: 0, messages: 0, reports: 0,
+    todayUsers: 0, premiumUsers: 0, verifiedUsers: 0, bannedUsers: 0,
+    maleCount: 0, femaleCount: 0,
+    topCities: [] as { city: string; count: number }[],
+    recentUsers: [] as AdminProfile[],
+    totalLikes: 0, likesToday: 0,
+    likesPerDay: [] as { date: string; count: number }[],
+    topLikedProfiles: [] as { name: string; city: string; count: number }[],
+  });
+
+  // ── Reports ──
+  const [reports, setReports] = useState<ReportRow[]>([]);
+  const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived">("all");
+  const [archiveSearch, setArchiveSearch] = useState("");
+  const [archiveTypeFilter, setArchiveTypeFilter] = useState<"all" | "messaging" | "system" | "profile">("all");
+  const [archiveActionFilter, setArchiveActionFilter] = useState<"all" | "reviewed" | "rejected" | "banned" | "archived">("all");
+  const [archivePage, setArchivePage] = useState(1);
+  // ── Modèles de réponse (Assistant Moyo Dating) ──
+  const TEMPLATE_CATS = ["Accueil", "Abonnement", "Paiement", "Sécurité", "Fonctionnalités", "Signalements", "Mise en avant", "Autre"];
+  const DEFAULT_SUPPORT_TEMPLATES = [
+    { id: "t1", category: "Accueil", title: "Accueil - Message de bienvenue", content: "Bonjour 👋 Merci de contacter Moyo Dating. Comment pouvons-nous vous aider aujourd'hui ?" },
+    { id: "t2", category: "Abonnement", title: "Abonnement - Annulation", content: "Oui, vous pouvez annuler votre abonnement Premium à tout moment depuis vos paramètres. L'accès Premium reste actif jusqu'à la fin de votre période en cours." },
+    { id: "t3", category: "Abonnement", title: "Abonnement - Activation", content: "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟" },
+    { id: "t4", category: "Paiement", title: "Paiement - Échec de paiement", content: "Votre paiement a malheureusement échoué. Veuillez vérifier vos informations et réessayer, ou essayer un autre moyen de paiement." },
+    { id: "t5", category: "Paiement", title: "Paiement - Confirmation", content: "Nous avons bien reçu votre paiement. Votre Premium sera activé sous peu. Merci de votre confiance !" },
+    { id: "t6", category: "Sécurité", title: "Sécurité - Signalement", content: "Merci pour votre signalement. Notre équipe va l'examiner dans les plus brefs délais. Nous vous tiendrons informé(e) si nécessaire." },
+    { id: "t7", category: "Sécurité", title: "Sécurité - Photo non conforme", content: "Votre photo de profil ne respecte pas nos conditions. Merci d'utiliser une photo claire de votre visage, sinon votre compte pourra être suspendu." },
+    { id: "t8", category: "Fonctionnalités", title: "Fonctionnalité - Explication", content: "Cette fonctionnalité vous permet de [description]. N'hésitez pas si vous avez d'autres questions !" },
+    { id: "t9", category: "Fonctionnalités", title: "Fonctionnalité - Matchs", content: "Pour discuter avec quelqu'un, likez son profil. Si la personne vous like en retour, le match se débloque automatiquement !" },
+    { id: "t10", category: "Signalements", title: "Signalement - Suivi", content: "Votre signalement a bien été pris en compte. Merci de contribuer à la sécurité de la communauté Moyo Dating." },
+    { id: "t11", category: "Mise en avant", title: "Mise en avant - Validée", content: "Votre demande de mise en avant a été acceptée ! Votre profil apparaîtra dans les Statuts Moyo Dating pendant 24h." },
+    { id: "t12", category: "Autre", title: "Autre - Remerciement", content: "Merci beaucoup de nous avoir contactés. Belle journée sur Moyo Dating ! 💛" },
+  ];
+  const [supportTemplates, setSupportTemplates] = useState<{ id: string; category: string; title: string; content: string }[]>(DEFAULT_SUPPORT_TEMPLATES);
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [templateCat, setTemplateCat] = useState("all");
+  const [templateModal, setTemplateModal] = useState<null | { id?: string; title: string; content: string; category: string }>(null);
+  const [tplMenu, setTplMenu] = useState<string | null>(null);
+  useEffect(() => {
+    if (!auth) return;
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.support_templates&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const d = await r.json().catch(() => []);
+        if (Array.isArray(d) && d[0]?.value) { const parsed = JSON.parse(d[0].value); if (Array.isArray(parsed) && parsed.length) setSupportTemplates(parsed); }
+      } catch {}
+    })();
+  }, [auth]);
+  const persistTemplates = async (next: { id: string; category: string; title: string; content: string }[]) => {
+    setSupportTemplates(next);
+    try {
+      await saveSetting("support_templates", JSON.stringify(next), auth.token);
+    } catch {}
+  };
+  const copyTemplate = async (content: string) => {
+    try { await navigator.clipboard.writeText(content); }
+    catch { try { const ta = document.createElement("textarea"); ta.value = content; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); } catch {} }
+    showToast("Modèle copié", "success");
+  };
+  const saveTemplate = () => {
+    if (!templateModal || !templateModal.title.trim() || !templateModal.content.trim()) return;
+    const draft = templateModal;
+    let next;
+    if (draft.id) next = supportTemplates.map(t => t.id === draft.id ? { ...t, title: draft.title.trim(), content: draft.content.trim(), category: draft.category } : t);
+    else next = [{ id: `t_${Date.now()}`, title: draft.title.trim(), content: draft.content.trim(), category: draft.category }, ...supportTemplates];
+    persistTemplates(next); setTemplateModal(null);
+  };
+  const deleteTemplate = (id: string) => { setTplMenu(null); persistTemplates(supportTemplates.filter(t => t.id !== id)); showToast("Modèle supprimé", "success"); };
+
+  // ── Statuts officiels Moyo Dating (publiés depuis l'onglet Marketing) ──
+  const [officialStatuses, setOfficialStatuses] = useState<(StatusPost & { _views?: number; _replies?: number })[]>([]);
+  const [confirmDeleteStatus, setConfirmDeleteStatus] = useState<StatusPost | null>(null);
+  
+  const [mktShowAll, setMktShowAll] = useState(false);
+  const [featureRequests, setFeatureRequests] = useState<Array<{ id: string; user_id: string; gender?: string; status: string; created_at: string; profile?: any; _usedThisMonth?: number }>>([]);
+  const [featureStatuses, setFeatureStatuses] = useState<Array<StatusPost & { profile?: any; _views?: number; _replies?: number; _likes?: number }>>([]);
+  const [frProcessing, setFrProcessing] = useState<string | null>(null);
+  const [stFile, setStFile] = useState<File | null>(null);
+  const [stPreview, setStPreview] = useState<string | null>(null);
+  const [stCaption, setStCaption] = useState("");
+  const [stSponsored, setStSponsored] = useState(false);
+  const [stLink, setStLink] = useState("");
+  const [stCtaType, setStCtaType] = useState<"none" | "link" | "phone">("none");
+  const [stPhone, setStPhone] = useState("");
+  const [stPublishing, setStPublishing] = useState(false);
+  const [stDeleting, setStDeleting] = useState<string | null>(null);
+  const stFileRef = useRef<HTMLInputElement>(null);
+
+  const onPickStatusFile = (f?: File) => {
+    if (!f) return;
+    setStFile(f);
+    const reader = new FileReader();
+    reader.onload = () => setStPreview(reader.result as string);
+    reader.readAsDataURL(f);
+  };
+  const loadOfficialStatuses = async () => {
+    try {
+      const now = new Date().toISOString();
+      const rows = await sb.query<StatusPost>(auth.token, "statuses", `?is_official=eq.true&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`);
+      const list = Array.isArray(rows) ? rows : [];
+      const ids = list.map(s => s.id).filter(Boolean) as string[];
+      const viewsBy: Record<string, number> = {};
+      const repliesBy: Record<string, number> = {};
+      if (ids.length) {
+        const views = await sb.query<{ status_id: string }>(auth.token, "status_status_views", `?status_id=in.(${ids.join(",")})&select=status_id`).catch(() => [] as { status_id: string }[]);
+        (Array.isArray(views) ? views : []).forEach(v => { viewsBy[v.status_id] = (viewsBy[v.status_id] || 0) + 1; });
+        const reps = await sb.query<{ reason: string }>(auth.token, "reports", `?reason=like.*%5B%23*&select=reason&limit=1000`).catch(() => [] as { reason: string }[]);
+        (Array.isArray(reps) ? reps : []).forEach(r => { ids.forEach(id => { if (r.reason && r.reason.includes(`[#${id}]`)) repliesBy[id] = (repliesBy[id] || 0) + 1; }); });
+      }
+      const enriched = await Promise.all(list.map(async s => ({ ...s, image_url: await resolveStatusImageUrl(auth.token, s.image_url), _views: viewsBy[s.id || ""] || 0, _replies: repliesBy[s.id || ""] || 0 })));
+      setOfficialStatuses(enriched);
+    } catch { setOfficialStatuses([]); }
+  };
+  const publishOfficialStatus = async () => {
+    if (!stFile) { showToast("Choisis une image d'abord.", "error"); return; }
+    setStPublishing(true);
+    try {
+      const ext = (stFile.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${auth.userId}/official-${Date.now()}.${ext}`;
+      const up = await fetch(`${SUPABASE_URL}/storage/v1/object/statuses/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": stFile.type || "image/jpeg", "x-upsert": "true" },
+        body: stFile,
+      });
+      if (!up.ok) throw new Error("upload_failed");
+      const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      // CTA : soit un lien (« En savoir plus »), soit un numéro stocké en tel: (bouton « Contacter » = WhatsApp + appel)
+      const phoneClean = stPhone.trim().replace(/[^\d+]/g, "");
+      const linkUrl = stCtaType === "phone"
+        ? (phoneClean ? `tel:${phoneClean}` : null)
+        : stCtaType === "link"
+        ? (stLink.trim() || null)
+        : null;
+      await sb.insert<StatusPost>(auth.token, "statuses", {
+        user_id: auth.userId, image_url: path, image_path: path,
+        caption: stCaption.trim() || null, is_official: true, is_sponsored: stSponsored,
+        link_url: linkUrl, expires_at,
+      });
+      showToast("Statut Moyo Dating publié pour 24h.", "success");
+      setStFile(null); setStPreview(null); setStCaption(""); setStSponsored(false); setStLink(""); setStCtaType("none"); setStPhone("");
+      if (stFileRef.current) stFileRef.current.value = "";
+      loadOfficialStatuses();
+    } catch {
+      showToast("Échec de la publication. Vérifie le bucket 'statuses' et les colonnes.", "error");
+    } finally { setStPublishing(false); }
+  };
+  const deleteOfficialStatus = async (s: StatusPost) => {
+    if (!s.id) return;
+    setStDeleting(s.id);
+    try {
+      await sb.delete(auth.token, "statuses", `?id=eq.${s.id}`);
+      setOfficialStatuses(prev => prev.filter(x => x.id !== s.id));
+      setFeatureStatuses(prev => prev.filter(x => x.id !== s.id));
+      showToast("Statut supprimé.", "success");
+    } catch { showToast("Suppression impossible.", "error"); }
+    finally { setStDeleting(null); }
+  };
+  const expiresInLabel = (iso?: string) => {
+    if (!iso) return "—";
+    const ms = new Date(iso).getTime() - Date.now();
+    if (ms <= 0) return "expiré";
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    if (h >= 1) return `dans ${h}h ${m}m`;
+    return `dans ${Math.max(1, m)} min`;
+  };
+
+  // ── Demandes de mise en avant (Premium) ──
+  const loadFeatureStatuses = async () => {
+    try {
+      const now = new Date().toISOString();
+      const rows = await sb.query<StatusPost>(auth.token, "statuses", `?is_feature=eq.true&expires_at=gt.${encodeURIComponent(now)}&order=created_at.desc`);
+      const list = Array.isArray(rows) ? rows : [];
+      const ids = list.map(s => s.id).filter(Boolean) as string[];
+      const uids = Array.from(new Set(list.map(s => s.feature_user_id).filter(Boolean) as string[]));
+      const profilesById: Record<string, any> = {};
+      if (uids.length) {
+        const profs = await sb.query<any>(auth.token, "profiles", `?id=in.(${uids.join(",")})&select=id,name,age,city,gender,photo_url`).catch(() => [] as any[]);
+        (Array.isArray(profs) ? profs : []).forEach((p: any) => { profilesById[p.id] = p; });
+      }
+      const viewsBy: Record<string, number> = {};
+      const repliesBy: Record<string, number> = {};
+      if (ids.length) {
+        const views = await sb.query<{ status_id: string }>(auth.token, "status_status_views", `?status_id=in.(${ids.join(",")})&select=status_id`).catch(() => [] as { status_id: string }[]);
+        (Array.isArray(views) ? views : []).forEach(v => { viewsBy[v.status_id] = (viewsBy[v.status_id] || 0) + 1; });
+        const reps = await sb.query<{ reason: string }>(auth.token, "reports", `?reason=like.*%5B%23*&select=reason&limit=1000`).catch(() => [] as { reason: string }[]);
+        (Array.isArray(reps) ? reps : []).forEach(r => { ids.forEach(id => { if (r.reason && r.reason.includes(`[#${id}]`)) repliesBy[id] = (repliesBy[id] || 0) + 1; }); });
+      }
+      let likesRows: any[] = [];
+      if (uids.length) likesRows = await sb.query<any>(auth.token, "likes", `?to_user=in.(${uids.join(",")})&select=to_user,created_at`).catch(() => [] as any[]);
+      likesRows = Array.isArray(likesRows) ? likesRows : [];
+      setFeatureStatuses(list.map(s => {
+        const since = s.created_at ? new Date(s.created_at).getTime() : 0;
+        const likes = likesRows.filter(l => l.to_user === s.feature_user_id && new Date(l.created_at).getTime() >= since).length;
+        return { ...s, profile: profilesById[s.feature_user_id || ""], _views: viewsBy[s.id || ""] || 0, _replies: repliesBy[s.id || ""] || 0, _likes: likes };
+      }));
+    } catch { setFeatureStatuses([]); }
+  };
+  const loadFeatureRequests = async () => {
+    try {
+      const reqs = await sb.query<any>(auth.token, "feature_requests", `?status=eq.en_attente&order=created_at.asc&limit=100`);
+      const list = Array.isArray(reqs) ? reqs : [];
+      const uids = Array.from(new Set(list.map((r: any) => r.user_id)));
+      const profilesById: Record<string, any> = {};
+      if (uids.length) {
+        const profs = await sb.query<any>(auth.token, "profiles", `?id=in.(${uids.join(",")})&select=id,name,age,city,gender,photo_url`).catch(() => [] as any[]);
+        (Array.isArray(profs) ? profs : []).forEach((p: any) => { profilesById[p.id] = p; });
+      }
+      const d = new Date();
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+      const usedBy: Record<string, number> = {};
+      if (uids.length) {
+        const monthReqs = await sb.query<any>(auth.token, "feature_requests", `?user_id=in.(${uids.join(",")})&created_at=gte.${encodeURIComponent(monthStart)}&status=eq.accepte&select=user_id`).catch(() => [] as any[]);
+        (Array.isArray(monthReqs) ? monthReqs : []).forEach((r: any) => { usedBy[r.user_id] = (usedBy[r.user_id] || 0) + 1; });
+      }
+      setFeatureRequests(list.map((r: any) => ({ ...r, profile: profilesById[r.user_id], _usedThisMonth: usedBy[r.user_id] || 0 })));
+      setFeaturePendingCount(list.length);
+    } catch { setFeatureRequests([]); }
+  };
+  const acceptFeatureRequest = async (req: any) => {
+    if (frProcessing) return;
+    setFrProcessing(req.id);
+    try {
+      let p = req.profile;
+      if (!p) { const arr = await sb.query<any>(auth.token, "profiles", `?id=eq.${req.user_id}&select=id,name,age,city,gender,photo_url&limit=1`).catch(() => [] as any[]); p = (Array.isArray(arr) ? arr : [])[0]; }
+      if (!p || !p.photo_url) { showToast("Ce profil n'a pas de photo principale.", "error"); setFrProcessing(null); return; }
+      const targetGender = p.gender === "Homme" ? "Femme" : "Homme";
+      const caption = `Célibataire à découvrir aujourd'hui 💝\nVous aimez son profil ? Laissez un like pour lui montrer votre intérêt.`;
+      const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const published_at = new Date().toISOString();
+      const arr = await sb.insert<{ id?: string }>(auth.token, "statuses", {
+        user_id: auth.userId, image_url: p.photo_url, image_path: null, caption,
+        is_official: false, is_feature: true, target_gender: targetGender, feature_user_id: req.user_id, expires_at,
+      });
+      const st = Array.isArray(arr) ? arr[0] : null;
+      if (!st || !st.id) { showToast("Échec de la publication du statut.", "error"); setFrProcessing(null); return; }
+      await sb.update(auth.token, "feature_requests", req.id, { status: "accepte", published_at, expires_at, status_id: st.id });
+      showToast("Mise en avant publiée pour 24h.", "success");
+      loadFeatureRequests();
+      loadFeatureStatuses();
+    } catch { showToast("Impossible d'accepter la demande.", "error"); }
+    finally { setFrProcessing(null); }
+  };
+  const refuseFeatureRequest = async (req: any) => {
+    if (frProcessing) return;
+    setFrProcessing(req.id);
+    try {
+      await sb.update(auth.token, "feature_requests", req.id, { status: "refuse" });
+      showToast("Demande refusée.", "success");
+      loadFeatureRequests();
+    } catch { showToast("Impossible de refuser la demande.", "error"); }
+    finally { setFrProcessing(null); }
+  };
+  const [expandedArchived, setExpandedArchived] = useState<Set<string>>(new Set());
+  const toggleArchived = (id: string) => setExpandedArchived(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const [reportActionLoading, setReportActionLoading] = useState<string | null>(null); // report id en cours
+  const [reportProfilePreview, setReportProfilePreview] = useState<AdminProfile | null>(null);
+  const [reportProfileLoading, setReportProfileLoading] = useState<string | null>(null);
+  const [reportProfilesCache, setReportProfilesCache] = useState<Record<string, AdminProfile>>({});
+  const [supportReply, setSupportReply] = useState<{ report: ReportRow; userId: string; allMessageIds?: string[] } | null>(null);
+  const [archivingConv, setArchivingConv] = useState<string | null>(null);
+  const [expandedConvs, setExpandedConvs] = useState<Set<string>>(new Set());
+  const toggleConv = (uid: string) => setExpandedConvs(prev => { const n = new Set(prev); n.has(uid) ? n.delete(uid) : n.add(uid); return n; });
+  // Archiver toute une conversation support (clôture). Les messages passent en "archived".
+  const archiveConversation = async (userId: string, messageIds: string[]) => {
+    setArchivingConv(userId);
+    try {
+      await Promise.all(messageIds.filter(Boolean).map(id =>
+        fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ status: "archived" }),
+        })
+      ));
+      setReports(prev => prev.map(r => messageIds.includes(r.id || "") ? { ...r, status: "archived" } : r));
+      showToast("Conversation archivée.", "success");
+      loadStats();
+    } catch { showToast("Erreur lors de l'archivage.", "error"); }
+    setArchivingConv(null);
+  };
+  const [supportReplyText, setSupportReplyText] = useState("");
+
+  // ── Users ──
+  const [users, setUsers] = useState<AdminProfile[]>([]);
+  // Helper : premium à vie
+  const isLifetimePremium = (u: AdminProfile) => !!u.premium_until && new Date(u.premium_until).getFullYear() >= 2090;
+  // Tri côté client pour les critères booléens
+  const sortedUsers = React.useMemo(() => {
+    const list = [...users];
+    const now = Date.now();
+    const isOnline = (u: AdminProfile) => !!u.last_seen && (now - new Date(u.last_seen).getTime()) < 5 * 60 * 1000;
+    switch (usersSort) {
+      case "online":    return list.sort((a, b) => Number(isOnline(b)) - Number(isOnline(a)));
+      case "premium":   return list.sort((a, b) => Number(b.is_premium) - Number(a.is_premium));
+      case "lifetime":  return list.sort((a, b) => Number(isLifetimePremium(b)) - Number(isLifetimePremium(a)));
+      case "admin":     return list.sort((a, b) => Number(!!b.is_admin) - Number(!!a.is_admin));
+      case "verified":  return list.sort((a, b) => Number(!!b.is_verified) - Number(!!a.is_verified));
+      case "banned":    return list.sort((a, b) => Number(!!b.is_banned) - Number(!!a.is_banned));
+      case "male":      return list.sort((a, b) => (a.gender === "Homme" ? -1 : 1));
+      case "female":    return list.sort((a, b) => (a.gender === "Femme" ? -1 : 1));
+      default:          return list;
+    }
+  }, [users, usersSort]);
+  // Profils incomplets = name est "..." ou vide
+  const displayedUsers = showIncomplete ? sortedUsers.filter(u => u.name === "..." || !u.name) : sortedUsers;
+  const [userSearch, setUserSearch] = useState("");
+  const [userSearchEmail, setUserSearchEmail] = useState("");
+  // Recherche automatique en direct (debounce ~450ms) dès qu'on tape dans l'un des deux champs,
+  // interroge directement la base sur TOUS les utilisateurs (pas seulement ceux déjà affichés).
+  useEffect(() => {
+    if (activeTab !== "users") return;
+    const t = setTimeout(() => {
+      setUserPage(0);
+      loadUsers(userSearch, 0, usersSort, userSearchEmail);
+    }, 450);
+    return () => clearTimeout(t);
+  }, [userSearch, userSearchEmail, activeTab]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userPage, setUserPage] = useState(0);
+  const USER_PAGE_SIZE_GRID = 20;
+  const USER_PAGE_SIZE_LIST = 500;
+  const USER_PAGE_SIZE = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
+
+  // ── Global ──
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<ToastState>(null);
+  const [confirmModal, setConfirmModal] = useState<{ msg: string; onConfirm: () => void } | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // userId en cours
+  const [banModal, setBanModal] = useState<AdminProfile | null>(null);
+  const [premiumGrantModal, setPremiumGrantModal] = useState<AdminProfile | null>(null);
+  const [grantFreeDate, setGrantFreeDate] = useState("");
+  const [grantOperator, setGrantOperator] = useState<"MTN" | "Airtel" | null>(null);
+  const [grantTab, setGrantTab] = useState<"paid" | "free">("paid");
+  const [grantSelectedPlan, setGrantSelectedPlan] = useState<{ label: string; days: number; amount: number } | null>(null);
+  const [grantTxRef, setGrantTxRef] = useState("");
+  const [banHours, setBanHours] = useState("24");
+  const [showHelp, setShowHelp] = useState(false);
+
+  // ── Utilitaires ──
+  const showToast = (msg: string, type: "success" | "error" = "success") => setToast({ msg, type });
+
+  const formatDate = (iso?: string) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  };
+
+  const formatDateTime = (iso?: string) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
+  // ── Chargement des stats globales ──
+  const loadStats = async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
+    console.log("[Moyo][Admin] Chargement du dashboard…");
+    try {
+      // Minuit UTC du jour en cours (Supabase stocke en UTC)
+      const now = new Date();
+      const todayIso = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+
+      // count=exact + Range "0-0" : récupère uniquement le total sans charger les données
+      const countHeader = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" };
+      const parseCount = (r: Response) => {
+        // content-range : "0-49/TOTAL" ou "*/TOTAL" ou absent si 416
+        const h = r.headers.get("content-range");
+        if (!h) return 0;
+        const parts = h.split("/");
+        const total = parseInt(parts[parts.length - 1]);
+        return isNaN(total) ? 0 : total;
+      };
+
+      const [rTotalUsers, rMatches, rMessages, rTotalReports,
+             rPremium, rVerified, rBanned, rMale, rFemale, rTodayUsers,
+             rTotalLikes, rLikesToday] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/matches?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/messages?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/reports?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?is_premium=eq.true&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?is_verified=eq.true&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?is_banned=eq.true&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?gender=eq.Homme&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?gender=eq.Femme&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?created_at=gte.${todayIso}&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/likes?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${todayIso}&select=id`, { headers: countHeader }),
+      ]);
+
+      // ── Likes par jour (30 derniers jours) ──
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const likesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      }).then(r => r.json()).catch(() => []);
+
+      const likesByDay: Record<string, number> = {};
+      (likesRaw as { created_at: string }[]).forEach(l => {
+        const d = l.created_at?.slice(0, 10);
+        if (d) likesByDay[d] = (likesByDay[d] || 0) + 1;
+      });
+      const likesPerDay = Object.entries(likesByDay).map(([date, count]) => ({ date, count })).slice(-14);
+
+      // ── Top 5 profils les plus likés ──
+      const topLikesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?select=to_user&limit=5000`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      }).then(r => r.json()).catch(() => []);
+      const likeCount: Record<string, number> = {};
+      (topLikesRaw as { to_user: string }[]).forEach(l => { if (l.to_user) likeCount[l.to_user] = (likeCount[l.to_user] || 0) + 1; });
+      const topIds = Object.entries(likeCount).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id);
+      let topLikedProfiles: { name: string; city: string; count: number }[] = [];
+      if (topIds.length > 0) {
+        const topProfiles = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${topIds.join(",")})&select=id,name,city`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        }).then(r => r.json()).catch(() => []);
+        topLikedProfiles = topIds.map(id => {
+          const p = (topProfiles as { id: string; name: string; city: string }[]).find(x => x.id === id);
+          return { name: p?.name || "?", city: p?.city || "", count: likeCount[id] };
+        });
+      }
+
+      // ── Charger un échantillon de profils pour top villes + derniers inscrits ──
+      const [recentProfilesRes, reps] = await Promise.all([
+        sb.query<AdminProfile>(auth.token, "profiles", "?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&order=created_at.desc&limit=500"),
+        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&order=created_at.desc&limit=50"),
+      ]);
+
+      // Top villes (sur l'échantillon de 500 derniers inscrits)
+      const cityMap: Record<string, number> = {};
+      recentProfilesRes.forEach(u => { if (u.city) cityMap[u.city] = (cityMap[u.city] || 0) + 1; });
+      const topCities = Object.entries(cityMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([city, count]) => ({ city, count }));
+      const recentUsers = recentProfilesRes.slice(0, 5);
+
+      setStats({
+        users: parseCount(rTotalUsers),
+        matches: parseCount(rMatches),
+        messages: parseCount(rMessages),
+        reports: parseCount(rTotalReports),
+        todayUsers: parseCount(rTodayUsers),
+        premiumUsers: parseCount(rPremium),
+        verifiedUsers: parseCount(rVerified),
+        bannedUsers: parseCount(rBanned),
+        maleCount: parseCount(rMale),
+        femaleCount: parseCount(rFemale),
+        topCities,
+        recentUsers,
+        totalLikes: parseCount(rTotalLikes),
+        likesToday: parseCount(rLikesToday),
+        likesPerDay,
+        topLikedProfiles,
+      });
+      setReports(reps);
+      // ── Charger automatiquement les profils reporter + reported ──
+      const idsToFetch = [...new Set(
+        reps.flatMap((r: ReportRow) => [r.reporter_id, r.reported_id].filter(Boolean) as string[])
+      )];
+      if (idsToFetch.length > 0) {
+        try {
+          const chunk = idsToFetch.slice(0, 50);
+          const profilesRes = await sb.query<AdminProfile>(
+            auth.token, "profiles",
+            "?select=id,name,age,city,gender,photo_url,is_premium,is_verified,is_banned,warning_count,created_at&id=in.(" + chunk.join(",") + ")"
+          );
+          const cache: Record<string, AdminProfile> = {};
+          profilesRes.forEach((p: AdminProfile) => { cache[p.id] = p; });
+          setReportProfilesCache(cache);
+        } catch (_) {}
+      }
+      console.log(`[Moyo][Admin] ✅ Dashboard chargé - ${parseCount(rTotalUsers)} profils, ${reps.length} signalements`);
+    } catch (e: any) {
+      console.error("[Moyo][Admin] ❌ Erreur chargement dashboard :", e?.message || e);
+      showToast("Erreur chargement dashboard : " + (e?.message || "inconnue"), "error");
+    }
+    setLoading(false);
+  };
+
+  // ── Chargement des utilisateurs avec recherche ──
+  const loadUsers = async (search = "", page = 0, sort = usersSort, searchEmail = "") => {
+    setUsersLoading(true);
+    try {
+      const pageSize = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
+      const offset = page * pageSize;
+      // Tris côté serveur (colonnes Supabase) vs tris côté client (booléens)
+      const serverSorts: Record<string, string> = {
+        "created_at.desc": "created_at.desc",
+        "created_at.asc": "created_at.asc",
+        "name.asc": "name.asc",
+        "name.desc": "name.desc",
+        "last_seen.desc": "last_seen.desc",
+        "age.asc": "age.asc",
+        "age.desc": "age.desc",
+        "admin":    "is_admin.desc.nullslast,created_at.desc",
+        "premium":  "is_premium.desc.nullslast,created_at.desc",
+        "verified": "is_verified.desc.nullslast,created_at.desc",
+        "banned":   "is_banned.desc.nullslast,created_at.desc",
+      };
+      const serverSort = serverSorts[sort] || "created_at.desc";
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
+      if (search.trim() || searchEmail.trim()) {
+        const nameQ = search.trim() ? `name.ilike.*${encodeURIComponent(search.trim())}*` : null;
+        const emailQ = searchEmail.trim() ? `email.ilike.*${encodeURIComponent(searchEmail.trim())}*` : null;
+        // Toujours envelopper dans or=(...), même avec un seul filtre : la syntaxe "colonne.operateur.valeur"
+        // (avec un point) n'est valide qu'à l'intérieur de or(...) — utilisée seule, elle est invalide
+        // et Supabase l'ignore silencieusement, d'où le filtre qui ne trouvait jamais rien.
+        const filter = [nameQ, emailQ].filter(Boolean).join(",");
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&or=(${filter})&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
+      }
+      const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
+      // Quand une recherche est active, on trie par pertinence (correspondance exacte / "commence par" en premier)
+      // plutôt que par le tri générique (date, etc.) — pour que la bonne personne apparaisse en tête, pas noyée.
+      if (search.trim() || searchEmail.trim()) {
+        const nq = search.trim().toLowerCase();
+        const eq = searchEmail.trim().toLowerCase();
+        const score = (u: AdminProfile) => {
+          const n = (u.name || "").toLowerCase();
+          const e = ((u as any).email || "").toLowerCase();
+          let best = 3; // 3 = correspond seulement en "contient" (déjà filtré côté serveur)
+          if (nq) {
+            if (n === nq) best = Math.min(best, 0);
+            else if (n.startsWith(nq)) best = Math.min(best, 1);
+            else if (n.includes(nq)) best = Math.min(best, 2);
+          }
+          if (eq) {
+            if (e === eq) best = Math.min(best, 0);
+            else if (e.startsWith(eq)) best = Math.min(best, 1);
+            else if (e.includes(eq)) best = Math.min(best, 2);
+          }
+          return best;
+        };
+        setUsers([...res].sort((a, b) => score(a) - score(b)));
+      } else {
+        setUsers(res);
+      }
+    } catch (e: any) {
+      console.error("[Moyo][Admin][Users] ❌ Erreur :", e?.message || e);
+      showToast("Erreur chargement utilisateurs : " + (e?.message || "inconnue"), "error");
+    }
+    setUsersLoading(false);
+  };
+
+  useEffect(() => {
+    loadStats();
+    loadReviews();
+    loadPayments();
+    const statsInterval = setInterval(() => {
+      if (activeTab === "stats") loadStats(false);
+    }, POLL_STATS_MS);
+
+    // ── Polling badges matchs (demandes + propositions) toutes les 8s ──
+    const checkMatchBadges = async () => {
+      try {
+        const h = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" };
+        // Nouvelles demandes de mise en relation
+        const lastReqSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
+        const rReq = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&created_at=gt.${encodeURIComponent(lastReqSeen)}&select=id`, { headers: h });
+        const reqCount = (() => { const c = rReq.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
+        setMatchRequestsBadge(reqCount);
+        // Propositions ayant reçu une réponse depuis la dernière visite
+        const lastPropSeen = localStorage.getItem("moyo_proposals_seen") || "1970-01-01";
+        const rProp = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(status.eq.accepted,status.eq.refused)&created_at=gt.${encodeURIComponent(lastPropSeen)}&select=id`, { headers: h });
+        const propCount = (() => { const c = rProp.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
+        setProposalsBadgeCount(propCount);
+        // Demandes de mise en avant (statuts Moyo Dating) en attente de validation
+        const rFeat = await fetch(`${SUPABASE_URL}/rest/v1/feature_requests?status=eq.en_attente&select=id`, { headers: h });
+        const featCount = (() => { const c = rFeat.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
+        setFeaturePendingCount(featCount);
+        // Rendez-vous en attente de traitement (à confirmer / reporter / annuler)
+        const rAppt = await fetch(`${SUPABASE_URL}/rest/v1/appointments?status=eq.en_attente&select=id`, { headers: h });
+        const apptCount = (() => { const c = rAppt.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
+        setAppointmentsPendingCount(apptCount);
+      } catch {}
+    };
+    checkMatchBadges();
+    const matchBadgeInterval = setInterval(checkMatchBadges, POLL_BADGES_MS);
+
+    return () => { clearInterval(statsInterval); clearInterval(matchBadgeInterval); };
+  }, [activeTab]);
+  useEffect(() => {
+    // Recharger les stats à chaque fois qu'on revient sur l'onglet "stats"
+    if (activeTab === "stats") loadStats();
+    if (activeTab === "users") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); }
+  }, [activeTab, usersViewMode]);
+
+  // ── Action admin générique sur un profil ──
+  const adminAction = async (
+    userId: string,
+    updates: Partial<AdminProfile>,
+    successMsg: string,
+  ) => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setActionLoading(userId);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify(updates),
+      });
+      const data = await r.json().catch(() => null);
+      if (!r.ok) {
+        const errMsg = data?.message || data?.code || `HTTP ${r.status}`;
+        console.error("[Moyo][Admin][Action] ❌ Supabase error :", data);
+        if (r.status === 403 || r.status === 401) {
+          showToast(`Action bloquée par Supabase RLS (policy). Détail : ${errMsg}`, "error");
+        } else {
+          showToast(`Erreur Supabase : ${errMsg}`, "error");
+        }
+        return;
+      }
+      console.log("[Moyo][Admin][Action] ✅", successMsg, updates);
+      showToast(successMsg, "success");
+      // Log historique admin
+      logAdminAction(auth.token, auth.userId, auth.name, successMsg, userId);
+      // Mise à jour locale immédiate
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+      // ── Recharger les KPIs pour refléter le changement (premium, banni, vérifié…) ──
+      loadStats();
+    } catch (e: any) {
+      console.error("[Moyo][Admin][Action] ❌ Erreur réseau :", e?.message || e);
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setActionLoading(null);
+  };
+
+  // ── Activer Premium suite à un paiement WhatsApp/manuel (transaction ID non captée par l'app) ──
+  // Applique la bonne durée selon la formule réellement payée ET enregistre le paiement dans
+  // Budget/Paiements pour que le revenu soit comptabilisé correctement.
+  // ── Envoyer une demande de paiement WhatsApp/manuel à valider ──
+  // Ne active RIEN directement : crée une ligne "pending" dans payment_requests,
+  // exactement comme quand le client soumet lui-même son ID de transaction.
+  // Seul un Super Admin (accès Budget/Paiements) peut ensuite vérifier et activer.
+  const sendPremiumPaymentRequest = async () => {
+    const user = premiumGrantModal;
+    if (!user || !grantOperator || !grantTxRef.trim() || !grantSelectedPlan) return;
+    setActionLoading(user.id);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+        body: JSON.stringify({ user_id: user.id, operator: grantOperator, tx_ref: grantTxRef.trim(), amount: grantSelectedPlan.amount, status: "pending" }),
+      });
+      const data = await r.json().catch(() => null);
+      const created = Array.isArray(data) ? data[0] : data;
+      // Ne jamais afficher un succès si l'insertion a réellement échoué
+      // (ex: policy RLS qui bloque l'admin car user_id ≠ son propre auth.uid()).
+      if (!r.ok || !created?.id) {
+        const errMsg = (data as any)?.message || (data as any)?.hint || (data as any)?.code || `HTTP ${r.status}`;
+        throw new Error(errMsg);
+      }
+      logAdminAction(auth.token, auth.userId, auth.name, `Demande de paiement manuelle envoyée pour ${user.name} — formule ${grantSelectedPlan.label} (${grantSelectedPlan.amount.toLocaleString()} FCFA, ${grantOperator}, réf. ${grantTxRef.trim()}), en attente de validation Super Admin.`, user.id);
+      showToast(`Demande envoyée pour ${user.name}. Un Super Admin doit la valider dans Budget/Paiements.`, "success");
+      setPremiumGrantModal(null);
+      setGrantOperator(null);
+      setGrantTxRef("");
+      setGrantSelectedPlan(null);
+    } catch (e: any) { showToast(`❌ Échec de l'envoi : ${e?.message || "inconnue"}`, "error"); }
+    setActionLoading(null);
+  };
+
+  // ── Offrir Premium gratuitement (collaborateurs, geste commercial…) ──
+  // Date de fin totalement libre, choisie par l'admin. Aucune trace dans Budget/Paiements
+  // puisqu'aucun paiement n'a eu lieu.
+  const grantPremiumFree = async () => {
+    const user = premiumGrantModal;
+    if (!user || !grantFreeDate) return;
+    const premiumUntil = new Date(`${grantFreeDate}T23:59:59`).toISOString();
+    const dateLabel = new Date(premiumUntil).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+    await adminAction(user.id, { is_premium: true, premium_until: premiumUntil, premium_is_gift: true }, `Premium offert gratuitement à ${user.name} jusqu'au ${dateLabel} (aucun paiement, non comptabilisé dans Budget).`);
+    setPremiumGrantModal(null);
+    setGrantFreeDate("");
+  };
+  const deleteAccount = async (user: AdminProfile) => {
+    if (user.id === auth.userId) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setActionLoading(user.id);
+    try {
+      // ── Étape 1 : supprimer toutes les données associées en cascade ──
+      await Promise.all([
+        sb.delete(auth.token, "likes", `?from_user=eq.${user.id}`),
+        sb.delete(auth.token, "likes", `?to_user=eq.${user.id}`),
+        sb.delete(auth.token, "blocks", `?blocker_id=eq.${user.id}`),
+        sb.delete(auth.token, "blocks", `?blocked_id=eq.${user.id}`),
+        sb.delete(auth.token, "profile_views", `?viewer_id=eq.${user.id}`),
+        sb.delete(auth.token, "profile_views", `?viewed_id=eq.${user.id}`),
+        sb.delete(auth.token, "dismissed_cards", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "app_ratings", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "statuses", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "payment_requests", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "user_warnings", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "reports", `?reporter_id=eq.${user.id}`),
+      ]);
+
+      // ── Étape 2 : supprimer les matchs et leurs messages ──
+      const matches = await sb.query<{ id: string }>(
+        auth.token, "matches",
+        `?or=(user1.eq.${user.id},user2.eq.${user.id})&select=id`
+      );
+      if (Array.isArray(matches) && matches.length > 0) {
+        for (const m of matches) {
+          await sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`);
+        }
+        await sb.delete(auth.token, "matches", `?user1=eq.${user.id}`);
+        await sb.delete(auth.token, "matches", `?user2=eq.${user.id}`);
+      }
+
+      // ── Étape 3 : supprimer le profil ──
+      await sb.delete(auth.token, "profiles", `?id=eq.${user.id}`);
+
+      // ── Étape 4 : supprimer le compte Auth via RPC admin ──
+      // La RPC delete_user_by_id(target_user_id uuid) doit exister dans Supabase
+      // Elle appelle auth.users DELETE avec les droits service_role via SECURITY DEFINER
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/delete_user_by_id`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+          body: JSON.stringify({ target_user_id: user.id }),
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(() => null);
+          console.warn("[Moyo][Admin][Delete] RPC delete_user_by_id non disponible ou erreur :", err?.message || r.status, "- Le profil a été supprimé mais le compte Auth peut subsister.");
+        } else {
+          console.log("[Moyo][Admin][Delete] ✅ Compte Auth supprimé via RPC :", user.id);
+        }
+      } catch (rpcErr) {
+        console.warn("[Moyo][Admin][Delete] RPC Auth inaccessible :", rpcErr, "- Données supprimées, Auth peut subsister.");
+      }
+
+      showToast(`Compte de ${user.name} supprimé définitivement.`, "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Compte supprimé définitivement : ${user.name}`, user.id);
+      setUsers(prev => prev.filter(u => u.id !== user.id));
+      // ── Recharger tous les KPIs après suppression (membres, matchs, messages…) ──
+      loadStats();
+    } catch (e: any) {
+      console.error("[Moyo][Admin][Delete] ❌ Erreur :", e?.message || e);
+      showToast("Erreur suppression : " + (e?.message || "inconnue"), "error");
+    }
+    setActionLoading(null);
+  };
+
+  // ── Envoi d'un avertissement ──
+  const sendWarning = async (user: AdminProfile) => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setWarnLoading(true);
+    try {
+      const finalReason = warnReason === "Autre motif" && warnCustom.trim()
+        ? warnCustom.trim()
+        : warnReason;
+      const newCount = (user.warning_count || 0) + 1;
+      // 1. Insérer l'avertissement
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          admin_id: auth.userId,
+          reason: finalReason,
+          warning_number: newCount,
+          acknowledged: false,
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => null);
+        showToast(`Erreur : ${err?.message || r.status}`, "error");
+        setWarnLoading(false);
+        return;
+      }
+      // 2. Incrémenter warning_count sur le profil
+      await sb.update(auth.token, "profiles", user.id, { warning_count: newCount });
+      // 3. Mise à jour locale
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, warning_count: newCount } : u));
+      showToast(`Avertissement ${newCount}/3 envoyé à ${user.name}.`, "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Avertissement ${newCount}/3 envoyé à ${user.name} - Motif : ${finalReason}`, user.id);
+      setWarnModal(null);
+      setWarnReason(WARN_REASONS[0]);
+      setWarnCustom("");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setWarnLoading(false);
+  };
+
+  // ── Confirmation modale ──
+  const confirm = (msg: string, fn: () => void) => setConfirmModal({ msg, onConfirm: fn });
+
+  // ── Actions sur les signalements ──
+  const updateReportStatus = async (reportId: string, newStatus: string, successMsg: string) => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setReportActionLoading(reportId);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${reportId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => null);
+        const errMsg = err?.message || err?.code || `HTTP ${r.status}`;
+        if (r.status === 403 || r.status === 401) {
+          showToast(`Bloqué par RLS. Exécute le SQL de policy dans Supabase. (${errMsg})`, "error");
+        } else {
+          showToast(`Erreur Supabase : ${errMsg}`, "error");
+        }
+        setReportActionLoading(null);
+        return;
+      }
+      // Mise à jour locale immédiate
+      setReports(prev => prev.map(rep => rep.id === reportId ? { ...rep, status: newStatus } : rep));
+      showToast(successMsg, "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setReportActionLoading(null);
+  };
+
+  // ── Suppression définitive d'un signalement archivé ──
+  const deleteReport = async (reportId: string) => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setReportActionLoading(reportId);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${reportId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+        },
+      });
+      if (!r.ok && r.status !== 204) {
+        const err = await r.json().catch(() => null);
+        const errMsg = err?.message || err?.code || `HTTP ${r.status}`;
+        if (r.status === 403 || r.status === 401) {
+          showToast(`Bloqué par RLS. Exécute ce SQL dans Supabase :\nCREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`, "error");
+        } else {
+          showToast(`Erreur suppression : ${errMsg}`, "error");
+        }
+        setReportActionLoading(null);
+        return;
+      }
+      // Suppression locale immédiate
+      setReports(prev => prev.filter(rep => rep.id !== reportId));
+      showToast("Signalement supprimé définitivement.", "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setReportActionLoading(null);
+  };
+
+  // ── Suppression d'une seule archive ──
+  const deleteOneArchivedReport = (id?: string) => {
+    if (!id) return;
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setConfirmModal({
+      msg: "Supprimer définitivement cet élément des archives ? Les profils, messages et avertissements ne sont pas supprimés.",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" } });
+          if (!r.ok && r.status !== 204) { showToast(`Erreur suppression (${r.status}).`, "error"); return; }
+          setReports(prev => prev.filter(rep => rep.id !== id));
+          showToast("Archive supprimée.", "success");
+        } catch { showToast("Erreur réseau.", "error"); }
+      },
+    });
+  };
+
+  // ── Suppression de TOUTES les archives (bulk delete) ──
+  const deleteAllArchivedReports = async () => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    const archivedIds = reports
+      .filter(r => ARCHIVED_STATUSES.includes(r.status) && r.id)
+      .map(r => r.id as string);
+    if (archivedIds.length === 0) return;
+    setReportActionLoading("bulk");
+    try {
+      // Supabase : DELETE avec filtre IN sur les IDs archivés uniquement
+      const inList = archivedIds.map(id => `"${id}"`).join(",");
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/reports?id=in.(${archivedIds.join(",")})&status=in.(reviewed,rejected,banned)`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${auth.token}`,
+          },
+        }
+      );
+      if (!r.ok && r.status !== 204) {
+        const err = await r.json().catch(() => null);
+        const errMsg = err?.message || err?.code || `HTTP ${r.status}`;
+        if (r.status === 403 || r.status === 401) {
+          showToast(`Bloqué par RLS. Exécute ce SQL dans Supabase :
+CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`, "error");
+        } else {
+          showToast(`Erreur suppression globale : ${errMsg}`, "error");
+        }
+        setReportActionLoading(null);
+        return;
+      }
+      // Suppression locale immédiate - ne touche qu'aux archivés
+      setReports(prev => prev.filter(rep => !ARCHIVED_STATUSES.includes(rep.status)));
+      showToast(`${archivedIds.length} archive${archivedIds.length > 1 ? "s" : ""} supprimée${archivedIds.length > 1 ? "s" : ""} définitivement.`, "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setReportActionLoading(null);
+  };
+
+  const sendSupportReply = async () => {
+    if (!supportReply || !supportReplyText.trim()) return;
+    if (!supportReply.userId) { showToast("Destinataire introuvable pour cette réponse.", "error"); return; }
+    setReportActionLoading(supportReply.report.id || "support-reply");
+    try {
+      // IMPORTANT : la conversation support d'un utilisateur est rattachée via reporter_id.
+      // Pour qu'une réponse de l'Assistance apparaisse bien CHEZ L'UTILISATEUR (et pas chez l'admin),
+      // on met l'utilisateur destinataire en reporter_id. Le préfixe [SUPPORT_REPLY] indique que
+      // le message vient de l'Assistance (affiché comme tel côté utilisateur).
+      await sb.insert<ReportRow>(auth.token, "reports", {
+        reporter_id: supportReply.userId,
+        reported_id: supportReply.userId,
+        reason: `${SUPPORT_PREFIX_REPLY} ${supportReplyText.trim()}`,
+        status: "reviewed",
+      });
+      // On n'archive PLUS automatiquement la conversation : elle reste visible dans Messagerie.
+      // Les messages "pending" de l'utilisateur sont juste marqués comme lus (reviewed) pour
+      // retirer la pastille "non lu", sans sortir la conversation de la liste active.
+      try {
+        const pendingIds = (supportReply.allMessageIds || []).filter(Boolean);
+        await Promise.all(pendingIds.map(id =>
+          fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${id}&status=eq.pending`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+            body: JSON.stringify({ status: "reviewed" }),
+          })
+        ));
+      } catch {}
+      showToast("Réponse envoyée à l'utilisateur dans sa messagerie.", "success");
+      setSupportReply(null);
+      setSupportReplyText("");
+      loadStats();
+    } catch (e: any) {
+      showToast("Impossible d’envoyer la réponse. Vérifiez les policies RLS de la table reports.", "error");
+    } finally {
+      setReportActionLoading(null);
+    }
+  };
+
+  const banReportedProfile = async (report: ReportRow) => {
+    if (!auth.isAdmin || !report.reported_id || !report.id) return;
+    setReportActionLoading(report.id);
+    try {
+      // 1. Bannir le profil
+      const rProfile = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${report.reported_id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({ is_banned: true, is_visible: false }),
+      });
+      if (!rProfile.ok) {
+        const err = await rProfile.json().catch(() => null);
+        showToast(`Erreur bannissement profil : ${err?.message || rProfile.status}`, "error");
+        setReportActionLoading(null);
+        return;
+      }
+      // 2. Mettre à jour le report → status "banned"
+      await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${report.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${auth.token}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({ status: "banned" }),
+      });
+      // 3. Mise à jour locale
+      setReports(prev => prev.map(rep => rep.id === report.id ? { ...rep, status: "banned" } : rep));
+      setUsers(prev => prev.map(u => u.id === report.reported_id ? { ...u, is_banned: true, is_visible: false } : u));
+      showToast("Profil banni et signalement clôturé.", "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setReportActionLoading(null);
+  };
+
+  const loadReportedProfile = async (reportedId: string) => {
+    setReportProfileLoading(reportedId);
+    try {
+      const res = await sb.query<AdminProfile>(
+        auth.token, "profiles",
+        `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_visible,warning_count,created_at&id=eq.${reportedId}`
+      );
+      if (res.length > 0) {
+        setReportProfilePreview(res[0]);
+      } else {
+        showToast("Profil introuvable (supprimé ?)", "error");
+      }
+    } catch (e: any) {
+      showToast("Erreur chargement profil : " + (e?.message || "inconnue"), "error");
+    }
+    setReportProfileLoading(null);
+  };
+
+  // ── Couleur badge statut report ──
+  const reportStatusStyle = (status: string): { bg: string; color: string; label: string } => {
+    switch (status) {
+      case "pending":    return { bg: "rgba(243,156,18,0.12)", color: "#f39c12", label: "En attente" };
+      case "reviewed":   return { bg: "rgba(39,174,96,0.12)",  color: "#27ae60", label: "Traité" };
+      case "rejected":   return { bg: "rgba(127,140,141,0.12)", color: "#7f8c8d", label: "Rejeté" };
+      case "banned":     return { bg: "rgba(231,76,60,0.12)",  color: "#e74c3c", label: "Banni" };
+      default:           return { bg: "rgba(52,152,219,0.12)", color: "#3498db", label: status };
+    }
+  };
+
+  // ── Classify reports ──
+  const classifyReport = (r: ReportRow): { label: string; color: string } => {
+    if (r.reason?.startsWith("[AUTO-MOD")) return { label: "Auto-modération", color: "#e67e22" };
+    if (r.reason?.startsWith("[BOT SIGNALEMENT]")) return { label: "Alerte bot", color: "#8e44ad" };
+    if (isSupportReason(r.reason)) return { label: "Messagerie", color: G.vert };
+    if (!r.reported_id) return { label: "Alerte système", color: "#7f8c8d" };
+    return { label: "Signalement profil", color: G.rouge };
+  };
+
+  const ARCHIVED_STATUSES = ["reviewed", "rejected", "banned", "archived"];
+  const isPending = (r: ReportRow) => !ARCHIVED_STATUSES.includes(r.status);
+  const isSupportReport = (r: ReportRow) => isSupportReason(r.reason);
+  // Messagerie = messages envoyés par l'utilisateur (SUPPORT_USER) OU réponses utilisateur à nos messages (SUPPORT_USER après un SUPPORT_REPLY)
+  const isSupportUserMessage = (r: ReportRow) => !!r.reason?.startsWith(SUPPORT_PREFIX_USER) || (!!r.reason?.startsWith(SUPPORT_PREFIX_REPLY) === false && isSupportReason(r.reason));
+  const isSupportInbox = (r: ReportRow) => isSupportReason(r.reason); // tout échange support
+  const isSupportAdminReply = (r: ReportRow) => !!r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
+  const isSystemReport = (r: ReportRow) => !isSupportReport(r) && (r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id);
+  const isProfileReport = (r: ReportRow) => !isSupportReport(r) && !isSystemReport(r) && !!r.reported_id;
+
+  // Onglet "Messagerie" (top-level) = même vue que le sous-filtre "messaging", mais depuis son propre onglet
+  const effectiveFilter = activeTab === "messagerie" ? "messaging" : reportFilter;
+
+  const filteredReports = reports.filter(r => {
+    if (effectiveFilter === "archived") return ARCHIVED_STATUSES.includes(r.status);
+    // Messagerie : on montre tous les échanges support NON archivés (statut ≠ "archived"),
+    // y compris les messages "reviewed" (réponses admin ou messages déjà lus), pour garder
+    // le fil de conversation visible jusqu'à ce que l'admin archive explicitement.
+    if (effectiveFilter === "messaging") return isSupportInbox(r) && r.status !== "archived";
+    // Autres vues actives : exclure les archivés
+    if (!isPending(r)) return false;
+    if (effectiveFilter === "user") return isProfileReport(r);
+    if (effectiveFilter === "system") return isSystemReport(r);
+    return !isSupportInbox(r); // "all" = tous les signalements en attente, hors messagerie (qui a son propre onglet)
+  });
+
+  const archivedCount = reports.filter(r => ARCHIVED_STATUSES.includes(r.status)).length;
+  const pendingCount = reports.filter(r => isPending(r) && !isSupportInbox(r)).length;
+  const profilePendingCount = reports.filter(r => isPending(r) && isProfileReport(r)).length;
+  const systemPendingCount = reports.filter(r => isPending(r) && isSystemReport(r)).length;
+  const messagingPendingCount = reports.filter(r => isPending(r) && isSupportInbox(r)).length;
+  const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
+  // ── Badge global = signalements en attente + avis non lus + paiements en attente + nouvelles demandes de mise en relation ──
+  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge + featurePendingCount + appointmentsPendingCount;
+  const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge;
+  // Sync badge vers App parent
+  useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
+
+  // ── SVG Icons ──
+  const IcoUsers = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+  const IcoStats = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+  const IcoAlert = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+  const IcoStar = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="#D4A843" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+  const IcoShield = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+  const IcoBan = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>;
+  const IcoEye = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+  const IcoCheckCircle = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+  const IcoXCircle = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>;
+  const IcoBanLg = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>;
+  const IcoWarnLg = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+  const IcoCheck = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+  const IcoTrash = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>;
+  const IcoSearch = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+  const IcoRefresh = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>;
+  const IcoHeart = ({ color = "currentColor" }: { color?: string }) => <svg width="16" height="16" viewBox="0 0 24 24" fill={color} stroke="none"><path d={"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"} /></svg>;
+  const IcoBolt = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+  const IcoSend = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d={"M22 2L11 13"}/><path d={"M22 2L15 22 11 13 2 9l20-7z"}/></svg>;
+  const IcoArrowLeft = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
+  const IcoGear = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+  const IcoKey = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8B008B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>;
+  const IcoWarn = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+
+  // ── Rendu d'un badge statut ──
+  const StatusBadge = ({ label, active, color, Icon }: { label: string; active: boolean; color: string; Icon: () => React.ReactElement }) => (
+    active ? (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${color}18`, color, borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>
+        <Icon />{label}
+      </span>
+    ) : null
+  );
+
+  // ── Rendu d'un bouton d'action utilisateur ──
+  const ActionBtn = ({ label, onClick, color = G.rouge, disabled = false }: {
+    label: string; onClick: () => void; color?: string; disabled?: boolean
+  }) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: `${color}14`, color, border: `1px solid ${color}30`, borderRadius: 8,
+        padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.5 : 1, whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  if (!auth.isAdmin) return null;
+
+  return (
+    <div style={{ padding: "0 0 80px", minHeight: "100vh", background: G.creme }}>
+      {/* Toast */}
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Modal confirmation */}
+      {confirmModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10010, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <p style={{ fontSize: "0.9rem", color: "#111", lineHeight: 1.6, marginBottom: 22, fontWeight: 500, whiteSpace: "pre-line", textAlign: "left" }}>{confirmModal.msg}</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn variant="ghost" onClick={() => setConfirmModal(null)} style={{ flex: 1, padding: "11px" }}>Annuler</Btn>
+              <Btn variant="danger" onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }} style={{ flex: 1, padding: "11px" }}>Confirmer</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ajouter / Modifier une dépense */}
+      {expenseForm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 12000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !expenseSaving && setExpenseForm(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, margin: 0 }}>{expenseForm.id ? "Modifier la dépense" : "Ajouter une dépense"}</h3>
+              <button onClick={() => !expenseSaving && setExpenseForm(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1.4rem", lineHeight: 1 }}>×</button>
+            </div>
+            {(() => {
+              const lbl = { display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#888", marginBottom: 5 } as React.CSSProperties;
+              const inp = { width: "100%", boxSizing: "border-box" as const, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", color: G.brun, background: G.blanc };
+              const set = (patch: Partial<Expense>) => setExpenseForm(f => f ? { ...f, ...patch } : f);
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 140px" }}>
+                      <label style={lbl}>Date</label>
+                      <input type="date" value={expenseForm.date} onChange={e => set({ date: e.target.value })} style={inp} />
+                    </div>
+                    <div style={{ flex: "1 1 140px" }}>
+                      <label style={lbl}>Catégorie</label>
+                      <select value={expenseForm.category} onChange={e => set({ category: e.target.value })} style={inp}>
+                        {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Libellé</label>
+                    <input type="text" value={expenseForm.label} onChange={e => set({ label: e.target.value })} placeholder="Ex : Campagne Facebook Ads - Mai" style={inp} />
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 140px" }}>
+                      <label style={lbl}>Montant</label>
+                      <input type="number" min="0" step="0.01" value={expenseForm.amount || ""} onChange={e => set({ amount: parseFloat(e.target.value) || 0 })} placeholder="0.00" style={inp} />
+                    </div>
+                    <div style={{ flex: "0 0 auto" }}>
+                      <label style={lbl}>Devise</label>
+                      <div style={{ display: "flex", gap: 4, background: G.creme, borderRadius: 10, padding: 3 }}>
+                        {([["EUR", "€"], ["XAF", "FCFA"]] as [string, string][]).map(([k, l]) => (
+                          <button key={k} onClick={() => set({ currency: k })} style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: expenseForm.currency === k ? "#27ae60" : "transparent", color: expenseForm.currency === k ? "#fff" : "#888", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Type de frais</label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {([["ponctuel", "Frais ponctuels", "Compté une seule fois"], ["quotidien", "Frais quotidiens", "Reconduit chaque jour"]] as [FeeType, string, string][]).map(([k, t, d]) => {
+                        const on = expenseForm.fee_type === k;
+                        return (
+                          <button key={k} onClick={() => set({ fee_type: k })} style={{ flex: 1, textAlign: "left", padding: "10px 12px", borderRadius: 10, cursor: "pointer", border: `2px solid ${on ? "#27ae60" : G.gris}`, background: on ? "rgba(39,174,96,0.08)" : G.blanc }}>
+                            <div style={{ fontSize: "0.82rem", fontWeight: 700, color: on ? "#27ae60" : G.brun }}>{t}</div>
+                            <div style={{ fontSize: "0.68rem", color: "#999", marginTop: 2 }}>{d}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 160px" }}>
+                      <label style={lbl}>Saisi par</label>
+                      <input type="text" value={expenseForm.entered_by || ""} onChange={e => set({ entered_by: e.target.value })} placeholder="Nom" style={inp} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Commentaire (facultatif)</label>
+                    <textarea value={expenseForm.comment || ""} onChange={e => set({ comment: e.target.value })} placeholder="Détail, fournisseur, référence..." style={{ ...inp, minHeight: 64, resize: "vertical" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                    <Btn variant="ghost" onClick={() => setExpenseForm(null)} style={{ flex: 1, padding: "11px" }} disabled={expenseSaving}>Annuler</Btn>
+                    <Btn variant="primary" onClick={saveExpense} style={{ flex: 1, padding: "11px" }} loading={expenseSaving}>{expenseForm.id ? "Enregistrer" : "Ajouter"}</Btn>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Modal réponse assistance (support) */}
+      {supportReply && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 12000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Répondre via {SUPPORT_TEAM_NAME}</h3>
+            <p style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>La réponse apparaîtra directement dans la messagerie de l’utilisateur comme une conversation avec l’assistance Moyo Dating.</p>
+            <div style={{ background: "rgba(26,92,58,0.06)", border: "1px solid rgba(26,92,58,0.15)", borderRadius: 12, padding: 10, fontSize: "0.78rem", color: "#444", lineHeight: 1.5, marginBottom: 12 }}>{cleanSupportReason(supportReply.report.reason)}</div>
+            <textarea value={supportReplyText} onChange={e => setSupportReplyText(e.target.value)} placeholder="Écrire la réponse de l’assistance Moyo Dating..." style={{ width: "100%", minHeight: 110, boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: 12, fontSize: "0.86rem", outline: "none", resize: "vertical", marginBottom: 12 }} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn variant="ghost" onClick={() => { setSupportReply(null); setSupportReplyText(""); }} style={{ flex: 1 }}>Annuler</Btn>
+              <Btn variant="primary" onClick={sendSupportReply} disabled={!supportReplyText.trim()} style={{ flex: 2 }}>Envoyer</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewPaymentProfile && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewPaymentProfile(null)}>
+          <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ height: 240, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden", borderRadius: "24px 24px 0 0" }}>
+              {viewPaymentProfile.photo_url ? <img src={viewPaymentProfile.photo_url} alt={viewPaymentProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }} />
+              <div style={{ position: "absolute", bottom: 16, left: 18, right: 18, color: "#fff" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: "1.4rem", fontWeight: 800 }}>{viewPaymentProfile.name}, {viewPaymentProfile.age} ans</span>
+                  {viewPaymentProfile.is_premium && <PremiumBadge size={16} />}
+                  {viewPaymentProfile.is_verified && <VerifiedBadge size={16} />}
+                </div>
+                <div style={{ fontSize: "0.82rem", opacity: 0.85, marginTop: 2 }}>{viewPaymentProfile.city}</div>
+              </div>
+              <button onClick={() => setViewPaymentProfile(null)} style={{ position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.45)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ padding: "16px 20px 24px" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                {viewPaymentProfile.gender && <span style={{ background: G.creme, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600, color: "#555" }}>{viewPaymentProfile.gender}</span>}
+                {viewPaymentProfile.religion && <span style={{ background: "rgba(212,168,67,0.12)", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600, color: "#555" }}>{viewPaymentProfile.religion}</span>}
+                {viewPaymentProfile.profession && <span style={{ background: G.creme, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600, color: "#555" }}>{viewPaymentProfile.profession}</span>}
+                {viewPaymentProfile.hobbies && <span style={{ background: "rgba(26,92,58,0.07)", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600, color: "#2a5a3a" }}>{viewPaymentProfile.hobbies}</span>}
+              </div>
+              {viewPaymentProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.65, marginBottom: 12 }}>{viewPaymentProfile.bio}</p>}
+              <div style={{ background: G.creme, borderRadius: 8, padding: "6px 10px", fontSize: "0.68rem", color: "#aaa", fontFamily: "monospace", wordBreak: "break-all" }}>{viewPaymentProfile.id}</div>
+            </div>
+          </div>
+        </div>
+      )}
+      {premiumEventConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            {/* Header */}
+            <div style={{ background: premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, padding: "22px 20px 18px", textAlign: "center" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>
+                {premiumEventActive ? "Désactiver l'événement Premium ?" : "Activer l'événement Premium ?"}
+              </div>
+            </div>
+            {/* Corps */}
+            <div style={{ padding: "20px 22px 24px" }}>
+              <p style={{ fontSize: "0.88rem", color: "#444", lineHeight: 1.6, marginBottom: 16, textAlign: "center" }}>
+                {premiumEventActive
+                  ? "⚠️ Cela va retirer le statut Premium à tous les utilisateurs qui ne sont pas abonnés réels. Les vrais abonnés (avec premium_until valide) ne seront pas affectés."
+                  : "⚠️ Cela va activer le Premium pour TOUS les utilisateurs gratuitement. Utilisez uniquement pour un événement spécial."}
+              </p>
+              {!premiumEventActive && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 4, fontWeight: 600 }}>Date d'expiration <span style={{ color: G.rouge }}>*</span></div>
+                  <input type="datetime-local" value={premiumEventExpiresAt} onChange={e => setPremiumEventExpiresAt(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: "2px solid rgba(184,134,11,0.4)", fontSize: "0.84rem", outline: "none", fontFamily: "inherit" }} />
+                  <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 3 }}>Passé cette date, le Premium sera retiré automatiquement aux non-abonnés</div>
+                </div>
+              )}
+              <p style={{ fontSize: "0.78rem", color: "#e74c3c", fontWeight: 600, textAlign: "center", marginBottom: 20 }}>
+                Cette action affecte tous les utilisateurs de la plateforme.
+              </p>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => { setPremiumEventConfirm(false); setPremiumEventExpiresAt(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
+                  Annuler
+                </button>
+                <button disabled={!premiumEventActive && !premiumEventExpiresAt} onClick={() => { setPremiumEventConfirm(false); togglePremiumEvent(); }} style={{ flex: 1, background: !premiumEventActive && !premiumEventExpiresAt ? "#aaa" : premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 700, cursor: !premiumEventActive && !premiumEventExpiresAt ? "not-allowed" : "pointer" }}>
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {broadcastModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg,#fef3e2,#fde8c0)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(230,126,34,0.15)" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun }}>📢 Diffusion générale</div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>Destinataires : {broadcastTarget === "all" ? "tous les utilisateurs" : broadcastTarget === "femmes" ? "les femmes" : broadcastTarget === "hommes" ? "les hommes" : broadcastTarget === "premium" ? "les membres Premium" : "les membres gratuits"}</div>
+            </div>
+            <div style={{ padding: "16px 20px 20px" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                {[
+                  "Moyo Dating est en maintenance ce soir de [H] à [H]. Merci de votre compréhension.",
+                  "Nouvelle fonctionnalité disponible : [PRÉCISION]",
+                  "Une mise à jour est disponible. Rechargez l'application pour en profiter.",
+                  "Un incident technique a été résolu. Tout fonctionne normalement.",
+                  "Profitez de -50% sur le Premium ce weekend uniquement !",
+                  "Offre spéciale : 1 mois Premium offert pour tout parrainage !",
+                  "Rappel : Moyo Dating est une plateforme de rencontre respectueuse. Soyons bienveillants ❤️",
+                  "La communauté Moyo Dating grandit ! Invitez vos amis à nous rejoindre.",
+                  "Pour votre sécurité, ne partagez jamais vos informations personnelles.",
+                  "Moyo Dating ne vous demandera jamais d'argent. Signalez toute tentative d'arnaque.",
+                ].map(t => (
+                  <button key={t} onClick={() => setBroadcastText(t)} style={{ fontSize: "0.72rem", background: broadcastText === t ? "rgba(230,126,34,0.12)" : G.creme, border: `1.5px solid ${broadcastText === t ? "#e67e22" : "transparent"}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: "#333", textAlign: "left", lineHeight: 1.3 }}>{t.length > 48 ? t.slice(0, 48) + "…" : t}</button>
+                ))}
+              </div>
+              <textarea value={broadcastText} onChange={e => setBroadcastText(e.target.value)} placeholder="Écrivez votre message de diffusion…" rows={4} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "2px solid rgba(230,126,34,0.3)", fontSize: "0.84rem", resize: "none", outline: "none", fontFamily: "inherit" }} />
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 6, fontWeight: 600 }}>Destinataires</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {([["all", "Tout le monde"], ["femmes", "Femmes"], ["hommes", "Hommes"], ["premium", "Premium"], ["gratuit", "Gratuits"]] as ["all" | "femmes" | "hommes" | "premium" | "gratuit", string][]).map(([val, lbl]) => (
+                    <button key={val} type="button" onClick={() => setBroadcastTarget(val)} style={{ padding: "7px 13px", borderRadius: 999, border: `1.5px solid ${broadcastTarget === val ? "#e67e22" : G.gris}`, background: broadcastTarget === val ? "rgba(230,126,34,0.12)" : "#fff", color: broadcastTarget === val ? "#d35400" : "#666", fontWeight: 700, fontSize: "0.74rem", cursor: "pointer" }}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 4, fontWeight: 600 }}>Date d'expiration du message <span style={{ color: G.rouge }}>*</span></div>
+                <input type="datetime-local" value={broadcastExpiresAt} onChange={e => setBroadcastExpiresAt(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: "2px solid rgba(230,126,34,0.3)", fontSize: "0.84rem", outline: "none", fontFamily: "inherit" }} />
+                <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 3 }}>Passé cette date, le message ne s'affichera plus</div>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <button onClick={() => { setBroadcastModal(false); setBroadcastExpiresAt(""); setBroadcastTarget("all"); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                <button disabled={broadcastLoading || !broadcastExpiresAt} onClick={async () => {
+                  if (!broadcastText.trim() || !broadcastExpiresAt) return;
+                  // Sécurité : refuser une date d'expiration déjà passée
+                  if (new Date(broadcastExpiresAt).getTime() <= Date.now()) {
+                    setBroadcastResult({ ok: false, message: "La date d'expiration est déjà passée. Choisis une date dans le futur, sinon le message ne s'affichera chez personne." });
+                    return;
+                  }
+                  setBroadcastLoading(true);
+                  try {
+                    const r = await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+                      body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId, expires_at: new Date(broadcastExpiresAt).toISOString(), target: broadcastTarget }),
+                    });
+                    // Vérifier le code HTTP : un fetch ne lève PAS d'erreur sur 4xx/5xx
+                    if (!r.ok) {
+                      let detail = `Erreur ${r.status}`;
+                      try { const e = await r.json(); detail = e.message || e.hint || e.details || detail; } catch {}
+                      if (r.status === 401 || r.status === 403) detail = "Accès refusé par la base de données. La table « broadcasts » n'autorise pas l'écriture (règle de sécurité RLS à vérifier).";
+                      setBroadcastLoading(false);
+                      setBroadcastResult({ ok: false, message: detail });
+                      return;
+                    }
+                    // Vérifier qu'une ligne a réellement été créée
+                    const data = await r.json().catch(() => null);
+                    const created = Array.isArray(data) ? data[0] : data;
+                    if (!created || !created.id) {
+                      setBroadcastLoading(false);
+                      setBroadcastResult({ ok: false, message: "Le serveur n'a renvoyé aucune ligne créée. Le message n'a probablement pas été enregistré — vérifie les permissions de la table « broadcasts »." });
+                      return;
+                    }
+                    // Succès confirmé
+                    setBroadcastLoading(false);
+                    setBroadcastModal(false); setBroadcastText(""); setBroadcastExpiresAt(""); setBroadcastTarget("all");
+                    setBroadcastResult({ ok: true, message: created.message || broadcastText.trim() });
+                  } catch {
+                    setBroadcastLoading(false);
+                    setBroadcastResult({ ok: false, message: "Impossible de joindre le serveur. Vérifie ta connexion internet et réessaie." });
+                  }
+                }} style={{ flex: 1, background: broadcastLoading || !broadcastExpiresAt ? "#aaa" : "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: broadcastLoading || !broadcastExpiresAt ? "not-allowed" : "pointer" }}>
+                  {broadcastLoading ? "Envoi…" : broadcastTarget === "all" ? "Envoyer à tous" : "Envoyer (ciblé)"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Modale de résultat de diffusion (vrai succès / vraie erreur) ── */}
+      {broadcastPreview !== null && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setBroadcastPreview(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 380, boxShadow: "0 24px 64px rgba(44,26,14,0.25)", overflow: "hidden" }}>
+            <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "20px", color: "#fff", display: "flex", alignItems: "center", gap: 10 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem" }}>Aperçu de la diffusion</div>
+            </div>
+            <div style={{ padding: 20 }}>
+              <div style={{ fontSize: "0.7rem", color: "#999", marginBottom: 8 }}>Voici comment la bannière apparaît aux utilisateurs ciblés :</div>
+              <div style={{ background: G.creme, borderRadius: 12, padding: "14px 16px", fontSize: "0.88rem", color: G.brun, lineHeight: 1.5 }}>{broadcastPreview}</div>
+              <button onClick={() => setBroadcastPreview(null)} style={{ width: "100%", marginTop: 16, background: G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {broadcastResult && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setBroadcastResult(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.25)", overflow: "hidden" }}>
+            <div style={{ background: broadcastResult.ok ? "linear-gradient(135deg,#e6f4ec,#cdeadb)" : "linear-gradient(135deg,#fdecea,#f9d5d0)", padding: "26px 22px 18px", textAlign: "center" }}>
+              <div style={{ width: 58, height: 58, borderRadius: "50%", background: broadcastResult.ok ? "rgba(26,92,58,0.15)" : "rgba(192,57,43,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                {broadcastResult.ok
+                  ? <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  : <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                }
+              </div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun }}>{broadcastResult.ok ? "Diffusion envoyée ✓" : "Échec de la diffusion"}</div>
+            </div>
+            <div style={{ padding: "20px 22px 24px" }}>
+              {broadcastResult.ok ? (
+                <>
+                  <p style={{ fontSize: "0.86rem", color: "#333", lineHeight: 1.7, marginBottom: 12, textAlign: "center" }}>Le message a bien été enregistré et sera affiché à tous les utilisateurs concernés.</p>
+                  <div style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 18 }}>
+                    <div style={{ fontSize: "0.7rem", fontWeight: 700, color: G.vert, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Message diffusé</div>
+                    <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5 }}>{broadcastResult.message}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: "0.85rem", color: "#333", lineHeight: 1.7, marginBottom: 12, textAlign: "center" }}>Le message <strong>n'a pas été envoyé</strong>. Aucun utilisateur ne le verra.</p>
+                  <div style={{ background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.22)", borderRadius: 10, padding: "10px 14px", marginBottom: 18 }}>
+                    <div style={{ fontSize: "0.7rem", fontWeight: 700, color: G.rouge, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Détail de l'erreur</div>
+                    <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5 }}>{broadcastResult.message}</div>
+                  </div>
+                </>
+              )}
+              <button onClick={() => { setBroadcastResult(null); }} style={{ width: "100%", background: broadcastResult.ok ? `linear-gradient(135deg,${G.vert},#134029)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.03em" }}>
+                {broadcastResult.ok ? "Parfait" : "Réessayer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {msgModal && (
+        <MsgModal
+          user={msgModal.user}
+          msgText={msgText}
+          setMsgText={setMsgText}
+          msgHistory={msgHistory}
+          msgHistoryLoading={msgHistoryLoading}
+          msgTab={msgTab}
+          setMsgTab={setMsgTab}
+          onClose={() => { setMsgModal(null); setMsgText(""); setMsgHistory([]); setMsgTab("modeles"); }}
+          onSend={async () => {
+            if (!msgText.trim()) return;
+            try {
+              const r = await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+                body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
+              });
+              if (!r.ok) { const err = await r.json().catch(() => null); showToast(`Erreur envoi : ${err?.message || r.status}`, "error"); return; }
+              showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
+              logAdminAction(auth.token, auth.userId, auth.name, `Message envoyé à ${msgModal.user.name}`, msgModal.user.id);
+              setMsgText("");
+              loadMsgHistory(msgModal.user.id);
+            } catch { showToast("Erreur réseau. Le message n'a pas été envoyé.", "error"); }
+          }}
+          onDeleteHistory={(id) => deleteMsgHistory(id, msgModal.user.id)}
+          G={G}
+          auth={auth}
+        />
+      )}
+      {/* Modal Mail */}
+      {mailModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: G.blanc, width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: window.innerWidth >= 768 ? "row" : "column" }}>
+
+            {/* ── COLONNE GAUCHE : historique + liste emails ── */}
+            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", borderRight: window.innerWidth >= 768 ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", maxHeight: window.innerWidth >= 768 ? "none" : "55vh", overflow: "hidden" }}>
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg,#f3e8ff,#e8d5f5)", padding: "20px 20px 14px", borderBottom: "1px solid rgba(142,68,173,0.15)", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <button onClick={() => { setMailModal(null); setMailHistory([]); }} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(142,68,173,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  </button>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Email à {mailModal.user.name}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#888", marginTop: 2 }}>Sélectionne un email à envoyer</div>
+                  </div>
+                </div>
+                {/* Onglets */}
+                <div style={{ display: "flex", marginTop: 12 }}>
+                  {(["modeles", "historique"] as const).map(tab => (
+                    <button key={tab} onClick={() => setMailTab(tab)} style={{ flex: 1, background: "transparent", border: "none", borderBottom: `3px solid ${mailTab === tab ? "#8e44ad" : "transparent"}`, padding: "8px 0", fontSize: "0.82rem", fontWeight: mailTab === tab ? 700 : 500, color: mailTab === tab ? "#8e44ad" : "#888", cursor: "pointer", transition: "all 0.15s", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      {tab === "modeles" ? "Modèles d'emails" : `Historique (${mailHistory.length})`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Onglet Historique */}
+              {mailTab === "historique" && (
+                <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px 6px" }}>
+                  {mailHistoryLoading ? (
+                    <div style={{ textAlign: "center", padding: "8px 0", color: "#aaa", fontSize: "0.75rem" }}>Chargement…</div>
+                  ) : mailHistory.length === 0 ? (
+                    <div style={{ fontSize: "0.75rem", color: "#bbb", padding: "6px 0 8px", fontStyle: "italic" }}>Aucun email envoyé pour le moment</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {mailHistory.map(m => (
+                        <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#faf5ff", borderRadius: 8, padding: "7px 10px", border: "1px solid #e8d5f5" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: "0.68rem", color: "#8e44ad", fontWeight: 600, marginBottom: 2 }}>
+                              {new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                            <div style={{ fontSize: "0.76rem", color: "#333", lineHeight: 1.4 }}>{m.reason}</div>
+                          </div>
+                          <button onClick={() => deleteMailHistory(m.id)} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 6, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Onglet Modèles */}
+              {mailTab === "modeles" && (
+              <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A5C3A", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Bienvenue</div>
+                <div onClick={() => sendMailFunction("send-bienvenue", "Email de bienvenue", mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === "send-bienvenue" ? "not-allowed" : "pointer", background: mailSending === "send-bienvenue" ? "#e8f5e9" : "#f0fff4", border: `1.5px solid ${mailSending === "send-bienvenue" ? "#a5d6a7" : "#c3e6cb"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: mailSending && mailSending !== "send-bienvenue" ? 0.5 : 1 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#1A5C3A", flexShrink: 0 }} />
+                  {mailSending === "send-bienvenue" ? "Envoi en cours..." : "Email de bienvenue"}
+                </div>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#C0392B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Inscription incomplète</div>
+                <div onClick={() => sendMailTemplate("send-inscription-incomplete", "Finalisez votre inscription", "Finalisez votre inscription Moyo Dating", `Bonjour,\n\nVotre inscription sur Moyo Dating n'a pas abouti car votre profil n'avait pas été complété à 100 %.\n\nVous pouvez vous réinscrire avec les mêmes identifiants (e-mail et mot de passe) sur : 👉 https://dating.moyo-congo.com\n\nPensez à compléter votre profil jusqu'au bout pour apparaître dans les résultats.\n\nÀ bientôt sur Moyo Dating !\n\nMoyo Dating Brazzaville - République du Congo\ncontact@moyo-congo.com | WhatsApp : +242 06 513 20 12`, mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === "send-inscription-incomplete" ? "not-allowed" : "pointer", background: mailSending === "send-inscription-incomplete" ? "#fdeaea" : "#fff5f5", border: `1.5px solid ${mailSending === "send-inscription-incomplete" ? "#f0b4b4" : "#f5d5d5"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: mailSending && mailSending !== "send-inscription-incomplete" ? 0.5 : 1 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#C0392B", flexShrink: 0 }} />
+                  {mailSending === "send-inscription-incomplete" ? "Envoi en cours..." : "Finalisez votre inscription"}
+                </div>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#8e44ad", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Relance inactivité</div>
+                {[
+                  { fn: "send-relance-5j", label: "Inactivité 5 jours - Tu nous manques !" },
+                  { fn: "send-relance-15j", label: "Inactivité 15 jours - Des profils t'attendent" },
+                  { fn: "send-relance-30j", label: "Inactivité 30 jours - Compte bientôt supprimé" },
+                ].map(item => (
+                  <div key={item.fn} onClick={() => sendMailFunction(item.fn, item.label, mailModal.user)} style={{ padding: "12px 14px", borderRadius: 12, cursor: mailSending === item.fn ? "not-allowed" : "pointer", background: mailSending === item.fn ? "#f3e8ff" : "#faf5ff", border: `1.5px solid ${mailSending === item.fn ? "#d8b4fe" : "#e8d5f5"}`, fontSize: "0.83rem", color: "#333", lineHeight: 1.4, transition: "all 0.12s", display: "flex", alignItems: "center", gap: 10, opacity: mailSending && mailSending !== item.fn ? 0.5 : 1 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#8e44ad", flexShrink: 0 }} />
+                    {mailSending === item.fn ? "Envoi en cours..." : item.label}
+                  </div>
+                ))}
+              </div>
+              )}
+            </div>
+
+            {/* ── COLONNE DROITE : saisie libre ── */}
+            <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", flex: 1, display: "flex", flexDirection: "column", padding: "24px", background: "#fafafa", borderTop: window.innerWidth < 768 ? `1px solid ${G.gris}` : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#333" }}>Email personnalisé</div>
+                  <div style={{ fontSize: "0.72rem", color: "#aaa" }}>à {mailModal.user.name} · {mailModal.user.email || "pas d'email"}</div>
+                </div>
+              </div>
+              <div style={{ fontWeight: 600, fontSize: "0.75rem", color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>Sujet</div>
+              <input
+                value={mailCustomSubject}
+                onChange={e => setMailCustomSubject(e.target.value)}
+                placeholder="Ex: Votre compte Moyo Dating"
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e8d5f5", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", marginBottom: 12, background: G.blanc }}
+              />
+              <div style={{ fontWeight: 600, fontSize: "0.75rem", color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>Message</div>
+              <textarea
+                value={mailCustomBody}
+                onChange={e => setMailCustomBody(e.target.value)}
+                placeholder="Écrivez votre message ici…"
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e8d5f5", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", resize: "none", flex: 1, minHeight: 140, lineHeight: 1.6, background: G.blanc }}
+              />
+              {mailCustomBody && <div style={{ fontSize: "0.7rem", color: "#aaa", textAlign: "right", marginTop: 3 }}>{mailCustomBody.length} caractères</div>}
+              {!mailModal.user.email && <div style={{ fontSize: "0.72rem", color: "#e74c3c", marginTop: 4, fontWeight: 600 }}>⚠️ Cet utilisateur n'a pas d'email enregistré</div>}
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <button onClick={() => { setMailModal(null); setMailHistory([]); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Fermer</button>
+                <button
+                  disabled={!mailCustomSubject.trim() || !mailCustomBody.trim()}
+                  onClick={async () => {
+                    if (!mailCustomSubject.trim() || !mailCustomBody.trim()) return;
+                    if (!mailModal.user.email) { showToast("Cet utilisateur n'a pas d'email enregistré", "error"); return; }
+                    const btn = document.activeElement as HTMLButtonElement;
+                    if (btn) { btn.disabled = true; btn.textContent = "Envoi en cours…"; }
+                    try {
+                      const r = await fetch(`${SUPABASE_URL}/functions/v1/send-custom-email`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
+                        body: JSON.stringify({ email: mailModal.user.email, name: mailModal.user.name, subject: mailCustomSubject.trim(), message: mailCustomBody.trim() }),
+                      });
+                      if (!r.ok) { const t = await r.text().catch(() => ""); throw new Error(`Erreur ${r.status}${t ? " : " + t.slice(0, 120) : ""}`); }
+                      // Enregistrer dans l'historique (seulement si succès)
+                      await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+                        body: JSON.stringify({ user_id: mailModal.user.id, admin_id: auth.userId, reason: `[EMAIL] ${mailCustomSubject.trim()}`, warning_number: 99, acknowledged: true }),
+                      });
+                      setMailCustomSubject("");
+                      setMailCustomBody("");
+                      setMailTab("historique");
+                      loadMailHistory(mailModal.user.id);
+                      showToast(`✅ Email envoyé à ${mailModal.user.name} !`, "success");
+                    } catch (e: any) { showToast(`❌ ${e?.message || "Erreur lors de l'envoi"}`, "error"); }
+                    if (btn) { btn.disabled = false; btn.textContent = "Envoyer"; }
+                  }}
+                  style={{ flex: 2, background: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "#ddd" : "linear-gradient(135deg,#8e44ad,#6c3483)", color: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "#aaa" : G.blanc, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: !mailCustomSubject.trim() || !mailCustomBody.trim() ? "not-allowed" : "pointer" }}>
+                  Envoyer
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+      {/* ── Modal liste Premium ── */}
+      {showPremiumList && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg,#D4A843,#b8922a)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff" }}>⭐ Membres Premium</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{premiumProfiles.length} membre{premiumProfiles.length > 1 ? "s" : ""} actif{premiumProfiles.length > 1 ? "s" : ""}</div>
+              </div>
+              <button onClick={() => setShowPremiumList(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            {/* Liste */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+              {premiumListLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement...</div>
+              ) : premiumProfiles.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Aucun membre Premium</div>
+              ) : premiumProfiles.map(p => (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden" }}>
+                    {p.photo_url && <img src={p.photo_url ?? undefined} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{p.name}</div>
+                    <div style={{ fontSize: "0.72rem", color: "#888" }}>{p.age} ans · {p.city}</div>
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: "#D4A843", fontWeight: 700, textAlign: "right", flexShrink: 0 }}>
+                    {p.premium_until ? `Expire le\n${new Date(p.premium_until).toLocaleDateString("fr-FR")}` : "Premium"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pwResetModal && (() => {
+        const u = pwResetModal;
+        const close = () => { setPwResetModal(null); setPwResetValue(""); setPwResetResult(null); };
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={close}>
+            <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+              <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
+                <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.02rem" }}>Mot de passe de {u.name}</div>
+                <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.75rem", marginTop: 2 }}>Utile si la personne n'arrive pas à réinitialiser elle-même</div>
+              </div>
+              <div style={{ padding: "20px 20px 22px" }}>
+                {!pwResetResult ? (
+                  <>
+                    <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 8 }}>Nouveau mot de passe (modifiable, 6 caractères minimum) :</div>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                      <input value={pwResetValue} onChange={e => setPwResetValue(e.target.value)} style={{ flex: 1, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 12px", fontSize: "0.95rem", outline: "none", fontFamily: "monospace", fontWeight: 700, color: "#6c3483" }} />
+                      <button onClick={() => setPwResetValue(genTempPassword())} title="Régénérer" style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "0 14px", cursor: "pointer", fontSize: "1.1rem" }}>🔄</button>
+                    </div>
+                    <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 16, lineHeight: 1.5 }}>Communiquez ce mot de passe à {u.name} (WhatsApp, Messenger...) — il pourra ensuite se connecter directement avec, sans passer par « mot de passe oublié ».</div>
+                    <button disabled={pwResetLoading || pwResetValue.length < 6} onClick={() => submitPasswordReset(u, pwResetValue)}
+                      style={{ width: "100%", background: pwResetValue.length >= 6 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ccc", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: pwResetValue.length >= 6 ? "pointer" : "not-allowed" }}>
+                      {pwResetLoading ? "Réinitialisation..." : "Réinitialiser le mot de passe"}
+                    </button>
+                    <button onClick={close} style={{ width: "100%", marginTop: 10, background: "transparent", color: "#888", border: "none", padding: "8px", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                  </>
+                ) : pwResetResult.ok ? (
+                  <>
+                    <div style={{ background: "rgba(26,92,58,0.08)", border: "1px solid rgba(26,92,58,0.25)", borderRadius: 12, padding: "14px", marginBottom: 14, textAlign: "center" }}>
+                      <div style={{ fontSize: "0.8rem", color: "#1A5C3A", fontWeight: 700, marginBottom: 6 }}>✅ Mot de passe mis à jour</div>
+                      <div style={{ fontFamily: "monospace", fontWeight: 800, fontSize: "1.15rem", color: "#1A5C3A", letterSpacing: 0.5 }}>{pwResetValue}</div>
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 16, textAlign: "center" }}>Communiquez ce mot de passe à {u.name} maintenant.</div>
+                    <button onClick={close} style={{ width: "100%", background: "linear-gradient(135deg,#1A5C3A,#134429)", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "14px", marginBottom: 16, textAlign: "center", color: G.rouge, fontSize: "0.85rem", fontWeight: 600 }}>
+                      ❌ {pwResetResult.msg}
+                    </div>
+                    <button onClick={() => setPwResetResult(null)} style={{ width: "100%", background: "linear-gradient(135deg,#8e44ad,#6c3483)", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Réessayer</button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {pinModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
+              <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: "1rem" }}>
+                {pinModal.mode === "set" ? `Définir le PIN de ${pinModal.user.name}` : `Réinitialiser le PIN de ${pinModal.user.name}`}
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.72rem", marginTop: 4 }}>PIN à 4 chiffres - communiquez-le par WhatsApp</div>
+            </div>
+            <div style={{ padding: "20px 20px 24px" }}>
+              <input value={pinModalInput} onChange={e => setPinModalInput(e.target.value.replace(/\D/g, "").slice(0, 4))} type="password" inputMode="numeric" maxLength={4} placeholder="• • • •" style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "14px", borderRadius: 12, border: `2px solid ${pinModalInput.length === 4 ? "#8e44ad" : G.gris}`, fontSize: "1.4rem", letterSpacing: 8, outline: "none", fontFamily: "inherit" }} autoFocus />
+              <button onClick={async () => {
+                if (pinModalInput.length < 4) return;
+                if (pinModal.mode === "set") await adminAction(pinModal.user.id, { is_admin: true }, `${pinModal.user.name} est maintenant admin.`);
+                try {
+                  await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_admin_pin_for`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Prefer": "return=minimal" },
+                    body: JSON.stringify({ target_user_id: pinModal.user.id, new_pin: pinModalInput }),
+                  });
+                  if (pinModal.mode === "reset") logAdminAction(auth!.token, auth!.userId, auth!.name, `PIN de ${pinModal.user.name} réinitialisé.`, pinModal.user.id);
+                } catch {}
+                setPinModal(null); setPinModalInput("");
+              }} disabled={pinModalInput.length < 4} style={{ width: "100%", marginTop: 12, background: pinModalInput.length === 4 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ddd", color: pinModalInput.length === 4 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: pinModalInput.length === 4 ? "pointer" : "not-allowed" }}>
+                {pinModal.mode === "set" ? "Rendre admin avec ce PIN" : "Mettre à jour le PIN"}
+              </button>
+              <button onClick={() => { setPinModal(null); setPinModalInput(""); }} style={{ width: "100%", marginTop: 8, background: "transparent", color: "#888", border: "none", fontSize: "0.82rem", cursor: "pointer", padding: "8px" }}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {templateModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setTemplateModal(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 460, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{templateModal.id ? "Modifier le modèle" : "Créer un modèle"}</div>
+              <button onClick={() => setTemplateModal(null)} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
+            </div>
+            <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888", marginBottom: 6 }}>Titre</div>
+                <input value={templateModal.title} onChange={e => setTemplateModal(m => m ? { ...m, title: e.target.value } : m)} placeholder="Ex : Abonnement - Annulation" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", fontFamily: "inherit" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888", marginBottom: 6 }}>Catégorie</div>
+                <select value={templateModal.category} onChange={e => setTemplateModal(m => m ? { ...m, category: e.target.value } : m)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", background: G.blanc, cursor: "pointer" }}>
+                  {TEMPLATE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888", marginBottom: 6 }}>Contenu</div>
+                <textarea value={templateModal.content} onChange={e => setTemplateModal(m => m ? { ...m, content: e.target.value } : m)} placeholder="Rédigez la réponse type…" rows={5} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button onClick={() => setTemplateModal(null)} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "11px 20px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                <button onClick={saveTemplate} disabled={!templateModal.title.trim() || !templateModal.content.trim()} style={{ background: (!templateModal.title.trim() || !templateModal.content.trim()) ? "rgba(192,57,43,0.4)" : G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "11px 20px", fontSize: "0.84rem", fontWeight: 800, cursor: (!templateModal.title.trim() || !templateModal.content.trim()) ? "not-allowed" : "pointer" }}>{templateModal.id ? "Enregistrer" : "Créer"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {premiumGrantModal && (() => {
+        const u = premiumGrantModal;
+        const close = () => { setPremiumGrantModal(null); setGrantFreeDate(""); setGrantOperator(null); setGrantTxRef(""); setGrantTab("paid"); setGrantSelectedPlan(null); };
+        const plans = [
+          PLAN_WEEK_ENABLED && { label: "Semaine", days: PREMIUM_DAYS_WEEK, amount: PREMIUM_PRICE_WEEK_FCFA },
+          PLAN_MONTH_ENABLED && { label: "Mois", days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, amount: PREMIUM_PRICE_FCFA },
+          PLAN_2MONTH_ENABLED && { label: "2 mois", days: PREMIUM_DAYS_2MONTH, amount: PREMIUM_PRICE_2MONTH_FCFA },
+        ].filter(Boolean) as { label: string; days: number; amount: number }[];
+        const todayISO = new Date().toISOString().slice(0, 10);
+        const presetDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={close}>
+            <div style={{ background: G.blanc, borderRadius: 20, padding: 24, maxWidth: 420, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+              <h3 style={{ margin: "0 0 4px", fontSize: "1.05rem", color: G.brun }}>Gérer le Premium de {u.name}</h3>
+              <p style={{ margin: "0 0 18px", fontSize: "0.78rem", color: "#888" }}>{u.is_premium ? "Cet utilisateur est actuellement Premium." : "Choisissez comment activer le Premium pour cet utilisateur."}</p>
+
+              {u.is_premium && (
+                <div style={{ marginBottom: 22 }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>⛔ Retirer le Premium maintenant</div>
+                  {u.premium_is_gift ? (
+                    <>
+                      <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>
+                        {isLifetimePremium(u) ? "Cet utilisateur a le Premium à vie (offert)." : `Premium offert en cours${u.premium_until ? `, prévu jusqu'au ${new Date(u.premium_until).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}` : ""}.`} Utile si un collaborateur quitte l'équipe avant la date prévue, par exemple.
+                      </div>
+                      <button disabled={actionLoading === u.id} onClick={() => confirm(`Retirer le Premium${isLifetimePremium(u) ? " À VIE" : ""} de ${u.name} maintenant ?`, () => { adminAction(u.id, { is_premium: false, premium_until: undefined, premium_is_gift: undefined }, `Premium retiré pour ${u.name}.`); close(); })}
+                        style={{ width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: actionLoading === u.id ? "not-allowed" : "pointer" }}>
+                        Retirer le Premium
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: "0.72rem", color: "#a05a2c", background: "rgba(230,126,34,0.1)", border: "1px solid rgba(230,126,34,0.25)", borderRadius: 10, padding: "10px 12px", lineHeight: 1.5 }}>
+                      🔒 Ce Premium correspond à un <strong>abonnement réellement payé</strong> par le client (ou son statut n'est pas connu). Il ne peut pas être retiré avant la date prévue{u.premium_until ? ` (${new Date(u.premium_until).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })})` : ""}, pour protéger les clients payants.
+                      <div style={{ marginTop: 8 }}>
+                        <button onClick={() => confirm(`Confirmez-vous que ${u.name} n'a PAS réellement payé cet abonnement (erreur de classification) ? Cela débloquera le retrait immédiat.`, () => adminAction(u.id, { premium_is_gift: true }, `${u.name} : statut Premium reclassifié en "offert" (correction manuelle).`))}
+                          style={{ background: "none", border: "none", color: "#a05a2c", textDecoration: "underline", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", padding: 0 }}>
+                          Ce n'est pas un vrai paiement → reclassifier comme offert
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {u.is_premium && <div style={{ height: 1, background: G.gris, margin: "0 0 22px" }} />}
+
+              {/* ── Sélecteur d'onglets (façon Windows) ── */}
+              <div style={{ display: "flex", background: G.creme, borderRadius: 12, padding: 4, marginBottom: 20, gap: 4 }}>
+                <button onClick={() => setGrantTab("paid")} style={{ flex: 1, background: grantTab === "paid" ? G.blanc : "transparent", boxShadow: grantTab === "paid" ? "0 1px 4px rgba(0,0,0,0.12)" : "none", border: "none", borderRadius: 9, padding: "9px 6px", fontSize: "0.78rem", fontWeight: 800, color: grantTab === "paid" ? G.brun : "#999", cursor: "pointer" }}>💳 Paiement</button>
+                <button onClick={() => setGrantTab("free")} style={{ flex: 1, background: grantTab === "free" ? G.blanc : "transparent", boxShadow: grantTab === "free" ? "0 1px 4px rgba(0,0,0,0.12)" : "none", border: "none", borderRadius: 9, padding: "9px 6px", fontSize: "0.78rem", fontWeight: 800, color: grantTab === "free" ? G.brun : "#999", cursor: "pointer" }}>🎁 Offrir gratuitement</button>
+              </div>
+
+              {/* ── Onglet 1 : paiement reçu (WhatsApp, ID non capté) → envoie une demande à valider ── */}
+              {grantTab === "paid" && (
+                <div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>💳 Le client a payé (capture WhatsApp)</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Renseignez l'opérateur, la référence et la formule visibles sur la preuve de paiement — exactement comme si le client l'avait saisi lui-même — puis envoyez. Un <strong>Super Admin</strong> devra vérifier et activer depuis Budget/Paiements.</div>
+
+                  <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <button onClick={() => setGrantOperator("MTN")} style={{ flex: 1, background: grantOperator === "MTN" ? "#FFCC00" : G.creme, border: `1.5px solid ${grantOperator === "MTN" ? "#FFCC00" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: "#1a1a1a", cursor: "pointer" }}>MTN MoMo</button>
+                    <button onClick={() => setGrantOperator("Airtel")} style={{ flex: 1, background: grantOperator === "Airtel" ? "#E40000" : G.creme, border: `1.5px solid ${grantOperator === "Airtel" ? "#E40000" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: grantOperator === "Airtel" ? "#fff" : G.brun, cursor: "pointer" }}>Airtel Money</button>
+                  </div>
+                  <input value={grantTxRef} onChange={e => setGrantTxRef(e.target.value)} placeholder="Référence de transaction (ID reçu par SMS)"
+                    style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", fontFamily: "inherit", marginBottom: 12 }} />
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+                    {plans.map(plan => {
+                      const selected = grantSelectedPlan?.label === plan.label;
+                      return (
+                        <button key={plan.label} onClick={() => setGrantSelectedPlan(plan)}
+                          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: selected ? "rgba(212,168,67,0.12)" : G.creme, border: `1.5px solid ${selected ? "#D4A843" : G.gris}`, borderRadius: 12, padding: "10px 14px", cursor: "pointer", textAlign: "left" }}>
+                          <span style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun, display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${selected ? "#D4A843" : "#ccc"}`, background: selected ? "#D4A843" : "transparent", flexShrink: 0 }} />
+                            {plan.label} <span style={{ fontWeight: 500, color: "#888" }}>({plan.days} jours)</span>
+                          </span>
+                          <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#D4A843" }}>{plan.amount.toLocaleString()} FCFA</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button disabled={!grantOperator || !grantTxRef.trim() || !grantSelectedPlan || actionLoading === u.id} onClick={sendPremiumPaymentRequest}
+                    style={{ width: "100%", background: (!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: (!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) ? "not-allowed" : "pointer" }}>
+                    Envoyer la demande →
+                  </button>
+                  {(!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) && <div style={{ fontSize: "0.66rem", color: "#bbb", marginTop: 6 }}>Renseignez l'opérateur, la référence et la formule pour envoyer.</div>}
+                </div>
+              )}
+
+              {/* ── Onglet 2 : offrir gratuitement (collaborateur, geste commercial…) → active immédiatement ── */}
+              {grantTab === "free" && (
+                <div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>🎁 Offrir gratuitement (collaborateur, etc.)</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Aucun paiement, aucune trace dans Budget/Paiements. Vous choisissez librement la date de fin (ex: fin de contrat).</div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                    <button onClick={() => setGrantFreeDate(presetDate(3))} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>3 jours</button>
+                    <button onClick={() => setGrantFreeDate(presetDate(7))} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>7 jours</button>
+                    <button onClick={() => setGrantFreeDate(presetDate(30))} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>30 jours</button>
+                    <button onClick={() => setGrantFreeDate(presetDate(365))} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>1 an</button>
+                  </div>
+                  <input type="date" value={grantFreeDate} min={todayISO} onChange={e => setGrantFreeDate(e.target.value)}
+                    style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", marginBottom: 12 }} />
+                  <button disabled={!grantFreeDate || actionLoading === u.id} onClick={grantPremiumFree}
+                    style={{ width: "100%", background: !grantFreeDate ? "#ccc" : `linear-gradient(135deg,${G.vert},#145c3a)`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: !grantFreeDate ? "not-allowed" : "pointer" }}>
+                    Offrir jusqu'au {grantFreeDate ? new Date(`${grantFreeDate}T12:00:00`).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "..."}
+                  </button>
+                </div>
+              )}
+
+              <button onClick={close} style={{ width: "100%", marginTop: 16, background: "transparent", color: "#888", border: "none", padding: "8px", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+            </div>
+          </div>
+        );
+      })()}
+      {banModal && (() => {
+        const u = banModal;
+        const close = () => setBanModal(null);
+        const doBan = (updates: Partial<AdminProfile>, msg: string) => { close(); adminAction(u.id, updates, msg); };
+        const hours = Math.max(1, parseInt(banHours) || 0);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" }}>
+              <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Bannir {u.name}</div>
+                <button onClick={close} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
+              </div>
+              <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Option 1 : définitif */}
+                <button onClick={() => doBan({ is_banned: true, is_visible: false }, `${u.name} a été banni(e) définitivement.`)} style={{ textAlign: "left", border: `1.5px solid ${G.gris}`, background: G.blanc, borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ fontSize: "1.3rem" }}>🚫</span>
+                  <span><span style={{ fontWeight: 800, color: G.brun, fontSize: "0.92rem" }}>Bannissement définitif</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>Accès bloqué jusqu'à ce qu'un admin le débannisse. Le compte est conservé.</span></span>
+                </button>
+                {/* Option 2 : éjection immédiate */}
+                <button onClick={() => doBan({ is_banned: true, is_visible: false }, `${u.name} a été éjecté(e) immédiatement.`)} style={{ textAlign: "left", border: `1.5px solid rgba(231,76,60,0.4)`, background: "rgba(231,76,60,0.04)", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ fontSize: "1.3rem" }}>⚡</span>
+                  <span><span style={{ fontWeight: 800, color: "#c0392b", fontSize: "0.92rem" }}>Éjection immédiate</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>La session active est coupée sur-le-champ : la personne est renvoyée à l'accueil et ne peut plus se reconnecter.</span></span>
+                </button>
+                {/* Option 3 : temporaire */}
+                <div style={{ border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: 14 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
+                    <span style={{ fontSize: "1.3rem" }}>⏳</span>
+                    <span><span style={{ fontWeight: 800, color: G.brun, fontSize: "0.92rem" }}>Bannissement temporaire</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>Bloqué pendant une durée définie, avec décompte affiché. Reconnexion automatique à la fin.</span></span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
+                    <input type="number" min={1} value={banHours} onChange={e => setBanHours(e.target.value)} style={{ width: 90, boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 11px", fontSize: "0.86rem", outline: "none" }} />
+                    <span style={{ fontSize: "0.82rem", color: "#666" }}>heure(s)</span>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                      {[1, 6, 24, 72, 168].map(h => (
+                        <button key={h} onClick={() => setBanHours(String(h))} style={{ border: `1px solid ${G.gris}`, background: parseInt(banHours) === h ? "rgba(192,57,43,0.1)" : "#fff", color: parseInt(banHours) === h ? G.rouge : "#777", borderRadius: 8, padding: "5px 9px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}>{h >= 24 ? `${h / 24}j` : `${h}h`}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={() => doBan({ is_banned: false, is_visible: false, ban_until: new Date(Date.now() + hours * 3600000).toISOString() }, `${u.name} a été banni(e) pour ${hours}h.`)} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.86rem", fontWeight: 800, cursor: "pointer" }}>Bannir pour {hours}h</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+      {warnModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg, #fff9ec, #fff3cc)", padding: "22px 20px 16px", textAlign: "center", borderBottom: `1px solid rgba(243,156,18,0.2)` }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(243,156,18,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun }}>Avertir {warnModal.user.name}</div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 4 }}>
+                Avertissement {(warnModal.user.warning_count || 0) + 1}/3
+              </div>
+            </div>
+            {/* Body */}
+            <div style={{ padding: "18px 20px 20px" }}>
+              {/* Avertissements existants (supprimables) */}
+              {(existingWarningsLoading || existingWarnings.length > 0) && (
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Avertissements actuels</div>
+                  {existingWarningsLoading ? (
+                    <div style={{ fontSize: "0.78rem", color: "#aaa", textAlign: "center", padding: "8px 0" }}>Chargement…</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {existingWarnings.map((w, idx) => (
+                        <div key={w.id} style={{ background: "#FFFDF5", border: "1px solid #FFE9B8", borderRadius: 10, padding: "9px 11px", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                              <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#b7770d" }}>Avertissement {idx + 1}</span>
+                              <span style={{ fontSize: "0.64rem", color: "#aaa" }}>{new Date(w.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                            </div>
+                            <div style={{ fontSize: "0.8rem", color: "#444", lineHeight: 1.4 }}>{w.reason}</div>
+                          </div>
+                          <button onClick={() => confirm(`Supprimer cet avertissement de ${warnModal.user.name} ?`, () => deleteOneWarning(w.id, warnModal.user))} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 7, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ height: 1, background: G.gris, margin: "16px 0 0" }} />
+                </div>
+              )}
+              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Nouveau motif</div>
+              {WARN_REASONS.map(r => (
+                <div key={r} onClick={() => setWarnReason(r)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, marginBottom: 6, cursor: "pointer", background: warnReason === r ? "rgba(243,156,18,0.1)" : G.creme, border: `1.5px solid ${warnReason === r ? "#f39c12" : "transparent"}`, transition: "all 0.15s" }}>
+                  <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${warnReason === r ? "#f39c12" : "#ccc"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {warnReason === r && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f39c12" }} />}
+                  </div>
+                  <span style={{ fontSize: "0.83rem", fontWeight: warnReason === r ? 600 : 400, color: warnReason === r ? "#b7770d" : "#333" }}>{r}</span>
+                </div>
+              ))}
+              {warnReason === "Autre motif" && (
+                <textarea
+                  value={warnCustom}
+                  onChange={e => setWarnCustom(e.target.value)}
+                  placeholder="Précisez le motif…"
+                  rows={3}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `2px solid rgba(243,156,18,0.4)`, fontSize: "0.82rem", resize: "none", outline: "none", marginTop: 4, fontFamily: "inherit" }}
+                />
+              )}
+              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                <button onClick={() => { setWarnModal(null); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
+                  Annuler
+                </button>
+                <button
+                  onClick={() => sendWarning(warnModal.user)}
+                  disabled={warnLoading || (warnReason === "Autre motif" && !warnCustom.trim())}
+                  style={{ flex: 1, background: warnLoading ? "#f9e4a0" : "linear-gradient(135deg,#f39c12,#e67e22)", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: warnLoading ? "not-allowed" : "pointer", opacity: warnLoading ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                >
+                  {warnLoading
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                    : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  }
+                  Envoyer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal aperçu profil signalé */}
+      {reportProfilePreview && (
+        <div
+          onClick={() => setReportProfilePreview(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "fadeIn 0.2s ease" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden", animation: "fadeUp 0.25s ease" }}
+          >
+            {/* Header */}
+            <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "22px 20px 18px", textAlign: "center", position: "relative" }}>
+              <button
+                onClick={() => setReportProfilePreview(null)}
+                style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>{reportProfilePreview.name}</div>
+              <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
+                {reportProfilePreview.age} ans · {reportProfilePreview.city}
+              </div>
+            </div>
+            {/* Body */}
+            <div style={{ padding: "18px 20px 20px" }}>
+              {/* Statuts */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                {reportProfilePreview.is_banned && (
+                  <span style={{ background: "rgba(231,76,60,0.12)", color: "#e74c3c", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    🚫 Banni
+                  </span>
+                )}
+                {reportProfilePreview.is_premium && (
+                  <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    ⭐ Premium
+                  </span>
+                )}
+                {reportProfilePreview.is_verified && (
+                  <span style={{ background: "rgba(29,155,240,0.12)", color: "#1d9bf0", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    ✓ Vérifié
+                  </span>
+                )}
+                {reportProfilePreview.is_admin && (
+                  <span style={{ background: `rgba(26,92,58,0.12)`, color: G.vert, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    🛡️ Admin
+                  </span>
+                )}
+                {(reportProfilePreview.warning_count || 0) > 0 && (
+                  <span style={{ background: "rgba(243,156,18,0.12)", color: "#e67e22", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    ⚠️ Avert. {reportProfilePreview.warning_count}/3
+                  </span>
+                )}
+              </div>
+              {/* Infos */}
+              <div style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                    <span style={{ color: "#888" }}>Genre</span>
+                    <span style={{ fontWeight: 600, color: G.brun }}>{reportProfilePreview.gender}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                    <span style={{ color: "#888" }}>Ville</span>
+                    <span style={{ fontWeight: 600, color: G.brun }}>{reportProfilePreview.city}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                    <span style={{ color: "#888" }}>ID</span>
+                    <span style={{ fontWeight: 500, color: "#666", fontSize: "0.72rem", fontFamily: "monospace" }}>{reportProfilePreview.id.slice(0, 20)}…</span>
+                  </div>
+                  {reportProfilePreview.created_at && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                      <span style={{ color: "#888" }}>Inscrit le</span>
+                      <span style={{ fontWeight: 600, color: G.brun }}>{formatDate(reportProfilePreview.created_at)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setReportProfilePreview(null)}
+                style={{ width: "100%", background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'aide Admin */}
+      {showHelp && <AdminHelpModal onClose={() => setShowHelp(false)} />}
+
+      {/* Header */}
+      <div data-admtabs="" style={{ background: G.blanc, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
+        {/* Ligne titre - cachée sur desktop (remplacée par la topbar) */}
+        <div data-admhdr="" style={{ padding: "14px 16px 0 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+          <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><IcoArrowLeft /></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <IcoGear />
+            <span style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</span>
+          </div>
+          <button
+            data-admhelp=""
+            onClick={() => setShowHelp(true)}
+            style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: G.brunLight, transition: "all 0.18s ease", flexShrink: 0 }}
+            onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.cremeDark; }}
+            onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Aide
+          </button>
+          {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-admin-config"))}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", flexShrink: 0 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+          )}
+        </div>
+        {/* Onglets - scroll horizontal sur mobile */}
+        <div className="admin-tabs" style={{ display: "flex", gap: 0, borderTop: `1px solid ${G.gris}`, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          {([
+            ["stats", "Statistiques", IcoStats],
+            ["users", "Utilisateurs", IcoUsers],
+            ["reports", "Signalements", IcoAlert],
+            ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
+            ["messagerie", "Messagerie", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "messagerie" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
+            ["marketing", "Marketing", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "marketing" ? "#E67E22" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>],
+            ["reviews", "Réputation", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
+            ["appointments", "Rendez-vous", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "appointments" ? G.vert : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>],
+            ["payments", "Budget", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>],
+            ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
+          ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
+            <div
+              key={key}
+              onClick={() => {
+                setActiveTab(key as any);
+                if (key === "users" && users.length === 0) loadUsers("", 0);
+                if (key === "reviews") loadReviews();
+                if (key === "payments") { loadPayments(); loadExpenses(); }
+                if (key === "logs") loadAdminLogs();
+                if (key === "messagerie") loadStats();
+                if (key === "marketing") { loadOfficialStatuses(); loadFeatureRequests(); loadFeatureStatuses(); }
+                if (key === "matches") {
+                  loadProposals();
+                  setProposalsBadgeCount(0);
+                  localStorage.setItem("moyo_proposals_seen", new Date().toISOString());
+                }
+              }}
+              style={{
+                ...(window.innerWidth >= 640 ? { flex: 1 } : { flexShrink: 0 }),
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                padding: "10px 12px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
+                color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : key === "marketing" ? "#E67E22" : G.rouge) : "#999",
+                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : key === "marketing" ? "#E67E22" : G.rouge}` : "2.5px solid transparent",
+                transition: "all 0.2s", whiteSpace: "nowrap",
+              }}
+            >
+              <Icon />
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                {label}
+                {key === "reports" && pendingCount > 0 && (
+                  <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(192,57,43,0.2)", border: `1px solid rgba(192,57,43,0.15)` }}>
+                    {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
+                {key === "messagerie" && messagingPendingCount > 0 && (
+                  <span style={{ background: G.blanc, color: G.rouge, borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(192,57,43,0.2)", border: `1px solid rgba(192,57,43,0.15)` }}>
+                    {messagingPendingCount > 99 ? "99+" : messagingPendingCount}
+                  </span>
+                )}
+                {key === "reviews" && unreadReviewsCount > 0 && (
+                  <span style={{ background: G.blanc, color: "#B8860B", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(184,134,11,0.2)", border: "1px solid rgba(184,134,11,0.15)" }}>
+                    {unreadReviewsCount > 99 ? "99+" : unreadReviewsCount}
+                  </span>
+                )}
+                {key === "payments" && pendingPaymentsCount > 0 && (
+                  <span style={{ background: G.blanc, color: "#27ae60", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(39,174,96,0.2)", border: "1px solid rgba(39,174,96,0.15)" }}>
+                    {pendingPaymentsCount > 99 ? "99+" : pendingPaymentsCount}
+                  </span>
+                )}
+                {key === "appointments" && appointmentsPendingCount > 0 && (
+                  <span style={{ background: G.blanc, color: G.vert, borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(26,92,58,0.2)", border: "1px solid rgba(26,92,58,0.15)" }}>
+                    {appointmentsPendingCount > 99 ? "99+" : appointmentsPendingCount}
+                  </span>
+                )}
+                {key === "matches" && matchesBadgeCount > 0 && (
+                  <span style={{ background: G.blanc, color: "#8e44ad", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(142,68,173,0.2)", border: "1px solid rgba(142,68,173,0.15)" }}>
+                    {matchesBadgeCount > 99 ? "99+" : matchesBadgeCount}
+                  </span>
+                )}
+                {key === "marketing" && featurePendingCount > 0 && (
+                  <span style={{ background: G.blanc, color: "#E67E22", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(230,126,34,0.2)", border: "1px solid rgba(230,126,34,0.15)" }}>
+                    {featurePendingCount > 99 ? "99+" : featurePendingCount}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════ ONGLET STATS */}
+      {activeTab === "stats" && (
+        <div style={{ padding: "16px" }}>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: 60 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+          ) : (
+            <>
+              {/* Grille stats principales */}
+              <div data-admgrid="main" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
+                {([
+                  ["Membres total", stats.users, G.rouge, <IcoUsers key="u"/>],
+                  ["Matchs", stats.matches, "#8e44ad", <svg key="m" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
+                  ["Messages", stats.messages, "#2980b9", <svg key="ms" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
+                  ["Signalements", stats.reports, "#e67e22", <IcoAlert key="a"/>],
+                ] as [string, number, string, React.ReactNode][]).map(([label, value, color, icon]) => (
+                  <div key={label} onClick={label === "Matchs" ? () => { setActiveTab("matches"); setMatchSubTab("list"); } : undefined}
+                    style={{ background: G.blanc, borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", cursor: label === "Matchs" ? "pointer" : "default" }}>
+                    <div style={{ color, marginBottom: 6 }}>{icon}</div>
+                    <div style={{ fontSize: "1.8rem", fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+                    <div style={{ fontSize: "0.73rem", color: "#777", marginTop: 4 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Stats avancées */}
+              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 14 }}>Statistiques avancées</h3>
+                <div data-admgrid="adv" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+                  {([
+                    ["Nouveaux aujourd'hui", stats.todayUsers, "#27ae60", null],
+                    ["Premium actifs", stats.premiumUsers, "#D4A843", "premium"],
+                    ["Profils vérifiés", stats.verifiedUsers, G.vert, null],
+                    ["Profils bannis", stats.bannedUsers, "#e74c3c", null],
+                  ] as [string, number, string, string | null][]).map(([label, val, color, action]) => (
+                    <div key={label} onClick={() => { if (action === "premium") setShowPremiumList(true); if (action === "matches") setShowMatchList(true); }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
+                      <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val}</div>
+                      <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>{label}</div>
+                      {action && <div style={{ position: "absolute", top: 8, right: 8, fontSize: "0.55rem", color, fontWeight: 700, opacity: 0.7 }}>Voir ›</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div data-admgrid="row">
+              {/* Ratio Genre */}
+              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Ratio Homme / Femme</h3>
+                {stats.users > 0 ? (
+                  <>
+                    <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                      <div style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#1a6ef5" }}>{stats.maleCount}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#555" }}>Hommes</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#e91e8c" }}>{stats.femaleCount}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#555" }}>Femmes</div>
+                      </div>
+                    </div>
+                    <div style={{ height: 10, borderRadius: 50, background: "#f0f0f0", overflow: "hidden", display: "flex" }}>
+                      <div style={{ width: `${Math.round(stats.maleCount / stats.users * 100)}%`, background: "#1a6ef5", borderRadius: "50px 0 0 50px", transition: "width 0.5s" }} />
+                      <div style={{ flex: 1, background: "#e91e8c", borderRadius: "0 50px 50px 0" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.68rem", color: "#888" }}>
+                      <span>{Math.round(stats.maleCount / stats.users * 100)}% H</span>
+                      <span>{Math.round(stats.femaleCount / stats.users * 100)}% F</span>
+                    </div>
+                  </>
+                ) : <p style={{ fontSize: "0.82rem", color: "#aaa" }}>Données insuffisantes</p>}
+              </div>
+
+              {/* Top villes */}
+              {stats.topCities.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Top villes</h3>
+                  {stats.topCities.map(({ city, count }, i) => (
+                    <div key={city} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                      <span style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{city}</span>
+                          <span style={{ fontSize: "0.78rem", color: G.rouge, fontWeight: 700 }}>{count}</span>
+                        </div>
+                        <div style={{ height: 5, borderRadius: 50, background: "#f0f0f0", overflow: "hidden" }}>
+                          <div style={{ width: `${Math.round(count / stats.users * 100)}%`, background: `linear-gradient(90deg,${G.rouge},${G.or})`, height: "100%", borderRadius: 50 }} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Derniers inscrits - déplacé avant admgrid-row */}
+              </div>{/* /admgrid-row */}
+
+              {/* ── LIKES ── */}
+              {/* Total + Aujourd'hui */}
+              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>❤️ Likes</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+                  <div style={{ background: "rgba(231,76,60,0.07)", borderRadius: 12, padding: "12px", border: "1px solid rgba(231,76,60,0.15)" }}>
+                    <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.rouge }}>{stats.totalLikes.toLocaleString()}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>Total likes</div>
+                  </div>
+                  <div style={{ background: "rgba(231,76,60,0.07)", borderRadius: 12, padding: "12px", border: "1px solid rgba(231,76,60,0.15)" }}>
+                    <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.rouge }}>+{stats.likesToday}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>Aujourd'hui</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Likes par jour (14 derniers jours) */}
+              {stats.likesPerDay.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Likes par jour (14 derniers jours)</h3>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80 }}>
+                    {(() => {
+                      const max = Math.max(...stats.likesPerDay.map(d => d.count), 1);
+                      return stats.likesPerDay.map((d, i) => (
+                        <div key={i} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <div style={{ width: "100%", background: G.rouge, borderRadius: "4px 4px 0 0", height: `${Math.round((d.count / max) * 64)}px`, minHeight: 3, opacity: 0.8 }} />
+                          <div style={{ fontSize: "0.52rem", color: "#aaa", transform: "rotate(-30deg)", whiteSpace: "nowrap" }}>{d.date.slice(5)}</div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Top 5 profils les plus likés */}
+              {stats.topLikedProfiles.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>🏆 Top profils les plus likés</h3>
+                  {stats.topLikedProfiles.map((p, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < stats.topLikedProfiles.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: i === 0 ? "#FFD700" : i === 1 ? "#C0C0C0" : i === 2 ? "#CD7F32" : G.creme, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.75rem", color: i < 3 ? "#333" : "#888", flexShrink: 0 }}>
+                        {i + 1}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.85rem" }}>{p.name}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#888" }}>{p.city}</div>
+                      </div>
+                      <div style={{ background: "rgba(231,76,60,0.1)", borderRadius: 8, padding: "4px 8px", fontSize: "0.78rem", fontWeight: 700, color: G.rouge }}>
+                        ❤️ {p.count}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Derniers inscrits */}
+              {stats.recentUsers.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Derniers inscrits</h3>
+                  {stats.recentUsers.map(u => (
+                    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${G.gris}` }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 5, color: G.brun }}>
+                          {u.name}{u.is_premium && <IcoStar />}
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: "#888" }}>{u.city} · {u.age} ans</div>
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "#aaa" }}>{formatDate(u.created_at)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}>
+                <IcoRefresh />Actualiser
+              </Btn>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET UTILISATEURS */}
+      {activeTab === "users" && (
+        <div style={{ padding: "16px" }}>
+          {/* Modale profil complet admin */}
+          {adminViewedProfile && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setAdminViewedProfile(null)}>
+              <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={e => e.stopPropagation()}>
+                {/* Photo */}
+                <div style={{ position: "relative", height: 260, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", borderRadius: "20px 20px 0 0", overflow: "hidden" }}>
+                  {adminViewedProfile.photo_url
+                    ? <img src={adminViewedProfile.photo_url} alt={adminViewedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                  }
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "40px 16px 14px", background: "linear-gradient(transparent, rgba(0,0,0,0.75))" }}>
+                    <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.3rem" }}>{adminViewedProfile.name}, {adminViewedProfile.age} ans</div>
+                    <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.8rem", marginTop: 3 }}>{adminViewedProfile.city} · {adminViewedProfile.gender}</div>
+                  </div>
+                  <div onClick={() => setAdminViewedProfile(null)} style={{ position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </div>
+                </div>
+                {/* Infos */}
+                <div style={{ padding: "16px" }}>
+                  {/* Badges */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                    {adminViewedProfile.is_premium && <span style={{ background: "rgba(212,168,67,0.15)", color: "#D4A843", borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>⭐ Premium</span>}
+                    {adminViewedProfile.is_verified && <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>✓ Vérifié</span>}
+                    {adminViewedProfile.is_admin && <span style={{ background: "rgba(231,76,60,0.1)", color: G.rouge, borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>⚙ Admin</span>}
+                  </div>
+                  {adminViewedProfile.bio && <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Bio</div><div style={{ fontSize: "0.88rem", color: "#333", lineHeight: 1.6 }}>{adminViewedProfile.bio}</div></div>}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {adminViewedProfile.religion && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Religion</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.religion}</div></div>}
+                    {adminViewedProfile.profession && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Profession</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.profession}</div></div>}
+                    {adminViewedProfile.hobbies && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px", gridColumn: "1 / -1" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Centres d'intérêt</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.hobbies}</div></div>}
+                  </div>
+                  {(adminViewedProfile as any).created_at && <div style={{ marginTop: 12, fontSize: "0.72rem", color: "#bbb", textAlign: "center" }}>Inscrit le {formatDate((adminViewedProfile as any).created_at)}</div>}
+                  <AdminNotes auth={auth} targetType="user" targetId={adminViewedProfile.id} />
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Barre de recherche : deux champs côte à côte (nom / email) */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <div style={{ position: "relative", flex: 1 }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
+              <input
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); } }}
+                placeholder="Nom d'utilisateur…"
+                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ position: "relative", flex: 1 }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+              <input
+                value={userSearchEmail}
+                onChange={e => setUserSearchEmail(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); } }}
+                placeholder="Email d'utilisateur…"
+                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); }} style={{ flex: 1, padding: "10px" }}>
+              Rechercher
+            </Btn>
+            <Btn variant="ghost" onClick={() => { setUserSearch(""); setUserSearchEmail(""); setUserPage(0); loadUsers("", 0, usersSort, ""); }} style={{ padding: "10px 16px" }}>
+              Réinitialiser
+            </Btn>
+          </div>
+          {/* ── Tri + Toggle vue ── */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
+            <select
+              value={usersSort}
+              onChange={e => { const s = e.target.value as typeof usersSort; setUsersSort(s); setUserPage(0); loadUsers(userSearch, 0, s, userSearchEmail); }}
+              style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: `2px solid ${G.gris}`, fontSize: "0.8rem", fontWeight: 600, color: "#333", background: G.blanc, cursor: "pointer", outline: "none" }}
+            >
+              <option value="created_at.desc">📅 Plus récents</option>
+              <option value="created_at.asc">📅 Plus anciens</option>
+              <option value="name.asc">🔤 A → Z</option>
+              <option value="name.desc">🔤 Z → A</option>
+              <option value="last_seen.desc">🟢 Dernière connexion</option>
+              <option value="online">🟢 En ligne d'abord</option>
+              <option value="age.asc">🎂 Âge croissant</option>
+              <option value="age.desc">🎂 Âge décroissant</option>
+              <option value="premium">★ Premium d'abord</option>
+              <option value="lifetime">♾️ Premium à vie d'abord</option>
+              <option value="admin">⚙️ Admin d'abord</option>
+              <option value="verified">✓ Vérifiés d'abord</option>
+              <option value="banned">⛔ Bannis d'abord</option>
+              <option value="male">👨 Hommes d'abord</option>
+              <option value="female">👩 Femmes d'abord</option>
+            </select>
+            {/* Toggle grille / liste */}
+            <div style={{ display: "flex", borderRadius: 10, border: `2px solid ${G.gris}`, overflow: "hidden", flexShrink: 0 }}>
+              <div onClick={() => setUsersViewMode("grid")} style={{ padding: "7px 12px", background: usersViewMode === "grid" ? G.rouge : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={usersViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              </div>
+              <div onClick={() => setUsersViewMode("list")} style={{ padding: "7px 12px", background: usersViewMode === "list" ? G.rouge : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={usersViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </div>
+            </div>
+          </div>
+
+          {usersLoading ? (
+            <div style={{ textAlign: "center", padding: 40 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+          ) : users.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.88rem" }}>Aucun utilisateur trouvé</div>
+          ) : (
+            <>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 10, fontWeight: 600 }}>{displayedUsers.length} utilisateur(s) affichés</div>
+
+              {/* ── Filtre profils incomplets ── */}
+              <div
+                onClick={() => { setShowIncomplete(v => !v); setSelectedUsers(new Set()); }}
+                style={{ display: "flex", alignItems: "center", gap: 8, background: showIncomplete ? "rgba(231,76,60,0.08)" : "#F8F8F8", border: `1.5px solid ${showIncomplete ? "#e74c3c" : G.gris}`, borderRadius: 10, padding: "8px 14px", marginBottom: 10, cursor: "pointer" }}
+              >
+                <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${showIncomplete ? "#e74c3c" : "#bbb"}`, background: showIncomplete ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {showIncomplete && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                </div>
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: showIncomplete ? "#e74c3c" : "#555" }}>
+                  Afficher uniquement les profils incomplets (<code style={{ fontFamily: "monospace", background: "rgba(0,0,0,0.06)", padding: "1px 5px", borderRadius: 4 }}>...</code>)
+                </span>
+              </div>
+
+              {/* ── Barre actions groupées ── */}
+              {displayedUsers.filter(u => u.id !== auth.userId).length > 0 && (
+                <div style={{ background: selectedUsers.size > 0 ? "rgba(231,76,60,0.06)" : "#F8F8F8", border: `1.5px solid ${selectedUsers.size > 0 ? "#e74c3c" : G.gris}`, borderRadius: 12, padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 6, flex: 1, flexWrap: "wrap", alignItems: "center" }}>
+                    <button
+                      onClick={() => selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length ? deselectAll() : selectAll(displayedUsers)}
+                      style={{ background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", color: "#333" }}
+                    >
+                      {selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length && displayedUsers.length > 0 ? "✗ Tout désélectionner" : "✓ Tout sélectionner"}
+                    </button>
+                    {selectedUsers.size > 0 && (
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#e74c3c" }}>{selectedUsers.size} sélectionné(s)</span>
+                    )}
+                  </div>
+                  {selectedUsers.size > 0 && (
+                    <button
+                      onClick={() => confirm(`⚠️ Supprimer définitivement les ${selectedUsers.size} profil(s) sélectionné(s) ? Cette action est irréversible.`, () => bulkDelete())}
+                      disabled={bulkDeleting}
+                      style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      {bulkDeleting ? "Suppression..." : `Supprimer (${selectedUsers.size})`}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* ── MODALE CONFIRMATION ÉVÉNEMENT PREMIUM (déplacée au niveau supérieur, sous-onglet Marketing) ── */}
+
+
+              {/* ── VUE LISTE ── */}
+              {usersViewMode === "list" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {displayedUsers.map((u, rowIdx) => {
+                    const isLoading = actionLoading === u.id;
+                    const isSelf = u.id === auth.userId;
+                    const iAmSuperAdmin = (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID;
+                    const targetIsSuperAdmin = (u as any).admin_level === "superadmin";
+                    const cannotModerate = isSelf || (targetIsSuperAdmin && !iAmSuperAdmin);
+                    const isSelected = selectedUsers.has(u.id);
+                    const onlineStatus = (() => {
+                      if (!u.last_seen) return null;
+                      const mins = Math.floor((Date.now() - new Date(u.last_seen).getTime()) / 60000);
+                      if (mins < 5) return <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", display: "inline-block", flexShrink: 0 }} />;
+                      return null;
+                    })();
+                    return (
+                      <div key={u.id} style={{ background: isSelected ? "rgba(231,76,60,0.04)" : G.blanc, borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: `1.5px solid ${isSelected ? "#e74c3c" : "transparent"}`, flexWrap: "wrap" }}>
+                        {/* Numéro de ligne */}
+                        <div style={{ width: 28, flexShrink: 0, textAlign: "right", fontSize: "0.65rem", color: "#bbb", fontWeight: 700, fontFamily: "monospace" }}>
+                          {userPage * USER_PAGE_SIZE_LIST + rowIdx + 1}
+                        </div>
+                        {/* Case à cocher */}
+                        {!isSelf && (
+                          <div onClick={() => toggleSelectUser(u.id)} style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isSelected ? "#e74c3c" : "#ccc"}`, background: isSelected ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                            {isSelected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </div>
+                        )}
+                        {/* Avatar */}
+                        <div onClick={() => openAdminProfile(u.id)} style={{ width: 34, height: 34, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", position: "relative" }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          {onlineStatus && <div style={{ position: "absolute", bottom: 0, right: 0 }}>{onlineStatus}</div>}
+                        </div>
+                        {/* Infos */}
+                        <div style={{ minWidth: 120, flex: "0 0 auto" }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.82rem", color: u.name === "..." ? "#e74c3c" : G.brun, whiteSpace: "nowrap" }}>
+                            {u.name} {isSelf && <span style={{ fontSize: "0.60rem", color: G.vert, fontWeight: 700 }}>(Vous)</span>}
+                            {u.name === "..." && <span style={{ fontSize: "0.60rem", color: "#e74c3c", fontWeight: 700, marginLeft: 3 }}>Incomplet</span>}
+                          </div>
+                          <div style={{ fontSize: "0.67rem", color: "#888" }}>{u.age} ans · {u.city} · {u.gender}</div>
+                        </div>
+                        {/* Badges statuts */}
+                        <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+                          {isLifetimePremium(u) && <span style={{ background: "linear-gradient(135deg,#8B6914,#D4A843)", color: "#fff", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>♾️ À vie</span>}
+                          {u.is_premium && !isLifetimePremium(u) && <span style={{ background: "rgba(212,168,67,0.15)", color: "#D4A843", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>★ Prem</span>}
+                          {u.is_verified && <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>✓ Vérifié</span>}
+                          {u.is_admin && <span style={{ background: "rgba(231,76,60,0.1)", color: G.rouge, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⚙ Admin</span>}
+                          {u.is_banned && <span style={{ background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⛔ Banni</span>}
+                        </div>
+                        {/* Tous les boutons d'action */}
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginLeft: "auto", flexShrink: 0 }}>
+                          {/* Premium */}
+                          {!u.is_premium
+                            ? <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading} onClick={() => setPremiumGrantModal(u)} />
+                            : isLifetimePremium(u)
+                              ? <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading} onClick={() => setPremiumGrantModal(u)} />
+                              : <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading} onClick={() => setPremiumGrantModal(u)} />
+                          }
+                          <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)} onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ?`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
+                          {/* Admin */}
+                          {!u.is_admin
+                            ? (auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading} onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
+                            : (auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !isSelf && <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading || isSelf} onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null as unknown as undefined }, `Droits admin retirés pour ${u.name}.`))} />
+                          }
+                          {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && (
+                            <ActionBtn label="🔑 Mot de passe" color="#8e44ad" disabled={isLoading} onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
+                          )}
+                          {/* Vérification */}
+                          {!u.is_verified
+                            ? <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading} onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
+                            : <ActionBtn label="- Vérifier" color="#555" disabled={isLoading} onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
+                          }
+                          {/* Modération */}
+                          <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
+                          <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
+                          {!u.is_banned
+                            ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setBanModal(u); setBanHours("24"); }} />
+                            : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
+                          }
+                          <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
+                          <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
+                          <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+              /* ── VUE GRILLE (existante) ── */
+              <div data-admlist="">
+              {displayedUsers.map(u => {
+                const isLoading = actionLoading === u.id;
+                const isSelf = u.id === auth.userId;
+                // Un admin simple ne peut PAS modérer un Super Admin. Seul le Super Admin principal le peut.
+                const iAmSuperAdmin = (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID;
+                const targetIsSuperAdmin = (u as any).admin_level === "superadmin";
+                const cannotModerate = isSelf || (targetIsSuperAdmin && !iAmSuperAdmin);
+                return (
+                  <div key={u.id} style={{ background: selectedUsers.has(u.id) ? "rgba(231,76,60,0.04)" : G.blanc, borderRadius: 16, padding: "14px", marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", border: `1.5px solid ${selectedUsers.has(u.id) ? "#e74c3c" : "transparent"}` }}>
+                    {/* En-tête utilisateur */}
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                      {/* Case à cocher */}
+                      {!isSelf && (
+                        <div onClick={() => toggleSelectUser(u.id)} style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${selectedUsers.has(u.id) ? "#e74c3c" : "#ccc"}`, background: selectedUsers.has(u.id) ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginTop: 2 }}>
+                          {selectedUsers.has(u.id) && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </div>
+                      )}
+                      <div onClick={() => openAdminProfile(u.id)} style={{ width: 42, height: 42, borderRadius: "50%", background: u.gender === "Femme" ? "rgba(233,30,140,0.1)" : "rgba(26,110,245,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={u.gender === "Femme" ? "#e91e8c" : "#1a6ef5"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, color: G.brun }}>
+                          {u.name}
+                          {isSelf && <span style={{ fontSize: "0.65rem", background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Vous</span>}
+                          {u.name === "..." && <span style={{ fontSize: "0.65rem", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>Incomplet</span>}
+                          {isLifetimePremium(u) && <span style={{ fontSize: "0.65rem", background: "linear-gradient(135deg,#8B6914,#D4A843)", color: "#fff", borderRadius: 50, padding: "1px 7px", fontWeight: 700 }}>♾️ À vie</span>}
+                          {/* Indicateur connexion */}
+                          {(() => {
+                            if (!u.last_seen) return null;
+                            const diff = Date.now() - new Date(u.last_seen).getTime();
+                            const mins = Math.floor(diff / 60000);
+                            const hours = Math.floor(diff / 3600000);
+                            const days = Math.floor(diff / 86400000);
+                            if (mins < 5) return <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.65rem", color: "#27ae60", fontWeight: 700 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#27ae60", display: "inline-block" }}></span>En ligne</span>;
+                            if (mins < 60) return <span style={{ fontSize: "0.65rem", color: "#888", fontWeight: 600 }}>vu il y a {mins}min</span>;
+                            if (hours < 24) return <span style={{ fontSize: "0.65rem", color: "#888", fontWeight: 600 }}>vu il y a {hours}h</span>;
+                            if (days < 7) return <span style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 600 }}>vu il y a {days}j</span>;
+                            return <span style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 600 }}>vu le {new Date(u.last_seen).toLocaleDateString("fr-FR")}</span>;
+                          })()}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 2 }}>
+                          {u.age} ans · {u.city} · {u.gender}
+                          {u.created_at && <span> · inscrit le {formatDate(u.created_at)}</span>}
+                        </div>
+                        {/* Badges statuts */}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                          <StatusBadge label="Premium" active={u.is_premium} color="#D4A843" Icon={IcoStar} />
+                          {u.is_admin && (
+                            (u as any).admin_level === "superadmin"
+                              ? <StatusBadge label="Super Admin" active={true} color="#8B008B" Icon={IcoKey} />
+                              : <StatusBadge label="Admin" active={true} color={G.rouge} Icon={IcoGear} />
+                          )}
+                          <StatusBadge label="Vérifié" active={!!u.is_verified} color={G.vert} Icon={IcoCheck} />
+                          <StatusBadge label="Banni" active={!!u.is_banned} color="#e74c3c" Icon={IcoBan} />
+                          {(u.warning_count || 0) > 0 && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: (u.warning_count || 0) >= 3 ? "rgba(231,76,60,0.12)" : "rgba(243,156,18,0.12)", color: (u.warning_count || 0) >= 3 ? "#e74c3c" : "#e67e22", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>
+                              <IcoWarn />
+                              Avert. {u.warning_count}/3
+                              {(u.warning_count || 0) >= 3 && <span style={{ marginLeft: 2 }}>· Risque bannissement</span>}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {isLoading && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite", flexShrink: 0 }}><circle cx="12" cy="12" r="10"/></svg>
+                      )}
+                    </div>
+
+                    {/* Actions - ligne 1 : Premium & Admin */}
+                    <div style={{ borderTop: `1px solid ${G.gris}`, paddingTop: 10 }}>
+                      <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Statuts</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                        {!u.is_premium ? (
+                          <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
+                            onClick={() => setPremiumGrantModal(u)} />
+                        ) : isLifetimePremium(u) ? (
+                          <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading}
+                            onClick={() => setPremiumGrantModal(u)} />
+                        ) : (
+                          <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading}
+                            onClick={() => setPremiumGrantModal(u)} />
+                        )}
+                        <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
+                          onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
+                        {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !isSelf && (() => {
+                          const isSuperAdmin = (u as any).admin_level === "superadmin";
+                          if (isSuperAdmin) {
+                            // Utilisateur déjà Super Admin → seulement "- Super Admin"
+                            return (
+                              <ActionBtn label="- Super Admin" color="#888" disabled={isLoading}
+                                onClick={() => confirm(`Retirer le statut Super Admin de ${u.name} ?`, async () => {
+                                  await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "admin" }) });
+                                  showToast(`${u.name} est maintenant Admin simple.`, "success");
+                                  loadUsers();
+                                })} />
+                            );
+                          }
+                          // Utilisateur pas Super Admin → boutons + Admin / - Admin / PIN / + Super Admin
+                          return <>
+                            {!u.is_admin
+                              ? <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
+                                  onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
+                              : <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading}
+                                  onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`))} />
+                            }
+                            {u.is_admin && (
+                              <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
+                                onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "reset" }); }} />
+                            )}
+                            <ActionBtn label="🔑 Mot de passe" color="#8e44ad" disabled={isLoading}
+                              onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
+                            <ActionBtn label="+ Super Admin" color="#8B008B" disabled={isLoading}
+                              onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
+                                await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
+                                showToast(`${u.name} est maintenant Super Admin.`, "success");
+                                loadUsers();
+                              })} />
+                          </>;
+                        })()}
+                        {!u.is_verified ? (
+                          <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading}
+                            onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
+                        ) : (
+                          <ActionBtn label="- Vérifier" color="#555" disabled={isLoading}
+                            onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
+                        )}
+                      </div>
+
+                      {/* Actions modération */}
+                      <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Modération</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
+                        <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate}
+                          onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
+                        {!u.is_banned ? (
+                          <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate}
+                            onClick={() => {
+                              if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }
+                              if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
+                              setBanModal(u); setBanHours("24");
+                            }} />
+                        ) : (
+                          <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate}
+                            onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
+                        )}
+                        <ActionBtn label="Supprimer" color="#c0392b" disabled={isLoading || cannotModerate}
+                          onClick={() => {
+                            if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
+                            if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
+                            confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
+                          }} />
+                        <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate}
+                          onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
+                        <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate}
+                          onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+              )}
+
+              {/* Pagination */}
+              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                <Btn variant="ghost" onClick={() => { const p = Math.max(0, userPage - 1); setUserPage(p); loadUsers(userSearch, p, usersSort, userSearchEmail); }} disabled={userPage === 0} style={{ flex: 1, padding: "10px" }}>
+                  ← Précédent
+                </Btn>
+                <span style={{ display: "flex", alignItems: "center", fontSize: "0.8rem", color: "#888", padding: "0 8px" }}>
+                  Page {userPage + 1}
+                </span>
+                <Btn variant="ghost" onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(userSearch, p, usersSort, userSearchEmail); }} disabled={users.length < USER_PAGE_SIZE} style={{ flex: 1, padding: "10px" }}>
+                  Suivant →
+                </Btn>
+              </div>
+            </>
+          )}
+
+          {/* Note colonnes manquantes */}
+          <div style={{ background: "rgba(243,156,18,0.08)", border: "1px solid rgba(243,156,18,0.3)", borderRadius: 12, padding: "12px 14px", marginTop: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span style={{ fontWeight: 700, fontSize: "0.78rem", color: "#f39c12" }}>Note technique</span>
+            </div>
+            <p style={{ fontSize: "0.73rem", color: "#555", lineHeight: 1.5 }}>
+              Si les actions Bannir/Débannir échouent, la colonne <code>is_banned</code> est peut-être absente. SQL à exécuter dans Supabase : <code>ALTER TABLE profiles ADD COLUMN is_banned boolean DEFAULT false;</code>
+            </p>
+            <p style={{ fontSize: "0.73rem", color: "#555", lineHeight: 1.5, marginTop: 6 }}>
+              Si les mises à jour sont bloquées (erreur 403), les policies RLS doivent autoriser les admins à modifier les profils. Contactez le développeur.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET SIGNALEMENTS */}
+      {activeTab === "messagerie" && (
+        <div style={{ padding: "16px 16px 0" }}>
+          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 2 }}>
+            {([["assistant", "Assistant Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>], ["broadcast", "Diffusion générale", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>]] as [("assistant" | "broadcast"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+              <button key={k} onClick={() => setMsgSubTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: msgSubTab === k ? G.rouge : "#fff", color: msgSubTab === k ? "#fff" : "#555", border: msgSubTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: msgSubTab === k ? "0 4px 12px rgba(192,57,43,0.25)" : "none" }}>{ico}{lbl}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {activeTab === "messagerie" && msgSubTab === "broadcast" && (
+        <div style={{ padding: "16px" }}>
+          {/* ── Composer ── */}
+          <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: "1.15rem", color: G.brun }}>Diffusion générale</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888" }}>Envoyez une annonce visible à tous les utilisateurs sélectionnés.</div>
+                </div>
+              </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(39,174,96,0.1)", color: "#1e8449", borderRadius: 50, padding: "6px 13px", fontSize: "0.76rem", fontWeight: 800 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60" }} />{broadcastList.length} diffusion{broadcastList.length > 1 ? "s" : ""} active{broadcastList.length > 1 ? "s" : ""}</div>
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 22 }}>
+              {/* GAUCHE : modèles rapides */}
+              <div style={{ flex: "1 1 210px", minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: "0.92rem", color: G.brun }}><svg width="16" height="16" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Modèles rapides</div>
+                <div style={{ fontSize: "0.74rem", color: "#999", margin: "3px 0 12px" }}>Cliquez sur un modèle pour préremplir le message.</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(115px, 1fr))", gap: 8 }}>
+                  {([
+                    { lbl: "Maintenance", col: "#E67E22", txt: "Moyo Dating est en maintenance ce soir de [H] à [H]. Merci de votre compréhension.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
+                    { lbl: "Nouvelle fonctionnalité", col: "#8e44ad", txt: "Nouvelle fonctionnalité disponible : [PRÉCISION]", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg> },
+                    { lbl: "Mise à jour disponible", col: "#2980b9", txt: "Une mise à jour est disponible. Rechargez l'application pour en profiter.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> },
+                    { lbl: "Promo Premium", col: "#E67E22", txt: "Profitez de -50% sur le Premium ce weekend uniquement !", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> },
+                    { lbl: "Rappel événement", col: "#c0392b", txt: "Rappel : [ÉVÉNEMENT] aura lieu le [DATE]. Ne manquez pas ça !", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+                    { lbl: "Communauté", col: "#16a085", txt: "La communauté Moyo Dating grandit ! Invitez vos amis à nous rejoindre.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+                    { lbl: "Sécurité", col: "#27ae60", txt: "Pour votre sécurité, ne partagez jamais vos informations personnelles.", ic: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+                  ]).map(m => (
+                    <button key={m.lbl} onClick={() => setBroadcastText(m.txt)} style={{ display: "flex", alignItems: "center", gap: 8, background: broadcastText === m.txt ? "rgba(192,57,43,0.06)" : "#fff", border: `1.5px solid ${broadcastText === m.txt ? G.rouge : G.gris}`, borderRadius: 12, padding: "10px 11px", cursor: "pointer", textAlign: "left" }}>
+                      <span style={{ width: 30, height: 30, borderRadius: 9, background: m.col + "1f", color: m.col, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{m.ic}</span>
+                      <span style={{ fontSize: "0.74rem", fontWeight: 700, color: G.brun, lineHeight: 1.2 }}>{m.lbl}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* DROITE : formulaire */}
+              <div style={{ flex: "2 1 330px", minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 7 }}>1. Message à diffuser</div>
+                <div style={{ position: "relative", marginBottom: 18 }}>
+                  <textarea value={broadcastText} onChange={e => setBroadcastText(e.target.value.slice(0, 500))} maxLength={500} placeholder="Écrivez votre message ici…" rows={4} style={{ width: "100%", boxSizing: "border-box", padding: "12px 12px 26px", borderRadius: 12, border: `1.5px solid ${G.gris}`, fontSize: "0.86rem", resize: "vertical", outline: "none", fontFamily: "inherit" }} />
+                  <div style={{ position: "absolute", right: 12, bottom: 9, fontSize: "0.7rem", color: "#aaa" }}>{broadcastText.length} / 500 caractères</div>
+                </div>
+
+                <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 8 }}>2. Destinataires</div>
+                <div style={{ fontSize: "0.72rem", color: "#999", fontWeight: 700, marginBottom: 6 }}>Genre</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                  {([["all", "Tout le monde", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>], ["femmes", "Femmes", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="5"/><line x1="12" y1="13" x2="12" y2="22"/><line x1="9" y1="18" x2="15" y2="18"/></svg>], ["hommes", "Hommes", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="14" r="5"/><line x1="13.5" y1="10.5" x2="20" y2="4"/><polyline points="15 4 20 4 20 9"/></svg>]] as ["all" | "femmes" | "hommes", string, React.ReactElement][]).map(([val, lbl, ico]) => (
+                    <button key={val} type="button" onClick={() => setBroadcastGender(val)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 15px", borderRadius: 999, border: `1.5px solid ${broadcastGender === val ? G.rouge : G.gris}`, background: broadcastGender === val ? "rgba(192,57,43,0.08)" : "#fff", color: broadcastGender === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{ico}{lbl}</button>
+                  ))}
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "#999", fontWeight: 700, marginBottom: 6 }}>Abonnement</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                  {([["all", "Tous", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20l-2-9-5 4-3-7-3 7-5-4-2 9z"/></svg>], ["premium", "Premium", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20l-2-9-5 4-3-7-3 7-5-4-2 9z"/></svg>], ["gratuit", "Gratuits", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>]] as ["all" | "premium" | "gratuit", string, React.ReactElement][]).map(([val, lbl, ico]) => (
+                    <button key={val} type="button" onClick={() => setBroadcastPlan(val)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 15px", borderRadius: 999, border: `1.5px solid ${broadcastPlan === val ? G.rouge : G.gris}`, background: broadcastPlan === val ? "rgba(192,57,43,0.08)" : "#fff", color: broadcastPlan === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{ico}{lbl}</button>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "flex-end" }}>
+                  <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 8 }}>3. Date d'expiration <span style={{ color: G.rouge }}>*</span></div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input type="date" value={broadcastDate} onChange={e => setBroadcastDate(e.target.value)} style={{ flex: 2, minWidth: 0, boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit" }} />
+                      <input type="time" value={broadcastTime} onChange={e => setBroadcastTime(e.target.value)} style={{ flex: 1, minWidth: 0, boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", fontFamily: "inherit" }} />
+                    </div>
+                  </div>
+                  <div style={{ flex: "1 1 200px", display: "flex", alignItems: "center", gap: 10, background: "rgba(39,174,96,0.08)", borderRadius: 12, padding: "11px 14px" }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e8449" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <div>
+                      <div style={{ fontSize: "0.72rem", color: "#1e8449", fontWeight: 600 }}>Audience estimée</div>
+                      <div style={{ fontSize: "1.15rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{audienceCount === null ? "…" : audienceCount.toLocaleString("fr-FR")} {audienceCount === 1 ? "utilisateur" : "utilisateurs"}</div>
+                      <div style={{ fontSize: "0.66rem", color: "#888" }}>Selon vos critères actuels</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18, flexWrap: "wrap" }}>
+                  <button onClick={() => { setBroadcastText(""); setBroadcastDate(""); setBroadcastTime(""); setBroadcastGender("all"); setBroadcastPlan("all"); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                  <button disabled={broadcastLoading || !broadcastText.trim() || !broadcastDate} onClick={async () => {
+                    if (!broadcastText.trim() || !broadcastDate) return;
+                    const iso = new Date(`${broadcastDate}T${broadcastTime || "00:00"}`).toISOString();
+                    if (new Date(iso).getTime() <= Date.now()) { setBroadcastResult({ ok: false, message: "La date d'expiration est déjà passée. Choisis une date dans le futur, sinon le message ne s'affichera chez personne." }); return; }
+                    setBroadcastLoading(true);
+                    try {
+                      const r = await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ message: broadcastText.trim(), created_by: auth.userId, expires_at: iso, target: `${broadcastGender}|${broadcastPlan}` }) });
+                      if (!r.ok) {
+                        let detail = `Erreur ${r.status}`;
+                        try { const e = await r.json(); detail = e.message || e.hint || e.details || detail; } catch {}
+                        if (r.status === 401 || r.status === 403) detail = "Accès refusé par la base de données (règle RLS sur « broadcasts »).";
+                        if (String(detail).includes("target")) detail = "La colonne « target » manque dans la table broadcasts. Ajoute-la dans Supabase : ALTER TABLE broadcasts ADD COLUMN target text DEFAULT 'all';";
+                        setBroadcastLoading(false); setBroadcastResult({ ok: false, message: detail }); return;
+                      }
+                      const data = await r.json().catch(() => []);
+                      const created = Array.isArray(data) ? data[0] : data;
+                      if (!created || !created.id) { setBroadcastLoading(false); setBroadcastResult({ ok: false, message: "Le serveur n'a renvoyé aucune ligne créée. Vérifie les permissions de la table « broadcasts »." }); return; }
+                      setBroadcastLoading(false);
+                      setBroadcastText(""); setBroadcastDate(""); setBroadcastTime(""); setBroadcastGender("all"); setBroadcastPlan("all");
+                      setBroadcastResult({ ok: true, message: created.message || broadcastText.trim() });
+                      loadBroadcasts();
+                    } catch { setBroadcastLoading(false); setBroadcastResult({ ok: false, message: "Impossible de joindre le serveur. Vérifie ta connexion et réessaie." }); }
+                  }} style={{ display: "flex", alignItems: "center", gap: 8, background: (broadcastLoading || !broadcastText.trim() || !broadcastDate) ? "rgba(192,57,43,0.45)" : G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: "0.88rem", fontWeight: 800, cursor: (broadcastLoading || !broadcastText.trim() || !broadcastDate) ? "not-allowed" : "pointer", boxShadow: "0 6px 18px rgba(192,57,43,0.28)" }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    {broadcastLoading ? "Envoi…" : "Publier la diffusion"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Diffusions actives ── */}
+          <div style={{ background: G.blanc, borderRadius: 18, padding: 18, marginTop: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 12 }}>Diffusions actives ({broadcastList.length})</div>
+            {broadcastList.length === 0 ? (
+              <div style={{ fontSize: "0.82rem", color: "#aaa", textAlign: "center", padding: "30px 0" }}>Aucune diffusion active.</div>
+            ) : (
+              <>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {(broadcastShowAll ? broadcastList : broadcastList.slice(0, 5)).map((b, idx, arr) => {
+                    const parts = (b.target || "all|all").split("|");
+                    const g = parts[0] || "all"; const pl = parts[1] || "all";
+                    const genreLbl = g === "femmes" ? "Femmes" : g === "hommes" ? "Hommes" : "Tout le monde";
+                    const planLbl = pl === "premium" ? "Premium" : pl === "gratuit" ? "Gratuits" : "Tous";
+                    return (
+                      <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 2px", borderBottom: idx < arr.length - 1 ? `1px solid ${G.gris}` : "none", flexWrap: "wrap" }}>
+                        <div style={{ width: 46, height: 46, borderRadius: 10, background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+                        <div style={{ flex: "1 1 170px", minWidth: 0 }}>
+                          <div style={{ fontSize: "0.86rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.message}</div>
+                          <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 2 }}>Publié le {new Date(b.created_at || Date.now()).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })} à {new Date(b.created_at || Date.now()).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+                        </div>
+                        <div style={{ flex: "0 0 auto", minWidth: 110 }}>
+                          <div style={{ fontSize: "0.74rem", color: "#666", fontWeight: 600 }}>{genreLbl}</div>
+                          <div style={{ display: "inline-block", fontSize: "0.64rem", fontWeight: 700, color: pl === "premium" ? "#B8860B" : pl === "gratuit" ? "#1e8449" : "#888", background: pl === "premium" ? "rgba(212,168,67,0.15)" : pl === "gratuit" ? "rgba(39,174,96,0.12)" : G.creme, borderRadius: 50, padding: "1px 8px", marginTop: 2 }}>{planLbl}</div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.rouge, fontWeight: 700, fontSize: "0.74rem", whiteSpace: "nowrap" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Expire {expiresInLabel(b.expires_at)}</div>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(39,174,96,0.1)", color: "#1e8449", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#27ae60" }} />En ligne</div>
+                        <button onClick={() => setBroadcastPreview(b.message)} style={{ display: "flex", alignItems: "center", gap: 5, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</button>
+                        <button onClick={() => deleteBroadcast(b.id)} disabled={broadcastDeleting === b.id} style={{ flexShrink: 0, border: `1px solid rgba(231,76,60,0.3)`, background: "rgba(231,76,60,0.08)", color: "#e74c3c", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {broadcastList.length > 5 && (
+                  <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+                    <button onClick={() => setBroadcastShowAll(v => !v)} style={{ display: "flex", alignItems: "center", gap: 7, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>{broadcastShowAll ? "Voir moins" : "Voir toutes les diffusions"}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: broadcastShowAll ? "rotate(180deg)" : "none" }}><polyline points="6 9 12 15 18 9"/></svg></button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {(activeTab === "reports" || (activeTab === "messagerie" && msgSubTab === "assistant")) && (
+        <div style={{ padding: "16px", display: (activeTab === "messagerie" && msgSubTab === "assistant") ? "flex" : "block", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <div style={{ flex: (activeTab === "messagerie" && msgSubTab === "assistant") ? "1.3 1 430px" : undefined, minWidth: 0, width: (activeTab === "messagerie" && msgSubTab === "assistant") ? undefined : "100%" }}>
+          {/* Sous-onglets — affichés uniquement sur Signalements (pas sur l'onglet Messagerie) */}
+          {activeTab === "reports" && (
+          <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
+            {(["all", "user", "system", "archived"] as const).map(f => {
+              const isActive = reportFilter === f;
+              const isArchived = f === "archived";
+              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : "Archives";
+              const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : f === "user" ? profilePendingCount : f === "system" ? systemPendingCount : null;
+              return (
+                <div
+                  key={f}
+                  onClick={() => setReportFilter(f)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    padding: "7px 13px", borderRadius: 50, fontSize: "0.74rem", fontWeight: 600,
+                    cursor: "pointer", flexShrink: 0, transition: "all 0.15s",
+                    background: isActive
+                      ? isArchived ? "#6c757d" : G.rouge
+                      : G.blanc,
+                    color: isActive ? "#fff" : isArchived ? "#6c757d" : "#555",
+                    boxShadow: isActive ? `0 2px 8px ${isArchived ? "rgba(108,117,125,0.3)" : "rgba(192,57,43,0.25)"}` : "none",
+                    border: `1px solid ${isActive ? (isArchived ? "#6c757d" : G.rouge) : G.gris}`,
+                  }}
+                >
+                  {isArchived && (
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+                    </svg>
+                  )}
+                  {label}
+                  {count !== null && count > 0 && (
+                    <span style={{
+                      background: isActive ? "rgba(255,255,255,0.25)" : isArchived ? "rgba(108,117,125,0.12)" : "rgba(192,57,43,0.12)",
+                      color: isActive ? "#fff" : isArchived ? "#6c757d" : G.rouge,
+                      borderRadius: 50, padding: "1px 6px", fontSize: "0.65rem", fontWeight: 700, minWidth: 18, textAlign: "center",
+                    }}>
+                      {count}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          )}
+
+          {activeTab === "reports" && reportFilter === "archived" ? (() => {
+            const typeOf = (r: ReportRow) => isSupportInbox(r) ? "messaging" : isSystemReport(r) ? "system" : "profile";
+            const q = archiveSearch.trim().toLowerCase();
+            let list = reports.filter(r => ARCHIVED_STATUSES.includes(r.status)).filter(r => {
+              if (archiveTypeFilter !== "all" && typeOf(r) !== archiveTypeFilter) return false;
+              if (archiveActionFilter !== "all" && r.status !== archiveActionFilter) return false;
+              if (q) {
+                const p = reportProfilesCache[r.reporter_id]; const p2 = r.reported_id ? reportProfilesCache[r.reported_id] : null;
+                if (!`${r.reason || ""} ${p?.name || ""} ${p2?.name || ""}`.toLowerCase().includes(q)) return false;
+              }
+              return true;
+            });
+            list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+            const PER = 10;
+            const totalPages = Math.max(1, Math.ceil(list.length / PER));
+            const page = Math.min(archivePage, totalPages);
+            const pageItems = list.slice((page - 1) * PER, page * PER);
+            const dayLabel = (iso?: string) => {
+              const d = new Date(iso || Date.now()); const today = new Date(); const y = new Date(); y.setDate(today.getDate() - 1);
+              const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+              const ds = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+              return same(d, today) ? `Aujourd'hui · ${ds}` : same(d, y) ? `Hier · ${ds}` : ds;
+            };
+            const groups: { lbl: string; items: ReportRow[] }[] = [];
+            for (const r of pageItems) { const lbl = dayLabel(r.created_at); let g = groups.find(x => x.lbl === lbl); if (!g) { g = { lbl, items: [] }; groups.push(g); } g.items.push(r); }
+            const meta = (r: ReportRow) => {
+              const t = typeOf(r);
+              const nm = (id?: string | null) => (id ? reportProfilesCache[id]?.name : "") || "";
+              if (t === "messaging") return { t, color: "#27ae60", bg: "rgba(39,174,96,0.12)", typeLabel: "Messagerie", actor: "Modération", title: `Conversation avec ${nm(r.reporter_id) || "un membre"}`, sub: r.status === "archived" ? "Discussion archivée" : "Discussion traitée", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e8449" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> };
+              if (t === "system") return { t, color: "#E67E22", bg: "rgba(230,126,34,0.14)", typeLabel: "Auto-modération", actor: "Système", title: `Auto-modération sur ${nm(r.reporter_id) || nm(r.reported_id) || "un membre"}`, sub: (r.reason || "").includes("CONTACT") ? "Tentative de partage de contact" : "Contenu modéré automatiquement", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> };
+              return { t, color: "#e74c3c", bg: "rgba(231,76,60,0.12)", typeLabel: "Signalement", actor: "Modération", title: `Signalement sur ${nm(r.reported_id) || "un profil"}`, sub: r.status === "rejected" ? "Signalement rejeté après examen" : r.status === "banned" ? "Profil banni après examen" : "Signalement traité", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> };
+            };
+            return (
+              <div>
+                {/* Barre recherche + filtres */}
+                <div style={{ background: G.blanc, borderRadius: 16, padding: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", marginBottom: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  <div style={{ flex: "1 1 220px", display: "flex", alignItems: "center", gap: 8, background: G.creme, borderRadius: 10, padding: "9px 12px", minWidth: 0 }}>
+                    <IcoSearch />
+                    <input value={archiveSearch} onChange={e => { setArchiveSearch(e.target.value); setArchivePage(1); }} placeholder="Rechercher dans les archives…" style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: "0.82rem", color: G.brun }} />
+                  </div>
+                  <select value={archiveTypeFilter} onChange={e => { setArchiveTypeFilter(e.target.value as any); setArchivePage(1); }} style={{ border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px", fontSize: "0.8rem", color: G.brun, background: G.blanc, cursor: "pointer", fontWeight: 600 }}>
+                    <option value="all">Tous les types</option>
+                    <option value="messaging">Messagerie</option>
+                    <option value="system">Auto-modération</option>
+                    <option value="profile">Signalement</option>
+                  </select>
+                  <select value={archiveActionFilter} onChange={e => { setArchiveActionFilter(e.target.value as any); setArchivePage(1); }} style={{ border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "9px 12px", fontSize: "0.8rem", color: G.brun, background: G.blanc, cursor: "pointer", fontWeight: 600 }}>
+                    <option value="all">Toutes les actions</option>
+                    <option value="reviewed">Traité</option>
+                    <option value="rejected">Rejeté</option>
+                    <option value="banned">Banni</option>
+                    <option value="archived">Archivé</option>
+                  </select>
+                </div>
+
+                {/* Liste groupée par date */}
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "8px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  {list.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "36px 0" }}>
+                      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                      <p style={{ color: "#bbb", fontSize: "0.84rem" }}>Aucune archive ne correspond à ta recherche.</p>
+                    </div>
+                  ) : groups.map(grp => (
+                    <div key={grp.lbl}>
+                      <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#999", textTransform: "none", padding: "14px 0 8px" }}>{grp.lbl}</div>
+                      {grp.items.map(r => {
+                        const m = meta(r);
+                        const st = reportStatusStyle(r.status);
+                        const expanded = expandedArchived.has(r.id || "");
+                        const time = new Date(r.created_at || Date.now()).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                        return (
+                          <div key={r.id} style={{ borderTop: `1px solid ${G.gris}`, padding: "12px 2px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                              <div style={{ width: 42, height: 42, borderRadius: "50%", background: m.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{m.icon}</div>
+                              <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+                                <div style={{ fontSize: "0.88rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</div>
+                                <div style={{ fontSize: "0.74rem", color: "#999" }}>{m.sub}</div>
+                              </div>
+                              <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
+                                <span style={{ background: m.bg, color: m.color, borderRadius: 50, padding: "3px 11px", fontSize: "0.68rem", fontWeight: 700 }}>{m.typeLabel}</span>
+                                <span style={{ background: st.bg, color: st.color, borderRadius: 50, padding: "3px 11px", fontSize: "0.68rem", fontWeight: 700 }}>{st.label}</span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, minWidth: 90 }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <div><div style={{ fontSize: "0.74rem", fontWeight: 700, color: "#666" }}>{m.actor}</div><div style={{ fontSize: "0.66rem", color: "#aaa" }}>{time}</div></div>
+                              </div>
+                              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                                <button onClick={() => toggleArchived(r.id || "")} style={{ display: "flex", alignItems: "center", gap: 5, border: `1px solid ${G.gris}`, background: G.blanc, color: G.brun, borderRadius: 9, padding: "7px 11px", fontSize: "0.73rem", fontWeight: 700, cursor: "pointer" }}><IcoEye />Voir{expanded ? " moins" : " les détails"}</button>
+                                <button onClick={() => deleteOneArchivedReport(r.id)} title="Supprimer" style={{ border: `1px solid rgba(231,76,60,0.3)`, background: "rgba(231,76,60,0.06)", color: "#e74c3c", borderRadius: 9, padding: "7px 9px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                              </div>
+                            </div>
+                            {expanded && (
+                              <div style={{ marginTop: 10, background: G.creme, borderRadius: 12, padding: "12px 14px", fontSize: "0.78rem", color: "#555", lineHeight: 1.6 }}>
+                                <div style={{ fontWeight: 700, color: G.brun, marginBottom: 4 }}>Détail</div>
+                                <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{r.reason || "—"}</div>
+                                <div style={{ marginTop: 8, fontSize: "0.72rem", color: "#999" }}>Statut : {st.label} · {new Date(r.created_at || Date.now()).toLocaleString("fr-FR")}</div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {list.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, flexWrap: "wrap", gap: 10 }}>
+                    <div style={{ fontSize: "0.76rem", color: "#999" }}>Affichage de {(page - 1) * PER + 1} à {Math.min(page * PER, list.length)} sur {list.length} archive{list.length > 1 ? "s" : ""}</div>
+                    {totalPages > 1 && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <button onClick={() => setArchivePage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ border: `1px solid ${G.gris}`, background: G.blanc, borderRadius: 9, padding: "7px 11px", cursor: page <= 1 ? "not-allowed" : "pointer", opacity: page <= 1 ? 0.5 : 1, color: G.brun }}>‹</button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1).map((n, idx, arr) => (
+                          <React.Fragment key={n}>
+                            {idx > 0 && n - arr[idx - 1] > 1 && <span style={{ color: "#bbb" }}>…</span>}
+                            <button onClick={() => setArchivePage(n)} style={{ border: `1px solid ${n === page ? G.rouge : G.gris}`, background: n === page ? G.rouge : "#fff", color: n === page ? "#fff" : G.brun, borderRadius: 9, padding: "7px 12px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", minWidth: 34 }}>{n}</button>
+                          </React.Fragment>
+                        ))}
+                        <button onClick={() => setArchivePage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ border: `1px solid ${G.gris}`, background: G.blanc, borderRadius: 9, padding: "7px 11px", cursor: page >= totalPages ? "not-allowed" : "pointer", opacity: page >= totalPages ? 0.5 : 1, color: G.brun }}>›</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })() : (
+          <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", maxWidth: effectiveFilter === "messaging" ? 760 : undefined, margin: effectiveFilter === "messaging" ? "0 auto" : undefined, width: effectiveFilter === "messaging" ? "100%" : undefined, boxSizing: "border-box" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
+                {effectiveFilter === "archived"
+                  ? `Archivés (${archivedCount})`
+                  : effectiveFilter === "user"
+                    ? `Profils (${filteredReports.length})`
+                    : effectiveFilter === "system"
+                      ? `Système (${filteredReports.length})`
+                      : effectiveFilter === "messaging"
+                        ? `Messagerie (${filteredReports.length})`
+                        : `En attente (${filteredReports.length})`
+                }
+              </h3>
+              {effectiveFilter === "archived" && archivedCount > 0 && (
+                <span style={{ fontSize: "0.7rem", color: "#aaa" }}>Supprimables</span>
+              )}
+            </div>
+
+            {filteredReports.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "28px 0" }}>
+                {effectiveFilter === "archived"
+                  ? <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                      <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucun signalement archivé</p>
+                    </>
+                  : effectiveFilter === "messaging"
+                  ? <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucune conversation pour le moment</p>
+                    </>
+                  : <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucun signalement en attente ✓</p>
+                    </>
+                }
+              </div>
+            ) : (
+              <div data-admlist={effectiveFilter === "messaging" ? undefined : ""} style={{ maxWidth: 720, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+              {effectiveFilter === "messaging" ? (() => {
+                // ── Vue Messagerie : grouper les échanges par utilisateur ──
+                const convMap: Record<string, { userId: string; messages: ReportRow[] }> = {};
+                filteredReports.forEach(r => {
+                  const userId = r.reason?.startsWith(SUPPORT_PREFIX_REPLY) ? (r.reported_id || r.reporter_id) : r.reporter_id;
+                  if (!userId) return;
+                  if (!convMap[userId]) convMap[userId] = { userId, messages: [] };
+                  convMap[userId].messages.push(r);
+                });
+                const convList = Object.values(convMap).sort((a, b) => {
+                  const aLast = a.messages[0]?.created_at || "";
+                  const bLast = b.messages[0]?.created_at || "";
+                  return bLast.localeCompare(aLast);
+                });
+                return convList.map((conv, ci) => {
+                  const userProfile = reportProfilesCache[conv.userId];
+                  // messages triés du plus ancien au plus récent pour l'affichage conversation
+                  const ordered = [...conv.messages].sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
+                  const lastMsg = ordered[ordered.length - 1];
+                  const unread = conv.messages.filter(r => r.status === "pending" && r.reason?.startsWith(SUPPORT_PREFIX_USER)).length;
+                  const isOpen = expandedConvs.has(conv.userId);
+                  const allIds = conv.messages.map(m => m.id || "").filter(Boolean);
+                  return (
+                    <div key={conv.userId} style={{ borderBottom: ci < convList.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                      {/* Ligne repliée : avatar + nom + dernier msg + Archiver + chevron */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0", cursor: "pointer" }} onClick={() => toggleConv(conv.userId)}>
+                        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#dbeafe", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {userProfile?.photo_url
+                            ? <img src={userProfile.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          }
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
+                              {userProfile ? `${userProfile.name}, ${userProfile.age} ans` : conv.userId.slice(0, 10) + "…"}
+                            </span>
+                            {unread > 0 && <span style={{ background: G.rouge, color: "#fff", borderRadius: 50, padding: "1px 7px", fontSize: "0.62rem", fontWeight: 800 }}>{unread}</span>}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {lastMsg?.reason?.startsWith(SUPPORT_PREFIX_REPLY) ? "✉️ Vous : " : "👤 "}{cleanSupportReason(lastMsg?.reason || "")}
+                          </div>
+                        </div>
+                        {/* Bouton Archiver */}
+                        <button onClick={(e) => { e.stopPropagation(); confirm(`Archiver la conversation avec ${userProfile?.name || "cet utilisateur"} ? Elle quittera la Messagerie. Si l'utilisateur réécrit, une nouvelle conversation sera créée.`, () => archiveConversation(conv.userId, allIds)); }} disabled={archivingConv === conv.userId} style={{ flexShrink: 0, background: "rgba(230,126,34,0.1)", color: "#e67e22", border: "1px solid rgba(230,126,34,0.25)", borderRadius: 8, padding: "6px 11px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                          {archivingConv === conv.userId ? "…" : "Archiver"}
+                        </button>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><path d="M6 9l6 6 6-6"/></svg>
+                      </div>
+                      {/* Déplié : conversation + bouton Répondre */}
+                      {isOpen && (
+                        <div style={{ padding: "4px 0 14px", paddingLeft: 52 }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+                            {ordered.map((r, mi) => {
+                              const isAdminMsg = r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
+                              return (
+                                <div key={r.id || mi} style={{ display: "flex", justifyContent: isAdminMsg ? "flex-end" : "flex-start" }}>
+                                  <div style={{ maxWidth: "min(80%, 460px)", background: isAdminMsg ? G.rouge : "#f0f0f0", color: isAdminMsg ? "#fff" : "#1a1a1a", borderRadius: isAdminMsg ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "7px 12px", fontSize: "0.78rem", lineHeight: 1.5, wordBreak: "break-word", overflowWrap: "anywhere" }}>
+                                    {cleanSupportReason(r.reason || "")}
+                                    <div style={{ fontSize: "0.62rem", opacity: 0.65, marginTop: 3, textAlign: isAdminMsg ? "right" : "left" }}>{formatDateTime(r.created_at || "")}</div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <button onClick={() => { setSupportReply({ report: lastMsg, userId: conv.userId, allMessageIds: allIds }); setSupportReplyText(""); }} style={{ background: "rgba(26,92,58,0.1)", color: G.vert, border: "1px solid rgba(26,92,58,0.2)", borderRadius: 8, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                            Répondre
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })() : filteredReports.map((r, i) => {
+                const cat = classifyReport(r);
+                const statusStyle = reportStatusStyle(r.status);
+                const isSupport = isSupportReport(r);
+                const isSystemAlert = isSystemReport(r);
+                const isProfileAlert = isProfileReport(r);
+                const isLoading = reportActionLoading === r.id;
+                const alreadyHandled = r.status !== "pending";
+                const isArchiveView = reportFilter === "archived";
+                // Pour répondre : toujours cibler le reporter_id (la personne qui a signalé)
+                // reported_id = profil accusé (on lui applique des actions, pas des messages)
+                const supportUserId = r.reporter_id;
+                const targetProfileId = isSupport ? supportUserId : r.reported_id;
+                // En vue Archivés : carte repliée par défaut → ligne résumé cliquable.
+                const isCollapsed = isArchiveView && !expandedArchived.has(r.id || String(i));
+                if (isCollapsed) {
+                  const who = (() => {
+                    const p = reportProfilesCache[r.reporter_id];
+                    return p ? `${p.name}, ${p.age} ans` : (r.reporter_id ? `${r.reporter_id.slice(0, 10)}…` : "—");
+                  })();
+                  return (
+                    <div key={r.id || i} onClick={() => toggleArchived(r.id || String(i))} style={{ padding: "11px 0", borderBottom: i < filteredReports.length - 1 ? `1px solid ${G.gris}` : "none", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                      <span style={{ background: `${cat.color}18`, color: cat.color, borderRadius: 50, padding: "2px 9px", fontSize: "0.64rem", fontWeight: 700, flexShrink: 0 }}>{cat.label}</span>
+                      <span style={{ background: statusStyle.bg, color: statusStyle.color, borderRadius: 50, padding: "2px 9px", fontSize: "0.62rem", fontWeight: 600, flexShrink: 0 }}>{statusStyle.label}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: "0.78rem", color: "#444", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{who}</span>
+                      <span style={{ fontSize: "0.66rem", color: "#aaa", flexShrink: 0 }}>{formatDate(r.created_at)}</span>
+                      <span style={{ color: "#bbb", fontSize: "0.7rem", flexShrink: 0 }}>▾</span>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={r.id || i} style={{ padding: "14px 0", borderBottom: i < filteredReports.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                    {/* En vue archivée dépliée : petit bouton "replier" en haut */}
+                    {isArchiveView && (
+                      <div onClick={() => toggleArchived(r.id || String(i))} style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", marginBottom: 8, color: "#8e44ad", fontSize: "0.72rem", fontWeight: 700 }}>
+                        <span style={{ transform: "rotate(180deg)" }}>▾</span> Replier
+                      </div>
+                    )}
+                    {/* Ligne 1 : badges catégorie + statut */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+                      <span style={{ background: `${cat.color}18`, color: cat.color, borderRadius: 50, padding: "2px 10px", fontSize: "0.68rem", fontWeight: 700 }}>
+                        {cat.label}
+                      </span>
+                      {r.status && (
+                        <span style={{ background: statusStyle.bg, color: statusStyle.color, borderRadius: 50, padding: "2px 10px", fontSize: "0.66rem", fontWeight: 600 }}>
+                          {statusStyle.label}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Ligne 2 : raison */}
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: G.brun, marginBottom: 5, lineHeight: 1.4 }}>{isSupport ? cleanSupportReason(r.reason) : r.reason}</div>
+
+                    {/* Ligne 3 : Profils reporter + reported avec noms */}
+                    {(() => {
+                      const reporterP = reportProfilesCache[r.reporter_id];
+                      const reportedP = r.reported_id ? reportProfilesCache[r.reported_id] : null;
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+                          {/* Signalé par */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(52,152,219,0.07)", borderRadius: 8, padding: "6px 10px" }}>
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#dbeafe", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {reporterP?.photo_url
+                                ? <img src={reporterP.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                              }
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: "0.65rem", color: "#2980b9", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Signalé par</div>
+                              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {reporterP ? `${reporterP.name}, ${reporterP.age} ans · ${reporterP.city}` : `${r.reporter_id?.slice(0, 14)}…`}
+                              </div>
+                            </div>
+                            {!isSupport && reporterP && (
+                              <button onClick={() => setSupportReply({ report: r, userId: r.reporter_id })} style={{ flexShrink: 0, background: "rgba(26,92,58,0.1)", color: G.vert, border: "1px solid rgba(26,92,58,0.2)", borderRadius: 6, padding: "3px 8px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer" }}>
+                                Répondre
+                              </button>
+                            )}
+                          </div>
+                          {/* Profil signalé */}
+                          {!isSupport && r.reported_id && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(192,57,43,0.07)", borderRadius: 8, padding: "6px 10px" }}>
+                              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#fde8e8", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                {reportedP?.photo_url
+                                  ? <img src={reportedP.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                }
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: "0.65rem", color: G.rouge, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Profil signalé</div>
+                                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {reportedP ? `${reportedP.name}, ${reportedP.age} ans · ${reportedP.city}` : `${r.reported_id?.slice(0, 14)}…`}
+                                </div>
+                              </div>
+                              {reportedP?.is_banned && <span style={{ fontSize: "0.6rem", background: "rgba(192,57,43,0.12)", color: G.rouge, borderRadius: 4, padding: "2px 6px", fontWeight: 700, flexShrink: 0 }}>Banni</span>}
+                              {(reportedP?.warning_count || 0) > 0 && <span style={{ fontSize: "0.6rem", background: "rgba(243,156,18,0.12)", color: "#e67e22", borderRadius: 4, padding: "2px 6px", fontWeight: 700, flexShrink: 0 }}>⚠️ {reportedP?.warning_count}/3</span>}
+                            </div>
+                          )}
+                          {isSupport && <span style={{ fontSize: "0.72rem", color: G.vert, paddingLeft: 4 }}>Conversation support</span>}
+                          {/* Date */}
+                          {r.created_at && (
+                            <div style={{ fontSize: "0.69rem", color: "#bbb", display: "flex", alignItems: "center", gap: 3, paddingLeft: 4 }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                              {formatDateTime(r.created_at)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {/* Ligne IDs masquée — remplacée par les profils ci-dessus */}
+                    <div style={{ display: "none" }}>
+                      <span>{r.reporter_id?.slice(0, 12)}…</span>
+                      {isSupport
+                        ? <span style={{ color: G.vert }}>Conversation support</span>
+                        : r.reported_id
+                          ? <span>
+                              {r.reported_id?.slice(0, 12)}…
+                            </span>
+                          : <span style={{ color: "#ccc" }}>Alerte système</span>
+                      }
+                      {r.created_at && (
+                        <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          {formatDateTime(r.created_at)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Ligne 4 : boutons d'action (masqués en vue archive) */}
+                    {/* Bouton suppression définitive - vue archive uniquement */}
+                    {isArchiveView && r.id && (
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
+                        <button
+                          onClick={() => {
+                            if (!r.id) return;
+                            const rid = r.id;
+                            setConfirmModal({
+                              msg: "Supprimer définitivement ce signalement archivé ? Cette action est irréversible. Le profil et les messages liés ne seront pas supprimés.",
+                              onConfirm: () => { setConfirmModal(null); deleteReport(rid); },
+                            });
+                          }}
+                          disabled={isLoading}
+                          title="Supprimer définitivement"
+                          style={{
+                            display: "flex", alignItems: "center", gap: 5,
+                            background: "rgba(192,57,43,0.06)",
+                            color: "#C0392B",
+                            border: "1px solid rgba(192,57,43,0.2)",
+                            borderRadius: 8,
+                            padding: "5px 10px",
+                            fontSize: "0.7rem", fontWeight: 600,
+                            cursor: isLoading ? "not-allowed" : "pointer",
+                            opacity: isLoading ? 0.5 : 1,
+                          }}
+                        >
+                          {isLoading
+                            ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                            : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                          }
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
+                    {!isArchiveView && <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {isSupport && supportUserId && (
+                        <button
+                          onClick={() => { setSupportReply({ report: r, userId: supportUserId }); setSupportReplyText(""); }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            background: "rgba(26,92,58,0.1)", color: G.vert,
+                            border: "1px solid rgba(26,92,58,0.25)", borderRadius: 8,
+                            padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer",
+                          }}
+                        >
+                          Répondre
+                        </button>
+                      )}
+                      {targetProfileId && (
+                        <button
+                          onClick={() => loadReportedProfile(targetProfileId)}
+                          disabled={reportProfileLoading === targetProfileId}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            background: "rgba(52,152,219,0.1)", color: "#2980b9",
+                            border: "1px solid rgba(52,152,219,0.25)", borderRadius: 8,
+                            padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                            cursor: reportProfileLoading === targetProfileId ? "not-allowed" : "pointer",
+                            opacity: reportProfileLoading === targetProfileId ? 0.65 : 1,
+                          }}
+                        >
+                          {reportProfileLoading === targetProfileId
+                            ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                            : <IcoEye size={12} />
+                          }
+                          Voir profil
+                        </button>
+                      )}
+                      {isSupport && r.id && (
+                        <button
+                          onClick={() => !alreadyHandled && updateReportStatus(r.id!, "reviewed", "Message archivé.")}
+                          disabled={isLoading || alreadyHandled}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            background: alreadyHandled ? "rgba(108,117,125,0.06)" : "rgba(108,117,125,0.1)",
+                            color: "#6c757d", border: "1px solid rgba(108,117,125,0.25)", borderRadius: 8,
+                            padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                            cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                            opacity: alreadyHandled ? 0.5 : 1,
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+                          </svg>
+                          Archiver
+                        </button>
+                      )}
+                      {/* ── Actions communes (alerte système) ── */}
+                      {isSystemAlert && (
+                        <>
+                          <button
+                            onClick={() => !alreadyHandled && r.id && updateReportStatus(r.id, "reviewed", "Signalement marqué comme traité.")}
+                            disabled={isLoading || alreadyHandled}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: alreadyHandled ? "rgba(39,174,96,0.06)" : "rgba(39,174,96,0.1)",
+                              color: "#27ae60", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                              opacity: alreadyHandled ? 0.5 : 1,
+                            }}
+                          >
+                            <IcoCheckCircle size={12} /> Traiter
+                          </button>
+                          <button
+                            onClick={() => !alreadyHandled && r.id && updateReportStatus(r.id, "rejected", "Signalement rejeté.")}
+                            disabled={isLoading || alreadyHandled}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: alreadyHandled ? "rgba(127,140,141,0.06)" : "rgba(127,140,141,0.1)",
+                              color: "#7f8c8d", border: "1px solid rgba(127,140,141,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                              opacity: alreadyHandled ? 0.5 : 1,
+                            }}
+                          >
+                            <IcoXCircle size={12} /> Rejeter
+                          </button>
+                        </>
+                      )}
+
+                      {/* ── Actions profil uniquement (vrais signalements de profil) ── */}
+                      {isProfileAlert && r.reported_id && (
+                        <>
+                          {/* Avertir */}
+                          <button
+                            onClick={() => {
+                              // Cherche le user dans la liste locale ou crée un objet minimal
+                              const knownUser = users.find(u => u.id === r.reported_id);
+                              setWarnModal({ user: knownUser || { id: r.reported_id!, name: r.reported_id!.slice(0, 8) + "…", age: 0, city: "", gender: "", bio: "", is_premium: false } });
+                            }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: "rgba(243,156,18,0.1)", color: "#e67e22",
+                              border: "1px solid rgba(243,156,18,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer",
+                            }}
+                          >
+                            <IcoWarnLg size={12} /> Avertir
+                          </button>
+
+                          {/* Marquer traité */}
+                          <button
+                            onClick={() => !alreadyHandled && r.id && updateReportStatus(r.id, "reviewed", "Signalement marqué comme traité.")}
+                            disabled={isLoading || alreadyHandled}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: alreadyHandled ? "rgba(39,174,96,0.06)" : "rgba(39,174,96,0.1)",
+                              color: "#27ae60", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                              opacity: alreadyHandled ? 0.5 : 1,
+                            }}
+                          >
+                            <IcoCheckCircle size={12} /> Traité
+                          </button>
+
+                          {/* Rejeter */}
+                          <button
+                            onClick={() => !alreadyHandled && r.id && updateReportStatus(r.id, "rejected", "Signalement rejeté.")}
+                            disabled={isLoading || alreadyHandled}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: alreadyHandled ? "rgba(127,140,141,0.06)" : "rgba(127,140,141,0.1)",
+                              color: "#7f8c8d", border: "1px solid rgba(127,140,141,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: alreadyHandled || isLoading ? "not-allowed" : "pointer",
+                              opacity: alreadyHandled ? 0.5 : 1,
+                            }}
+                          >
+                            <IcoXCircle size={12} /> Rejeter
+                          </button>
+
+                          {/* Bannir */}
+                          <button
+                            onClick={() => {
+                              if (alreadyHandled && r.status === "banned") return;
+                              confirm(
+                                `Bannir ce profil (${r.reported_id?.slice(0, 12)}…) ? Il/elle ne pourra plus accéder à MOYO. Cette action est irréversible depuis ici.`,
+                                () => banReportedProfile(r)
+                              );
+                            }}
+                            disabled={isLoading || r.status === "banned"}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              background: r.status === "banned" ? "rgba(231,76,60,0.06)" : "rgba(231,76,60,0.1)",
+                              color: "#e74c3c", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 8,
+                              padding: "5px 10px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: isLoading || r.status === "banned" ? "not-allowed" : "pointer",
+                              opacity: r.status === "banned" ? 0.5 : 1,
+                            }}
+                          >
+                            {isLoading
+                              ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                              : <IcoBanLg size={12} />
+                            }
+                            Bannir
+                          </button>
+                        </>
+                      )}
+                    </div>}
+                    {r.id && <AdminNotes auth={auth} targetType="report" targetId={r.id} />}
+                  </div>
+                );
+              })}
+              </div>
+            )}
+          </div>
+          )}
+
+          {/* Info policy SQL - visible seulement hors archive, et seulement sur Signalements */}
+          {activeTab === "reports" && reportFilter !== "archived" && (
+            <div style={{ background: "rgba(52,152,219,0.06)", border: "1px solid rgba(52,152,219,0.2)", borderRadius: 12, padding: "12px 14px", marginTop: 12, fontSize: "0.74rem", color: "#2980b9", lineHeight: 1.6 }}>
+              <strong>Si "Traiter" / "Rejeter" retourne une erreur 403</strong>, exécute ce SQL dans Supabase → SQL Editor :<br />
+              <code style={{ display: "block", marginTop: 6, background: "rgba(52,152,219,0.1)", padding: "8px 10px", borderRadius: 8, fontSize: "0.7rem", color: "#1a6a9a", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{`CREATE POLICY "Admin can update reports" ON public.reports FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`}</code>
+            </div>
+          )}
+
+          {/* Note archive + SQL policy DELETE */}
+          {activeTab === "reports" && reportFilter === "archived" && archivedCount > 0 && (
+            <>
+              <div style={{ background: "rgba(108,117,125,0.06)", border: "1px solid rgba(108,117,125,0.15)", borderRadius: 12, padding: "10px 14px", marginTop: 12, fontSize: "0.74rem", color: "#6c757d", display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                {archivedCount} signalement{archivedCount > 1 ? "s" : ""} archivé{archivedCount > 1 ? "s" : ""} - traités, rejetés ou bannis. Clique "Supprimer" pour nettoyer définitivement.
+              </div>
+              <div style={{ background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 12, padding: "12px 14px", marginTop: 10, fontSize: "0.74rem", color: "#C0392B", lineHeight: 1.6 }}>
+                <strong>Si "Supprimer" retourne une erreur 403</strong>, exécute ce SQL dans Supabase :<br />
+                <code style={{ display: "block", marginTop: 6, background: "rgba(192,57,43,0.08)", padding: "8px 10px", borderRadius: 8, fontSize: "0.7rem", color: "#922B21", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{`CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));`}</code>
+              </div>
+            </>
+          )}
+
+          <Btn variant="ghost" onClick={loadStats} style={{ width: "100%", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <IcoRefresh />Actualiser
+          </Btn>
+
+          {/* Bouton Tout supprimer - visible uniquement dans la vue Archivés */}
+          {activeTab === "reports" && reportFilter === "archived" && (
+            <button
+              disabled={archivedCount === 0 || reportActionLoading === "bulk"}
+              onClick={() => {
+                if (archivedCount === 0) return;
+                setConfirmModal({
+                  msg: `Voulez-vous vraiment supprimer définitivement toutes les archives (${archivedCount} signalement${archivedCount > 1 ? "s" : ""}) ? Cette action est irréversible. Les profils, messages et avertissements ne seront pas supprimés.`,
+                  onConfirm: () => { setConfirmModal(null); deleteAllArchivedReports(); },
+                });
+              }}
+              style={{
+                width: "100%",
+                marginTop: 8,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                background: archivedCount === 0 ? "rgba(192,57,43,0.03)" : "rgba(192,57,43,0.07)",
+                color: archivedCount === 0 ? "#ccc" : "#C0392B",
+                border: `1px solid ${archivedCount === 0 ? "#eee" : "rgba(192,57,43,0.2)"}`,
+                borderRadius: 12,
+                padding: "11px 16px",
+                fontSize: "0.82rem", fontWeight: 600,
+                cursor: archivedCount === 0 || reportActionLoading === "bulk" ? "not-allowed" : "pointer",
+                opacity: archivedCount === 0 ? 0.5 : 1,
+                transition: "all 0.2s",
+              }}
+            >
+              {reportActionLoading === "bulk"
+                ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+              }
+              {reportActionLoading === "bulk" ? "Suppression…" : `Tout supprimer (${archivedCount})`}
+            </button>
+          )}
+          </div>
+          {(activeTab === "messagerie" && msgSubTab === "assistant") && (
+            <div style={{ flex: "1 1 360px", minWidth: 0 }}>
+              <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Modèles de réponse</div>
+                  <button onClick={() => setTemplateModal({ title: "", content: "", category: "Autre" })} style={{ display: "flex", alignItems: "center", gap: 6, background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "8px 13px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Créer un modèle</button>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: G.creme, borderRadius: 10, padding: "9px 12px", marginBottom: 10 }}>
+                  <IcoSearch />
+                  <input value={templateSearch} onChange={e => setTemplateSearch(e.target.value)} placeholder="Rechercher un modèle…" style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: "0.82rem", color: G.brun }} />
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                  {(["all", ...TEMPLATE_CATS]).map(c => {
+                    const active = templateCat === c;
+                    return <button key={c} onClick={() => setTemplateCat(c)} style={{ padding: "5px 11px", borderRadius: 999, border: `1.5px solid ${active ? G.rouge : G.gris}`, background: active ? "rgba(192,57,43,0.08)" : "#fff", color: active ? G.rouge : "#666", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{c === "all" ? `Tous (${supportTemplates.length})` : c}</button>;
+                  })}
+                </div>
+                {(() => {
+                  const q = templateSearch.trim().toLowerCase();
+                  const filtered = supportTemplates.filter(t => (templateCat === "all" || t.category === templateCat) && (!q || `${t.title} ${t.content}`.toLowerCase().includes(q)));
+                  if (filtered.length === 0) return <div style={{ textAlign: "center", color: "#bbb", fontSize: "0.82rem", padding: "26px 0" }}>Aucun modèle trouvé.</div>;
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {filtered.map(t => (
+                        <div key={t.id} style={{ position: "relative", border: `1px solid ${G.gris}`, borderRadius: 14, padding: 14 }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ display: "inline-block", background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "1px 9px", fontSize: "0.62rem", fontWeight: 800, marginBottom: 5 }}>{t.category}</div>
+                              <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun }}>{t.title}</div>
+                            </div>
+                            <button onClick={() => setTplMenu(tplMenu === t.id ? null : t.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#999", fontSize: "1.1rem", lineHeight: 1, padding: "0 4px", flexShrink: 0 }}>⋮</button>
+                          </div>
+                          {tplMenu === t.id && (
+                            <div style={{ position: "absolute", top: 36, right: 12, background: G.blanc, borderRadius: 10, boxShadow: "0 6px 20px rgba(0,0,0,0.15)", border: `1px solid ${G.gris}`, zIndex: 5, overflow: "hidden", minWidth: 130 }}>
+                              <button onClick={() => { setTemplateModal({ id: t.id, title: t.title, content: t.content, category: t.category }); setTplMenu(null); }} style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: G.blanc, padding: "10px 14px", fontSize: "0.78rem", color: G.brun, cursor: "pointer" }}>✏️ Modifier</button>
+                              <button onClick={() => deleteTemplate(t.id)} style={{ display: "block", width: "100%", textAlign: "left", border: "none", borderTop: `1px solid ${G.gris}`, background: G.blanc, padding: "10px 14px", fontSize: "0.78rem", color: "#e74c3c", cursor: "pointer" }}>🗑 Supprimer</button>
+                            </div>
+                          )}
+                          <div style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, margin: "6px 0 12px", whiteSpace: "pre-wrap" }}>{t.content}</div>
+                          <button onClick={() => copyTemplate(t.content)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${G.gris}`, background: G.blanc, color: G.brun, borderRadius: 9, padding: "7px 13px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copier</button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+                <div style={{ background: "rgba(192,57,43,0.05)", borderRadius: 12, padding: "10px 13px", marginTop: 14, fontSize: "0.72rem", color: G.rouge, display: "flex", alignItems: "center", gap: 7 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  Utilisez les modèles pour répondre plus rapidement et garder une communication cohérente.
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET MARKETING */}
+      {activeTab === "marketing" && (
+        <div style={{ padding: "16px" }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>]] as [("statuts" | "features" | "event"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+              <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
+            ))}
+          </div>
+
+          {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
+          {mktTab !== "event" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
+            {(mktTab === "statuts" ? [
+              { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
+              { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>, bg: "rgba(230,126,34,0.14)", label: "Demandes en attente", value: featureRequests.length, sub: "À valider", subColor: "#E67E22" },
+              { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>, bg: "rgba(142,68,173,0.14)", label: "Profils mis en avant", value: featureStatuses.length, sub: "actuellement affichés", subColor: "#8e44ad" },
+            ] : [
+              { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>, bg: "rgba(230,126,34,0.14)", label: "Demandes en attente", value: featureRequests.length, sub: "À traiter", subColor: "#E67E22" },
+              { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>, bg: "rgba(26,92,58,0.12)", label: "Mises en avant actives", value: featureStatuses.length, sub: "En ligne actuellement", subColor: "#1A5C3A" },
+              { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, bg: "rgba(142,68,173,0.14)", label: "Mises en avant ce mois", value: featureStatuses.length, sub: "actuellement en ligne", subColor: "#8e44ad" },
+            ]).map((c, i) => (
+              <div key={i} style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: c.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{c.ic}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>{c.label}</div>
+                  <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{c.value}</div>
+                  <div style={{ fontSize: "0.72rem", color: c.subColor, fontWeight: 700, marginTop: 1 }}>{c.sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          )}
+
+          {mktTab === "statuts" && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-start" }}>
+              {/* ── COLONNE GAUCHE : statuts actifs ── */}
+              <div style={{ flex: "2 1 460px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Statuts actifs</div>
+                  <button onClick={() => setActiveTab("stats")} style={{ display: "flex", alignItems: "center", gap: 7, background: G.creme, border: `1px solid ${G.gris}`, borderRadius: 10, padding: "8px 14px", fontSize: "0.75rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Voir les statistiques globales
+                  </button>
+                </div>
+                {officialStatuses.length === 0 ? (
+                  <div style={{ fontSize: "0.82rem", color: "#aaa", textAlign: "center", padding: "34px 0" }}>Aucun statut officiel actif pour le moment.</div>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      {(mktShowAll ? officialStatuses : officialStatuses.slice(0, 4)).map((s, idx, arr) => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 2px", borderBottom: idx < arr.length - 1 ? `1px solid ${G.gris}` : "none", flexWrap: "wrap" }}>
+                          {s.image_url ? <img src={s.image_url} alt="" style={{ width: 58, height: 50, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 58, height: 50, borderRadius: 10, background: G.creme, flexShrink: 0 }} />}
+                          <div style={{ flex: "1 1 170px", minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 230 }}>{s.caption || "Statut Moyo Dating"}</span>
+                              {s.is_sponsored && <span style={{ background: "rgba(192,57,43,0.1)", color: G.rouge, borderRadius: 50, padding: "2px 9px", fontSize: "0.64rem", fontWeight: 800 }}>Sponsorisé</span>}
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 3 }}>Publié le {new Date(s.created_at || Date.now()).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })} à {new Date(s.created_at || Date.now()).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                            <div style={{ textAlign: "center" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.brun, fontWeight: 800, fontSize: "0.85rem" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{(s._views || 0).toLocaleString("fr-FR")}</div>
+                              <div style={{ fontSize: "0.62rem", color: "#aaa" }}>Vues</div>
+                            </div>
+                            <div style={{ textAlign: "center" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.brun, fontWeight: 800, fontSize: "0.85rem" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{s._replies || 0}</div>
+                              <div style={{ fontSize: "0.62rem", color: "#aaa" }}>Réponses</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.rouge, fontWeight: 700, fontSize: "0.72rem", whiteSpace: "nowrap" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Expire {expiresInLabel(s.expires_at)}</div>
+                            <button onClick={() => s.image_url && window.open(s.image_url, "_blank")} style={{ display: "flex", alignItems: "center", gap: 5, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</button>
+                            <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ flexShrink: 0, border: "none", background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {officialStatuses.length > 4 && (
+                      <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+                        <button onClick={() => setMktShowAll(v => !v)} style={{ display: "flex", alignItems: "center", gap: 7, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>
+                          {mktShowAll ? "Voir moins" : "Voir plus de statuts"}
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: mktShowAll ? "rotate(180deg)" : "none" }}><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* ── COLONNE DROITE : nouveau statut ── */}
+              <div style={{ flex: "1 1 320px", background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Nouveau statut</div>
+                <p style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Publiez un statut officiel visible par tous les membres pendant 24h.</p>
+
+                <input ref={stFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => onPickStatusFile(e.target.files?.[0] || undefined)} />
+
+                {stPreview ? (
+                  <div style={{ position: "relative", marginBottom: 12 }}>
+                    <img src={stPreview} alt="" style={{ width: "100%", borderRadius: 14, maxHeight: 220, objectFit: "cover", display: "block" }} />
+                    <button onClick={() => { setStFile(null); setStPreview(null); if (stFileRef.current) stFileRef.current.value = ""; }} style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.55)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                  </div>
+                ) : (
+                  <button onClick={() => stFileRef.current?.click()} style={{ width: "100%", border: `2px dashed rgba(192,57,43,0.4)`, borderRadius: 14, padding: "26px 12px", background: "rgba(192,57,43,0.04)", color: G.rouge, fontWeight: 800, fontSize: "0.9rem", cursor: "pointer", marginBottom: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Choisir une image
+                    <span style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 600 }}>PNG, JPG ou WEBP. Max 5MB</span>
+                  </button>
+                )}
+
+                <div style={{ position: "relative", marginBottom: 10 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                  <input value={stCaption} onChange={e => setStCaption(e.target.value)} placeholder="Légende (optionnel)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: "12px 12px 12px 34px", fontSize: "0.85rem", outline: "none" }} />
+                </div>
+
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#777", marginBottom: 6 }}>Bouton d'action (optionnel)</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                  {([["none", "Aucun"], ["link", "Lien"], ["phone", "Numéro"]] as ["none" | "link" | "phone", string][]).map(([val, lbl]) => (
+                    <button key={val} type="button" onClick={() => setStCtaType(val)} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${stCtaType === val ? G.rouge : G.gris}`, background: stCtaType === val ? "rgba(192,57,43,0.08)" : "#fff", color: stCtaType === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{lbl}</button>
+                  ))}
+                </div>
+                {stCtaType === "link" && (
+                  <div style={{ position: "relative", marginBottom: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    <input value={stLink} onChange={e => setStLink(e.target.value)} placeholder="Lien « En savoir plus » (https://…)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: "12px 12px 12px 34px", fontSize: "0.85rem", outline: "none" }} />
+                  </div>
+                )}
+                {stCtaType === "phone" && (
+                  <div style={{ position: "relative", marginBottom: 10 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <input value={stPhone} onChange={e => setStPhone(e.target.value)} inputMode="tel" placeholder="Numéro +242… → bouton « Contacter »" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: "12px 12px 12px 34px", fontSize: "0.85rem", outline: "none" }} />
+                  </div>
+                )}
+
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.8rem", color: "#555", margin: "4px 0 14px", cursor: "pointer", lineHeight: 1.35 }}>
+                  <input type="checkbox" checked={stSponsored} onChange={e => setStSponsored(e.target.checked)} style={{ marginTop: 2 }} />
+                  <span>Marquer comme sponsorisé<br /><span style={{ color: "#999", fontSize: "0.74rem" }}>(pub payée par un tiers)</span></span>
+                </label>
+
+                <button onClick={publishOfficialStatus} disabled={!stFile || stPublishing} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: (!stFile || stPublishing) ? "rgba(192,57,43,0.45)" : G.rouge, color: "#fff", border: "none", borderRadius: 14, padding: "14px", fontWeight: 800, fontSize: "0.95rem", cursor: (!stFile || stPublishing) ? "not-allowed" : "pointer", boxShadow: "0 6px 18px rgba(192,57,43,0.28)" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  {stPublishing ? "Publication…" : "Publier le statut"}
+                </button>
+
+                <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 9, background: "rgba(192,57,43,0.06)", borderRadius: 12, padding: "11px 14px" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  <span style={{ fontSize: "0.74rem", color: "#a14338", lineHeight: 1.4 }}>Le statut sera automatiquement supprimé après 24 heures.</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {mktTab === "features" && (
+            <>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-start" }}>
+                {/* ── COLONNE GAUCHE : demandes à traiter ── */}
+                <div style={{ flex: "1 1 430px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Demandes à traiter</div>
+                  <p style={{ fontSize: "0.76rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>À l'acceptation, le profil sera publié 24h dans les Statuts Moyo Dating, visible uniquement par le genre opposé.</p>
+                  {featureRequests.length === 0 ? (
+                    <div style={{ fontSize: "0.82rem", color: "#aaa", textAlign: "center", padding: "30px 0" }}>Aucune demande en attente.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {featureRequests.map(req => {
+                        const vis = (req.profile?.gender || req.gender) === "Femme" ? "hommes" : "femmes";
+                        return (
+                          <div key={req.id} style={{ border: `1px solid ${G.gris}`, borderRadius: 14, padding: 14 }}>
+                            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                              {req.profile?.photo_url ? <img src={req.profile.photo_url} alt="" style={{ width: 72, height: 92, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 72, height: 92, borderRadius: 12, background: G.creme, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg></div>}
+                              <div style={{ flex: "1 1 150px", minWidth: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: "1rem", fontWeight: 800, color: G.brun }}>{req.profile?.name || "—"}{req.profile?.age ? `, ${req.profile.age} ans` : ""}</span>
+                                  {req.profile?.is_premium && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(212,168,67,0.16)", color: "#B8860B", borderRadius: 50, padding: "2px 9px", fontSize: "0.66rem", fontWeight: 800 }}><svg width="11" height="11" viewBox="0 0 24 24" fill="#D4A843" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Premium</span>}
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.76rem", color: "#888", marginTop: 4 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>{req.profile?.city || "—"} · {req.profile?.gender || "—"}</div>
+                                <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 4 }}>Demandée le {new Date(req.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })} à {new Date(req.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+                              </div>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+                                <button onClick={() => acceptFeatureRequest(req)} disabled={frProcessing === req.id} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: "none", background: "#27ae60", color: "#fff", borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", opacity: frProcessing === req.id ? 0.6 : 1 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{frProcessing === req.id ? "…" : "Accepter"}</button>
+                                <button onClick={() => refuseFeatureRequest(req)} disabled={frProcessing === req.id} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1.5px solid rgba(231,76,60,0.4)`, background: G.blanc, color: "#e74c3c", borderRadius: 10, padding: "9px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>Refuser</button>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, background: G.creme, borderRadius: 10, padding: "8px 12px", fontSize: "0.76rem", color: "#666", fontWeight: 600, marginTop: 12 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Visible par les {vis} uniquement</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.74rem", color: "#999", marginTop: 8 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Mises en avant utilisées ce mois : {req._usedThisMonth || 0} / {FREE_LIMITS.statusBoosts}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 9, background: "rgba(230,126,34,0.07)", borderRadius: 12, padding: "12px 14px", marginTop: 14 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span style={{ fontSize: "0.74rem", color: "#8a5a2b", lineHeight: 1.5 }}><strong>Rappel :</strong> Le statut sera généré automatiquement avec la photo principale, le prénom, l'âge et la ville du profil.</span>
+                  </div>
+                </div>
+
+                {/* ── COLONNE DROITE : mises en avant actives ── */}
+                <div style={{ flex: "1 1 430px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Mises en avant actives</div>
+                  <p style={{ fontSize: "0.76rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Profils actuellement affichés dans les Statuts Moyo Dating.</p>
+                  {featureStatuses.length === 0 ? (
+                    <div style={{ fontSize: "0.82rem", color: "#aaa", textAlign: "center", padding: "30px 0" }}>Aucune mise en avant active.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {featureStatuses.map(s => (
+                        <div key={s.id} style={{ border: `1px solid ${G.gris}`, borderRadius: 14, padding: 14, display: "flex", gap: 14, flexWrap: "wrap" }}>
+                          {(s.profile?.photo_url || s.image_url) ? <img src={s.profile?.photo_url || s.image_url || undefined} alt="" style={{ width: 64, height: 64, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 64, height: 64, borderRadius: 12, background: G.creme, flexShrink: 0 }} />}
+                          <div style={{ flex: "1 1 150px", minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>{s.profile?.name || "Profil"}{s.profile?.age ? `, ${s.profile.age} ans` : ""}</span>
+                              {s.profile?.is_premium && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(212,168,67,0.16)", color: "#B8860B", borderRadius: 50, padding: "2px 9px", fontSize: "0.64rem", fontWeight: 800 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="#D4A843" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Premium</span>}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.74rem", color: "#8e44ad", fontWeight: 700, marginTop: 4 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Visible par les {s.target_gender === "Homme" ? "hommes" : "femmes"}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#888", marginTop: 3 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Expire {expiresInLabel(s.expires_at)}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.76rem", color: "#666" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><strong style={{ color: G.brun }}>{(s._views || 0).toLocaleString("fr-FR")}</strong> vues</span>
+                              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.76rem", color: "#666" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#e74c3c" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg><strong style={{ color: G.brun }}>{s._likes || 0}</strong> likes</span>
+                              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.76rem", color: "#666" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><strong style={{ color: G.brun }}>{s._replies || 0}</strong> réponses</span>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+                            <button onClick={() => (s.profile?.photo_url || s.image_url) && window.open(s.profile?.photo_url || s.image_url || "", "_blank")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1px solid ${G.gris}`, background: G.blanc, color: G.brun, borderRadius: 10, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Aperçu</button>
+                            <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1.5px solid rgba(231,76,60,0.4)`, background: G.blanc, color: "#e74c3c", borderRadius: 10, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Retirer</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Bannière règle de visibilité ── */}
+              <div style={{ marginTop: 16, background: "rgba(230,126,34,0.07)", borderRadius: 16, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span style={{ fontSize: "0.8rem", color: "#7a4d22", lineHeight: 1.5 }}><strong>Règle de visibilité :</strong> Homme → visible par les femmes et lui-même · Femme → visible par les hommes et elle-même.</span>
+              </div>
+            </>
+          )}
+
+          {mktTab === "event" && (() => {
+            const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+            const visibleCamps = campShowAll ? campaignsHistory : campaignsHistory.slice(0, 3);
+            return (
+              <div>
+                {premiumEventActive && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.3)", borderRadius: 14, padding: "12px 16px", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", fontWeight: 700, color: "#1e8449" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60" }} />Une campagne Premium est actuellement active.</div>
+                    <button onClick={() => setPremiumEventConfirm(true)} disabled={premiumEventLoading} style={{ background: G.blanc, color: "#c0392b", border: "1px solid rgba(192,57,43,0.3)", borderRadius: 9, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}>{premiumEventLoading ? "…" : "Arrêter la campagne"}</button>
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+                  {/* ── Formulaire ── */}
+                  <div style={{ flex: "1.4 1 460px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 22, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                      <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(212,168,67,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: "1.15rem", color: G.brun }}>Créer une campagne Premium</div>
+                        <div style={{ fontSize: "0.8rem", color: "#888" }}>Offrez le Premium gratuitement à des utilisateurs ciblés pour un événement spécial.</div>
+                      </div>
+                    </div>
+
+                    <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>1. Cible de la campagne</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
+                      {CAMP_TARGETS.map(t => {
+                        const active = campTarget === t.key;
+                        return (
+                          <div key={t.key} onClick={() => setCampTarget(t.key)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 13px", borderRadius: 11, border: `1.5px solid ${active ? "#E67E22" : G.gris}`, background: active ? "rgba(230,126,34,0.06)" : "#fff", cursor: "pointer" }}>
+                            <span style={{ width: 17, height: 17, borderRadius: "50%", border: `2px solid ${active ? "#E67E22" : "#ccc"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{active && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#E67E22" }} />}</span>
+                            <span style={{ flex: 1, fontSize: "0.84rem", fontWeight: active ? 700 : 500, color: G.brun }}>{t.label}</span>
+                            {t.badge && <span style={{ background: "rgba(39,174,96,0.12)", color: "#1e8449", borderRadius: 50, padding: "2px 9px", fontSize: "0.64rem", fontWeight: 800 }}>{t.badge}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>2. Durée du Premium offert</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+                      {[1, 3, 7, 15, 30].map(d => (
+                        <button key={d} onClick={() => setCampDays(d)} style={{ flex: "1 1 auto", padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${campDays === d ? "#E67E22" : G.gris}`, background: campDays === d ? "#E67E22" : "#fff", color: campDays === d ? "#fff" : "#555", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}>{d} jour{d > 1 ? "s" : ""}</button>
+                      ))}
+                    </div>
+
+                    <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>3. Date de fin de la campagne</div>
+                    <input type="date" value={campEndDate} onChange={e => setCampEndDate(e.target.value)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 13px", fontSize: "0.86rem", outline: "none", color: G.brun }} />
+                    <div style={{ fontSize: "0.72rem", color: "#999", margin: "6px 0 20px" }}>À la date sélectionnée, le Premium sera retiré automatiquement.</div>
+
+                    <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>4. Message affiché aux bénéficiaires <span style={{ color: "#aaa", fontWeight: 500 }}>(optionnel)</span></div>
+                    <textarea value={campMessage} onChange={e => setCampMessage(e.target.value.slice(0, 200))} rows={3} placeholder="🎉 Moyo Dating vous offre le Premium pour célébrer un événement. Profitez-en !" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 13px", fontSize: "0.84rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
+                    <div style={{ textAlign: "right", fontSize: "0.7rem", color: "#aaa", marginTop: 4 }}>{campMessage.length}/200</div>
+
+                    <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18 }}>
+                      <button onClick={() => { setCampMessage(""); setCampEndDate(""); setCampTarget("all"); setCampDays(7); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 11, padding: "12px 22px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Réinitialiser</button>
+                      <button onClick={() => { if (!campEndDate) { showToast("Choisis une date de fin.", "error"); return; } setCampConfirm(true); }} disabled={campLaunching} style={{ background: campLaunching ? "rgba(230,126,34,0.5)" : "#E67E22", color: "#fff", border: "none", borderRadius: 11, padding: "12px 22px", fontSize: "0.84rem", fontWeight: 800, cursor: campLaunching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 7, boxShadow: "0 6px 16px rgba(230,126,34,0.3)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>{campLaunching ? "Lancement…" : "Lancer la campagne"}</button>
+                    </div>
+                  </div>
+
+                  {/* ── Panneau résumé ── */}
+                  <div style={{ flex: "1 1 300px", minWidth: 0, background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                    <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, marginBottom: 14 }}>Aperçu de la campagne</div>
+                    <div style={{ background: "linear-gradient(135deg,#8e7cc3,#b8a4e0)", borderRadius: 14, padding: 16, color: "#fff", marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M2 19h20l-2-7-4 3-4-7-4 7-4-3z"/></svg></div>
+                        <div><div style={{ fontWeight: 800, fontSize: "1.02rem" }}>Premium offert {campDays} jours</div><div style={{ fontSize: "0.74rem", opacity: 0.85 }}>{campName(campTarget)}</div></div>
+                      </div>
+                    </div>
+                    {[["Cible", campTargetLabel(campTarget)], ["Durée", `${campDays} jours`], ["Date de fin", campEndDate ? fmtDate(new Date(campEndDate).toISOString()) : "—"], ["Utilisateurs concernés", campCountLoading ? "…" : campCount === null ? "—" : `${campCount.toLocaleString("fr-FR")} utilisateurs`]].map(([k, v], i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "9px 0", borderBottom: i < 3 ? `1px solid ${G.creme}` : "none" }}>
+                        <span style={{ fontSize: "0.78rem", color: "#999" }}>{k}</span>
+                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, textAlign: "right" }}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{ background: "rgba(230,126,34,0.08)", borderRadius: 12, padding: "12px 14px", marginTop: 14, display: "flex", gap: 9 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                      <div style={{ fontSize: "0.74rem", color: "#9a5a1a", lineHeight: 1.5 }}><strong>Impact estimé</strong><br />{campCountLoading ? "Calcul en cours…" : `${(campCount || 0).toLocaleString("fr-FR")} utilisateur${(campCount || 0) > 1 ? "s" : ""} recevront le Premium gratuitement pendant ${campDays} jours.`}</div>
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "#aaa", lineHeight: 1.5, marginTop: 12, display: "flex", gap: 7 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      <span>Les abonnés Premium actuels ne sont pas impactés. Le Premium sera retiré automatiquement à la date de fin.</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Historique des campagnes ── */}
+                <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginTop: 16 }}>
+                  <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, marginBottom: 14 }}>Campagnes précédentes</div>
+                  {campaignsHistory.length === 0 ? (
+                    <div style={{ textAlign: "center", color: "#bbb", fontSize: "0.82rem", padding: "24px 0" }}>Aucune campagne lancée pour le moment.</div>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 0.8fr 1fr 1.4fr 1fr", gap: 10, fontSize: "0.7rem", fontWeight: 800, color: "#aaa", padding: "0 0 8px", borderBottom: `1px solid ${G.gris}`, minWidth: 620 }}>
+                        <span>Campagne</span><span>Cible</span><span>Durée</span><span>Bénéficiaires</span><span>Période</span><span>Statut</span>
+                      </div>
+                      {visibleCamps.map(c => {
+                        const ended = c.end && new Date(c.end) < new Date();
+                        return (
+                          <div key={c.id} style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 0.8fr 1fr 1.4fr 1fr", gap: 10, alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${G.creme}`, minWidth: 620 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(142,124,195,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="15" height="15" viewBox="0 0 24 24" fill="#8e7cc3" stroke="none"><path d="M2 19h20l-2-7-4 3-4-7-4 7-4-3z"/></svg></div>
+                              <div style={{ minWidth: 0 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div><div style={{ fontSize: "0.68rem", color: "#aaa", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.sub}</div></div>
+                            </div>
+                            <span style={{ fontSize: "0.76rem", color: "#666" }}>{c.targetLabel}</span>
+                            <span style={{ fontSize: "0.76rem", color: "#666" }}>{c.days} j</span>
+                            <span style={{ fontSize: "0.76rem", color: "#666", fontWeight: 700 }}>{(c.beneficiaries || 0).toLocaleString("fr-FR")}</span>
+                            <span style={{ fontSize: "0.72rem", color: "#666" }}>{fmtDate(c.start)} – {fmtDate(c.end)}</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.72rem", fontWeight: 700, color: ended ? "#1e8449" : "#E67E22" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: ended ? "#27ae60" : "#E67E22" }} />{ended ? "Terminée" : "En cours"}</span>
+                          </div>
+                        );
+                      })}
+                      {campaignsHistory.length > 3 && (
+                        <div style={{ textAlign: "center", marginTop: 12 }}>
+                          <button onClick={() => setCampShowAll(s => !s)} style={{ background: "transparent", border: "none", color: "#E67E22", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{campShowAll ? "Voir moins" : `Voir toutes les campagnes (${campaignsHistory.length})`}</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+          {campConfirm && (
+            <ConfirmModal
+              msg={`Lancer cette campagne ?\n\n${(campCount || 0).toLocaleString("fr-FR")} utilisateur(s) ciblé(s) (${campTargetLabel(campTarget)}) recevront le Premium gratuitement pendant ${campDays} jours, jusqu'au ${campEndDate ? new Date(campEndDate).toLocaleDateString("fr-FR") : "—"}.\n\nLes abonnés payants ne sont pas affectés.`}
+              confirmLabel="Lancer la campagne"
+              onConfirm={launchCampaign}
+              onCancel={() => setCampConfirm(false)}
+            />
+          )}
+          {confirmDeleteStatus && (
+            <ConfirmModal
+              msg={"Supprimer ce statut ?\n\nCette action est irréversible."}
+              confirmLabel="Supprimer"
+              danger
+              onConfirm={() => { const s = confirmDeleteStatus; setConfirmDeleteStatus(null); deleteOfficialStatus(s); }}
+              onCancel={() => setConfirmDeleteStatus(null)}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET AVIS */}
+      {activeTab === "reviews" && (
+        <div style={{ padding: "16px" }}>
+          {/* ── Sous-onglets Réputation ── */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <button onClick={() => setReviewsSubTab("avis")} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${reviewsSubTab === "avis" ? "#B8860B" : G.gris}`, background: reviewsSubTab === "avis" ? "#B8860B" : "#fff", color: reviewsSubTab === "avis" ? "#fff" : "#666", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Avis
+            </button>
+            <button onClick={() => { setReviewsSubTab("sondage"); loadSurveys(); }} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${reviewsSubTab === "sondage" ? "#2980b9" : G.gris}`, background: reviewsSubTab === "sondage" ? "#2980b9" : "#fff", color: reviewsSubTab === "sondage" ? "#fff" : "#666", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Sondage
+            </button>
+          </div>
+          {reviewsSubTab === "sondage" ? (
+            <div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                <button onClick={newSurveyDraft} style={{ flex: 1, background: "#2980b9", color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>+ Créer un sondage</button>
+                <button onClick={loadDefaultSurvey} style={{ flex: "0 0 auto", background: G.blanc, color: "#2980b9", border: `1.5px solid #2980b9`, borderRadius: 10, padding: "11px 14px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Sondage par défaut</button>
+              </div>
+              <div style={{ fontSize: "0.74rem", color: "#888", background: G.creme, borderRadius: 10, padding: "9px 12px", marginBottom: 14, lineHeight: 1.5 }}>💡 Un sondage <b>Publié</b> est automatiquement envoyé aux membres ciblés (ils reçoivent l'invitation). Mettez-le en <b>Brouillon</b> pour arrêter de le diffuser.</div>
+              {surveysLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.85rem" }}>Chargement…</div>
+              ) : surveys.length === 0 ? (
+                <div style={{ background: G.blanc, borderRadius: 14, padding: 32, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <p style={{ color: "#999", fontSize: "0.86rem" }}>Aucun sondage pour l'instant.</p>
+                  <p style={{ color: "#bbb", fontSize: "0.78rem", marginTop: 4 }}>Créez-en un ou partez du sondage par défaut.</p>
+                </div>
+              ) : surveys.map(s => {
+                const tgt = (() => { const [g, p] = (s.target || "all|all").split("|"); const gl = g === "femmes" ? "Femmes" : g === "hommes" ? "Hommes" : "Tous"; const pl = p === "premium" ? "Premium" : p === "gratuit" ? "Gratuits" : "Tous"; return `${gl} · ${pl}`; })();
+                return (
+                  <div key={s.id} style={{ background: G.blanc, borderRadius: 14, padding: 16, marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>{s.title}</div>
+                        <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 3 }}>{(s.questions || []).length} question{(s.questions || []).length > 1 ? "s" : ""} · Cible : {tgt} · {surveyCounts[s.id] || 0} réponse{(surveyCounts[s.id] || 0) > 1 ? "s" : ""}</div>
+                      </div>
+                      <span style={{ flexShrink: 0, background: s.status === "active" ? "rgba(39,174,96,0.12)" : "#f0f0f0", color: s.status === "active" ? "#27ae60" : "#999", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 800 }}>{s.status === "active" ? "● Publié" : "Brouillon"}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 7, marginTop: 12, flexWrap: "wrap" }}>
+                      <button onClick={() => loadSurveyResults(s)} style={{ flex: "1 1 auto", background: "#2980b9", color: "#fff", border: "none", borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>📊 Résultats</button>
+                      <button onClick={() => toggleSurveyStatus(s)} style={{ flex: "1 1 auto", background: s.status === "active" ? "#fff" : "#27ae60", color: s.status === "active" ? "#555" : "#fff", border: s.status === "active" ? `1px solid ${G.gris}` : "none", borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>{s.status === "active" ? "Dépublier" : "📢 Publier"}</button>
+                      <button onClick={() => setSurveyEditor({ ...s, questions: JSON.parse(JSON.stringify(s.questions || [])) })} style={{ flex: "1 1 auto", background: G.blanc, color: "#555", border: `1px solid ${G.gris}`, borderRadius: 9, padding: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>
+                      <button onClick={() => deleteSurvey(s)} style={{ flex: "0 0 auto", background: G.blanc, color: "#c0392b", border: `1px solid rgba(192,57,43,0.3)`, borderRadius: 9, padding: "8px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Suppr.</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : reviewsLoading ? (
+            <div style={{ textAlign: "center", padding: 60 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+          ) : (
+            <>
+              {/* ── Résumé stats ── */}
+              {reviewsStats && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                  <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", textAlign: "center" }}>
+                    <div style={{ fontSize: "2rem", fontWeight: 800, color: "#B8860B", lineHeight: 1 }}>{reviewsStats.total}</div>
+                    <div style={{ fontSize: "0.73rem", color: "#777", marginTop: 4 }}>Avis total</div>
+                  </div>
+                  <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", textAlign: "center" }}>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                      <span style={{ fontSize: "2rem", fontWeight: 800, color: "#B8860B", lineHeight: 1 }}>{reviewsStats.avg || "-"}</span>
+                      {reviewsStats.avg > 0 && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      )}
+                    </div>
+                    <div style={{ fontSize: "0.73rem", color: "#777" }}>Note moyenne /5</div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Répartition par note ── */}
+              {reviews.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.82rem", color: G.brun, marginBottom: 10 }}>Répartition des notes</div>
+                  {[5,4,3,2,1].map(n => {
+                    const count = reviews.filter(r => r.rating === n).length;
+                    const pct = reviews.length ? Math.round((count / reviews.length) * 100) : 0;
+                    return (
+                      <div key={n} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0, width: 60 }}>
+                          {[...Array(n)].map((_, i) => (
+                            <svg key={i} width="10" height="10" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          ))}
+                        </div>
+                        <div style={{ flex: 1, background: "#F0F0F0", borderRadius: 50, height: 7, overflow: "hidden" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", background: n >= 4 ? "#27ae60" : n === 3 ? G.or : G.rouge, borderRadius: 50, transition: "width 0.5s" }} />
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: "#888", flexShrink: 0, width: 34, textAlign: "right" }}>{count} ({pct}%)</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ── Liste des avis ── */}
+              {reviews.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#DDD" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 12px" }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <div style={{ fontSize: "0.88rem" }}>Aucun avis pour l'instant</div>
+                </div>
+              ) : (
+                <div data-admlist="" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {reviews.map(r => {
+                    const isHidden = hiddenReviews.has(r.id);
+                    const isUnread = !r.is_read;
+                    return (
+                      <div key={r.id} style={{ background: isHidden ? "#F8F8F8" : G.blanc, borderRadius: 14, padding: "14px 16px", boxShadow: isUnread ? "0 1px 8px rgba(192,57,43,0.1)" : "0 1px 6px rgba(0,0,0,0.05)", border: `1px solid ${isUnread ? "rgba(192,57,43,0.18)" : isHidden ? "#E8E8E8" : "#F0F0F0"}`, opacity: isHidden ? 0.55 : 1, transition: "opacity 0.2s" }}>
+                        {/* Header : user + date */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: "50%", background: G.gris, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: "0.83rem", color: G.brun }}>{r.profile?.name || "Utilisateur"}</div>
+                              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{r.profile?.city || "-"} · {new Date(r.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
+                            </div>
+                          </div>
+                          {/* Note */}
+                          <div style={{ display: "flex", gap: 2 }}>
+                            {[1,2,3,4,5].map(s => (
+                              <svg key={s} width="13" height="13" viewBox="0 0 24 24" fill={s <= r.rating ? G.or : "#DDD"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Commentaire */}
+                        {r.comment && (
+                          <div style={{ fontSize: "0.82rem", color: "#444", lineHeight: 1.6, fontStyle: "italic", background: "#F7F7F7", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+                            "{r.comment}"
+                          </div>
+                        )}
+
+                        {/* Actions admin */}
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                          {isUnread && (
+                            <div
+                              onClick={() => markReviewRead(r.id)}
+                              style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(192,57,43,0.07)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: G.rouge }}
+                            >
+                              <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill={G.rouge}/></svg>
+                              Marquer lu
+                            </div>
+                          )}
+                          <div
+                            onClick={() => toggleFeatureReview(r.id, !!r.is_featured)}
+                            style={{ display: "flex", alignItems: "center", gap: 5, background: r.is_featured ? "rgba(212,168,67,0.15)" : "rgba(212,168,67,0.07)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: r.is_featured ? "#B8860B" : "#aaa", border: r.is_featured ? "1px solid rgba(212,168,67,0.4)" : "none" }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill={r.is_featured ? "#D4A843" : "none"} stroke={r.is_featured ? "#B8860B" : "#aaa"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            {r.is_featured ? "En avant ✓" : "Mettre en avant"}
+                          </div>
+                          <div
+                            onClick={() => toggleHideReview(r.id)}
+                            style={{ display: "flex", alignItems: "center", gap: 5, background: isHidden ? "rgba(39,174,96,0.08)" : "rgba(0,0,0,0.04)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: isHidden ? "#27ae60" : "#888" }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                              {isHidden
+                                ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                                : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                              }
+                            </svg>
+                            {isHidden ? "Afficher" : "Masquer"}
+                          </div>
+                          <div
+                            onClick={() => { if (window.confirm(`Supprimer l'avis de ${r.profile?.name || "cet utilisateur"} ?`)) deleteReview(r.id); }}
+                            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(231,76,60,0.07)", borderRadius: 50, padding: "5px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600, color: "#e74c3c" }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                            Supprimer
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <Btn variant="ghost" onClick={loadReviews} style={{ width: "100%", marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <IcoRefresh />Actualiser
+              </Btn>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Éditeur de sondage ── */}
+      {surveyEditor && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setSurveyEditor(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 540, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "#2980b9", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: "0.98rem" }}>{surveyEditor.id ? "Modifier le sondage" : "Nouveau sondage"}</div>
+              <button onClick={() => setSurveyEditor(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff" }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Titre du sondage</label>
+              <input value={surveyEditor.title} onChange={e => setSurveyEditor((s: any) => ({ ...s, title: e.target.value }))} placeholder="Ex : Votre satisfaction Moyo Dating" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box", marginBottom: 14 }} />
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Message d'invitation (affiché au membre)</label>
+              <textarea value={surveyEditor.intro_message} onChange={e => setSurveyEditor((s: any) => ({ ...s, intro_message: e.target.value }))} rows={2} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.84rem", outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", marginBottom: 14 }} />
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "#333", marginBottom: 6 }}>Destinataires</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                <select value={(surveyEditor.target || "all|all").split("|")[0]} onChange={e => setSurveyEditor((s: any) => ({ ...s, target: `${e.target.value}|${(s.target || "all|all").split("|")[1]}` }))} style={{ padding: "10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: G.blanc }}>
+                  <option value="all">Tous les genres</option><option value="hommes">Hommes</option><option value="femmes">Femmes</option>
+                </select>
+                <select value={(surveyEditor.target || "all|all").split("|")[1]} onChange={e => setSurveyEditor((s: any) => ({ ...s, target: `${(s.target || "all|all").split("|")[0]}|${e.target.value}` }))} style={{ padding: "10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", background: G.blanc }}>
+                  <option value="all">Tous les comptes</option><option value="premium">Premium</option><option value="gratuit">Gratuits</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "#333" }}>Questions</label>
+                <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: [...(s.questions || []), { id: `q${Date.now()}`, text: "", type: "single", options: ["", ""] }] }))} style={{ background: "rgba(41,128,185,0.1)", color: "#2980b9", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}>+ Question</button>
+              </div>
+              {(surveyEditor.questions || []).map((q: any, qi: number) => (
+                <div key={qi} style={{ border: `1px solid ${G.gris}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontWeight: 800, color: "#2980b9", fontSize: "0.82rem" }}>{qi + 1}.</span>
+                    <input value={q.text} onChange={e => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, text: e.target.value } : x) }))} placeholder="Texte de la question" style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
+                    <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.filter((_: any, i: number) => i !== qi) }))} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: "1rem" }}>🗑</button>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    {[["single", "Choix unique"], ["multi", "Choix multiple"], ["text", "Réponse libre"]].map(([t, lbl]) => (
+                      <button key={t} onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, type: t } : x) }))} style={{ flex: 1, padding: "6px", borderRadius: 8, border: `1.5px solid ${q.type === t ? "#2980b9" : G.gris}`, background: q.type === t ? "rgba(41,128,185,0.08)" : "#fff", color: q.type === t ? "#2980b9" : "#888", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+                    ))}
+                  </div>
+                  {q.type === "text" ? (
+                    <div style={{ fontSize: "0.74rem", color: "#999", background: G.creme, borderRadius: 8, padding: "8px 10px", fontStyle: "italic" }}>Le membre répondra dans un champ texte libre.</div>
+                  ) : (<>
+                  {q.options.map((opt: string, oi: number) => (
+                    <div key={oi} style={{ display: "flex", gap: 6, marginBottom: 5, alignItems: "center" }}>
+                      <span style={{ color: "#bbb", fontSize: "0.8rem" }}>{q.type === "single" ? "○" : "☐"}</span>
+                      <input value={opt} onChange={e => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, options: x.options.map((o: string, j: number) => j === oi ? e.target.value : o) } : x) }))} placeholder={`Option ${oi + 1}`} style={{ flex: 1, padding: "7px 9px", borderRadius: 7, border: `1px solid ${G.gris}`, fontSize: "0.8rem", outline: "none" }} />
+                      {q.options.length > 2 && <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, options: x.options.filter((_: string, j: number) => j !== oi) } : x) }))} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer" }}>✕</button>}
+                    </div>
+                  ))}
+                  <button onClick={() => setSurveyEditor((s: any) => ({ ...s, questions: s.questions.map((x: any, i: number) => i === qi ? { ...x, options: [...x.options, ""] } : x) }))} style={{ background: "none", border: "none", color: "#2980b9", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", marginTop: 2 }}>+ Ajouter une option</button>
+                  </>)}
+                </div>
+              ))}
+              {(surveyEditor.questions || []).length === 0 && <div style={{ textAlign: "center", color: "#bbb", fontSize: "0.8rem", padding: 16 }}>Aucune question. Cliquez sur « + Question ».</div>}
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: `1px solid ${G.gris}`, display: "flex", gap: 10, flexShrink: 0 }}>
+              <button onClick={() => setSurveyEditor(null)} style={{ flex: "0 0 auto", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 18px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+              <button onClick={saveSurvey} disabled={savingSurvey} style={{ flex: 1, background: savingSurvey ? "rgba(41,128,185,0.5)" : "#2980b9", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 800, cursor: savingSurvey ? "not-allowed" : "pointer" }}>{savingSurvey ? "Enregistrement…" : "Enregistrer le sondage"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Résultats du sondage ── */}
+      {surveyResults && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setSurveyResults(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 540, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "#2980b9", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ color: "#fff", minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: "0.95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{surveyResults.survey.title}</div><div style={{ fontSize: "0.74rem", opacity: 0.9 }}>{surveyResults.responses.length} réponse{surveyResults.responses.length > 1 ? "s" : ""}</div></div>
+              <button onClick={() => setSurveyResults(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff", flexShrink: 0 }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+              {surveyResults.loading ? <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement…</div>
+                : surveyResults.responses.length === 0 ? <div style={{ textAlign: "center", padding: 40, color: "#999", fontSize: "0.85rem" }}>Aucune réponse pour l'instant.</div>
+                : (surveyResults.survey.questions || []).map((q: any, qi: number) => {
+                  if (q.type === "text") {
+                    const texts = surveyResults.responses.map((r: any) => (r.answers?.[q.id] || [])[0]).filter((t: string) => t && t.trim());
+                    return (
+                      <div key={qi} style={{ marginBottom: 20 }}>
+                        <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 10 }}>{qi + 1}. {q.text} <span style={{ fontWeight: 600, color: "#999", fontSize: "0.76rem" }}>({texts.length} réponse{texts.length > 1 ? "s" : ""})</span></div>
+                        {texts.length === 0 ? <div style={{ fontSize: "0.78rem", color: "#bbb", fontStyle: "italic" }}>Aucune réponse écrite.</div>
+                          : texts.map((t: string, i: number) => <div key={i} style={{ background: G.creme, borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#333", marginBottom: 6, lineHeight: 1.4 }}>« {t} »</div>)}
+                      </div>
+                    );
+                  }
+                  const counts: Record<string, number> = {};
+                  q.options.forEach((o: string) => counts[o] = 0);
+                  surveyResults.responses.forEach((r: any) => { const a = r.answers?.[q.id]; (Array.isArray(a) ? a : a ? [a] : []).forEach((v: string) => { if (counts[v] !== undefined) counts[v]++; }); });
+                  const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+                  return (
+                    <div key={qi} style={{ marginBottom: 20 }}>
+                      <div style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun, marginBottom: 10 }}>{qi + 1}. {q.text}</div>
+                      {q.options.map((o: string) => { const c = counts[o]; const pct = Math.round(c / total * 100); return (
+                        <div key={o} style={{ marginBottom: 8 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "#444", marginBottom: 3 }}><span>{o}</span><span style={{ fontWeight: 700 }}>{c} ({pct}%)</span></div>
+                          <div style={{ height: 8, background: "#eee", borderRadius: 5, overflow: "hidden" }}><div style={{ width: `${pct}%`, height: "100%", background: "#2980b9" }} /></div>
+                        </div>
+                      ); })}
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET BUDGET (Recettes / Dépenses / Résultat net) */}
+      {activeTab === "appointments" && (
+        <div style={{ padding: "0 4px" }}>
+          <AdminAppointments auth={auth!} showToast={showToast} />
+        </div>
+      )}
+
+      {activeTab === "payments" && (
+        (auth.adminLevel !== "superadmin" && auth.userId !== SUPER_ADMIN_ID) ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 60, gap: 16, textAlign: "center" }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>Accès restreint</div>
+            <div style={{ fontSize: "0.85rem", color: "#888", maxWidth: 280, lineHeight: 1.6 }}>Vous n'avez pas les autorisations nécessaires pour accéder à cette section. Contactez le Super Admin.</div>
+          </div>
+        ) : (
+        <div style={{ padding: "16px" }}>
+          {/* En-tête Budget */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1.05rem", color: G.brun }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>
+              Budget
+            </div>
+            <Btn variant="ghost" onClick={() => {
+              if (budgetTab === "recettes") { loadPayments(); if (paymentSubTab === "archive") loadArchived(); if (paymentSubTab === "finance") loadFinance(); }
+              else if (budgetTab === "depenses") loadExpenses();
+              else { loadFinance(); loadExpenses(); }
+            }} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>
+          </div>
+
+          {/* Sélecteur principal Budget : Recettes / Dépenses / Résultat net */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 18 }}>
+            {([
+              ["recettes", "Recettes", "Entrées d'argent"],
+              ["depenses", "Dépenses", "Sorties d'argent"],
+              ["resultat", "Résultat net", "Bénéfice réel"],
+            ] as [BudgetTab, string, string][]).map(([key, title, sub]) => {
+              const active = budgetTab === key;
+              return (
+                <button key={key} onClick={() => {
+                  setBudgetTab(key);
+                  if (key === "depenses") loadExpenses();
+                  if (key === "resultat") { loadFinance(); loadExpenses(); }
+                  if (key === "recettes") loadPayments();
+                }} style={{ textAlign: "center", padding: "14px 10px", borderRadius: 14, cursor: "pointer", border: `2px solid ${active ? "#27ae60" : G.gris}`, background: active ? "#27ae60" : G.blanc, color: active ? "#fff" : G.brun, transition: "all 0.18s", boxShadow: active ? "0 6px 16px rgba(39,174,96,0.25)" : "none" }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.92rem" }}>{title}</div>
+                  <div style={{ fontSize: "0.72rem", marginTop: 3, opacity: active ? 0.92 : 0.6 }}>{sub}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ═══════════════ RECETTES (ancien module Paiements, inchangé) ═══════════════ */}
+          {budgetTab === "recettes" && (<>
+          {/* Sous-onglets Recettes */}
+          <div className="match-subtabs" style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", flexWrap: "nowrap" }}>
+            {([
+              ["pending", "Demandes", "#27ae60"],
+              ["treated", "Traitées", "#2980b9"],
+              ["finance", "Données financières", "#8e44ad"],
+              ["archive", "Archivage", "#e67e22"],
+            ] as [string, string, string][]).map(([key, label, color]) => (
+              <button key={key} onClick={() => { setPaymentSubTab(key as any); if (key === "archive") loadArchived(); if (key === "finance") loadFinance(); }} style={{ flexShrink: 0, padding: "7px 14px", borderRadius: 50, border: `2px solid ${paymentSubTab === key ? color : G.gris}`, background: paymentSubTab === key ? color : G.blanc, color: paymentSubTab === key ? "#fff" : "#666", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                {label}
+                {key === "pending" && pendingPaymentsCount > 0 && <span style={{ background: paymentSubTab === key ? "#fff" : "#27ae60", color: paymentSubTab === key ? "#27ae60" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px" }}>{pendingPaymentsCount}</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* ══ DEMANDES (en attente) ══ */}
+          {paymentSubTab === "pending" && (
+            paymentsLoading ? (
+              <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+            ) : (() => {
+              const list = payments.filter(p => p.status === "pending");
+              return list.length === 0
+                ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune demande en attente 🎉</div>
+                : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{list.map(p => <PaymentCard key={p.id} p={p} isPending={true} isApproved={false} isRejected={false} onActivate={activatePayment} onReject={rejectPayment} onDelete={archivePayment} onViewProfile={openPaymentProfile} />)}</div>;
+            })()
+          )}
+
+          {/* ══ TRAITÉES (approuvées / refusées) ══ */}
+          {paymentSubTab === "treated" && (
+            paymentsLoading ? (
+              <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+            ) : (() => {
+              const list = payments.filter(p => p.status === "approved" || p.status === "rejected");
+              return list.length === 0
+                ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune demande traitée</div>
+                : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{list.map(p => <PaymentCard key={p.id} p={p} isPending={false} isApproved={p.status === "approved"} isRejected={p.status === "rejected"} onActivate={activatePayment} onReject={rejectPayment} onDelete={archivePayment} onViewProfile={openPaymentProfile} />)}</div>;
+            })()
+          )}
+
+          {/* ══ DONNÉES FINANCIÈRES ══ */}
+          {paymentSubTab === "finance" && (
+            financeLoading ? (
+              <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+            ) : (() => {
+              const reset = financeResetAt ? new Date(financeResetAt).getTime() : 0;
+              const periodRows = financeRows.filter(r => new Date(r.approved_at || r.created_at).getTime() >= reset);
+              const counted = periodRows.filter(r => !financeExcluded.has(r.id));
+              // Deux totaux distincts par devise (jamais additionnés entre eux)
+              const totalXAF = counted.filter(r => paymentCurrency(r) !== "EUR").reduce((s, r) => s + (r.amount || 0), 0);
+              const totalEUR = counted.filter(r => paymentCurrency(r) === "EUR").reduce((s, r) => s + (r.amount || 0), 0);
+              const countXAF = counted.filter(r => paymentCurrency(r) !== "EUR").length;
+              const countEUR = counted.filter(r => paymentCurrency(r) === "EUR").length;
+              // Détail Mobile Money par opérateur (FCFA)
+              const mtnRows = counted.filter(r => r.operator === "MTN");
+              const airtelRows = counted.filter(r => r.operator === "Airtel");
+              const totalMTN = mtnRows.reduce((s, r) => s + (r.amount || 0), 0);
+              const totalAirtel = airtelRows.reduce((s, r) => s + (r.amount || 0), 0);
+              const countMTN = mtnRows.length;
+              const countAirtel = airtelRows.length;
+              // CA total converti en FCFA : MTN + Airtel + (Carte € × taux)
+              const rate = EUR_TO_FCFA || 655.957;
+              const grandTotalFcfa = totalMTN + totalAirtel + totalEUR * rate;
+              // Toutes les analyses détaillées portent sur la devise sélectionnée
+              const cur = financeCurrency === "EUR" ? "EUR" : "XAF";
+              const inCur = (r: PaymentRequest) => paymentCurrency(r) === cur;
+              const periodCur = periodRows.filter(inCur);
+              const rows = counted.filter(inCur);
+              const total = rows.reduce((sum, r) => sum + (r.amount || 0), 0);
+              const byMonth: Record<string, { count: number; sum: number; items: PaymentRequest[] }> = {};
+              periodCur.forEach(r => {
+                const d = new Date(r.approved_at || r.created_at);
+                const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                if (!byMonth[k]) byMonth[k] = { count: 0, sum: 0, items: [] };
+                byMonth[k].items.push(r);
+                if (!financeExcluded.has(r.id)) { byMonth[k].count++; byMonth[k].sum += (r.amount || 0); }
+              });
+              const months = Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0]));
+              const excludedCount = periodCur.filter(r => financeExcluded.has(r.id)).length;
+              const fmtMonth = (k: string) => { const [y, m] = k.split("-"); return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); };
+              // Répartition Premium vs Cadeaux (sur les paiements comptés, devise sélectionnée)
+              const giftSum = rows.filter(r => r.gift_for).reduce((s, r) => s + (r.amount || 0), 0);
+              const premiumSum = total - giftSum;
+              const giftCount = rows.filter(r => r.gift_for).length;
+              const premiumCount = rows.length - giftCount;
+              // Dernier paiement (devise sélectionnée)
+              const last = rows.length > 0 ? [...rows].sort((a, b) => new Date(b.approved_at || b.created_at).getTime() - new Date(a.approved_at || a.created_at).getTime())[0] : null;
+              // Classement par utilisateur (devise sélectionnée)
+              const byUser: Record<string, { count: number; sum: number }> = {};
+              rows.forEach(r => { if (!byUser[r.user_id]) byUser[r.user_id] = { count: 0, sum: 0 }; byUser[r.user_id].count++; byUser[r.user_id].sum += (r.amount || 0); });
+              const topUsers = Object.entries(byUser).sort((a, b) => b[1].sum - a[1].sum).slice(0, 5);
+              // Conversion (toutes devises confondues, ce sont des comptes)
+              const totalRequests = financeCounts.pending + financeCounts.approved + financeCounts.rejected;
+              const convRate = totalRequests > 0 ? Math.round((financeCounts.approved / totalRequests) * 100) : 0;
+              // Max mensuel pour mettre le graphique à l'échelle
+              const maxMonth = months.reduce((mx, [, v]) => Math.max(mx, v.sum), 0) || 1;
+              return (
+                <div>
+                  {/* Grande carte : Chiffre d'affaires total (converti en FCFA) */}
+                  <div style={{ background: "linear-gradient(135deg,#8e44ad,#5b2c6f)", borderRadius: 20, padding: "22px 22px 18px", color: "#fff", marginBottom: 12, boxShadow: "0 8px 24px rgba(142,68,173,0.3)" }}>
+                    <div style={{ fontSize: "0.78rem", opacity: 0.9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Chiffre d'affaires total</div>
+                    <div style={{ fontSize: "2.1rem", fontWeight: 900, marginTop: 6, lineHeight: 1.1 }}>{Math.round(grandTotalFcfa).toLocaleString()} FCFA</div>
+                    <div style={{ fontSize: "0.66rem", opacity: 0.8, marginTop: 8 }}>Taux utilisé : 1 € = {rate.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 3 })} FCFA</div>
+                  </div>
+
+                  {/* Détail par moyen de paiement (devises réelles) */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
+                    <div style={{ background: "linear-gradient(135deg,#FFCC00,#E0A800)", borderRadius: 14, padding: "12px 13px", color: G.brun }}>
+                      <div style={{ fontSize: "0.64rem", opacity: 0.8, fontWeight: 700 }}>CA MTN</div>
+                      <div style={{ fontSize: "1.05rem", fontWeight: 900, marginTop: 3 }}>{totalMTN.toLocaleString()} FCFA</div>
+                      <div style={{ fontSize: "0.6rem", opacity: 0.75, marginTop: 2 }}>{countMTN} paiement{countMTN > 1 ? "s" : ""}</div>
+                    </div>
+                    <div style={{ background: "linear-gradient(135deg,#e74c3c,#c0392b)", borderRadius: 14, padding: "12px 13px", color: "#fff" }}>
+                      <div style={{ fontSize: "0.64rem", opacity: 0.85, fontWeight: 700 }}>CA Airtel</div>
+                      <div style={{ fontSize: "1.05rem", fontWeight: 900, marginTop: 3 }}>{totalAirtel.toLocaleString()} FCFA</div>
+                      <div style={{ fontSize: "0.6rem", opacity: 0.85, marginTop: 2 }}>{countAirtel} paiement{countAirtel > 1 ? "s" : ""}</div>
+                    </div>
+                    <div style={{ background: "linear-gradient(135deg,#1A56DB,#123e9c)", borderRadius: 14, padding: "12px 13px", color: "#fff" }}>
+                      <div style={{ fontSize: "0.64rem", opacity: 0.85, fontWeight: 700 }}>CA Carte 💳</div>
+                      <div style={{ fontSize: "1.05rem", fontWeight: 900, marginTop: 3 }}>{totalEUR.toLocaleString("fr-FR")} €</div>
+                      <div style={{ fontSize: "0.6rem", opacity: 0.85, marginTop: 2 }}>{countEUR} paiement{countEUR > 1 ? "s" : ""}</div>
+                    </div>
+                  </div>
+                  {financeResetAt && <div style={{ fontSize: "0.66rem", color: "#aaa", textAlign: "center", marginBottom: 10 }}>Depuis la réinitialisation du {new Date(financeResetAt).toLocaleDateString("fr-FR")}{excludedCount > 0 ? ` · ${excludedCount} exclu${excludedCount > 1 ? "s" : ""} du CA` : ""}</div>}
+
+                  {/* Sélecteur de devise pour les analyses détaillées */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <span style={{ fontSize: "0.72rem", color: "#888", fontWeight: 600 }}>Analyses en :</span>
+                    <div style={{ display: "flex", gap: 4, background: G.creme, borderRadius: 50, padding: 3 }}>
+                      {([["XAF", "FCFA"], ["EUR", "€"]] as [string, string][]).map(([k, lbl]) => (
+                        <button key={k} onClick={() => setFinanceCurrency(k as any)} style={{ padding: "5px 14px", borderRadius: 50, border: "none", background: financeCurrency === k ? (k === "EUR" ? "#1A5C3A" : "#8e44ad") : "transparent", color: financeCurrency === k ? "#fff" : "#888", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                    <button onClick={exportFinanceCSV} style={{ background: "rgba(39,174,96,0.1)", color: "#1a8c4a", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 50, padding: "7px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      Exporter
+                    </button>
+                    <button onClick={() => confirm("Réinitialiser les statistiques financières ? Le compteur repartira de zéro à partir d'aujourd'hui. Aucun paiement n'est supprimé.", resetFinance)} title="Réinitialiser le compteur (sans rien supprimer)" style={{ background: "transparent", color: "#aaa", border: `1px solid ${G.gris}`, borderRadius: 50, padding: "7px 14px", fontSize: "0.74rem", fontWeight: 600, cursor: "pointer" }}>↺ Réinitialiser</button>
+                  </div>
+
+                  {/* ── Indicateurs de conversion ── */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 16 }}>
+                    {([
+                      ["Demandes reçues", totalRequests, "#555", G.creme],
+                      ["Approuvés", financeCounts.approved, "#27ae60", "rgba(39,174,96,0.08)"],
+                      ["Refusés", financeCounts.rejected, "#e74c3c", "rgba(231,76,60,0.06)"],
+                      ["Taux de conversion", `${convRate}%`, "#8e44ad", "rgba(142,68,173,0.07)"],
+                    ] as [string, any, string, string][]).map(([label, val, color, bg]) => (
+                      <div key={label} style={{ background: bg, borderRadius: 12, padding: "12px 14px", border: `1px solid ${color}22` }}>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 900, color }}>{val}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 600, marginTop: 2 }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ── Dernier paiement reçu ── */}
+                  {last && (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: "14px 16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0", display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: last.gift_for ? "rgba(212,168,67,0.15)" : "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.1rem" }}>{last.gift_for ? "🎁" : "⭐"}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Dernier paiement</div>
+                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[last.user_id] || "Utilisateur"}{last.gift_for ? ` → cadeau pour ${last.gift_for_name || "un membre"}` : ""}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{new Date(last.approved_at || last.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: "1rem", color: "#8e44ad", flexShrink: 0 }}>{formatMoney(last.amount || 0, paymentCurrency(last))}</div>
+                    </div>
+                  )}
+
+                  {/* ── Évolution du chiffre d'affaires ── */}
+                  {months.length > 0 && (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: "16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, marginBottom: 14 }}>📈 Évolution du chiffre d'affaires</div>
+                      {(() => {
+                        const data = [...months].reverse();
+                        const slot = 52, padL = 8, padR = 8, padTop = 18, chartH = 96, baseY = padTop + chartH, labelH = 26;
+                        const w = padL + padR + data.length * slot;
+                        const h = baseY + labelH;
+                        const barW = 26;
+                        return (
+                          <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+                            <svg width={Math.max(w, 240)} height={h} viewBox={`0 0 ${Math.max(w, 240)} ${h}`} style={{ display: "block" }}>
+                              <defs>
+                                <linearGradient id="caBar" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#a569bd" />
+                                  <stop offset="100%" stopColor="#8e44ad" />
+                                </linearGradient>
+                              </defs>
+                              <line x1={padL} y1={baseY + 0.5} x2={w - padR} y2={baseY + 0.5} style={{ stroke: G.gris }} strokeWidth="1" />
+                              {data.map(([k, v], i) => {
+                                const barH = Math.max(3, (v.sum / maxMonth) * chartH);
+                                const cx = padL + i * slot + slot / 2;
+                                const x = cx - barW / 2;
+                                const y = baseY - barH;
+                                return (
+                                  <g key={k}>
+                                    <rect x={x} y={y} width={barW} height={barH} rx="5" fill="url(#caBar)" />
+                                    <text x={cx} y={y - 5} textAnchor="middle" fontSize="9" fontWeight="700" fill="#8e44ad">{v.sum >= 1000 ? `${Math.round(v.sum / 1000)}k` : v.sum}</text>
+                                    <text x={cx} y={baseY + 16} textAnchor="middle" fontSize="9" fill="#999">{fmtMonth(k).slice(0, 3)}. {k.slice(2, 4)}</text>
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* ── Répartition des revenus ── */}
+                  {total > 0 && (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: "16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, marginBottom: 14 }}>🍩 Répartition des revenus</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+                        {(() => {
+                          const pPct = Math.round((premiumSum / total) * 100);
+                          const gPct = 100 - pPct;
+                          const R = 40, C = 2 * Math.PI * R, sw = 16;
+                          const pLen = (premiumSum / total) * C;
+                          return (
+                            <>
+                              <svg width="96" height="96" viewBox="0 0 96 96" style={{ flexShrink: 0 }}>
+                                <g transform="rotate(-90 48 48)">
+                                  <circle cx="48" cy="48" r={R} fill="none" stroke={G.or} strokeWidth={sw} />
+                                  <circle cx="48" cy="48" r={R} fill="none" stroke="#8e44ad" strokeWidth={sw} strokeDasharray={`${pLen} ${C - pLen}`} strokeDashoffset="0" />
+                                </g>
+                                <text x="48" y="45" textAnchor="middle" fontSize="11" fontWeight="800" fill="#555">{rows.length}</text>
+                                <text x="48" y="57" textAnchor="middle" fontSize="8" fill="#999">paie.</text>
+                              </svg>
+                              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "#8e44ad", display: "inline-block" }} /><span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#555" }}>Premium ({premiumCount})</span></div>
+                                  <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#8e44ad" }}>{formatMoney(premiumSum, cur)} · {pPct}%</span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: G.or, display: "inline-block" }} /><span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#555" }}>Cadeaux ({giftCount})</span></div>
+                                  <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#B8860B" }}>{formatMoney(giftSum, cur)} · {gPct}%</span>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Classement des meilleurs contributeurs ── */}
+                  {topUsers.length > 0 && (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: "16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, marginBottom: 12 }}>🏆 Meilleurs contributeurs</div>
+                      {topUsers.map(([uid, v], i) => (
+                        <div key={uid} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < topUsers.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                          <div style={{ width: 26, height: 26, borderRadius: "50%", background: i === 0 ? "#FFD700" : i === 1 ? "#C0C0C0" : i === 2 ? "#CD7F32" : G.creme, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.72rem", color: i < 3 ? "#333" : "#888", flexShrink: 0 }}>{i + 1}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.82rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{financeNames[uid] || "Utilisateur"}</div>
+                            <div style={{ fontSize: "0.68rem", color: "#999" }}>{v.count} achat{v.count > 1 ? "s" : ""}</div>
+                          </div>
+                          <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "#8e44ad", flexShrink: 0 }}>{formatMoney(v.sum, cur)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* ── Détail par mois (dépliable, avec exclusion) ── */}
+                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, marginBottom: 10 }}>📅 Détail par mois</div>
+                  {months.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "30px 20px", color: "#aaa", fontSize: "0.85rem" }}>Aucun revenu sur la période</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {months.map(([k, v]) => (
+                        <div key={k} style={{ background: G.blanc, borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                          <div onClick={() => setFinanceOpenMonth(financeOpenMonth === k ? "" : k)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, textTransform: "capitalize" }}>{fmtMonth(k)}</div>
+                              <div style={{ fontSize: "0.7rem", color: "#999" }}>{v.count} paiement{v.count > 1 ? "s" : ""}{v.items.length > v.count ? ` · ${v.items.length - v.count} exclu${v.items.length - v.count > 1 ? "s" : ""}` : ""}</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#8e44ad" }}>{formatMoney(v.sum, cur)}</div>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: financeOpenMonth === k ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                            </div>
+                          </div>
+                          {financeOpenMonth === k && (
+                            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${G.gris}`, display: "flex", flexDirection: "column", gap: 6 }}>
+                              {v.items.map(it => {
+                                const excluded = financeExcluded.has(it.id);
+                                return (
+                                  <div key={it.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "7px 10px", borderRadius: 8, background: excluded ? "rgba(231,76,60,0.05)" : G.creme }}>
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                      <div style={{ fontSize: "0.76rem", fontWeight: 700, color: excluded ? "#bbb" : "#555", textDecoration: excluded ? "line-through" : "none" }}>{it.operator} · {formatMoney(it.amount || 0, paymentCurrency(it))}</div>
+                                      <div style={{ fontSize: "0.65rem", color: "#aaa", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.tx_ref} · {new Date(it.approved_at || it.created_at).toLocaleDateString("fr-FR")}</div>
+                                    </div>
+                                    <button onClick={(e) => { e.stopPropagation(); toggleFinanceExclude(it.id, it.tx_ref); }} style={{ flexShrink: 0, background: excluded ? "rgba(39,174,96,0.1)" : "rgba(231,76,60,0.08)", color: excluded ? "#27ae60" : "#e74c3c", border: `1.5px solid ${excluded ? "rgba(39,174,96,0.3)" : "rgba(231,76,60,0.25)"}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.68rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                      {excluded ? "↩ Réintégrer" : "🧪 Exclure du CA"}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()
+          )}
+
+          {/* ══ ARCHIVAGE (suppression définitive) ══ */}
+          {paymentSubTab === "archive" && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8, flexWrap: "wrap" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#e67e22" }}>📦 Archivés ({archivedPayments.length})</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  {!archiveSelectMode && archivedPayments.length > 0 && (
+                    <button onClick={() => { setSelectedArchiveIds(new Set()); setArchiveSelectMode(true); }} style={{ background: "rgba(230,126,34,0.1)", color: "#e67e22", border: "1.5px solid rgba(230,126,34,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Sélectionner</button>
+                  )}
+                  {!archiveSelectMode && archivedPayments.length > 0 && (
+                    <button onClick={() => confirm(`Supprimer DÉFINITIVEMENT les ${archivedPayments.length} entrées archivées ? Cette action est irréversible.`, deleteArchivedAll)} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>🗑 Tout supprimer</button>
+                  )}
+                  {archiveSelectMode && (
+                    <>
+                      <button onClick={toggleSelectAllArchive} style={{ background: G.blanc, color: "#e67e22", border: "1.5px solid rgba(230,126,34,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>
+                        {selectedArchiveIds.size === archivedPayments.length && archivedPayments.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
+                      </button>
+                      <button disabled={selectedArchiveIds.size === 0} onClick={() => confirm(`Supprimer DÉFINITIVEMENT ${selectedArchiveIds.size} entrée${selectedArchiveIds.size > 1 ? "s" : ""} ? Cette action est irréversible.`, deleteSelectedArchived)} style={{ background: selectedArchiveIds.size === 0 ? "rgba(231,76,60,0.04)" : "rgba(231,76,60,0.12)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: selectedArchiveIds.size === 0 ? "not-allowed" : "pointer", opacity: selectedArchiveIds.size === 0 ? 0.5 : 1 }}>
+                        Supprimer ({selectedArchiveIds.size})
+                      </button>
+                      <button onClick={() => { setArchiveSelectMode(false); setSelectedArchiveIds(new Set()); }} style={{ background: G.blanc, color: "#666", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                    </>
+                  )}
+                </div>
+              </div>
+              {archivedLoading ? (
+                <div style={{ textAlign: "center", padding: 20 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : archivedPayments.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "30px 0", fontSize: "0.85rem", color: "#bbb" }}>Aucun élément archivé</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {archivedPayments.map(a => {
+                    const sel = selectedArchiveIds.has(a.id);
+                    return (
+                      <div key={a.id} onClick={archiveSelectMode ? () => toggleArchiveSelect(a.id) : undefined} style={{ background: archiveSelectMode && sel ? "rgba(230,126,34,0.08)" : G.blanc, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: `1px solid ${archiveSelectMode && sel ? "rgba(230,126,34,0.5)" : "rgba(230,126,34,0.15)"}`, cursor: archiveSelectMode ? "pointer" : "default", userSelect: "none" as any }}>
+                        {archiveSelectMode && (
+                          <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${sel ? "#e67e22" : G.gris}`, background: sel ? "#e67e22" : G.blanc, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            {sel && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555" }}>{a.operator} · {formatMoney(a.amount, paymentCurrency(a))}</div>
+                          <div style={{ fontSize: "0.68rem", color: "#aaa", fontFamily: "monospace", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.tx_ref}</div>
+                          <div style={{ fontSize: "0.65rem", color: "#ccc", marginTop: 1 }}>{new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
+                        </div>
+                        {!archiveSelectMode && (
+                          <button onClick={() => confirm(`Supprimer DÉFINITIVEMENT cette entrée (${a.tx_ref}) ? Action irréversible.`, () => deleteArchivedOne(a))} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+          </>)}
+
+          {/* ═══════════════════════════════════════════ DÉPENSES */}
+          {budgetTab === "depenses" && (() => {
+            const filtered = expenses.filter(e => {
+              if (expCatFilter && e.category !== expCatFilter) return false;
+              const d = new Date(e.date + "T00:00:00").getTime();
+              if (expFrom && d < new Date(expFrom + "T00:00:00").getTime()) return false;
+              if (expTo && d > new Date(expTo + "T23:59:59").getTime()) return false;
+              return true;
+            });
+            const totalDisplay = filtered.reduce((s, e) => s + toBudgetCurrency(e.amount, e.currency), 0);
+            return (
+            <div>
+              <div style={{ marginBottom: 6, fontWeight: 800, fontSize: "1rem", color: G.brun }}>Dépenses</div>
+              <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 14 }}>Consultez et gérez toutes les sorties d'argent.</div>
+
+              {/* Carte total + ajout */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                  <input type="date" value={expFrom} onChange={e => setExpFrom(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }} />
+                  <span style={{ color: "#aaa" }}>→</span>
+                  <input type="date" value={expTo} onChange={e => setExpTo(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }} />
+                  <select value={expCatFilter} onChange={e => setExpCatFilter(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }}>
+                    <option value="">Toutes les catégories</option>
+                    {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <button onClick={() => { setExpFrom(""); setExpTo(""); setExpCatFilter(""); }} style={{ padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, background: G.blanc, color: "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>↻ Réinitialiser</button>
+                </div>
+                <div style={{ background: G.blanc, borderRadius: 14, padding: "14px 18px", border: `1px solid ${G.gris}`, minWidth: 190, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Total des dépenses</div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: "#e74c3c", marginTop: 2 }}>{fmtBudget(totalDisplay)}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 1 }}>{filtered.length} dépense{filtered.length > 1 ? "s" : ""}</div>
+                  </div>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(231,76,60,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                <button onClick={() => setExpenseForm(emptyExpenseForm())} style={{ background: "#27ae60", color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>+ Ajouter une dépense</button>
+                <button onClick={() => exportExpensesCSV(filtered)} disabled={filtered.length === 0} style={{ background: "rgba(39,174,96,0.1)", color: "#1a8c4a", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 10, padding: "9px 16px", fontSize: "0.8rem", fontWeight: 700, cursor: filtered.length ? "pointer" : "not-allowed", opacity: filtered.length ? 1 : 0.5, display: "flex", alignItems: "center", gap: 6 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Exporter
+                </button>
+                <div style={{ display: "flex", gap: 4, background: G.creme, borderRadius: 50, padding: 3, alignItems: "center" }}>
+                  {([["EUR", "€"], ["XAF", "FCFA"]] as [string, string][]).map(([k, lbl]) => (
+                    <button key={k} onClick={() => setBudgetCurrency(k as any)} style={{ padding: "5px 12px", borderRadius: 50, border: "none", background: budgetCurrency === k ? "#27ae60" : "transparent", color: budgetCurrency === k ? "#fff" : "#888", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tableau des dépenses */}
+              {expensesLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : filtered.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune dépense enregistrée.</div>
+              ) : (
+                <div style={{ overflowX: "auto", border: `1px solid ${G.gris}`, borderRadius: 12, background: G.blanc }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", minWidth: 820 }}>
+                    <thead>
+                      <tr style={{ textAlign: "left", color: "#888", borderBottom: `1px solid ${G.gris}` }}>
+                        {["Date", "Catégorie", "Libellé", "Montant", "Commentaire", "Saisi par", "Type de frais", "Actions"].map(h => (
+                          <th key={h} style={{ padding: "11px 12px", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map(e => {
+                        const col = EXPENSE_CAT_COLORS[e.category] || "#95a5a6";
+                        return (
+                          <tr key={e.id} style={{ borderBottom: `1px solid ${G.gris}` }}>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap", color: "#555" }}>{new Date(e.date).toLocaleDateString("fr-FR")}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
+                              <span style={{ background: `${col}1a`, color: col, borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>{e.category}</span>
+                            </td>
+                            <td style={{ padding: "11px 12px", color: G.brun, fontWeight: 600 }}>{e.label}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap", color: "#e74c3c", fontWeight: 700 }}>{formatMoney(e.amount, e.currency)}</td>
+                            <td style={{ padding: "11px 12px", color: "#888" }}>{e.comment || "—"}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap", color: "#555" }}>{e.entered_by || "—"}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap", color: "#555" }}>{e.fee_type === "quotidien" ? "Frais quotidiens" : "Frais ponctuels"}</td>
+                            <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => setExpenseForm({ ...e })} title="Modifier" style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${G.gris}`, background: G.blanc, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+                                </button>
+                                <button onClick={() => confirm(`Supprimer la dépense « ${e.label} » ? Cette action est irréversible.`, () => deleteExpense(e))} title="Supprimer" style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid rgba(231,76,60,0.25)", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 10 }}>Affichage de {filtered.length} sur {expenses.length} dépense{expenses.length > 1 ? "s" : ""}. Les montants sont affichés dans leur devise d'origine ; le total est converti en {budgetCurrency === "EUR" ? "€" : "FCFA"}.</div>
+            </div>
+            );
+          })()}
+
+          {/* ═══════════════════════════════════════════ RÉSULTAT NET */}
+          {budgetTab === "resultat" && (() => {
+            const { start, end, label } = resultPeriodRange();
+            const recRows = financeRows.filter(r => !financeExcluded.has(r.id));
+            const totalRecettes = recRows.filter(r => {
+              const t = new Date(r.approved_at || r.created_at).getTime();
+              return t >= start && t <= end;
+            }).reduce((s, r) => s + toBudgetCurrency(r.amount, paymentCurrency(r)), 0);
+            const totalDepenses = expenses.reduce((s, e) => s + expenseAmountForPeriod(e, start, end), 0);
+            const net = totalRecettes - totalDepenses;
+            const marge = totalRecettes > 0 ? (net / totalRecettes) * 100 : 0;
+            const exportResult = () => {
+              const esc = (v: any) => { const s = String(v ?? ""); return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+              const cur = budgetCurrency === "EUR" ? "EUR" : "FCFA";
+              const lines = [
+                ["Periode", label], ["Devise", cur],
+                ["Total recettes", (Math.round(totalRecettes * 100) / 100)],
+                ["Total depenses", (Math.round(totalDepenses * 100) / 100)],
+                ["Resultat net", (Math.round(net * 100) / 100)],
+                ["Marge (%)", (Math.round(marge * 100) / 100)],
+              ].map(row => row.map(esc).join(";"));
+              const csv = "\uFEFF" + lines.join("\n");
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = `moyo-resultat-net-${new Date().toISOString().slice(0, 10)}.csv`;
+              document.body.appendChild(a); a.click(); document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              showToast("Résultat net exporté.", "success");
+            };
+            return (
+            <div>
+              <div style={{ marginBottom: 6, fontWeight: 800, fontSize: "1rem", color: G.brun }}>Résultat net</div>
+              <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 14 }}>Consultez votre performance financière. Les données sont calculées automatiquement.</div>
+
+              {/* Sélecteurs de période + devise */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                {([["today", "Aujourd'hui"], ["month", "Ce mois"], ["year", "Cette année"], ["all", "Depuis le lancement"], ["custom", "Choisir une période"]] as [string, string][]).map(([k, lbl]) => (
+                  <button key={k} onClick={() => setResultPeriod(k as any)} style={{ padding: "7px 14px", borderRadius: 50, border: `2px solid ${resultPeriod === k ? "#27ae60" : G.gris}`, background: resultPeriod === k ? "#27ae60" : G.blanc, color: resultPeriod === k ? "#fff" : "#666", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+                ))}
+                <div style={{ display: "flex", gap: 4, background: G.creme, borderRadius: 50, padding: 3, marginLeft: "auto" }}>
+                  {([["EUR", "€"], ["XAF", "FCFA"]] as [string, string][]).map(([k, lbl]) => (
+                    <button key={k} onClick={() => setBudgetCurrency(k as any)} style={{ padding: "5px 12px", borderRadius: 50, border: "none", background: budgetCurrency === k ? "#27ae60" : "transparent", color: budgetCurrency === k ? "#fff" : "#888", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
+              {resultPeriod === "custom" && (
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14 }}>
+                  <input type="date" value={resultFrom} onChange={e => setResultFrom(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }} />
+                  <span style={{ color: "#aaa" }}>→</span>
+                  <input type="date" value={resultTo} onChange={e => setResultTo(e.target.value)} style={{ padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", color: G.brun, background: G.blanc }} />
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14, marginTop: 14, marginBottom: 14 }}>
+                {/* Colonne gauche : 3 cartes */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+                    <div><div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Total recettes</div><div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#27ae60" }}>{fmtBudget(totalRecettes)}</div><div style={{ fontSize: "0.68rem", color: "#aaa" }}>Entrées d'argent</div></div>
+                  </div>
+                  <div style={{ background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(231,76,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
+                    <div><div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Total dépenses</div><div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#e74c3c" }}>{fmtBudget(totalDepenses)}</div><div style={{ fontSize: "0.68rem", color: "#aaa" }}>Sorties d'argent</div></div>
+                  </div>
+                  <div style={{ background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: marge >= 0 ? "rgba(39,174,96,0.12)" : "rgba(231,76,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: marge >= 0 ? "#27ae60" : "#e74c3c", fontWeight: 900 }}>%</div>
+                    <div><div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Marge en %</div><div style={{ fontSize: "1.25rem", fontWeight: 900, color: marge >= 0 ? "#27ae60" : "#e74c3c" }}>{marge.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</div><div style={{ fontSize: "0.68rem", color: "#aaa" }}>(Résultat net / Total recettes)</div></div>
+                  </div>
+                </div>
+                {/* Colonne droite : grande carte Résultat net (verte si bénéfice, rouge si déficit) */}
+                <div style={{ background: net >= 0 ? "rgba(39,174,96,0.07)" : "rgba(231,76,60,0.07)", border: `2px solid ${net >= 0 ? "rgba(39,174,96,0.4)" : "rgba(231,76,60,0.4)"}`, borderRadius: 18, padding: "26px 24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center", transition: "all 0.2s" }}>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: net >= 0 ? "#27ae60" : "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#888", fontWeight: 700 }}>Résultat net</div>
+                  <div style={{ fontSize: "2rem", fontWeight: 900, color: net >= 0 ? "#27ae60" : "#e74c3c", lineHeight: 1.1 }}>{fmtBudget(net)}</div>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: net >= 0 ? "#27ae60" : "#e74c3c" }}>{net >= 0 ? "Bénéfice" : "Déficit"} · {label}</div>
+                </div>
+              </div>
+
+              {/* Bandeau formule + export */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between", background: "rgba(39,174,96,0.06)", border: "1px solid rgba(39,174,96,0.2)", borderLeft: "4px solid #27ae60", borderRadius: 12, padding: "14px 18px" }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: "0.9rem", color: G.brun }}>Résultat net = <span style={{ color: "#27ae60" }}>Total Recettes</span> − <span style={{ color: "#e74c3c" }}>Total Dépenses</span></div>
+                  <div style={{ fontSize: "0.75rem", color: "#888", marginTop: 3 }}>Les calculs sont mis à jour automatiquement. Les frais quotidiens sont reconduits chaque jour de la période.</div>
+                </div>
+                <button onClick={exportResult} style={{ background: "rgba(39,174,96,0.12)", color: "#1a8c4a", border: "1.5px solid rgba(39,174,96,0.35)", borderRadius: 50, padding: "10px 22px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Exporter
+                </button>
+              </div>
+            </div>
+            );
+          })()}
+
+        </div>
+        )
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET HISTORIQUE */}
+      {activeTab === "logs" && (
+        <div style={{ padding: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Historique des actions</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              {!logSelectMode && <Btn variant="ghost" onClick={loadAdminLogs} style={{ padding: "6px 14px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 6 }}><IcoRefresh />Actualiser</Btn>}
+              {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && adminLogs.length > 0 && !logSelectMode && (
+                <button onClick={() => { setSelectedLogIds(new Set()); setLogSelectMode(true); }} style={{ background: "rgba(142,68,173,0.08)", color: "#8e44ad", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                  Sélectionner
+                </button>
+              )}
+              {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && adminLogs.length > 0 && !logSelectMode && (
+                <button onClick={() => confirm("Supprimer définitivement tout l'historique ? Cette action est irréversible.", clearAdminLogs)} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                  Tout effacer
+                </button>
+              )}
+              {logSelectMode && (
+                <>
+                  <button onClick={toggleSelectAllLogs} style={{ background: G.blanc, color: "#8e44ad", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                    {selectedLogIds.size === adminLogs.length && adminLogs.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
+                  </button>
+                  <button disabled={selectedLogIds.size === 0} onClick={() => confirm(`Supprimer définitivement ${selectedLogIds.size} action${selectedLogIds.size > 1 ? "s" : ""} sélectionnée${selectedLogIds.size > 1 ? "s" : ""} ? Cette action est irréversible.`, deleteSelectedAdminLogs)} style={{ background: selectedLogIds.size === 0 ? "rgba(231,76,60,0.04)" : "rgba(231,76,60,0.12)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: selectedLogIds.size === 0 ? "not-allowed" : "pointer", opacity: selectedLogIds.size === 0 ? 0.5 : 1 }}>
+                    Supprimer ({selectedLogIds.size})
+                  </button>
+                  <button onClick={() => { setLogSelectMode(false); setSelectedLogIds(new Set()); }} style={{ background: G.blanc, color: "#666", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                    Annuler
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          {/* ── Tableau de bord d'activité par employé ── */}
+          {adminLogs.length > 0 && (() => {
+            const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+            const now = Date.now();
+            const cutoff = logsPeriod === "today" ? startToday.getTime()
+              : logsPeriod === "7d" ? now - 7 * 24 * 3600 * 1000
+              : logsPeriod === "30d" ? now - 30 * 24 * 3600 * 1000
+              : 0;
+            const filtered = adminLogs.filter(l => new Date(l.created_at).getTime() >= cutoff);
+            const byEmp: Record<string, { total: number; types: Record<string, number> }> = {};
+            filtered.forEach(l => {
+              const name = l.admin_name || "Inconnu";
+              if (!byEmp[name]) byEmp[name] = { total: 0, types: {} };
+              byEmp[name].total++;
+              const cat = categorizeAction(l.action || "");
+              byEmp[name].types[cat] = (byEmp[name].types[cat] || 0) + 1;
+            });
+            const employees = Object.entries(byEmp).sort((a, b) => b[1].total - a[1].total);
+            return (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>Activité par admin</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                  {([["today", "Aujourd'hui"], ["7d", "7 jours"], ["30d", "30 jours"], ["all", "Tout"]] as [string, string][]).map(([k, label]) => (
+                    <button key={k} onClick={() => setLogsPeriod(k as any)} style={{ flex: 1, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${logsPeriod === k ? "#8e44ad" : G.gris}`, background: logsPeriod === k ? "rgba(142,68,173,0.08)" : G.blanc, color: logsPeriod === k ? "#8e44ad" : "#888", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                  ))}
+                </div>
+                {employees.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "20px", color: "#aaa", fontSize: "0.82rem" }}>Aucune action sur cette période</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {employees.map(([name, stats]) => (
+                      <div key={name} style={{ background: G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                          <span style={{ fontWeight: 800, fontSize: "0.86rem", color: G.brun }}>{name}</span>
+                          <span style={{ background: "rgba(142,68,173,0.1)", color: "#8e44ad", borderRadius: 50, padding: "2px 10px", fontSize: "0.74rem", fontWeight: 800 }}>{stats.total} action{stats.total > 1 ? "s" : ""}</span>
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {Object.entries(stats.types).sort((a, b) => b[1] - a[1]).map(([cat, n]) => (
+                            <span key={cat} style={{ background: G.creme, borderRadius: 8, padding: "3px 8px", fontSize: "0.7rem", color: "#555", fontWeight: 600 }}>{cat} : {n}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ borderTop: "1px solid #eee", margin: "16px 0 4px" }} />
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#555", marginBottom: 4 }}>Détail des actions</div>
+              </div>
+            );
+          })()}
+          {logsLoading ? (
+            <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+          ) : adminLogs.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune action enregistrée</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {adminLogs.map(log => (
+                <div key={log.id} onClick={logSelectMode ? () => toggleLogSelect(log.id) : undefined} style={{ background: logSelectMode && selectedLogIds.has(log.id) ? "rgba(142,68,173,0.07)" : G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: logSelectMode && selectedLogIds.has(log.id) ? "1px solid rgba(142,68,173,0.5)" : "1px solid #F0F0F0", display: "flex", alignItems: "flex-start", gap: 12, cursor: logSelectMode ? "pointer" : "default", userSelect: "none" as any }}>
+                  {logSelectMode && (
+                    <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${selectedLogIds.has(log.id) ? "#8e44ad" : G.gris}`, background: selectedLogIds.has(log.id) ? "#8e44ad" : G.blanc, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 7 }}>
+                      {selectedLogIds.has(log.id) && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </div>
+                  )}
+                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 3 }}>
+                      <span style={{ fontWeight: 700, fontSize: "0.82rem", color: G.brun }}>{log.admin_name}</span>
+                      <span style={{ fontSize: "0.68rem", color: "#aaa" }}>{new Date(log.created_at).toLocaleString("fr-FR")}</span>
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.4 }}>{log.action}</div>
+                    {log.target_user_id && (
+                      <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 3, fontFamily: "monospace" }}>Utilisateur : {log.target_user_id.slice(0, 16)}…</div>
+                    )}
+                  </div>
+                  {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !logSelectMode && (
+                    <button onClick={() => confirm("Supprimer cette action de l'historique ?", () => deleteOneAdminLog(log.id))} style={{ background: "rgba(231,76,60,0.08)", border: "none", borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET MATCHS */}
+      {activeTab === "matches" && (
+        <div style={{ padding: "16px" }}>
+          {/* ── Sous-onglets Matchs ── */}
+          <div className="match-subtabs" style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", flexWrap: "nowrap" }}>
+            {([
+              ["requests", "Demandes", G.rouge],
+              ["matchmaking", "Matchmaking intelligent", "#7c3aed"],
+              ["mmfollow", "Suivi couples Matchmaking", "#16a34a"],
+              ["propose", "Propositions", "#e67e22"],
+              ["list", "Voir les matchs", "#2980b9"],
+              ["archived", "Archivés", "#555"],
+              ["create", "Créer un match", "#8e44ad"],
+            ] as [string, string, string][]).map(([key, label, color]) => (
+              <button key={key} onClick={() => {
+                setMatchSubTab(key as any);
+                if (key === "list") { loadMatchListData(); }
+                if (key === "requests") { loadMatchRequests(); localStorage.setItem("moyo_requests_seen", new Date().toISOString()); setMatchRequestsBadge(0); }
+                if (key === "propose") loadProposals();
+                if (key === "mmfollow") loadMmFollow();
+                if (key === "matchmaking") loadMatchmaking();
+                if (key === "archived") loadArchivedItems();
+              }} style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 50, border: `2px solid ${matchSubTab === key ? color : G.gris}`, background: matchSubTab === key ? color : G.blanc, color: matchSubTab === key ? "#fff" : "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                {label}
+                {key === "requests" && matchRequestsBadge > 0 && <span style={{ background: matchSubTab === key ? "#fff" : G.rouge, color: matchSubTab === key ? G.rouge : "#fff", borderRadius: 50, fontSize: "0.55rem", fontWeight: 800, padding: "1px 6px" }}>{matchRequestsBadge}</span>}
+                {key === "matchmaking" && mmSuggestions.length > 0 && <span style={{ background: matchSubTab === key ? "#fff" : "#7c3aed", color: matchSubTab === key ? "#7c3aed" : "#fff", borderRadius: 50, fontSize: "0.55rem", fontWeight: 800, padding: "1px 6px" }}>{mmSuggestions.length}</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* ══ MATCHMAKING INTELLIGENT ══ */}
+          {matchSubTab === "matchmaking" && (
+            <div>
+              {/* En-tête */}
+              <div style={{ background: G.blanc, borderRadius: 16, padding: 18, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 12, background: "rgba(124,58,237,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg></div>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: "1.1rem", color: G.brun }}>Matchmaking intelligent</div>
+                    <div style={{ fontSize: "0.8rem", color: "#888" }}>Suggestions de couples générées automatiquement</div>
+                    <div style={{ fontSize: "0.76rem", color: "#7c3aed", fontWeight: 700, marginTop: 3 }}>{mmLoading ? "Analyse en cours…" : `${mmSuggestions.length} suggestion${mmSuggestions.length > 1 ? "s" : ""} trouvée${mmSuggestions.length > 1 ? "s" : ""}`}</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <button onClick={loadMatchmaking} disabled={mmLoading} style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: "0.8rem", fontWeight: 700, cursor: mmLoading ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 7 }}><IcoRefresh />{mmLoading ? "Analyse…" : "Actualiser les suggestions"}</button>
+                  {mmLastUpdate && <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 6 }}>Dernière mise à jour : {mmLastUpdate}</div>}
+                </div>
+              </div>
+
+              <RelationalProfilesCard auth={auth} />
+
+              <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 560px", minWidth: 0 }}>
+                  {/* Filtres */}
+                  <div style={{ background: G.blanc, borderRadius: 14, padding: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 14 }}>
+                    <div style={{ fontSize: "0.8rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Filtres et exclusions</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {([["pastRefusals", "Exclure les refus passés"], ["existingMatches", "Exclure les matchs existants"], ["reported", "Exclure les comptes signalés"], ["banned", "Exclure les comptes bannis"], ["teamRefused", "Exclure les refus de l'équipe"], ["activeOnly", "Uniquement les demandes actives"]] as [string, string][]).map(([k, lbl]) => {
+                        const on = (mmFilters as any)[k];
+                        return (
+                          <button key={k} onClick={() => { setMmFilters(f => ({ ...f, [k]: !on })); setTimeout(loadMatchmaking, 50); }} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 12px", borderRadius: 9, border: `1.5px solid ${on ? (k === "activeOnly" ? "#7c3aed" : "rgba(39,174,96,0.4)") : G.gris}`, background: on ? (k === "activeOnly" ? "rgba(124,58,237,0.08)" : "rgba(39,174,96,0.08)") : "#fff", fontSize: "0.74rem", fontWeight: 700, color: on ? (k === "activeOnly" ? "#7c3aed" : "#1e8449") : "#888", cursor: "pointer" }}>
+                            <span style={{ width: 15, height: 15, borderRadius: 4, border: `1.5px solid ${on ? (k === "activeOnly" ? "#7c3aed" : "#27ae60") : "#ccc"}`, background: on ? (k === "activeOnly" ? "#7c3aed" : "#27ae60") : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{on && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}</span>
+                            {lbl}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Légende */}
+                  <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 12, padding: "0 4px" }}>
+                    {[["Élevée (90%+)", "#8e44ad"], ["Bonne (75-89%)", "#e67e22"], ["Moyenne (50-74%)", "#2980b9"]].map(([l, c]) => (
+                      <div key={l} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "#777" }}><span style={{ width: 9, height: 9, borderRadius: "50%", background: c }} />{l}</div>
+                    ))}
+                  </div>
+
+                  {/* Suggestions */}
+                  {!mmLoading && mmSuggestions.length > 0 && (() => {
+                    const nArch = mmSuggestions.filter(x => mmArchived.has(x.key)).length;
+                    const nActive = mmSuggestions.length - nArch;
+                    return (
+                      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                        <button onClick={() => setShowMmArchived(false)} style={{ flex: 1, padding: "8px", borderRadius: 9, border: `1.5px solid ${!showMmArchived ? "#7c3aed" : G.gris}`, background: !showMmArchived ? "#7c3aed" : "#fff", color: !showMmArchived ? "#fff" : "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>Actives ({nActive})</button>
+                        <button onClick={() => setShowMmArchived(true)} style={{ flex: 1, padding: "8px", borderRadius: 9, border: `1.5px solid ${showMmArchived ? "#7c3aed" : G.gris}`, background: showMmArchived ? "#7c3aed" : "#fff", color: showMmArchived ? "#fff" : "#666", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>📦 Archivées ({nArch})</button>
+                      </div>
+                    );
+                  })()}
+                  {mmLoading ? (
+                    <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.85rem" }}>Analyse des profils relationnels en cours…</div>
+                  ) : mmSuggestions.length === 0 ? (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: 36, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                      <p style={{ color: "#999", fontSize: "0.86rem", marginBottom: 6 }}>Aucune suggestion pour le moment.</p>
+                      <p style={{ color: "#bbb", fontSize: "0.78rem" }}>Les suggestions apparaîtront quand des membres auront complété leur profil relationnel.</p>
+                    </div>
+                  ) : mmSuggestions.filter(s => showMmArchived ? mmArchived.has(s.key) : !mmArchived.has(s.key)).length === 0 ? (
+                    <div style={{ background: G.blanc, borderRadius: 14, padding: 30, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                      <p style={{ color: "#999", fontSize: "0.84rem" }}>{showMmArchived ? "Aucune suggestion archivée." : "Aucune suggestion active. Consultez les archivées."}</p>
+                    </div>
+                  ) : mmSuggestions.filter(s => showMmArchived ? mmArchived.has(s.key) : !mmArchived.has(s.key)).map(s => {
+                    const lvl = mmLevel(s.score);
+                    const expired = s.prop && s.prop.expires_at && new Date(s.prop.expires_at) < new Date();
+                    const Person = ({ p }: { p: any }) => (
+                      <div style={{ display: "flex", gap: 10, flex: "1 1 200px", minWidth: 0 }}>
+                        <Avatar url={p.photo_url} gender={p.gender} size={52} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 800, fontSize: "0.92rem", color: G.brun }}>{p.name}{p.is_verified && <VerifiedBadge size={13} />}</div>
+                          <div style={{ fontSize: "0.74rem", color: "#888" }}>{p.gender === "Homme" ? "♂" : "♀"} {p.age} ans</div>
+                          <div style={{ fontSize: "0.72rem", color: "#999" }}>{p.city || "—"}</div>
+                          <div style={{ fontSize: "0.72rem", color: "#999" }}>{p.religion || ""}</div>
+                          {p.profession && <div style={{ fontSize: "0.72rem", color: "#999" }}>{p.profession}</div>}
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <div key={s.key} style={{ background: G.blanc, borderRadius: 16, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 12, border: `1px solid ${G.gris}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                          <Person p={s.man} />
+                          <div style={{ textAlign: "center", flex: "0 0 auto", margin: "0 auto" }}>
+                            <div style={{ background: `${lvl.color}14`, border: `1.5px solid ${lvl.color}40`, borderRadius: 12, padding: "8px 14px" }}>
+                              <div style={{ fontSize: "0.66rem", fontWeight: 800, color: lvl.color, textTransform: "uppercase", letterSpacing: 0.3 }}>{lvl.label}</div>
+                              <div style={{ fontSize: "0.74rem", color: "#999", fontWeight: 600 }}>{s.score}%</div>
+                            </div>
+                          </div>
+                          <Person p={s.woman} />
+                        </div>
+
+                        {s.reasons.length > 0 && (
+                          <div style={{ background: G.creme, borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
+                            <div style={{ fontSize: "0.74rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>Pourquoi cette suggestion ?</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px" }}>
+                              {s.reasons.map((r: string, i: number) => (
+                                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.76rem", color: "#555" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{r}</div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {s.prop && (
+                          <div style={{ marginTop: 10, fontSize: "0.74rem", fontWeight: 700, color: expired ? "#c0392b" : "#e67e22", display: "flex", alignItems: "center", gap: 6 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            {expired ? "Proposition expirée" : `Déjà proposé le ${new Date(s.prop.created_at).toLocaleDateString("fr-FR")}`}
+                          </div>
+                        )}
+
+                        <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                          <button onClick={() => setMmView(s.man)} style={{ flex: "1 1 auto", border: `1px solid ${G.gris}`, background: G.blanc, color: "#555", borderRadius: 9, padding: "9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Voir profil homme</button>
+                          <button onClick={() => setMmView(s.woman)} style={{ flex: "1 1 auto", border: `1px solid ${G.gris}`, background: G.blanc, color: "#555", borderRadius: 9, padding: "9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>Voir profil femme</button>
+                          {mmArchived.has(s.key)
+                            ? <button onClick={() => mmUnarchive(s.key)} style={{ flex: "0 0 auto", border: `1px solid #7c3aed`, background: G.blanc, color: "#7c3aed", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>↩ Désarchiver</button>
+                            : <button onClick={() => mmArchive(s.key)} style={{ flex: "0 0 auto", border: `1px solid ${G.gris}`, background: G.blanc, color: "#888", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>📦 Archiver</button>}
+                          <button onClick={() => mmProposeCouple(s)} style={{ flex: "1 1 auto", background: mmProposedKeys.has(s.key) ? "#27ae60" : "#7c3aed", color: "#fff", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>{mmProposedKeys.has(s.key) ? "✓ Proposé (reproposer)" : "❤ Proposer ce couple"}</button>
+                          <button onClick={() => generateFiche(s)} style={{ flex: "1 1 100%", background: G.blanc, color: G.rouge, border: `1.5px solid ${G.rouge}`, borderRadius: 9, padding: "10px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Générer la fiche de compatibilité relationnelle
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Colonne droite : résumé + comment ça marche */}
+                <div style={{ flex: "1 1 230px", minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ background: G.blanc, borderRadius: 16, padding: 18, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.9rem", color: G.brun, marginBottom: 12 }}>Résumé du jour</div>
+                    {[[mmSuggestions.length, "Suggestions disponibles"], [mmStats.created, "Mises en relation créées"], [mmStats.pending, "Propositions en attente"], [`${mmStats.avg}%`, "Taux de compatibilité moyen"]].map(([v, l], i) => (
+                      <div key={i} style={{ marginBottom: 12 }}><div style={{ fontSize: "1.4rem", fontWeight: 900, color: "#7c3aed" }}>{v}</div><div style={{ fontSize: "0.74rem", color: "#888" }}>{l}</div></div>
+                    ))}
+                  </div>
+                  <div style={{ background: G.blanc, borderRadius: 16, padding: 18, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.9rem", color: G.brun, marginBottom: 8 }}>Comment ça fonctionne ?</div>
+                    <p style={{ fontSize: "0.76rem", color: "#888", lineHeight: 1.5, marginBottom: 10 }}>L'algorithme analyse les profils relationnels pour proposer des couples compatibles.</p>
+                    {["Religion / Confession", "Objectif de relation", "Âge", "Localisation / Diaspora", "Centres d'intérêt", "Valeurs et vision de vie"].map(c => (
+                      <div key={c} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: "0.76rem", color: "#666", marginBottom: 6 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c3aed" }} />{c}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: "rgba(124,58,237,0.05)", borderRadius: 12, padding: "12px 16px", marginTop: 14, fontSize: "0.76rem", color: "#6b46c1", display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                Ces suggestions sont générées automatiquement. L'équipe Moyo Dating garde le contrôle final sur chaque mise en relation.
+              </div>
+
+              {/* Modal profil rapide */}
+              {mmView && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setMmView(null)}>
+                  <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+                    <div style={{ padding: 18, display: "flex", gap: 12, alignItems: "center", borderBottom: `1px solid ${G.gris}` }}>
+                      <Avatar url={mmView.photo_url} gender={mmView.gender} size={56} />
+                      <div><div style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 800, color: G.brun }}>{mmView.name}{mmView.is_verified && <VerifiedBadge size={14} />}</div><div style={{ fontSize: "0.78rem", color: "#888" }}>{mmView.gender} · {mmView.age} ans · {mmView.city}</div></div>
+                    </div>
+                    <div style={{ padding: 18, fontSize: "0.8rem", color: "#555", lineHeight: 1.8 }}>
+                      <div><strong>Religion :</strong> {mmView.religion || "—"}</div>
+                      <div><strong>Profession :</strong> {mmView.profession || "—"}</div>
+                      <div><strong>Recherche :</strong> {mmView.relational_profile?.project || "—"} · {mmView.relational_profile?.city || "—"} · {mmView.relational_profile?.age_min || "?"}–{mmView.relational_profile?.age_max || "?"} ans</div>
+                      {Array.isArray(mmView.relational_profile?.qualities) && mmView.relational_profile.qualities.length > 0 && <div><strong>Qualités :</strong> {mmView.relational_profile.qualities.join(", ")}</div>}
+                      {Array.isArray(mmView.relational_profile?.interests) && mmView.relational_profile.interests.length > 0 && <div><strong>Intérêts :</strong> {mmView.relational_profile.interests.join(", ")}</div>}
+                    </div>
+                    <div style={{ padding: "0 18px 18px" }}><button onClick={() => setMmView(null)} style={{ width: "100%", background: G.creme, color: "#555", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "11px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══ CRÉER ══ */}
+          {matchSubTab === "create" && (
+            <div style={{ background: G.blanc, borderRadius: 16, padding: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+              <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16, background: "rgba(142,68,173,0.06)", borderRadius: 10, padding: "10px 12px" }}>Le match est créé immédiatement. Un message de bienvenue est envoyé automatiquement.</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 12, alignItems: "start", marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 1</div>
+                  {createSelected1 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{createSelected1.photo_url && <img src={createSelected1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{createSelected1.name}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{createSelected1.age} ans · {createSelected1.city}</div></div>
+                      <button onClick={() => { setCreateSelected1(null); setCreateSearch1(""); setCreateResults1([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", padding: 0 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={createSearch1} onChange={async e => { setCreateSearch1(e.target.value); setCreateResults1(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {createResults1.length > 0 && <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>{createResults1.map(p => <div key={p.id} onClick={() => { setCreateSelected1(p); setCreateSearch1(""); setCreateResults1([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}><div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div><div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div></div>)}</div>}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 2</div>
+                  {createSelected2 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{createSelected2.photo_url && <img src={createSelected2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{createSelected2.name}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{createSelected2.age} ans · {createSelected2.city}</div></div>
+                      <button onClick={() => { setCreateSelected2(null); setCreateSearch2(""); setCreateResults2([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", padding: 0 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={createSearch2} onChange={async e => { setCreateSearch2(e.target.value); setCreateResults2(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {createResults2.length > 0 && <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>{createResults2.map(p => <div key={p.id} onClick={() => { setCreateSelected2(p); setCreateSearch2(""); setCreateResults2([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}><div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div><div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div></div>)}</div>}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button onClick={handleCreateMatch} disabled={!createSelected1 || !createSelected2 || createLoading} style={{ width: "100%", background: createSelected1 && createSelected2 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ddd", color: createSelected1 && createSelected2 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: createSelected1 && createSelected2 ? "pointer" : "not-allowed" }}>
+                {createLoading ? "Création en cours..." : "Créer le match"}
+              </button>
+            </div>
+          )}
+
+          {/* ══ PROPOSITIONS ══ */}
+          {matchSubTab === "propose" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12, gap: 8 }}>
+                <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}` }}>
+                  <div onClick={() => setProposalsViewMode("grid")} style={{ padding: "7px 12px", background: proposalsViewMode === "grid" ? "#8e44ad" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={proposalsViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  </div>
+                  <div onClick={() => setProposalsViewMode("list")} style={{ padding: "7px 12px", background: proposalsViewMode === "list" ? "#8e44ad" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={proposalsViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  </div>
+                </div>
+                <button onClick={() => openProposeNew()} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Nouvelle proposition</button>
+                <button onClick={loadProposals} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                {([["pending","En attente","#f39c12"],["pending_response","En attente de réponse","#2980b9"],["accepted","Acceptée","#27ae60"],["refused","Refusée","#e74c3c"],["expired","Expirée","#888"]] as [typeof proposalsStatusFilter, string, string][]).map(([key, label, color]) => (
+                  <div key={label as string} onClick={() => setProposalsStatusFilter(f => f === key ? null : key)}
+                    style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: color as string, fontWeight: 600, cursor: "pointer", padding: "4px 9px", borderRadius: 50, background: proposalsStatusFilter === key ? `${color}1f` : "transparent", border: `1.5px solid ${proposalsStatusFilter === key ? color : "transparent"}` }}>
+                    <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={color as string}/></svg><span>{label}</span>
+                  </div>
+                ))}
+                {proposalsStatusFilter && <div onClick={() => setProposalsStatusFilter(null)} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
+              </div>
+              {proposalsLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : proposals.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                  <div style={{ marginBottom: 12, color: "#8e44ad" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+                  <div style={{ color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition</div>
+                </div>
+              ) : (() => {
+                const visibleProposals = proposalsStatusFilter ? proposals.filter(p => propFilterCategory(p) === proposalsStatusFilter) : proposals;
+                if (visibleProposals.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition dans cette catégorie</div>;
+                return (
+                <div style={proposalsViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
+                  {visibleProposals.map(p => {
+                    const statusInfo = p.status === "pending"
+                      ? (propFilterCategory(p) === "pending_response"
+                          ? { label: p.user1_response === "accepted" ? `En attente de ${p.profile2?.name || "..."}` : `En attente de ${p.profile1?.name || "..."}`, color: "#2980b9", bg: "rgba(41,128,185,0.08)" }
+                          : { label: "En attente", color: "#f39c12", bg: "rgba(243,156,18,0.08)" })
+                      : p.status === "accepted" ? { label: "Match créé", color: "#27ae60", bg: "rgba(39,174,96,0.08)" }
+                      : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? p.profile1?.name : p.profile2?.name || "..."}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
+                      : { label: "Expirée", color: "#888", bg: "rgba(0,0,0,0.04)" };
+                    return (
+                      <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user1_response === "accepted" ? "#27ae60" : p.user1_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile1?.photo_url && <img src={p.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile1?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile1?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user1_response === "accepted" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#27ae60"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : p.user1_response === "refused" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#e74c3c"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
+                            </div>
+                          </div>
+                          <div style={{ flexShrink: 0, textAlign: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><div style={{ marginTop: 2 }}><svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={statusInfo.color}/></svg></div></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user2_response === "accepted" ? "#27ae60" : p.user2_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile2?.photo_url && <img src={p.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ minWidth: 0, textAlign: "right" }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile2?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile2?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600, justifyContent: "flex-end" }}>{p.user2_response === "accepted" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#27ae60",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : p.user2_response === "refused" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#e74c3c",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: `1px solid ${G.gris}` }}>
+                          <div style={{ fontSize: "0.68rem", fontWeight: 700, color: statusInfo.color, background: statusInfo.bg, padding: "3px 8px", borderRadius: 50 }}>{statusInfo.label}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ fontSize: "0.62rem", color: "#aaa" }}>{new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
+                            {p.status === "expired" && <button onClick={async () => {
+                              const newExpiry = new Date(Date.now() + (parseInt(proposeDuration) || 48) * 3600 * 1000).toISOString();
+                              try {
+                                // On repasse en "pending" et on prolonge l'expiration, SANS toucher aux réponses.
+                                // La personne ayant déjà accepté (réponse ≠ null) n'est pas re-sollicitée :
+                                // le modal côté utilisateur ne s'affiche qu'à qui a une réponse encore vide.
+                                await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ status: "pending", expires_at: newExpiry, archived: false }) });
+                                setProposals(prev => prev.map(x => x.id === p.id ? { ...x, status: "pending", expires_at: newExpiry } : x));
+                                logAdminAction(auth.token, auth.userId, auth.name, `Proposition réactivée : ${p.profile1?.name || "?"} ↔ ${p.profile2?.name || "?"} (expire dans ${proposeDuration}h)`, p.user1_id);
+                                showToast("✅ Proposition réactivée", "success");
+                              } catch { showToast("Erreur lors de la réactivation", "error"); }
+                            }} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.25)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#1a8c4a", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Réactiver</button>}
+                            {p.status === "pending" && <button onClick={() => handleCancelProposal(p.id)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Annuler</button>}
+                        {(p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={async () => {
+                          await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ archived: true }) });
+                          setProposals(prev => prev.filter(x => x.id !== p.id));
+                          showToast("✅ Archivé", "success");
+                        }} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "3px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#555", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>Archiver</button>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {matchSubTab === "mmfollow" && (() => {
+            const fmtDT = (s?: string) => s ? new Date(s).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(":", "h") : "";
+            // Prolonger / réactiver avec une durée choisie par l'admin (en jours)
+            const extendMm = async (id: string, days: number) => {
+              const newExpiry = new Date(Date.now() + days * 24 * 3600 * 1000).toISOString();
+              try {
+                await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ status: "pending", expires_at: newExpiry, archived: false }) });
+                setMmFollow(prev => prev.map(x => x.id === id ? { ...x, status: "pending", expires_at: newExpiry } : x));
+                showToast(`⏳ Délai fixé à ${days} jour${days > 1 ? "s" : ""}`, "success");
+              } catch { showToast("Erreur", "error"); }
+            };
+            // Envoyer un mot d'encouragement de l'équipe dans la conversation du couple (quand les deux ont accepté)
+            const encourageCouple = async (p: any) => {
+              try {
+                const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${p.user1_id},user2.eq.${p.user2_id}),and(user1.eq.${p.user2_id},user2.eq.${p.user1_id}))&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+                const d = await r.json().catch(() => []);
+                const mid = Array.isArray(d) ? d[0]?.id : null;
+                if (!mid) { showToast("Conversation introuvable (le match n'existe peut-être pas encore).", "error"); return; }
+                const def = `Bonjour ${p.profile1?.name || ""} et ${p.profile2?.name || ""} 👋 L'équipe Moyo est ravie de vous avoir mis en relation. Prenez le temps d'échanger, on vous souhaite le meilleur ❤️`;
+                const msg = window.prompt("Message d'encouragement à envoyer dans leur conversation :", def);
+                if (!msg || !msg.trim()) return;
+                await fetch(`${SUPABASE_URL}/rest/v1/messages`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ match_id: mid, sender_id: SUPPORT_TEAM_ID, content: msg.trim(), is_read: false }) });
+                showToast("💌 Message d'encouragement envoyé", "success");
+              } catch { showToast("Erreur lors de l'envoi", "error"); }
+            };
+            // Note interne admin sur le couple (sauvegarde au blur)
+            const saveMmNote = async (id: string, note: string) => {
+              try {
+                const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ admin_note: note }) });
+                const body = await r.json().catch(() => null);
+                if (!r.ok || (Array.isArray(body) && body.length === 0)) { showToast("Note non enregistrée (vérifie la colonne admin_note).", "error"); return; }
+                setMmFollow(prev => prev.map(x => x.id === id ? { ...x, admin_note: note } : x));
+              } catch { showToast("Erreur enregistrement de la note", "error"); }
+            };
+            return (
+            <div>
+              <div style={{ background: "rgba(22,163,74,0.07)", border: "1px solid rgba(22,163,74,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: "0.74rem", color: "#15803d", lineHeight: 1.5 }}>
+                Suivi des couples proposés via le <b>Matchmaking intelligent</b> : qui a accepté ou refusé, quand, et les actions possibles. Les propositions spontanées et les demandes restent dans l'onglet « Propositions ».
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12, gap: 8 }}>
+                <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}` }}>
+                  <div onClick={() => setMmFollowViewMode("grid")} style={{ padding: "7px 12px", background: mmFollowViewMode === "grid" ? "#16a34a" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={mmFollowViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  </div>
+                  <div onClick={() => setMmFollowViewMode("list")} style={{ padding: "7px 12px", background: mmFollowViewMode === "list" ? "#16a34a" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={mmFollowViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  </div>
+                </div>
+                <button onClick={loadMmFollow} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                {([["En attente", "#f39c12"], ["Un seul a répondu", "#2980b9"], ["Les deux ont accepté", "#27ae60"], ["Refusée", "#e74c3c"], ["Expirée", "#888"]] as [string, string][]).map(([label, color]) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color, fontWeight: 600 }}>
+                    <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={color} /></svg><span>{label}</span>
+                  </div>
+                ))}
+              </div>
+              {mmFollowLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg></div>
+              ) : mmFollow.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                  <div style={{ color: "#aaa", fontSize: "0.88rem", lineHeight: 1.6 }}>Aucun couple matchmaking en suivi pour l'instant.<br />Propose un couple depuis « Matchmaking intelligent » et il apparaîtra ici.</div>
+                </div>
+              ) : (
+                <div style={mmFollowViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
+                  {mmFollow.map(p => {
+                    const oneAnswered = p.user1_response === "accepted" || p.user2_response === "accepted";
+                    const statusInfo = p.status === "pending"
+                      ? { label: oneAnswered ? "Un seul a répondu" : "En attente", color: oneAnswered ? "#2980b9" : "#f39c12", bg: oneAnswered ? "rgba(41,128,185,0.08)" : "rgba(243,156,18,0.08)" }
+                      : p.status === "accepted" ? { label: "Les deux ont accepté", color: "#27ae60", bg: "rgba(39,174,96,0.08)" }
+                      : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? (p.profile1?.name || "?") : (p.profile2?.name || "?")}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
+                      : { label: "Expirée", color: "#888", bg: "rgba(0,0,0,0.04)" };
+                    return (
+                      <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user1_response === "accepted" ? "#27ae60" : p.user1_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile1?.photo_url && <img src={p.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile1?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile1?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user1_response === "accepted" ? <span style={{ color: "#27ae60" }}>✓ Accepté{p.user1_responded_at ? ` · ${fmtDT(p.user1_responded_at)}` : ""}</span> : p.user1_response === "refused" ? <span style={{ color: "#e74c3c" }}>✕ Refusé{p.user1_responded_at ? ` · ${fmtDT(p.user1_responded_at)}` : ""}</span> : <span style={{ color: "#aaa" }}>En attente</span>}</div>
+                            </div>
+                          </div>
+                          <div style={{ flexShrink: 0, textAlign: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="#16a34a" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg><div style={{ marginTop: 2 }}><svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={statusInfo.color} /></svg></div></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user2_response === "accepted" ? "#27ae60" : p.user2_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile2?.photo_url && <img src={p.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ minWidth: 0, textAlign: "right" }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile2?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile2?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user2_response === "accepted" ? <span style={{ color: "#27ae60" }}>✓ Accepté{p.user2_responded_at ? ` · ${fmtDT(p.user2_responded_at)}` : ""}</span> : p.user2_response === "refused" ? <span style={{ color: "#e74c3c" }}>✕ Refusé{p.user2_responded_at ? ` · ${fmtDT(p.user2_responded_at)}` : ""}</span> : <span style={{ color: "#aaa" }}>En attente</span>}</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: `1px solid ${G.gris}`, flexWrap: "wrap", gap: 8 }}>
+                          <div style={{ fontSize: "0.68rem", fontWeight: 700, color: statusInfo.color, background: statusInfo.bg, padding: "3px 8px", borderRadius: 50 }}>{statusInfo.label}</div>
+                          <div style={{ fontSize: "0.62rem", color: "#aaa" }}>Proposé par {mmAdminNames[p.created_by] || "—"} le {new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                          <button onClick={() => openAdminProfile(p.user1_id)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.64rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Voir {p.profile1?.name || "profil 1"}</button>
+                          <button onClick={() => openAdminProfile(p.user2_id)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "4px 10px", fontSize: "0.64rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Voir {p.profile2?.name || "profil 2"}</button>
+                          {p.status === "accepted" && <>
+                            <span style={{ fontSize: "0.64rem", color: "#15803d", fontWeight: 700 }}>✅ Match créé</span>
+                            <button onClick={() => { setMatchSubTab("list"); loadMatchListData(); }} style={{ background: "rgba(41,128,185,0.1)", border: "1.5px solid rgba(41,128,185,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>Voir le match</button>
+                            <button onClick={() => encourageCouple(p)} style={{ background: "rgba(233,30,140,0.08)", border: "1.5px solid rgba(233,30,140,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#c2185b", cursor: "pointer" }}>💌 Encourager le couple</button>
+                          </>}
+                          {(p.status === "pending" || p.status === "expired") && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(243,156,18,0.06)", border: "1px solid rgba(243,156,18,0.2)", borderRadius: 50, padding: "2px 4px 2px 10px" }}>
+                            <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#b9770e" }}>{p.status === "expired" ? "Réactiver :" : "Prolonger :"}</span>
+                            {([["+1j", 1], ["+3j", 3], ["+7j", 7]] as [string, number][]).map(([lbl, d]) => (
+                              <button key={lbl} onClick={() => extendMm(p.id, d)} style={{ background: "#fff", border: "1.5px solid rgba(243,156,18,0.4)", borderRadius: 50, padding: "3px 9px", fontSize: "0.64rem", fontWeight: 800, color: "#b9770e", cursor: "pointer" }}>{lbl}</button>
+                            ))}
+                          </span>}
+                          {p.status === "pending" && <button onClick={() => handleCancelProposal(p.id)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer" }}>Annuler</button>}
+                          {(p.status === "refused" || p.status === "expired") && <button onClick={() => { setMatchSubTab("matchmaking"); loadMatchmaking(); }} style={{ background: "rgba(124,58,237,0.1)", border: "1.5px solid rgba(124,58,237,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#6d28d9", cursor: "pointer" }}>Reproposer un autre profil</button>}
+                          {(p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={async () => {
+                            try {
+                              await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ archived: true }) });
+                              setMmFollow(prev => prev.filter(x => x.id !== p.id));
+                              showToast("✅ Archivé", "success");
+                            } catch { showToast("Erreur", "error"); }
+                          }} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Archiver</button>}
+                        </div>
+                        <textarea defaultValue={p.admin_note || ""} onBlur={(e) => { if ((e.target.value || "") !== (p.admin_note || "")) saveMmNote(p.id, e.target.value); }} placeholder="Note interne sur ce couple (visible uniquement par l'équipe)…" style={{ width: "100%", marginTop: 10, boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "8px 10px", fontSize: "0.72rem", fontFamily: "inherit", resize: "vertical", minHeight: 34, color: "#555", background: G.creme }} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            );
+          })()}
+
+          {/* ══ VOIR LES MATCHS ══ */}
+          {matchSubTab === "list" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
+                <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input value={matchListSearch} onChange={e => setMatchListSearch(e.target.value)} placeholder="Rechercher une personne (voir tous ses matchs)…"
+                    style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px 9px 34px", border: `1.5px solid ${G.gris}`, borderRadius: 50, fontSize: "0.8rem", outline: "none", fontFamily: "inherit" }} />
+                  {matchListSearch && (
+                    <div onClick={() => setMatchListSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#999" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => { loadMatchListData(); }} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}><IcoRefresh /> Actualiser</button>
+                <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}`, flexShrink: 0 }}>
+                  <div onClick={() => setMatchListViewMode("grid")} style={{ padding: "7px 12px", background: matchListViewMode === "grid" ? "#2980b9" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={matchListViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  </div>
+                  <div onClick={() => setMatchListViewMode("list")} style={{ padding: "7px 12px", background: matchListViewMode === "list" ? "#2980b9" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={matchListViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  </div>
+                </div>
+              </div>
+              {matchListLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : matchList.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun match trouvé</div>
+              ) : (() => {
+                const q = matchListSearch.trim().toLowerCase();
+                const deduped = dedupeMatchesByCouple(matchList);
+                const filtered = q ? deduped.filter(m => m.profile1?.name?.toLowerCase().includes(q) || m.profile2?.name?.toLowerCase().includes(q)) : deduped;
+                if (filtered.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun match pour « {matchListSearch} »</div>;
+                return (
+                <div style={matchListViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 8 } : { display: "flex", flexDirection: "column", gap: 8 }}>
+                  {q && <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 2, gridColumn: "1/-1" }}>{filtered.length} match{filtered.length > 1 ? "s" : ""} avec « {matchListSearch} »</div>}
+                  {filtered.map((m, i) => (
+                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: G.blanc, borderRadius: 14, boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{m.profile1?.photo_url && <img src={m.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                        <div style={{ minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.profile1?.name || "?"}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile1?.age ? `${m.profile1.age} ans` : ""}{m.profile1?.city ? ` · ${m.profile1.city}` : ""}</div></div>
+                      </div>
+                      <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        <div style={{ fontSize: "0.55rem", color: "#aaa", whiteSpace: "nowrap" }}>{new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" })}</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{m.profile2?.photo_url && <img src={m.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                        <div style={{ minWidth: 0, textAlign: "right" }}><div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.profile2?.name || "?"}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile2?.age ? `${m.profile2.age} ans` : ""}{m.profile2?.city ? ` · ${m.profile2.city}` : ""}</div></div>
+                      </div>
+                      <button onClick={() => confirm(`Annuler le match entre ${m.profile1?.name || "?"} et ${m.profile2?.name || "?"} ? Leur conversation sera supprimée et ils ne seront plus en relation.`, () => adminCancelMatch(m))} title="Annuler le match" style={{ flexShrink: 0, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        Annuler
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* ══ DEMANDES ══ */}
+          {matchSubTab === "requests" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                <button onClick={loadMatchRequests} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
+              </div>
+              {matchRequestsLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : matchRequests.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune demande de mise en relation</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {matchRequests.map(req => {
+                    const statusColor = req.status === "pending" ? "#f39c12" : req.status === "processing" ? "#2980b9" : req.status === "done" ? "#27ae60" : "#888";
+                    const statusLabel = req.status === "pending" ? "En attente" : req.status === "processing" ? "En cours" : req.status === "done" ? "Traitée" : "Annulée";
+                    return (
+                      <div key={req.id} style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusColor}22` }}>
+                        {/* Profil demandeur */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                          <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${G.rouge}` }}>{req.profile?.photo_url && <img src={req.profile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{req.profile?.name || "?"}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#888" }}>{req.profile?.age} ans · {req.profile?.city}</div>
+                          </div>
+                          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: statusColor, background: `${statusColor}15`, padding: "3px 10px", borderRadius: 50 }}>{statusLabel}</div>
+                        </div>
+                        {/* Critères */}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                          {req.target_gender && <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 600 }}>{req.target_gender}</span>}
+                          {req.target_city && <span style={{ background: "rgba(41,128,185,0.08)", color: "#2980b9", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 600 }}>{req.target_city}</span>}
+                          {(req.target_age_min || req.target_age_max) && <span style={{ background: "rgba(39,174,96,0.08)", color: "#27ae60", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 600 }}>{req.target_age_min || "?"} - {req.target_age_max || "?"} ans</span>}
+                        </div>
+                        {req.message && <div style={{ fontSize: "0.78rem", color: "#555", background: G.creme, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontStyle: "italic" }}>"{req.message}"</div>}
+                        <div style={{ fontSize: "0.65rem", color: "#aaa", marginBottom: 12 }}>{new Date(req.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                        {/* Profils compatibles */}
+                        {req.showCompatible && req.compatibleProfiles && req.compatibleProfiles.length > 0 && (
+                          <div style={{ borderTop: `1px solid ${G.gris}`, paddingTop: 12, marginBottom: 10 }}>
+                            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#555", marginBottom: 8 }}>
+                Profils compatibles ({req.compatibleProfiles.length})
+                {req.compatibleNote && <span style={{ marginLeft: 8, fontSize: "0.65rem", color: "#e67e22", fontWeight: 600 }}>⚠ {req.compatibleNote}</span>}
+              </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              {req.compatibleProfiles.map(cp => (
+                                <div key={cp.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: G.creme, borderRadius: 10 }}>
+                                  <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.gris, flexShrink: 0 }}>{cp.photo_url && <img src={cp.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>{cp.name}</div>
+                                    <div style={{ fontSize: "0.65rem", color: "#888" }}>{cp.age} ans · {cp.city}</div>
+                                  </div>
+                                  <button onClick={async () => {
+                                    if (req.profile) {
+                                      // Vérifier si match existant
+                                      const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${req.profile.id},user2.eq.${cp.id}),and(user1.eq.${cp.id},user2.eq.${req.profile.id}))&select=id&limit=1`, {
+                                        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+                                      });
+                                      const d = await r.json().catch(() => []);
+                                      if (Array.isArray(d) && d.length > 0) { showToast("⚠️ Ces deux personnes ont déjà un match", "error"); return; }
+                                      setProposeSelected1(req.profile);
+                                      setProposeSelected2(cp);
+                                      setShowProposeMatch(true);
+                                    }
+                                  }} style={{ background: `linear-gradient(135deg,#e67e22,#d35400)`, color: "#fff", border: "none", borderRadius: 50, padding: "5px 12px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+                                    Proposer
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {req.showCompatible && req.compatibleProfiles && req.compatibleProfiles.length === 0 && (
+                          <div style={{ textAlign: "center", padding: "10px 0", color: "#aaa", fontSize: "0.78rem", borderTop: `1px solid ${G.gris}`, paddingTop: 12, marginBottom: 10 }}>Aucun profil compatible trouvé avec ces critères</div>
+                        )}
+                        {/* Actions */}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button onClick={() => loadCompatibleProfiles(req)} style={{ background: "rgba(41,128,185,0.1)", color: "#2980b9", border: "1.5px solid rgba(41,128,185,0.25)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Voir profils compatibles
+                          </button>
+                          {req.profile?.id && <button onClick={() => { setSupportReply({ userId: req.profile!.id, report: { reason: `Réponse à la demande de mise en relation de ${req.profile!.name}` } as ReportRow, allMessageIds: [] }); setSupportReplyText(""); }} style={{ background: "rgba(26,92,58,0.08)", color: "#1A5C3A", border: "1.5px solid rgba(26,92,58,0.22)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Message</button>}
+                          {req.status === "pending" && <button onClick={() => updateRequestStatus(req.id, "processing")} style={{ background: "rgba(41,128,185,0.08)", color: "#2980b9", border: "1.5px solid rgba(41,128,185,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Prendre en charge</button>}
+                          {req.status === "processing" && <button onClick={() => updateRequestStatus(req.id, "done")} style={{ background: "rgba(39,174,96,0.08)", color: "#27ae60", border: "1.5px solid rgba(39,174,96,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Marquer traitée</button>}
+                          {(req.status === "pending" || req.status === "processing") && <button onClick={() => updateRequestStatus(req.id, "cancelled")} style={{ background: "rgba(231,76,60,0.06)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.15)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>}
+                        {(req.status === "done" || req.status === "cancelled") && <button onClick={async () => {
+                          try {
+                            await fetch(`${SUPABASE_URL}/rest/v1/match_requests?id=eq.${req.id}`, {
+                              method: "PATCH",
+                              headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+                              body: JSON.stringify({ archived: true })
+                            });
+                            setMatchRequests(prev => prev.filter(r => r.id !== req.id));
+                            showToast("✅ Archivé", "success");
+                          } catch {}
+                        }} style={{ background: "rgba(85,85,85,0.06)", color: "#555", border: "1.5px solid rgba(85,85,85,0.15)", borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                          Archiver
+                        </button>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+          {/* ══ ARCHIVÉS ══ */}
+          {matchSubTab === "archived" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ fontSize: "0.82rem", color: "#888", fontWeight: 600 }}>{archivedItems.length} élément{archivedItems.length > 1 ? "s" : ""} archivé{archivedItems.length > 1 ? "s" : ""}</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {archivedItems.length > 0 && (
+                    <button onClick={() => { if (window.confirm(`Supprimer définitivement les ${archivedItems.length} éléments archivés ? Cette action est irréversible.`)) deleteAllArchived(); }} style={{ background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "7px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                      Tout supprimer
+                    </button>
+                  )}
+                  <button onClick={loadArchivedItems} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "7px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+                  <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}` }}>
+                    <div onClick={() => setArchivedViewMode("grid")} style={{ padding: "7px 12px", background: archivedViewMode === "grid" ? "#555" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={archivedViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    </div>
+                    <div onClick={() => setArchivedViewMode("list")} style={{ padding: "7px 12px", background: archivedViewMode === "list" ? "#555" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={archivedViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {matchArchiveLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+              ) : archivedItems.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                  <div style={{ fontSize: "0.88rem", color: "#aaa", marginBottom: 6 }}>Aucun élément archivé</div>
+                  <div style={{ fontSize: "0.75rem", color: "#ccc" }}>Les propositions et demandes archivées apparaissent ici</div>
+                </div>
+              ) : (
+                <div style={archivedViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 } : { display: "flex", flexDirection: "column", gap: 8 }}>
+                  {archivedItems.map(item => (
+                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, background: G.blanc, borderRadius: 14, padding: "12px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)", border: `1px solid ${G.gris}` }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: item.type === "proposal" ? "rgba(142,68,173,0.1)" : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {item.type === "proposal"
+                          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+                        }
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: "0.65rem", fontWeight: 700, background: item.type === "proposal" ? "rgba(142,68,173,0.1)" : "rgba(192,57,43,0.1)", color: item.type === "proposal" ? "#8e44ad" : G.rouge, borderRadius: 50, padding: "2px 8px" }}>{item.label}</span>
+                          <span style={{ fontSize: "0.65rem", color: "#aaa" }}>{new Date(item.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" })}</span>
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#444", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.detail}</div>
+                      </div>
+                      <button onClick={() => deleteArchivedItem(item.id, item.type)} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+
+
+      {/* ── MODAL CRÉER UN MATCH DIRECT ── */}
+      {showCreateMatch && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 500, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1rem", color: "#fff" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>{" "}Créer un match direct</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Le match est créé immédiatement sans demande</div>
+              </div>
+              <button onClick={() => { setShowCreateMatch(false); setCreateSelected1(null); setCreateSelected2(null); setCreateSearch1(""); setCreateSearch2(""); setCreateResults1([]); setCreateResults2([]); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 12, alignItems: "start", marginBottom: 20 }}>
+                {/* Profil 1 */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 1</div>
+                  {createSelected1 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                        {createSelected1.photo_url && <img src={createSelected1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{createSelected1.name}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#888" }}>{createSelected1.age} ans · {createSelected1.city}</div>
+                      </div>
+                      <button onClick={() => { setCreateSelected1(null); setCreateSearch1(""); setCreateResults1([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={createSearch1} onChange={async e => { setCreateSearch1(e.target.value); setCreateResults1(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {createResults1.length > 0 && (
+                        <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                          {createResults1.map(p => (
+                            <div key={p.id} onClick={() => { setCreateSelected1(p); setCreateSearch1(""); setCreateResults1([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                              <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                              </div>
+                              <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Icône centre */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+                {/* Profil 2 */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 2</div>
+                  {createSelected2 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                        {createSelected2.photo_url && <img src={createSelected2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{createSelected2.name}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#888" }}>{createSelected2.age} ans · {createSelected2.city}</div>
+                      </div>
+                      <button onClick={() => { setCreateSelected2(null); setCreateSearch2(""); setCreateResults2([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={createSearch2} onChange={async e => { setCreateSearch2(e.target.value); setCreateResults2(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {createResults2.length > 0 && (
+                        <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                          {createResults2.map(p => (
+                            <div key={p.id} onClick={() => { setCreateSelected2(p); setCreateSearch2(""); setCreateResults2([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                              <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                              </div>
+                              <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button onClick={handleCreateMatch} disabled={!createSelected1 || !createSelected2 || createLoading} style={{ width: "100%", background: createSelected1 && createSelected2 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ddd", color: createSelected1 && createSelected2 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: createSelected1 && createSelected2 ? "pointer" : "not-allowed" }}>
+                {createLoading ? "Création en cours..." : "Créer le match"}
+              </button>
+            </div>
+        </div>
+          </div>
+          )}
+
+      {/* ── MODAL PROPOSER UN MATCH ── */}
+      {showProposeMatch && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 500, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1rem", color: "#fff" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>{" "}Proposer un match</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Les deux personnes choisissent d'accepter ou refuser</div>
+              </div>
+              <button onClick={() => { setShowProposeMatch(false); setProposeSelected1(null); setProposeSelected2(null); setProposeSearch1(""); setProposeSearch2(""); setProposeResults1([]); setProposeResults2([]); setProposeP1Locked(false); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 12, alignItems: "start", marginBottom: 16 }}>
+                {/* Profil 1 */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 1</div>
+                  {proposeSelected1 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(230,126,34,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(230,126,34,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                        {proposeSelected1.photo_url && <img src={proposeSelected1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{proposeSelected1.name}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#888" }}>{proposeSelected1.age} ans · {proposeSelected1.city}</div>
+                      </div>
+                      <button onClick={() => { setProposeSelected1(null); setProposeSearch1(""); setProposeSelected2(null); setProposeSearch2(""); setProposeResults2([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0, visibility: proposeP1Locked ? "hidden" : "visible" }}>✕</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={proposeSearch1} onChange={e => setProposeSearch1(e.target.value)} placeholder="Rechercher un nom..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      {(() => {
+                        const q = proposeSearch1.trim().toLowerCase();
+                        const list = q ? proposeResults1.filter(p => (p.name || "").toLowerCase().includes(q)) : proposeResults1;
+                        if (list.length === 0) return null;
+                        return (
+                          <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflowY: "auto", maxHeight: 260, marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                            <div style={{ fontSize: "0.62rem", color: "#999", padding: "6px 12px", background: G.creme, position: "sticky", top: 0 }}>{list.length} profil{list.length > 1 ? "s" : ""} — choisis la personne 1</div>
+                            {list.map(p => (
+                              <div key={p.id} onClick={async () => { setProposeSelected1(p); setProposeSearch1(""); setProposeSelected2(null); setProposeSearch2(""); const opp = await loadOppositeGenderProfiles(p.gender, p.id); setProposeResults2(opp); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                                <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                  {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                                </div>
+                                <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}{p.gender ? ` · ${p.gender}` : ""}</div></div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+                {/* Icône centre */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+                </div>
+                {/* Profil 2 */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 2</div>
+                  {proposeSelected2 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(230,126,34,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(230,126,34,0.3)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                        {proposeSelected2.photo_url && <img src={proposeSelected2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{proposeSelected2.name}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#888" }}>{proposeSelected2.age} ans · {proposeSelected2.city}</div>
+                      </div>
+                      <button onClick={() => { setProposeSelected2(null); setProposeSearch2(""); setProposeResults2([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1rem", padding: 0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input value={proposeSearch2} onChange={e => setProposeSearch2(e.target.value)} disabled={!proposeSelected1} placeholder={proposeSelected1 ? "Rechercher un nom..." : "Choisis d'abord la personne 1"} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box", background: proposeSelected1 ? G.blanc : G.creme, color: proposeSelected1 ? undefined : "#aaa" }} />
+                      {(() => {
+                        if (!proposeSelected1) return <div style={{ fontSize: "0.72rem", color: "#bbb", marginTop: 8, textAlign: "center" }}>Sélectionne la personne 1 pour voir les profils compatibles</div>;
+                        const q = proposeSearch2.trim().toLowerCase();
+                        const list = q ? proposeResults2.filter(p => (p.name || "").toLowerCase().includes(q)) : proposeResults2;
+                        if (list.length === 0) return <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: 8, textAlign: "center" }}>Aucun profil compatible</div>;
+                        return (
+                          <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflowY: "auto", maxHeight: 260, marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                            <div style={{ fontSize: "0.62rem", color: "#999", padding: "6px 12px", background: G.creme, position: "sticky", top: 0 }}>{list.length} profil{list.length > 1 ? "s" : ""} compatible{list.length > 1 ? "s" : ""} (genre opposé)</div>
+                            {list.map(p => (
+                              <div key={p.id} onClick={() => { setProposeSelected2(p); setProposeSearch2(""); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
+                                <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                                  {p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                                </div>
+                                <div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Durée expiration */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>⏰ Durée avant expiration</div>
+                <select value={proposeDuration} onChange={e => setProposeDuration(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", background: G.blanc, cursor: "pointer" }}>
+                  <option value="12">12 heures</option>
+                  <option value="24">24 heures</option>
+                  <option value="48">48 heures (recommandé)</option>
+                  <option value="72">72 heures</option>
+                  <option value="168">7 jours</option>
+                </select>
+              </div>
+              {/* Info */}
+              <div style={{ background: "rgba(230,126,34,0.07)", borderRadius: 10, padding: "10px 12px", marginBottom: 16, fontSize: "0.75rem", color: "#555", lineHeight: 1.6 }}>
+                💡 Les deux personnes recevront un modal avec le profil de l'autre. Si les deux acceptent, le match est créé automatiquement. Si l'un refuse, la proposition est annulée.
+              </div>
+              <button onClick={handleProposeMatch} disabled={!proposeSelected1 || !proposeSelected2 || proposeLoading} style={{ width: "100%", background: proposeSelected1 && proposeSelected2 ? "linear-gradient(135deg,#e67e22,#d35400)" : "#ddd", color: proposeSelected1 && proposeSelected2 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: proposeSelected1 && proposeSelected2 ? "pointer" : "not-allowed" }}>
+                {proposeLoading ? "Envoi en cours..." : "Envoyer la proposition"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
