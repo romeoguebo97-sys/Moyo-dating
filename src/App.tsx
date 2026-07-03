@@ -16240,6 +16240,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Liste des matchs ──
   const [showMatchList, setShowMatchList] = useState(false);
   const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
+  const [matchListSearch, setMatchListSearch] = useState("");
+  const [proposalsViewMode, setProposalsViewMode] = useState<"list" | "grid">("list");
   const [matchListLoading, setMatchListLoading] = useState(false);
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [msgSubTab, setMsgSubTab] = useState<"assistant" | "broadcast">("assistant");
@@ -18726,7 +18728,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   ["Messages", stats.messages, "#2980b9", <svg key="ms" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
                   ["Signalements", stats.reports, "#e67e22", <IcoAlert key="a"/>],
                 ] as [string, number, string, React.ReactNode][]).map(([label, value, color, icon]) => (
-                  <div key={label} style={{ background: G.blanc, borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div key={label} onClick={label === "Matchs" ? () => { setActiveTab("matches"); setMatchSubTab("list"); } : undefined}
+                    style={{ background: G.blanc, borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", cursor: label === "Matchs" ? "pointer" : "default" }}>
                     <div style={{ color, marginBottom: 6 }}>{icon}</div>
                     <div style={{ fontSize: "1.8rem", fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
                     <div style={{ fontSize: "0.73rem", color: "#777", marginTop: 4 }}>{label}</div>
@@ -21895,6 +21898,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           {matchSubTab === "propose" && (
             <div>
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12, gap: 8 }}>
+                <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}` }}>
+                  <div onClick={() => setProposalsViewMode("grid")} style={{ padding: "7px 12px", background: proposalsViewMode === "grid" ? "#8e44ad" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={proposalsViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  </div>
+                  <div onClick={() => setProposalsViewMode("list")} style={{ padding: "7px 12px", background: proposalsViewMode === "list" ? "#8e44ad" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={proposalsViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  </div>
+                </div>
                 <button onClick={() => openProposeNew()} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Nouvelle proposition</button>
                 <button onClick={loadProposals} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
               </div>
@@ -21913,7 +21924,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition</div>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={proposalsViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
                   {proposals.map(p => {
                     const statusInfo = p.status === "pending"
                       ? { label: p.user1_response === "accepted" ? `En attente de ${p.profile2?.name || "..."}` : p.user2_response === "accepted" ? `En attente de ${p.profile1?.name || "..."}` : "En attente", color: "#f39c12", bg: "rgba(243,156,18,0.08)" }
@@ -22099,16 +22110,32 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           {/* ══ VOIR LES MATCHS ══ */}
           {matchSubTab === "list" && (
             <div>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-                <button onClick={() => { loadMatchListData(); }} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
+                <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input value={matchListSearch} onChange={e => setMatchListSearch(e.target.value)} placeholder="Rechercher une personne (voir tous ses matchs)…"
+                    style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px 9px 34px", border: `1.5px solid ${G.gris}`, borderRadius: 50, fontSize: "0.8rem", outline: "none", fontFamily: "inherit" }} />
+                  {matchListSearch && (
+                    <div onClick={() => setMatchListSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#999" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => { loadMatchListData(); }} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}><IcoRefresh /> Actualiser</button>
               </div>
               {matchListLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
               ) : matchList.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun match trouvé</div>
-              ) : (
+              ) : (() => {
+                const q = matchListSearch.trim().toLowerCase();
+                const deduped = dedupeMatchesByCouple(matchList);
+                const filtered = q ? deduped.filter(m => m.profile1?.name?.toLowerCase().includes(q) || m.profile2?.name?.toLowerCase().includes(q)) : deduped;
+                if (filtered.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun match pour « {matchListSearch} »</div>;
+                return (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {dedupeMatchesByCouple(matchList).map((m, i) => (
+                  {q && <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 2 }}>{filtered.length} match{filtered.length > 1 ? "s" : ""} avec « {matchListSearch} »</div>}
+                  {filtered.map((m, i) => (
                     <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: G.blanc, borderRadius: 14, boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{m.profile1?.photo_url && <img src={m.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
@@ -22129,7 +22156,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   ))}
                 </div>
-              )}
+                );
+              })()}
             </div>
           )}
 
