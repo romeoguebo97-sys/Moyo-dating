@@ -3503,7 +3503,7 @@ function BanScreen({ until, onExpire, onBack, name, email }: { until?: string | 
   const waLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(waMessage)}`;
   const ContactSupportBtn = () => (
     <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 10 }}>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d=".057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
       Contacter le service support
     </a>
   );
@@ -3653,7 +3653,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     const closeForgot = () => { setShowForgot(false); setForgotMethod("choice"); setForgotSent(false); setForgotEmail(""); setForgotName(""); };
     const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}\n\nPouvez-vous m'aider à le changer ?`)}`;
     return (
-      <AuthLayout onBack={forgotMethod === "choice" ? () => onNav("login") : () => setForgotMethod("choice")}>
+      <AuthLayout onBack={forgotMethod === "choice" ? () => onNav("landing") : () => setForgotMethod("choice")}>
         <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
         {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
@@ -3675,7 +3675,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
             </div>
             <div onClick={() => setForgotMethod("whatsapp")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px", borderRadius: 16, border: `2px solid ${G.gris}`, cursor: "pointer", marginBottom: 8 }}>
               <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(37,211,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366"><path d=".057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#222" }}>Demander au support de le faire</div>
@@ -3711,7 +3711,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
             <a href={forgotEmail.trim() ? waSupportLink : undefined} target="_blank" rel="noopener noreferrer"
               onClick={e => { if (!forgotEmail.trim()) { e.preventDefault(); setErrorMsg("Entre ton email d'abord."); } }}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: forgotEmail.trim() ? "#25D366" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 12 }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d=".057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
               Envoyer la demande via WhatsApp
             </a>
             <div style={{ textAlign: "center" }}><span onClick={() => setForgotMethod("choice")} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div>
@@ -15670,7 +15670,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setSelectedUsers(new Set());
     setBulkDeleting(false);
     showToast(`${count} profil(s) supprimé(s).${skipped > 0 ? ` ${skipped} Super Admin(s) ignoré(s).` : ""}`, "success");
-    loadUsers(userSearch, userPage, usersSort);
+    loadUsers(userSearch, userPage, usersSort, userSearchEmail);
   };
 
 
@@ -16212,7 +16212,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       setWarnModal(m => m ? { ...m, user: { ...m.user, warning_count: newCount } } : m);
       logAdminAction(auth.token, auth.userId, auth.name, `Avertissement supprimé pour ${user.name} (reste ${newCount}/3)`, user.id);
       showToast(`Avertissement supprimé. Il reste ${newCount}/3.`, "success");
-      loadUsers(userSearch, userPage, usersSort);
+      loadUsers(userSearch, userPage, usersSort, userSearchEmail);
     } catch { showToast("Erreur lors de la suppression.", "error"); }
   };
   const [pinModal, setPinModal] = useState<{ user: AdminProfile; mode: "set" | "reset" } | null>(null);
@@ -16952,6 +16952,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // Profils incomplets = name est "..." ou vide
   const displayedUsers = showIncomplete ? sortedUsers.filter(u => u.name === "..." || !u.name) : sortedUsers;
   const [userSearch, setUserSearch] = useState("");
+  const [userSearchEmail, setUserSearchEmail] = useState("");
   const [usersLoading, setUsersLoading] = useState(false);
   const [userPage, setUserPage] = useState(0);
   const USER_PAGE_SIZE_GRID = 20;
@@ -17112,7 +17113,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Chargement des utilisateurs avec recherche ──
-  const loadUsers = async (search = "", page = 0, sort = usersSort) => {
+  const loadUsers = async (search = "", page = 0, sort = usersSort, searchEmail = "") => {
     setUsersLoading(true);
     try {
       const pageSize = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
@@ -17133,9 +17134,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       };
       const serverSort = serverSorts[sort] || "created_at.desc";
       let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
-      if (search.trim()) {
-        const q = encodeURIComponent(search.trim());
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&or=(name.ilike.*${q}*,email.ilike.*${q}*)&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
+      if (search.trim() || searchEmail.trim()) {
+        const nameQ = search.trim() ? `name.ilike.*${encodeURIComponent(search.trim())}*` : null;
+        const emailQ = searchEmail.trim() ? `email.ilike.*${encodeURIComponent(searchEmail.trim())}*` : null;
+        const filter = [nameQ, emailQ].filter(Boolean).join(",");
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&${nameQ && emailQ ? `or=(${filter})` : filter}&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       setUsers(res);
@@ -17186,7 +17189,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   useEffect(() => {
     // Recharger les stats à chaque fois qu'on revient sur l'onglet "stats"
     if (activeTab === "stats") loadStats();
-    if (activeTab === "users") { setUserPage(0); loadUsers(userSearch, 0, usersSort); }
+    if (activeTab === "users") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); }
   }, [activeTab, usersViewMode]);
 
   // ── Action admin générique sur un profil ──
@@ -19070,22 +19073,34 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             </div>
           )}
-          {/* Barre de recherche */}
-          <div style={{ position: "relative", marginBottom: 14 }}>
-            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
-            <input
-              value={userSearch}
-              onChange={e => setUserSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort); } }}
-              placeholder="Rechercher par nom ou email…"
-              style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
-            />
+          {/* Barre de recherche : deux champs côte à côte (nom / email) */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <div style={{ position: "relative", flex: 1 }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
+              <input
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); } }}
+                placeholder="Nom d'utilisateur…"
+                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ position: "relative", flex: 1 }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+              <input
+                value={userSearchEmail}
+                onChange={e => setUserSearchEmail(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); } }}
+                placeholder="Email d'utilisateur…"
+                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0, usersSort); }} style={{ flex: 1, padding: "10px" }}>
+            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); }} style={{ flex: 1, padding: "10px" }}>
               Rechercher
             </Btn>
-            <Btn variant="ghost" onClick={() => { setUserSearch(""); setUserPage(0); loadUsers("", 0, usersSort); }} style={{ padding: "10px 16px" }}>
+            <Btn variant="ghost" onClick={() => { setUserSearch(""); setUserSearchEmail(""); setUserPage(0); loadUsers("", 0, usersSort, ""); }} style={{ padding: "10px 16px" }}>
               Réinitialiser
             </Btn>
           </div>
@@ -19093,7 +19108,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
             <select
               value={usersSort}
-              onChange={e => { const s = e.target.value as typeof usersSort; setUsersSort(s); setUserPage(0); loadUsers(userSearch, 0, s); }}
+              onChange={e => { const s = e.target.value as typeof usersSort; setUsersSort(s); setUserPage(0); loadUsers(userSearch, 0, s, userSearchEmail); }}
               style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: `2px solid ${G.gris}`, fontSize: "0.8rem", fontWeight: 600, color: "#333", background: G.blanc, cursor: "pointer", outline: "none" }}
             >
               <option value="created_at.desc">📅 Plus récents</option>
@@ -19430,13 +19445,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
               {/* Pagination */}
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <Btn variant="ghost" onClick={() => { const p = Math.max(0, userPage - 1); setUserPage(p); loadUsers(userSearch, p, usersSort); }} disabled={userPage === 0} style={{ flex: 1, padding: "10px" }}>
+                <Btn variant="ghost" onClick={() => { const p = Math.max(0, userPage - 1); setUserPage(p); loadUsers(userSearch, p, usersSort, userSearchEmail); }} disabled={userPage === 0} style={{ flex: 1, padding: "10px" }}>
                   ← Précédent
                 </Btn>
                 <span style={{ display: "flex", alignItems: "center", fontSize: "0.8rem", color: "#888", padding: "0 8px" }}>
                   Page {userPage + 1}
                 </span>
-                <Btn variant="ghost" onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(userSearch, p, usersSort); }} disabled={users.length < USER_PAGE_SIZE} style={{ flex: 1, padding: "10px" }}>
+                <Btn variant="ghost" onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(userSearch, p, usersSort, userSearchEmail); }} disabled={users.length < USER_PAGE_SIZE} style={{ flex: 1, padding: "10px" }}>
                   Suivant →
                 </Btn>
               </div>
