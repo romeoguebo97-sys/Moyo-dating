@@ -16953,6 +16953,16 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const displayedUsers = showIncomplete ? sortedUsers.filter(u => u.name === "..." || !u.name) : sortedUsers;
   const [userSearch, setUserSearch] = useState("");
   const [userSearchEmail, setUserSearchEmail] = useState("");
+  // Recherche automatique en direct (debounce ~450ms) dès qu'on tape dans l'un des deux champs,
+  // interroge directement la base sur TOUS les utilisateurs (pas seulement ceux déjà affichés).
+  useEffect(() => {
+    if (activeTab !== "users") return;
+    const t = setTimeout(() => {
+      setUserPage(0);
+      loadUsers(userSearch, 0, usersSort, userSearchEmail);
+    }, 450);
+    return () => clearTimeout(t);
+  }, [userSearch, userSearchEmail, activeTab]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userPage, setUserPage] = useState(0);
   const USER_PAGE_SIZE_GRID = 20;
@@ -17137,11 +17147,38 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       if (search.trim() || searchEmail.trim()) {
         const nameQ = search.trim() ? `name.ilike.*${encodeURIComponent(search.trim())}*` : null;
         const emailQ = searchEmail.trim() ? `email.ilike.*${encodeURIComponent(searchEmail.trim())}*` : null;
+        // Toujours envelopper dans or=(...), même avec un seul filtre : la syntaxe "colonne.operateur.valeur"
+        // (avec un point) n'est valide qu'à l'intérieur de or(...) — utilisée seule, elle est invalide
+        // et Supabase l'ignore silencieusement, d'où le filtre qui ne trouvait jamais rien.
         const filter = [nameQ, emailQ].filter(Boolean).join(",");
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&${nameQ && emailQ ? `or=(${filter})` : filter}&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&or=(${filter})&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
-      setUsers(res);
+      // Quand une recherche est active, on trie par pertinence (correspondance exacte / "commence par" en premier)
+      // plutôt que par le tri générique (date, etc.) — pour que la bonne personne apparaisse en tête, pas noyée.
+      if (search.trim() || searchEmail.trim()) {
+        const nq = search.trim().toLowerCase();
+        const eq = searchEmail.trim().toLowerCase();
+        const score = (u: AdminProfile) => {
+          const n = (u.name || "").toLowerCase();
+          const e = ((u as any).email || "").toLowerCase();
+          let best = 3; // 3 = correspond seulement en "contient" (déjà filtré côté serveur)
+          if (nq) {
+            if (n === nq) best = Math.min(best, 0);
+            else if (n.startsWith(nq)) best = Math.min(best, 1);
+            else if (n.includes(nq)) best = Math.min(best, 2);
+          }
+          if (eq) {
+            if (e === eq) best = Math.min(best, 0);
+            else if (e.startsWith(eq)) best = Math.min(best, 1);
+            else if (e.includes(eq)) best = Math.min(best, 2);
+          }
+          return best;
+        };
+        setUsers([...res].sort((a, b) => score(a) - score(b)));
+      } else {
+        setUsers(res);
+      }
     } catch (e: any) {
       console.error("[Moyo][Admin][Users] ❌ Erreur :", e?.message || e);
       showToast("Erreur chargement utilisateurs : " + (e?.message || "inconnue"), "error");
