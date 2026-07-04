@@ -9618,7 +9618,12 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 
   // ── Liste des conversations (commun mobile + desktop) ──
   const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0 }}>
-    <div style={{ padding: isWideMsg ? "16px 16px 8px" : "12px 16px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0, display: FEATURE_STATUSES ? undefined : "none" }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0" }}>
+    {/* ── Bandeau collé en haut (statuts + onglets) : position:sticky à l'intérieur de la zone qui
+        défile, plutôt qu'un frère externe dont la hauteur doit être calculée au pixel près. Ne peut
+        pas être "arraché" par un scroll, quelle que soit la précision du calcul de viewport. ── */}
+    <div style={{ position: "sticky", top: 0, zIndex: 5, background: G.blanc }}>
+    <div style={{ padding: isWideMsg ? "16px 16px 8px" : "12px 16px 8px", borderBottom: `1px solid ${G.gris}`, display: FEATURE_STATUSES ? undefined : "none" }}>
 
       <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
       <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 8px", WebkitOverflowScrolling: "touch" }}>
@@ -9656,7 +9661,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       </div>
     </div>
     {FEATURE_GROUP_PREMIUM && (
-    <div style={{ display: "flex", padding: "10px 12px 0", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+    <div style={{ display: "flex", padding: "10px 12px 0", background: G.blanc, borderBottom: `1px solid ${G.gris}` }}>
       <div onClick={() => setShowGroup(false)} style={{
         width: "calc(50% + 9px)", textAlign: "center", padding: "11px 0 13px", cursor: "pointer",
         background: !showGroup ? G.rouge : G.creme,
@@ -9683,7 +9688,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       </div>
     </div>
     )}
-    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0" }}>
+    </div>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
         : (() => {
