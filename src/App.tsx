@@ -7905,7 +7905,18 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   };
   const confirmJoinGroup = async () => {
     setShowGroupJoinModal(false);
-    try { await sb.insert(auth.token, "group_members", { user_id: auth.userId, role: "member", status: "pending" }); } catch {}
+    try {
+      const res = await sb.insert<{ user_id?: string }>(auth.token, "group_members", { user_id: auth.userId, role: "member", status: "pending" });
+      if (!res[0]?.user_id) {
+        // L'insertion a été refusée (policy de sécurité, ou autre) : on le dit clairement au lieu
+        // de laisser croire que la demande est partie alors qu'elle n'a jamais atteint la base.
+        setToast({ msg: "Ta demande n'a pas pu être envoyée. Réessaie dans un instant, ou contacte le support si ça persiste.", type: "error" });
+        return;
+      }
+    } catch {
+      setToast({ msg: "Ta demande n'a pas pu être envoyée. Réessaie dans un instant, ou contacte le support si ça persiste.", type: "error" });
+      return;
+    }
     setShowGroup(true);
   };
   useEffect(() => { onConvOpen?.(open !== null); }, [open]);
@@ -9645,7 +9656,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       </div>
     </div>
     {FEATURE_GROUP_PREMIUM && (
-    <div style={{ display: "flex", padding: "10px 12px 0", background: G.blanc, borderBottom: `1px solid ${G.gris}` }}>
+    <div style={{ display: "flex", padding: "10px 12px 0", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
       <div onClick={() => setShowGroup(false)} style={{
         width: "calc(50% + 9px)", textAlign: "center", padding: "11px 0 13px", cursor: "pointer",
         background: !showGroup ? G.rouge : G.creme,
@@ -11189,7 +11200,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, margin: "0 0 8px" }}>Demander à rejoindre le Groupe Premium ?</h3>
-          <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.55, margin: "0 0 22px" }}>Contrairement à tes conversations privées, ce groupe est <b>partagé par tous les membres Premium</b> — ce que tu y écris n'est plus discret, tout le monde peut le voir. Ta demande sera examinée par un administrateur avant de rejoindre.</p>
+          <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.55, margin: "0 0 22px" }}>Contrairement à tes conversations privées, ce groupe est <b>partagé par tous les membres Premium</b> : ce que tu y écris n'est plus discret, tout le monde peut le voir. Ta demande sera examinée par un administrateur avant de rejoindre.</p>
           <Btn variant="primary" onClick={confirmJoinGroup} style={{ width: "100%", marginBottom: 8 }}>Envoyer la demande</Btn>
           <Btn variant="ghost" onClick={() => setShowGroupJoinModal(false)} style={{ width: "100%" }}>Annuler</Btn>
         </div>
