@@ -261,6 +261,7 @@ export let BLOCK_SAME_GENDER = true;
 let FEATURE_STATUSES = true;
 let FEATURE_GIFT_PREMIUM = true;
 let FEATURE_ASSISTANT = true;
+let FEATURE_GROUP_PREMIUM = true;
 let APPOINTMENTS_ENABLED = true;
 let APPT_PHONE_ENABLED = true;
 let APPT_PHYSICAL_ENABLED = true;
@@ -319,7 +320,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_group_premium,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -331,6 +332,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["rule_block_same_gender_like"] !== undefined) BLOCK_SAME_GENDER = map["rule_block_same_gender_like"] !== "false";
   if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
+  if (map["feature_group_premium"] !== undefined) FEATURE_GROUP_PREMIUM = map["feature_group_premium"] !== "false";
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
@@ -7868,6 +7870,44 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   const [showGroup, setShowGroup] = useState(false); // Groupe Premium : écran séparé, indépendant de la logique 1-à-1
+  const [showGroupJoinModal, setShowGroupJoinModal] = useState(false); // Confirmation explicite avant la 1ère demande (le groupe n'est pas discret)
+  const [groupPendingCount, setGroupPendingCount] = useState(0); // Nombre de demandes d'adhésion en attente — visible seulement si admin/modérateur du groupe
+
+  // Badge de demandes en attente sur l'onglet "Groupe" : ne concerne que les admins/modérateurs du
+  // groupe (une seule requête pour vérifier le rôle, puis un comptage, mis à jour en direct).
+  useEffect(() => {
+    if (!auth.isPremium || !FEATURE_GROUP_PREMIUM) return;
+    let alive = true;
+    const refreshPendingCount = async () => {
+      try {
+        const me = await sb.query<{ role: string; status: string }>(auth.token, "group_members", `?user_id=eq.${auth.userId}&select=role,status`);
+        const amModerator = !!me[0] && (me[0].role === "admin" || me[0].role === "moderator") && me[0].status === "approved";
+        if (!alive) return;
+        if (!amModerator) { setGroupPendingCount(0); return; }
+        const pending = await sb.query<{ user_id: string }>(auth.token, "group_members", `?status=eq.pending&select=user_id`);
+        if (alive) setGroupPendingCount(pending.length);
+      } catch {}
+    };
+    refreshPendingCount();
+    const ws = sb.subscribeRealtime(auth.token, "group_members", `status=eq.pending`, refreshPendingCount);
+    const iv = setInterval(refreshPendingCount, 30000); // filet de sécurité si le websocket temps réel est indisponible
+    return () => { alive = false; ws?.close(); clearInterval(iv); };
+  }, [auth.userId, auth.token, auth.isPremium]);
+  // On ne sait si une demande existe déjà (pending/approved/rejected) qu'en interrogeant la base —
+  // ce n'est plus un simple flag local, puisque l'adhésion doit être validée par un admin.
+  const requestJoinGroup = async () => {
+    if (!auth.isPremium) { onShowPremium("L'accès au Groupe Premium est réservé aux membres Premium."); return; }
+    try {
+      const rows = await sb.query<{ status: string }>(auth.token, "group_members", `?user_id=eq.${auth.userId}&select=status`);
+      if (rows[0]) { setShowGroup(true); return; } // déjà demandé avant (pending/approved/rejected) : l'écran gère l'affichage selon le statut
+    } catch {}
+    setShowGroupJoinModal(true); // jamais demandé : on prévient avant d'envoyer la demande
+  };
+  const confirmJoinGroup = async () => {
+    setShowGroupJoinModal(false);
+    try { await sb.insert(auth.token, "group_members", { user_id: auth.userId, role: "member", status: "pending" }); } catch {}
+    setShowGroup(true);
+  };
   useEffect(() => { onConvOpen?.(open !== null); }, [open]);
   // ── Favoris de conversations (swipe vers la droite) — persistés par appareil ──
   const FAV_KEY = `moyo_fav_convs_${auth.userId}`;
@@ -9604,14 +9644,19 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         <span>Statuts visibles uniquement par vos matchs</span>
       </div>
     </div>
-    <div style={{ display: "flex", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-        <div onClick={() => setShowGroup(false)} style={{ flex: 1, textAlign: "center", padding: "13px 0 11px", cursor: "pointer", borderBottom: !showGroup ? `2px solid ${G.rouge}` : "2px solid transparent" }}>
-          <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? G.rouge : "#999" }}>Messages privés</span>
+    {FEATURE_GROUP_PREMIUM && (
+    <div style={{ display: "flex", gap: 8, padding: "10px 12px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+        <div onClick={() => setShowGroup(false)} style={{ flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 10, cursor: "pointer", background: !showGroup ? G.rouge : G.creme, transition: "background 0.15s" }}>
+          <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? "#fff" : "#999" }}>Messages privés</span>
         </div>
-        <div onClick={() => { if (!auth.isPremium) { onShowPremium("L'accès au Groupe Premium est réservé aux membres Premium."); return; } setShowGroup(true); }} style={{ flex: 1, textAlign: "center", padding: "13px 0 11px", cursor: "pointer", borderBottom: showGroup ? `2px solid ${G.rouge}` : "2px solid transparent" }}>
-          <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? G.rouge : "#999" }}>Groupe</span>
+        <div onClick={requestJoinGroup} style={{ flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 10, cursor: "pointer", background: showGroup ? G.rouge : G.creme, position: "relative", transition: "background 0.15s" }}>
+          <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#999" }}>Groupe</span>
+          {groupPendingCount > 0 && (
+            <span style={{ position: "absolute", top: -6, right: 10, background: G.or, color: "#fff", fontSize: "0.58rem", fontWeight: 800, borderRadius: 50, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)" }}>{groupPendingCount > 99 ? "99+" : groupPendingCount}</span>
+          )}
         </div>
     </div>
+    )}
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0" }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
@@ -11112,10 +11157,27 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     )}
     {/* Mobile : liste des convs (seulement si pas de conv ouverte) */}
     {!isWideMsg && !open && convList}
-    {/* Groupe Premium : overlay plein écran indépendant, pour ne pas toucher à la logique 1-à-1 */}
-    {showGroup && (
+    {/* Groupe Premium : overlay plein écran indépendant, pour ne pas toucher à la logique 1-à-1.
+        Coupe-circuit admin : si FEATURE_GROUP_PREMIUM est désactivé, ne s'affiche jamais, quel que
+        soit l'état de showGroup — comme si le groupe n'avait jamais existé. */}
+    {showGroup && FEATURE_GROUP_PREMIUM && (
       <div style={{ position: "fixed", inset: 0, zIndex: 600, background: G.blanc }}>
         <GroupChat auth={auth} onBack={() => setShowGroup(false)} onShowPremium={onShowPremium} />
+      </div>
+    )}
+    {/* Demande d'adhésion : contrairement aux conversations privées, ce groupe rassemble tout le
+        monde — on prévient explicitement avant d'y entrer, geste volontaire requis. */}
+    {showGroupJoinModal && (
+      <div onClick={() => setShowGroupJoinModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 630, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "28px 24px 22px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg, ${G.or}, ${G.rouge})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, margin: "0 0 8px" }}>Demander à rejoindre le Groupe Premium ?</h3>
+          <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.55, margin: "0 0 22px" }}>Contrairement à tes conversations privées, ce groupe est <b>partagé par tous les membres Premium</b> — ce que tu y écris n'est plus discret, tout le monde peut le voir. Ta demande sera examinée par un administrateur avant de rejoindre.</p>
+          <Btn variant="primary" onClick={confirmJoinGroup} style={{ width: "100%", marginBottom: 8 }}>Envoyer la demande</Btn>
+          <Btn variant="ghost" onClick={() => setShowGroupJoinModal(false)} style={{ width: "100%" }}>Annuler</Btn>
+        </div>
       </div>
     )}
   </div>;
@@ -11131,37 +11193,15 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 // l'instant — voir l'explication donnée au développeur en fin de réponse.
 // ═══════════════════════════════════════════════════════════════════════
 type GroupMessage = { id?: string; sender_id: string; content: string; created_at?: string; reactions?: Record<string, string[]> };
-type GroupMemberRow = { user_id: string; role: "admin" | "moderator" | "member"; removed_at?: string | null };
+type GroupMemberRow = { user_id: string; role: "admin" | "moderator" | "member"; status: "pending" | "approved" | "rejected"; removed_at?: string | null };
 
 function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => void; onShowPremium: (r: string) => void }) {
-  // Garde-fou : si l'abonnement Premium se termine pendant que la personne est déjà dans cet écran
-  // (ou si elle y accède par un autre chemin), on bloque immédiatement l'accès — cohérent avec les
-  // policies RLS côté base de données qui font déjà la même vérification sur is_premium.
-  if (!auth.isPremium) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-          <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </div>
-          <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Groupe Premium</div>
-        </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 30, textAlign: "center" }}>
-          <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg, ${G.or}, ${G.rouge})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun }}>Réservé aux membres Premium</div>
-          <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.5, maxWidth: 260 }}>Ton abonnement Premium n'est plus actif. Réabonne-toi pour retrouver l'accès au Groupe.</p>
-          <Btn variant="primary" onClick={() => onShowPremium("L'accès au Groupe Premium est réservé aux membres Premium.")} style={{ width: "100%", maxWidth: 240 }}>Passer Premium</Btn>
-        </div>
-      </div>
-    );
-  }
   const [msgs, setMsgs] = useState<GroupMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
   const [myRole, setMyRole] = useState<"admin" | "moderator" | "member">("member");
+  const [myStatus, setMyStatus] = useState<"pending" | "approved" | "rejected" | null>(null);
   const [isRemoved, setIsRemoved] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [members, setMembers] = useState<GroupMemberRow[]>([]);
@@ -11172,16 +11212,29 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
   const listRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isModerator = myRole === "admin" || myRole === "moderator";
+  const isApproved = myStatus === "approved" && !isRemoved;
 
-  // Mon statut dans le groupe (rôle + éventuelle exclusion)
+  const [statusLoading, setStatusLoading] = useState(true);
+
+  // Mon statut dans le groupe (rôle, statut de la demande, éventuelle exclusion)
   useEffect(() => {
-    (async () => {
+    let alive = true;
+    const loadMyStatus = async () => {
       try {
-        const rows = await sb.query<GroupMemberRow>(auth.token, "group_members", `?user_id=eq.${auth.userId}&select=user_id,role,removed_at`);
-        if (rows[0]) { setMyRole(rows[0].role); setIsRemoved(!!rows[0].removed_at); }
+        const rows = await sb.query<GroupMemberRow>(auth.token, "group_members", `?user_id=eq.${auth.userId}&select=user_id,role,status,removed_at`);
+        if (alive && rows[0]) { setMyRole(rows[0].role); setMyStatus(rows[0].status); setIsRemoved(!!rows[0].removed_at); }
       } catch {}
-    })();
-  }, [auth.userId, auth.token]);
+      if (alive) setStatusLoading(false);
+    };
+    loadMyStatus();
+    // Si en attente, on réinterroge de temps en temps pour détecter automatiquement la validation
+    const iv = myStatus === "pending" ? setInterval(loadMyStatus, 8000) : null;
+    return () => { alive = false; if (iv) clearInterval(iv); };
+  }, [auth.userId, auth.token, myStatus]);
+
+  const reapply = async () => {
+    try { await sb.upsert(auth.token, "group_members", { user_id: auth.userId, role: "member", status: "pending" }); setMyStatus("pending"); } catch {}
+  };
 
   // Messages + temps réel
   useEffect(() => {
@@ -11276,7 +11329,7 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
   // ── Modération ──
   const loadMembers = async () => {
     try {
-      const rows = await sb.query<GroupMemberRow>(auth.token, "group_members", `?select=user_id,role,removed_at`);
+      const rows = await sb.query<GroupMemberRow>(auth.token, "group_members", `?select=user_id,role,status,removed_at&order=requested_at.asc`);
       setMembers(rows);
       const ids = rows.map(r => r.user_id).filter(id => !profilesById[id]);
       if (ids.length) {
@@ -11286,6 +11339,12 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
     } catch {}
   };
   const openMembers = () => { setShowMembers(true); loadMembers(); };
+  const approveRequest = async (userId: string) => {
+    try { await sb.upsert(auth.token, "group_members", { user_id: userId, status: "approved", decided_at: new Date().toISOString(), decided_by: auth.userId }); loadMembers(); } catch {}
+  };
+  const rejectRequest = async (userId: string) => {
+    try { await sb.upsert(auth.token, "group_members", { user_id: userId, status: "rejected", decided_at: new Date().toISOString(), decided_by: auth.userId }); loadMembers(); } catch {}
+  };
   const removeMember = async (userId: string) => {
     try { await sb.upsert(auth.token, "group_members", { user_id: userId, removed_at: new Date().toISOString(), removed_by: auth.userId }); loadMembers(); } catch {}
   };
@@ -11295,6 +11354,49 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
   const setRole = async (userId: string, role: "admin" | "moderator" | "member") => {
     try { await sb.upsert(auth.token, "group_members", { user_id: userId, role, removed_at: null }); loadMembers(); } catch {}
   };
+
+  // ── Écran-cadre commun aux états "pas encore dans le chat" (en-tête + centre) ──
+  const StatusScreen = ({ icon, title, text, action }: { icon: React.ReactNode; title: string; text: string; action?: React.ReactNode }) => (
+    <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+        <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Groupe Premium</div>
+      </div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 30, textAlign: "center" }}>
+        <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg, ${G.or}, ${G.rouge})`, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun }}>{title}</div>
+        <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.5, maxWidth: 260 }}>{text}</p>
+        {action}
+      </div>
+    </div>
+  );
+  const groupIcon = <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+
+  // Garde-fou : si l'abonnement Premium se termine (même déjà dans cet écran), accès bloqué —
+  // cohérent avec les policies RLS qui exigent déjà une adhésion "approved" liée à un compte Premium.
+  if (!auth.isPremium) {
+    return <StatusScreen icon={groupIcon} title="Réservé aux membres Premium" text="Ton abonnement Premium n'est plus actif. Réabonne-toi pour retrouver l'accès au Groupe."
+      action={<Btn variant="primary" onClick={() => onShowPremium("L'accès au Groupe Premium est réservé aux membres Premium.")} style={{ width: "100%", maxWidth: 240 }}>Passer Premium</Btn>} />;
+  }
+  if (statusLoading) {
+    return <StatusScreen icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>} title="Chargement…" text="" />;
+  }
+  if (isRemoved) {
+    return <StatusScreen icon={groupIcon} title="Retiré(e) du groupe" text="Un administrateur t'a retiré(e) du Groupe Premium. Tu peux redemander à le rejoindre."
+      action={<Btn variant="primary" onClick={reapply} style={{ width: "100%", maxWidth: 240 }}>Redemander à rejoindre</Btn>} />;
+  }
+  if (myStatus === "pending") {
+    return <StatusScreen icon={groupIcon} title="Demande en attente" text="Ta demande pour rejoindre le Groupe Premium a été envoyée. Un administrateur doit la valider avant que tu puisses y accéder." />;
+  }
+  if (myStatus === "rejected") {
+    return <StatusScreen icon={groupIcon} title="Demande refusée" text="Ta demande pour rejoindre le Groupe Premium n'a pas été acceptée. Tu peux réessayer."
+      action={<Btn variant="primary" onClick={reapply} style={{ width: "100%", maxWidth: 240 }}>Redemander à rejoindre</Btn>} />;
+  }
+  if (myStatus !== "approved") {
+    return <StatusScreen icon={groupIcon} title="Pas encore membre" text="Tu dois d'abord demander à rejoindre le Groupe Premium." />;
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
@@ -11313,7 +11415,9 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
       </div>
 
       {/* Messages */}
-      <div ref={listRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 12px" }}>
+      <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
+        <img src="/msg-bg.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none" }} />
+        <div ref={listRef} style={{ position: "relative", zIndex: 1, height: "100%", overflowY: "auto", padding: "14px 12px" }}>
         {loading ? (
           <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
         ) : msgs.length === 0 ? (
@@ -11352,6 +11456,7 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Composer */}
@@ -11392,11 +11497,33 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
       {showMembers && (
         <div onClick={() => setShowMembers(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 620, display: "flex", alignItems: "flex-end" }}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxHeight: "78vh", overflowY: "auto", padding: "20px 16px 30px" }}>
+            {isModerator && members.filter(m => m.status === "pending").length > 0 && (
+              <>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.rouge, marginBottom: 4 }}>Demandes en attente ({members.filter(m => m.status === "pending").length})</h3>
+                <p style={{ fontSize: "0.78rem", color: "#999", marginBottom: 12 }}>Ces personnes veulent rejoindre le Groupe Premium.</p>
+                {members.filter(m => m.status === "pending").map(mem => {
+                  const prof = profilesById[mem.user_id];
+                  return (
+                    <div key={mem.user_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
+                      <Avatar url={prof?.photo_url} gender={prof?.gender} size={38} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.86rem", color: G.brun }}>{prof?.name || mem.user_id.slice(0, 8)}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <span onClick={() => rejectRequest(mem.user_id)} style={{ fontSize: "0.7rem", fontWeight: 700, color: "#c00", cursor: "pointer" }}>Refuser</span>
+                        <span onClick={() => approveRequest(mem.user_id)} style={{ fontSize: "0.7rem", fontWeight: 700, color: G.rouge, cursor: "pointer" }}>Valider</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ height: 18 }} />
+              </>
+            )}
             <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, marginBottom: 4 }}>Membres du groupe</h3>
-            <p style={{ fontSize: "0.78rem", color: "#999", marginBottom: 16 }}>Tous les membres Premium ont accès au groupe, sauf ceux retirés ci-dessous.</p>
-            {members.length === 0 ? (
-              <p style={{ fontSize: "0.82rem", color: "#999" }}>Aucun rôle particulier ni exclusion pour l'instant.</p>
-            ) : members.map(mem => {
+            <p style={{ fontSize: "0.78rem", color: "#999", marginBottom: 16 }}>Membres validés par un administrateur, sauf ceux retirés ci-dessous.</p>
+            {members.filter(m => m.status === "approved").length === 0 ? (
+              <p style={{ fontSize: "0.82rem", color: "#999" }}>Aucun membre validé pour l'instant.</p>
+            ) : members.filter(m => m.status === "approved").map(mem => {
               const prof = profilesById[mem.user_id];
               const excluded = !!mem.removed_at;
               return (

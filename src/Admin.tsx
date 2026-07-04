@@ -296,6 +296,7 @@ export function AdminDesktopPage() {
     featureStatuses: "true",
     featureGiftPremium: "true",
     featureAssistant: "true",
+    featureGroupPremium: "true",
     appointmentsEnabled: "true",
     phoneAppointmentsEnabled: "true",
     physicalAppointmentsEnabled: "true",
@@ -319,7 +320,7 @@ export function AdminDesktopPage() {
       "modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises",
       "limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
       "premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days",
-      "feature_statuses","feature_gift_premium","feature_assistant",
+      "feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium",
       "appointments_enabled","phone_appointments_enabled","physical_appointments_enabled",
       "appointment_physical_price",
       "maintenance_mode","maintenance_message",
@@ -359,6 +360,7 @@ export function AdminDesktopPage() {
         featureStatuses: map["feature_statuses"] || c.featureStatuses,
         featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium,
         featureAssistant: map["feature_assistant"] || c.featureAssistant,
+        featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
         appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
         phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
         physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
@@ -624,6 +626,7 @@ export function AdminDesktopPage() {
                 ["physical_appointments_enabled", "physicalAppointmentsEnabled" as keyof typeof appConfig, "Rendez-vous physiques (agence)"],
                 ["feature_gift_premium", "featureGiftPremium" as keyof typeof appConfig, "Cadeau Premium"],
                 ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
+                ["feature_group_premium", "featureGroupPremium" as keyof typeof appConfig, "Groupe Premium"],
               ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
                   <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>{label}</div>
@@ -1570,7 +1573,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -1578,7 +1581,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -1627,7 +1630,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
-        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
+        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
           <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
             <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
             <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => { const v = appConfig[ck] !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, [ck]: v })); await patch(key, v); }} />
@@ -2791,7 +2794,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Onglet actif ──
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing" | "appointments">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing" | "appointments" | "groupe">("stats");
   const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage">("avis");
   // ── SONDAGES ──
   const DEFAULT_SURVEY_QUESTIONS = [
@@ -3902,6 +3905,59 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [featurePendingCount, setFeaturePendingCount] = useState(0);
   const [proposalsBadgeCount, setProposalsBadgeCount] = useState(0);
   const [appointmentsPendingCount, setAppointmentsPendingCount] = useState(0);
+  const [groupMembers, setGroupMembers] = useState<{ user_id: string; role: "admin" | "moderator" | "member"; status: "pending" | "approved" | "rejected"; removed_at?: string | null; profile?: { name: string; photo_url?: string | null; gender?: string } }[]>([]);
+  const [groupMembersLoading, setGroupMembersLoading] = useState(false);
+  const groupPendingCount = groupMembers.filter(m => m.status === "pending").length;
+
+  const loadGroupMembers = async () => {
+    if (!auth) return;
+    setGroupMembersLoading(true);
+    try {
+      const rows = await fetch(`${SUPABASE_URL}/rest/v1/group_members?select=user_id,role,status,removed_at&order=requested_at.asc`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json());
+      const list = Array.isArray(rows) ? rows : [];
+      const ids = list.map((r: any) => r.user_id);
+      let profiles: any[] = [];
+      if (ids.length) {
+        profiles = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,name,photo_url,gender`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).catch(() => []);
+      }
+      const profById: Record<string, any> = {};
+      (Array.isArray(profiles) ? profiles : []).forEach(p => { profById[p.id] = p; });
+      setGroupMembers(list.map((r: any) => ({ ...r, profile: profById[r.user_id] })));
+    } catch {}
+    setGroupMembersLoading(false);
+  };
+  // Badge visible même sans avoir ouvert l'onglet, mis à jour périodiquement
+  useEffect(() => {
+    if (!auth) return;
+    loadGroupMembers();
+    const iv = setInterval(loadGroupMembers, 30000);
+    return () => clearInterval(iv);
+  }, [auth?.token]);
+  const approveGroupRequest = async (userId: string) => {
+    if (!auth) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "approved", decided_at: new Date().toISOString(), decided_by: auth.userId }) });
+    loadGroupMembers();
+  };
+  const rejectGroupRequest = async (userId: string) => {
+    if (!auth) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "rejected", decided_at: new Date().toISOString(), decided_by: auth.userId }) });
+    loadGroupMembers();
+  };
+  const removeGroupMember = async (userId: string) => {
+    if (!auth) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ removed_at: new Date().toISOString(), removed_by: auth.userId }) });
+    loadGroupMembers();
+  };
+  const restoreGroupMember = async (userId: string) => {
+    if (!auth) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ removed_at: null }) });
+    loadGroupMembers();
+  };
+  const setGroupMemberRole = async (userId: string, role: "admin" | "moderator" | "member") => {
+    if (!auth) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ role }) });
+    loadGroupMembers();
+  };
 
   const loadPayments = async () => {
     setPaymentsLoading(true);
@@ -7047,6 +7103,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["appointments", "Rendez-vous", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "appointments" ? G.vert : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>],
             ["payments", "Budget", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
+            ["groupe", "Groupe Premium", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "groupe" ? G.or : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
             <div
               key={key}
@@ -7063,13 +7120,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   setProposalsBadgeCount(0);
                   localStorage.setItem("moyo_proposals_seen", new Date().toISOString());
                 }
+                if (key === "groupe") loadGroupMembers();
               }}
               style={{
                 ...(window.innerWidth >= 640 ? { flex: 1 } : { flexShrink: 0 }),
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                 padding: "10px 12px 12px", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
-                color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : key === "marketing" ? "#E67E22" : G.rouge) : "#999",
-                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : key === "marketing" ? "#E67E22" : G.rouge}` : "2.5px solid transparent",
+                color: activeTab === key ? (key === "reviews" ? "#B8860B" : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : key === "marketing" ? "#E67E22" : key === "groupe" ? G.or : G.rouge) : "#999",
+                borderBottom: activeTab === key ? `2.5px solid ${key === "reviews" ? G.or : key === "payments" ? "#27ae60" : key === "logs" ? "#8e44ad" : key === "marketing" ? "#E67E22" : key === "groupe" ? G.or : G.rouge}` : "2.5px solid transparent",
                 transition: "all 0.2s", whiteSpace: "nowrap",
               }}
             >
@@ -7109,6 +7167,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {key === "marketing" && featurePendingCount > 0 && (
                   <span style={{ background: G.blanc, color: "#E67E22", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(230,126,34,0.2)", border: "1px solid rgba(230,126,34,0.15)" }}>
                     {featurePendingCount > 99 ? "99+" : featurePendingCount}
+                  </span>
+                )}
+                {key === "groupe" && groupPendingCount > 0 && (
+                  <span style={{ background: G.blanc, color: G.or, borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(212,168,67,0.25)", border: "1px solid rgba(212,168,67,0.2)" }}>
+                    {groupPendingCount > 99 ? "99+" : groupPendingCount}
                   </span>
                 )}
               </div>
@@ -9373,6 +9436,72 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "appointments" && (
         <div style={{ padding: "0 4px" }}>
           <AdminAppointments auth={auth!} showToast={showToast} />
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET GROUPE PREMIUM (demandes d'adhésion + modération) */}
+      {activeTab === "groupe" && (
+        <div style={{ padding: "16px" }}>
+          {groupMembersLoading && groupMembers.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>⭐ Groupe Premium</div>
+                <Btn variant="ghost" onClick={loadGroupMembers} style={{ fontSize: "0.78rem", padding: "6px 12px" }}>↻ Rafraîchir</Btn>
+              </div>
+              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 20 }}>Un seul groupe global, accès réservé aux membres Premium, validé manuellement.</p>
+
+              {/* Demandes en attente */}
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.rouge, marginBottom: 8 }}>Demandes en attente ({groupPendingCount})</div>
+              {groupMembers.filter(m => m.status === "pending").length === 0 ? (
+                <p style={{ fontSize: "0.82rem", color: "#999", marginBottom: 22 }}>Aucune demande en attente.</p>
+              ) : (
+                <div style={{ marginBottom: 22, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {groupMembers.filter(m => m.status === "pending").map(mem => (
+                    <div key={mem.user_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(212,168,67,0.06)", borderRadius: 12 }}>
+                      <Avatar url={mem.profile?.photo_url} gender={mem.profile?.gender} size={38} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.86rem", color: G.brun }}>{mem.profile?.name || mem.user_id.slice(0, 8)}</div>
+                      </div>
+                      <Btn variant="ghost" onClick={() => rejectGroupRequest(mem.user_id)} style={{ fontSize: "0.75rem", padding: "6px 12px", color: "#c00" }}>Refuser</Btn>
+                      <Btn variant="primary" onClick={() => approveGroupRequest(mem.user_id)} style={{ fontSize: "0.75rem", padding: "6px 12px" }}>Valider</Btn>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Membres validés */}
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun, marginBottom: 8 }}>Membres validés ({groupMembers.filter(m => m.status === "approved").length})</div>
+              {groupMembers.filter(m => m.status === "approved").length === 0 ? (
+                <p style={{ fontSize: "0.82rem", color: "#999" }}>Aucun membre validé pour l'instant.</p>
+              ) : groupMembers.filter(m => m.status === "approved").map(mem => {
+                const excluded = !!mem.removed_at;
+                return (
+                  <div key={mem.user_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
+                    <Avatar url={mem.profile?.photo_url} gender={mem.profile?.gender} size={38} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.86rem", color: G.brun }}>{mem.profile?.name || mem.user_id.slice(0, 8)}</div>
+                      <div style={{ fontSize: "0.72rem", color: excluded ? "#c00" : mem.role === "admin" ? G.or : mem.role === "moderator" ? G.rouge : "#999" }}>
+                        {excluded ? "Retiré du groupe" : mem.role === "admin" ? "Administrateur" : mem.role === "moderator" ? "Modérateur" : "Membre"}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {excluded ? (
+                        <span onClick={() => restoreGroupMember(mem.user_id)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.rouge, cursor: "pointer" }}>Réintégrer</span>
+                      ) : (
+                        <>
+                          {mem.role !== "moderator" && mem.role !== "admin" && <span onClick={() => setGroupMemberRole(mem.user_id, "moderator")} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>Nommer modérateur</span>}
+                          {mem.role === "moderator" && <span onClick={() => setGroupMemberRole(mem.user_id, "member")} style={{ fontSize: "0.75rem", fontWeight: 700, color: "#999", cursor: "pointer" }}>Retirer le rôle</span>}
+                          {mem.role !== "admin" && <span onClick={() => removeGroupMember(mem.user_id)} style={{ fontSize: "0.75rem", fontWeight: 700, color: "#c00", cursor: "pointer" }}>Retirer du groupe</span>}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
       )}
 
