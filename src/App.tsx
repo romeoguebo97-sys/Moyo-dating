@@ -1319,6 +1319,8 @@ const GLOBAL_CSS = `
     background-size: 200px 200px;
   }
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  @keyframes waveBounce{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
+  .wave-bar-live{animation:waveBounce 0.9s ease-in-out infinite}
   @keyframes shimmer{0%{background-position:-450px 0}100%{background-position:450px 0}}
   .skeleton{background:#e7e4dd;background-image:linear-gradient(90deg,rgba(255,255,255,0) 0,rgba(255,255,255,0.7) 50%,rgba(255,255,255,0) 100%);background-size:450px 100%;background-repeat:no-repeat;animation:shimmer 1.25s ease-in-out infinite;border-radius:10px}
   button{transition:transform .12s cubic-bezier(.34,1.56,.64,1)}
@@ -4121,7 +4123,7 @@ const BOT_FAQ = [
   { q: ["sombre", "thème", "dark", "nuit"], r: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
   { q: ["annuler", "unmatch", "fin"], r: "Dans Matchs → 3 traits → Annuler le match. La conversation et les messages sont supprimés. L'autre personne n'est pas notifiée." },
   { q: ["répondre", "citer", "reply", "bandeau", "réponse message"], r: "Appuyez longuement sur un message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
-  { q: ["vocal", "note vocale", "message vocal", "micro", "audio", "enregistrer message"], r: "L'envoi de messages vocaux est réservé aux membres Premium (l'écoute d'un vocal reçu est libre pour tous). Maintenez appuyé le bouton micro pour enregistrer (1 minute max), glissez vers la gauche pour annuler ou vers le haut pour verrouiller l'enregistrement mains libres. Avant l'envoi, vous pouvez réécouter votre vocal et choisir entre 🎤 Vocal normal (lecture illimitée, vitesses x1/x1.5/x2) ou 🔥 Vocal à écoute unique (il se détruit automatiquement dès que le destinataire a fini de l'écouter)." },
+  { q: ["vocal", "note vocale", "message vocal", "micro", "audio", "enregistrer message"], r: "L'envoi de messages vocaux est réservé aux membres Premium (l'écoute d'un vocal reçu est libre pour tous). Maintenez appuyé le bouton micro pour enregistrer (1 minute max), glissez vers la gauche pour annuler ou vers le haut pour verrouiller l'enregistrement mains libres. Avant l'envoi, vous pouvez réécouter votre vocal et choisir entre Vocal normal (lecture illimitée, vitesses x1/x1.5/x2) ou Écoute unique (il se détruit automatiquement dès que le destinataire a fini de l'écouter)." },
   { q: ["offrir premium", "demander premium", "cadeau premium", "offrir abonnement", "demander abonnement", "demander cadeau", "cadeau doré"], r: "Dans une conversation : si vous êtes Premium et que l'autre ne l'est pas, un bouton cadeau doré 🎁 permet de lui offrir Premium. Si vous n'êtes pas Premium et que l'autre l'est, un bouton 💝 permet de lui demander de vous l'offrir (une fenêtre de confirmation s'ouvre ; limite de 2 demandes par mois et par conversation). La personne reçoit alors un message avec un bouton pour offrir Premium en un clic." },
   { q: ["modifier message", "éditer message", "corriger message"], r: "Appuyez longuement sur l'un de vos messages → Modifier (possible pendant 15 minutes après l'envoi). Le message modifié affiche la mention 'modifié'." },
   { q: ["supprimer message", "effacer message", "pour moi", "pour tous"], r: "Appuyez longuement sur un message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté)." },
@@ -7734,7 +7736,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff" }}>🔥 Vocal à écoute unique</div>
+          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff" }}>Vocal à écoute unique</div>
           <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.85)" }}>Envoyé</div>
         </div>
       </div>
@@ -7749,7 +7751,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>}
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>🔥 Vocal à écoute unique</div>
+          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>Vocal à écoute unique</div>
           <div style={{ fontSize: "0.72rem", color: G.rouge, fontWeight: 600 }}>{onceLoading ? "Chargement…" : "Appuie pour écouter"}</div>
         </div>
       </div>
@@ -7780,7 +7782,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
           style={{ display: "flex", alignItems: "center", gap: 1.5, height: 24, cursor: m.is_view_once ? "default" : "pointer" }}>
           {bars.map((v, idx) => {
             const played = idx / bars.length <= ratio;
-            return <div key={idx} style={{ width: 3, borderRadius: 2, height: `${Math.max(15, v * 100)}%`, background: isMine ? (played ? "#fff" : "rgba(255,255,255,0.4)") : (played ? G.rouge : "rgba(44,26,14,0.18)"), flexShrink: 0 }} />;
+            return <div key={idx} className={playing ? "wave-bar-live" : undefined} style={{ width: 3, borderRadius: 2, height: `${Math.max(15, v * 100)}%`, background: isMine ? (played ? "#fff" : "rgba(255,255,255,0.4)") : (played ? G.rouge : "rgba(44,26,14,0.18)"), flexShrink: 0, animationDelay: playing ? `${(idx % 8) * 0.07}s` : undefined }} />;
           })}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 3 }}>
@@ -7855,15 +7857,20 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const AUDIO_MAX_MS = 60_000; // 1 minute max
   const AUDIO_CANCEL_PX = 90;  // glissement gauche pour révéler/déclencher la corbeille
   const AUDIO_LOCK_PX = 70;    // glissement haut pour verrouiller
-  const [recState, setRecState] = useState<"idle" | "recording" | "locked">("idle");
+  const [recState, setRecState] = useState<"idle" | "recording" | "locked" | "review">("idle");
+  const [micPermState, setMicPermState] = useState<"unknown" | "granted" | "denied" | "prompt">("unknown");
+  const [showMicIntro, setShowMicIntro] = useState(false); // modal Moyo affiché AVANT la demande native du navigateur
+  const [showMicBlocked, setShowMicBlocked] = useState(false); // micro refusé précédemment : on ne peut pas re-déclencher le popup natif
   const [recDuration, setRecDuration] = useState(0); // secondes, mis à jour ~10x/s pendant l'enregistrement
   const [recLevels, setRecLevels] = useState<number[]>([]); // ondes en temps réel (fenêtre glissante affichée)
   const [recDragX, setRecDragX] = useState(0); // décalage horizontal du doigt (0 → -AUDIO_CANCEL_PX)
   const [recCanceling, setRecCanceling] = useState(false);
-  const [audioPreview, setAudioPreview] = useState<{ url: string; blob: Blob; duration: number; wave: number[] } | null>(null);
-  const [audioPreviewOnce, setAudioPreviewOnce] = useState(false);
-  const [audioPreviewPlaying, setAudioPreviewPlaying] = useState(false);
-  const [audioPreviewTime, setAudioPreviewTime] = useState(0);
+  // État "review" : enregistrement terminé (micro verrouillé relâché), en attente d'action (Supprimer/
+  // Écoute unique/Préécouter/Envoyer) — affiché en ligne sous la barre, jamais en plein écran.
+  const [reviewData, setReviewData] = useState<{ url: string; blob: Blob; duration: number; wave: number[] } | null>(null);
+  const [reviewOnce, setReviewOnce] = useState(false);
+  const [reviewPlaying, setReviewPlaying] = useState(false);
+  const [reviewTime, setReviewTime] = useState(0);
   const [audioSending, setAudioSending] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -7878,8 +7885,36 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const recLockedRef = useRef(false);
   const recCancelRef = useRef(false);
   const recPendingReleaseRef = useRef(false); // doigt relâché avant même que getUserMedia() ait résolu
-  const audioPreviewElRef = useRef<HTMLAudioElement | null>(null);
+  const reviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const destroyedAudioIdsRef = useRef<Set<string>>(new Set());
+
+  // ── Détecte l'état actuel de la permission micro (une seule fois), pour éviter de redemander
+  //    inutilement l'autorisation à chaque enregistrement. Repli sur localStorage si l'API
+  //    Permissions n'est pas disponible (Safari notamment). ──
+  useEffect(() => {
+    let status: any = null;
+    (async () => {
+      try {
+        status = await (navigator as any).permissions?.query?.({ name: "microphone" });
+        if (status) {
+          setMicPermState(status.state);
+          status.onchange = () => setMicPermState(status.state);
+          return;
+        }
+      } catch {}
+      try {
+        if (localStorage.getItem(`moyo_mic_granted_${auth.userId}`) === "1") setMicPermState("granted");
+      } catch {}
+    })();
+    return () => { if (status) status.onchange = null; };
+  }, [auth.userId]);
+
+  // ── Le flux micro est mis en cache (voir getMicStream) pour ne demander l'autorisation qu'une
+  //    seule fois par session : on ne le coupe VRAIMENT qu'à la fermeture de la messagerie. ──
+  useEffect(() => () => {
+    mediaStreamRef.current?.getTracks().forEach(t => t.stop());
+    mediaStreamRef.current = null;
+  }, []);
   // Défilement vers le message cité (clic sur la citation)
   const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
@@ -8861,60 +8896,95 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     recAnalyserRef.current = null;
   };
   const cleanupRecordingStream = () => {
-    mediaStreamRef.current?.getTracks().forEach(t => t.stop());
-    mediaStreamRef.current = null;
+    // Important : on NE coupe PLUS le flux micro ici. On le garde en cache (mediaStreamRef) pour
+    // toute la durée de la conversation, afin de ne jamais redemander l'autorisation au navigateur
+    // entre deux vocaux. Il n'est réellement libéré qu'à la fermeture de la messagerie (cf. useEffect
+    // de nettoyage plus haut).
     mediaRecorderRef.current = null;
   };
 
-  // Démarre l'enregistrement (appui long sur le micro). Réservé Premium.
-  const startRecording = async () => {
-    if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
-    if (!open || recState !== "idle") return;
+  // Récupère le flux micro : réutilise le flux déjà en cache s'il est encore actif, sinon le demande
+  // (c'est cet appel qui déclenche, le cas échéant, le popup natif du navigateur/OS — une seule fois).
+  const getMicStream = async (): Promise<MediaStream | null> => {
+    const existing = mediaStreamRef.current;
+    if (existing && existing.getAudioTracks().some(t => t.readyState === "live")) return existing;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
-      recChunksRef.current = [];
-      recAllLevelsRef.current = [];
-      recCancelRef.current = false;
-      recLockedRef.current = false;
-      recPendingReleaseRef.current = false;
-      setRecCanceling(false); setRecDragX(0); setRecDuration(0); setRecLevels([]);
-      const mimeType = (window as any).MediaRecorder?.isTypeSupported?.("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : ((window as any).MediaRecorder?.isTypeSupported?.("audio/mp4") ? "audio/mp4" : "");
-      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      mediaRecorderRef.current = rec;
-      rec.ondataavailable = (e) => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
-      rec.start();
-      recStartRef.current = Date.now();
-      setRecState("recording");
-      // Si le doigt a déjà été relâché pendant l'attente de la permission micro, on termine tout de suite.
-      if (recPendingReleaseRef.current) { setTimeout(() => finishRecording(recCancelRef.current), 0); return; }
-      try { (navigator as any).vibrate?.(15); } catch {}
-      // Analyse en temps réel du niveau sonore → alimente l'animation des ondes de la bulle flottante
-      const ctx = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
-      recAudioCtxRef.current = ctx;
-      const src = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      src.connect(analyser);
-      recAnalyserRef.current = analyser;
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      const tick = () => {
-        analyser.getByteFrequencyData(data);
-        const avg = data.reduce((a, b) => a + b, 0) / data.length / 255;
-        recAllLevelsRef.current.push(avg);
-        setRecLevels(prev => { const next = [...prev, avg]; return next.length > 40 ? next.slice(-40) : next; });
-        const elapsed = (Date.now() - recStartRef.current) / 1000;
-        setRecDuration(elapsed);
-        if (elapsed * 1000 >= AUDIO_MAX_MS) { finishRecording(false); return; }
-        recRafRef.current = requestAnimationFrame(tick);
-      };
-      recRafRef.current = requestAnimationFrame(tick);
+      setMicPermState("granted");
+      try { localStorage.setItem(`moyo_mic_granted_${auth.userId}`, "1"); } catch {}
+      return stream;
     } catch {
-      setToast({ msg: "Micro inaccessible. Vérifie les autorisations de l'application.", type: "error" });
+      setMicPermState("denied");
+      return null;
     }
   };
 
+  // Démarre effectivement l'enregistrement à partir d'un flux déjà obtenu.
+  // locked=true : démarrage mains libres direct (ex. juste après confirmation du modal Moyo,
+  // quand le doigt n'est plus sur le bouton micro).
+  const beginRecordingWithStream = (stream: MediaStream, locked: boolean) => {
+    recChunksRef.current = [];
+    recAllLevelsRef.current = [];
+    recCancelRef.current = false;
+    recLockedRef.current = locked;
+    recPendingReleaseRef.current = false;
+    setRecCanceling(false); setRecDragX(0); setRecDuration(0); setRecLevels([]);
+    const mimeType = (window as any).MediaRecorder?.isTypeSupported?.("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : ((window as any).MediaRecorder?.isTypeSupported?.("audio/mp4") ? "audio/mp4" : "");
+    const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    mediaRecorderRef.current = rec;
+    rec.ondataavailable = (e) => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
+    rec.start();
+    recStartRef.current = Date.now();
+    setRecState(locked ? "locked" : "recording");
+    // Si le doigt a déjà été relâché pendant l'attente de la permission micro, on termine tout de suite.
+    if (!locked && recPendingReleaseRef.current) { setTimeout(() => finishRecording(recCancelRef.current), 0); return; }
+    try { (navigator as any).vibrate?.(15); } catch {}
+    // Analyse en temps réel du niveau sonore → alimente l'animation des ondes de la bulle flottante
+    const ctx = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
+    recAudioCtxRef.current = ctx;
+    const src = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    src.connect(analyser);
+    recAnalyserRef.current = analyser;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    const tick = () => {
+      analyser.getByteFrequencyData(data);
+      const avg = data.reduce((a, b) => a + b, 0) / data.length / 255;
+      recAllLevelsRef.current.push(avg);
+      setRecLevels(prev => { const next = [...prev, avg]; return next.length > 40 ? next.slice(-40) : next; });
+      const elapsed = (Date.now() - recStartRef.current) / 1000;
+      setRecDuration(elapsed);
+      if (elapsed * 1000 >= AUDIO_MAX_MS) { finishRecording(false); return; }
+      recRafRef.current = requestAnimationFrame(tick);
+    };
+    recRafRef.current = requestAnimationFrame(tick);
+  };
+
+  // Démarre l'enregistrement (appui long sur le micro, permission déjà acquise). Réservé Premium.
+  const startRecording = async () => {
+    if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
+    if (!open || recState !== "idle") return;
+    const stream = await getMicStream();
+    if (!stream) { setToast({ msg: "Micro inaccessible. Vérifie les autorisations de l'application.", type: "error" }); return; }
+    beginRecordingWithStream(stream, false);
+  };
+
+  // Appelée depuis le modal Moyo (voir plus bas) une fois que l'utilisateur a confirmé vouloir
+  // autoriser le micro. Comme le doigt n'est plus sur le bouton à ce moment-là, l'enregistrement
+  // démarre directement en mode mains libres (verrouillé) : l'utilisateur peut parler tout de suite.
+  const confirmMicIntro = async () => {
+    setShowMicIntro(false);
+    if (!open || recState !== "idle") return;
+    const stream = await getMicStream();
+    if (!stream) { setShowMicBlocked(true); return; }
+    beginRecordingWithStream(stream, true);
+  };
+
   // Termine l'enregistrement : cancel=true → jette tout ; cancel=false → ouvre l'écran d'aperçu.
+  // Termine l'enregistrement : cancel=true → jette tout ; cancel=false → passe en mode "review"
+  // (panneau inline sous la barre, jamais un écran plein écran).
   const finishRecording = (cancel: boolean) => {
     const rec = mediaRecorderRef.current;
     stopAnalyserLoop();
@@ -8930,33 +9000,24 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       const duration = (Date.now() - recStartRef.current) / 1000;
       const wave = downsampleWave(recAllLevelsRef.current, 40);
       const url = URL.createObjectURL(blob);
-      setRecState("idle"); setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0);
-      setAudioPreviewOnce(false); setAudioPreviewPlaying(false); setAudioPreviewTime(0);
-      setAudioPreview({ url, blob, duration, wave });
+      setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0);
+      setReviewOnce(false); setReviewPlaying(false); setReviewTime(0);
+      setReviewData({ url, blob, duration, wave });
+      setRecState("review");
     };
     if (rec.state !== "inactive") rec.stop(); else rec.onstop(null as any);
   };
 
-  // Envoi rapide depuis la barre verrouillée (raccourci : envoie directement en vocal normal, sans passer par l'aperçu).
-  const quickSendLockedRecording = () => {
-    const rec = mediaRecorderRef.current;
-    stopAnalyserLoop();
-    if (!rec) return;
-    rec.onstop = async () => {
-      cleanupRecordingStream();
-      const mime = rec.mimeType || "audio/webm";
-      const blob = new Blob(recChunksRef.current, { type: mime });
-      const duration = (Date.now() - recStartRef.current) / 1000;
-      const wave = downsampleWave(recAllLevelsRef.current, 40);
-      setRecState("idle"); setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0);
-      await uploadAndSendAudio(blob, duration, wave, false);
-    };
-    if (rec.state !== "inactive") rec.stop();
-  };
-
   // Gestes sur le bouton micro : appui long = enregistrer, glisser à gauche = annuler, glisser en haut = verrouiller.
+  // Si la permission micro n'a jamais été accordée (ou n'est pas encore confirmée dans ce navigateur),
+  // on affiche d'abord notre propre modal Moyo — le popup natif du navigateur n'apparaît qu'ensuite,
+  // et une seule fois pour toute la durée de vie de l'app sur cet appareil.
   const onMicPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
+    if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
+    if (micPermState === "denied") { setShowMicBlocked(true); return; }
+    const hasLiveStream = mediaStreamRef.current?.getAudioTracks().some(t => t.readyState === "live");
+    if (micPermState !== "granted" && !hasLiveStream) { setShowMicIntro(true); return; }
     recPointerStartRef.current = { x: e.clientX, y: e.clientY };
     startRecording();
   };
@@ -8980,12 +9041,17 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     }
   };
   const onMicPointerUp = () => {
-    if (recState === "locked") { recPointerStartRef.current = null; return; } // reste enregistré, attend un geste manuel
+    if (recState === "locked") { recPointerStartRef.current = null; return; } // reste enregistré, attend un tap sur le micro verrouillé
     if (recState !== "recording") { recPointerStartRef.current = null; return; }
     const shouldCancel = recCancelRef.current;
     recPointerStartRef.current = null;
     if (shouldCancel) { try { (navigator as any).vibrate?.(30); } catch {} }
     finishRecording(shouldCancel);
+  };
+  // Tap sur le micro verrouillé : arrête l'enregistrement et ouvre le panneau "review" (4 actions).
+  const stopLockedRecording = () => {
+    try { (navigator as any).vibrate?.(15); } catch {}
+    finishRecording(false);
   };
 
   // Upload Supabase Storage (bucket "messages", déjà utilisé pour les photos) puis insertion du message.
@@ -9013,18 +9079,30 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     } catch { setToast({ msg: "Échec de l'envoi du vocal", type: "error" }); }
     setAudioSending(false);
   };
-  // Envoi depuis l'écran d'aperçu (avec le mode choisi : normal ou vue unique)
-  const confirmSendAudio = async () => {
-    if (!audioPreview) return;
-    const { blob, duration, wave, url } = audioPreview;
-    const once = audioPreviewOnce;
-    setAudioPreview(null); setAudioPreviewOnce(false); setAudioPreviewPlaying(false); setAudioPreviewTime(0);
-    URL.revokeObjectURL(url);
-    await uploadAndSendAudio(blob, duration, wave, once);
+  // ── Les 4 actions du panneau "review" ──
+  // 🗑 Supprimer : jette l'enregistrement, retour à la barre normale.
+  const discardReview = () => {
+    setReviewData(prev => { if (prev) URL.revokeObjectURL(prev.url); return null; });
+    setReviewOnce(false); setReviewPlaying(false); setReviewTime(0);
+    setRecState("idle");
   };
-  const cancelAudioPreview = () => {
-    setAudioPreview(prev => { if (prev) URL.revokeObjectURL(prev.url); return null; });
-    setAudioPreviewOnce(false); setAudioPreviewPlaying(false); setAudioPreviewTime(0);
+  // Écoute unique : simple bascule visuelle, appliquée seulement à l'envoi.
+  const toggleReviewOnce = () => setReviewOnce(v => !v);
+  // ▶ Préécouter : joue/mette en pause le vocal en cours de révision (la forme d'onde reste animée pendant la lecture).
+  const toggleReviewPlay = () => {
+    const el = reviewAudioRef.current;
+    if (!el) return;
+    if (reviewPlaying) el.pause(); else el.play().catch(() => {});
+  };
+  // ➤ Envoyer : envoi immédiat, normal ou à écoute unique selon la bascule.
+  const sendReview = async () => {
+    if (!reviewData) return;
+    const { blob, duration, wave, url } = reviewData;
+    const once = reviewOnce;
+    setReviewData(null); setReviewOnce(false); setReviewPlaying(false); setReviewTime(0);
+    URL.revokeObjectURL(url);
+    setRecState("idle");
+    await uploadAndSendAudio(blob, duration, wave, once);
   };
 
   // Vocal à écoute unique : charge le fichier en mémoire pour lecture (la destruction serveur
@@ -9667,7 +9745,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                     onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
                   >
                     {!m.is_view_once && !m.is_destroyed && (
-                      <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 6, right: isMine ? "auto" : 6, left: isMine ? 6 : "auto", zIndex: 3, cursor: "pointer", width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.78)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
+                      <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 6, right: 6, zIndex: 3, cursor: "pointer", width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.78)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                       </div>
                     )}
@@ -9944,68 +10022,138 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
           )}
         </div>
         ) : recState === "recording" ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", position: "relative" }}>
-          {/* Bulle flottante façon Snapchat, au-dessus de la barre : ondes en temps réel + durée + hint d'annulation */}
-          <div style={{ position: "absolute", bottom: "100%", left: 12, right: 12, marginBottom: 10, background: "#1c1c1e", borderRadius: 18, padding: "14px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.32)", display: "flex", flexDirection: "column", gap: 9 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite" }} />
-              <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.85rem" }}>{fmtAudioTime(recDuration)}</span>
-              <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", marginLeft: "auto" }}>max 1:00</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 2, height: 30 }}>
-              {(recLevels.length ? recLevels : Array.from({ length: 20 }, () => 0.12)).map((v, i) => (
-                <div key={i} style={{ width: 3, borderRadius: 2, height: `${Math.max(10, v * 100)}%`, background: "#fff", flexShrink: 0 }} />
-              ))}
-            </div>
-            {recCanceling ? (
-              <div style={{ textAlign: "center", color: "#ff3b30", fontSize: "0.78rem", fontWeight: 700 }}>Relâche pour annuler</div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: "rgba(255,255,255,0.5)", fontSize: "0.72rem" }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                Glisser pour annuler · vers le haut pour verrouiller
+        <div style={{ padding: "10px 12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 30, padding: "10px 18px 10px 16px", minHeight: 48 }}>
+              {/* Poubelle qui apparaît et grossit à gauche pendant le glissement */}
+              {recDragX < -4 && (
+                <div style={{ position: "absolute", left: -8, top: "50%", transform: "translateY(-50%)", width: 34 + Math.min(16, -recDragX * 0.2), height: 34 + Math.min(16, -recDragX * 0.2), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </div>
+              )}
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
+              <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 2, height: 26, overflow: "hidden" }}>
+                {(recLevels.length ? recLevels : Array.from({ length: 24 }, () => 0.12)).map((v, i) => (
+                  <div key={i} style={{ width: 3, borderRadius: 2, height: `${Math.max(10, v * 100)}%`, background: "#fff", flexShrink: 0 }} />
+                ))}
               </div>
-            )}
-          </div>
-          {/* Zone de gauche : poubelle qui grossit pendant le glissement */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-            <div style={{ width: 36 + Math.min(16, -recDragX * 0.22), height: 36 + Math.min(16, -recDragX * 0.22), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s, width 0.05s, height 0.05s", flexShrink: 0 }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={recCanceling ? "#fff" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
-            <span style={{ fontSize: "0.8rem", color: "#888", fontWeight: 600 }}>Enregistrement…</span>
-          </div>
-          {/* Bouton micro : reste au même endroit, capte le glissement du doigt */}
-          <div
-            onPointerMove={onMicPointerMove}
-            onPointerUp={onMicPointerUp}
-            onPointerCancel={onMicPointerUp}
-            style={{ width: 52, height: 52, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, boxShadow: "0 0 0 8px rgba(192,57,43,0.12)", touchAction: "none" }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
-          </div>
-        </div>
-        ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
-          {/* Verrouillé : poubelle (annuler) */}
-          <div onClick={() => finishRecording(true)} style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: G.creme, border: `2px solid ${G.gris}`, borderRadius: 20, padding: "8px 12px", minWidth: 0 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
-            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 1.5, height: 20, flex: 1, overflow: "hidden" }}>
-              {(recLevels.length ? recLevels.slice(-26) : Array.from({ length: 20 }, () => 0.15)).map((v, i) => (
-                <div key={i} style={{ width: 3, borderRadius: 2, height: `${Math.max(15, v * 100)}%`, background: G.rouge, flexShrink: 0 }} />
-              ))}
+            {/* Bouton micro : chevauche le bord droit de la pastille, capte le glissement du doigt */}
+            <div
+              onPointerMove={onMicPointerMove}
+              onPointerUp={onMicPointerUp}
+              onPointerCancel={onMicPointerUp}
+              style={{ width: 52, height: 52, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, boxShadow: "0 0 0 8px rgba(192,57,43,0.12)", touchAction: "none", marginLeft: -26, zIndex: 2 }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
             </div>
           </div>
-          <div onClick={() => finishRecording(false)} title="Arrêter et prévisualiser" style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(44,26,14,0.06)", border: `1.5px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill={G.brun}><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
-          </div>
-          <div onClick={quickSendLockedRecording} title="Envoyer" style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, padding: "0 6px" }}>
+            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: recCanceling ? G.rouge : "#999", display: "flex", alignItems: "center", gap: 4 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              {recCanceling ? "Relâche pour annuler" : "Glisser pour annuler"}
+            </span>
+            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", display: "flex", alignItems: "center", gap: 4 }}>
+              Verrouiller
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            </span>
           </div>
         </div>
-        )}
+        ) : recState === "locked" ? (
+        <div style={{ padding: "10px 12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 30, padding: "10px 18px 10px 16px", minHeight: 48 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
+              <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 2, height: 26, overflow: "hidden" }}>
+                {(recLevels.length ? recLevels : Array.from({ length: 24 }, () => 0.12)).map((v, i) => (
+                  <div key={i} style={{ width: 3, borderRadius: 2, height: `${Math.max(10, v * 100)}%`, background: "#fff", flexShrink: 0 }} />
+                ))}
+              </div>
+            </div>
+            {/* Micro verrouillé : un tap arrête l'enregistrement et ouvre le panneau à 4 actions */}
+            <div onClick={stopLockedRecording} title="Arrêter l'enregistrement"
+              style={{ width: 52, height: 52, borderRadius: "50%", background: "#1c1c1e", border: `3px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, cursor: "pointer", marginLeft: -26, zIndex: 2 }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </div>
+          </div>
+          <div style={{ textAlign: "center", marginTop: 8 }}>
+            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999" }}>Appuie sur le micro pour arrêter</span>
+          </div>
+        </div>
+        ) : recState === "review" && reviewData ? (
+        <div style={{ padding: "10px 12px 14px" }}>
+          <audio
+            ref={reviewAudioRef}
+            src={reviewData.url}
+            onPlay={() => setReviewPlaying(true)}
+            onPause={() => setReviewPlaying(false)}
+            onTimeUpdate={e => setReviewTime((e.target as HTMLAudioElement).currentTime)}
+            onEnded={() => { setReviewPlaying(false); setReviewTime(0); }}
+            style={{ display: "none" }}
+          />
+          {/* Lecteur : forme d'onde toujours visible, animée en direct pendant la lecture (jamais figée) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 24, padding: "10px 16px", marginBottom: 16 }}>
+            <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.76rem", flexShrink: 0 }}>{fmtAudioTime(reviewPlaying || reviewTime > 0 ? reviewTime : reviewData.duration)}</span>
+            <div onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const el = reviewAudioRef.current; if (el && el.duration) el.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * el.duration; }}
+              style={{ flex: 1, display: "flex", alignItems: "center", gap: 2, height: 28, cursor: "pointer" }}>
+              {reviewData.wave.map((v, i) => {
+                const ratio = reviewData.duration > 0 ? reviewTime / reviewData.duration : 0;
+                const played = i / reviewData.wave.length <= ratio;
+                return (
+                  <div key={i} className={reviewPlaying ? "wave-bar-live" : undefined}
+                    style={{ width: 3, borderRadius: 2, height: `${Math.max(15, v * 100)}%`, background: played ? G.rouge : "rgba(255,255,255,0.3)", flexShrink: 0, animationDelay: reviewPlaying ? `${(i % 8) * 0.07}s` : undefined }} />
+                );
+              })}
+            </div>
+          </div>
+          {/* Les 4 actions, exactement comme demandé : Supprimer / Écoute unique / Préécouter / Envoyer */}
+          <div style={{ display: "flex", justifyContent: "space-around" }}>
+            <div onClick={discardReview} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </div>
+              <span style={{ fontSize: "0.66rem", fontWeight: 600, color: "#888" }}>Supprimer</span>
+            </div>
+            <div onClick={toggleReviewOnce} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <div style={{ width: 46, height: 46, borderRadius: "50%", background: reviewOnce ? G.rouge : "rgba(44,26,14,0.06)", border: reviewOnce ? "none" : `1.5px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={reviewOnce ? "#fff" : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <span style={{ fontSize: "0.66rem", fontWeight: 600, color: reviewOnce ? G.rouge : "#888" }}>Écoute unique</span>
+            </div>
+            <div onClick={toggleReviewPlay} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <div style={{ width: 46, height: 46, borderRadius: "50%", background: "#2c2c2e", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {reviewPlaying ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                )}
+              </div>
+              <span style={{ fontSize: "0.66rem", fontWeight: 600, color: "#888" }}>{reviewPlaying ? "Pause" : "Préécouter"}</span>
+            </div>
+            <div onClick={() => { if (!audioSending) sendReview(); }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: audioSending ? "default" : "pointer", opacity: audioSending ? 0.6 : 1 }}>
+              <div style={{ width: 46, height: 46, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {audioSending ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                ) : (
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                )}
+              </div>
+              <span style={{ fontSize: "0.66rem", fontWeight: 600, color: "#888" }}>Envoyer</span>
+            </div>
+          </div>
+          {reviewOnce && (
+            <div style={{ textAlign: "center", marginTop: 12 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#1c1c1e", color: "#fff", borderRadius: 50, padding: "6px 14px", fontSize: "0.7rem", fontWeight: 700 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Écoute unique activée
+              </span>
+            </div>
+          )}
+        </div>
+        ) : null}
       </div>
 
       {/* Menu contextuel style WhatsApp */}
@@ -10068,19 +10216,25 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                 <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
               </div>
-              <div onClick={async () => {
-                const contentToCopy = contextMenu.msg.content.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/^\[img\](.*)\[\/img\]$/, "$1").replace(/^\[audio\][\s\S]*\[\/audio\]$/, "Message vocal");
-                setContextMenu(null);
-                try {
-                  await navigator.clipboard.writeText(contentToCopy);
-                  setToast({ msg: "Message copié", type: "success" });
-                } catch {
-                  setToast({ msg: "Impossible de copier le message", type: "error" });
-                }
-              }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
-                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Copier</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              </div>
+              {(() => {
+                const m = contextMenu.msg;
+                if (m.content.startsWith("[img]") || isAudioMsg(m.content)) return null; // rien d'utile (ni permis) à copier pour une photo/un vocal
+                return (
+                  <div onClick={async () => {
+                    const contentToCopy = contextMenu.msg.content.replace(/^\[↩ .+? : .+?\]\n/, "");
+                    setContextMenu(null);
+                    try {
+                      await navigator.clipboard.writeText(contentToCopy);
+                      setToast({ msg: "Message copié", type: "success" });
+                    } catch {
+                      setToast({ msg: "Impossible de copier le message", type: "error" });
+                    }
+                  }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+                    <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Copier</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </div>
+                );
+              })()}
               <div onClick={async () => {
                 const msgId = contextMenu.msg.id;
                 setContextMenu(null);
@@ -10174,57 +10328,33 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         </div>
       )}
 
-      {/* Écran d'aperçu du vocal avant envoi : lecture, forme d'onde, mode normal / écoute unique */}
-      {audioPreview && (
-        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 510, display: "flex", flexDirection: "column" }}>
-          <audio
-            ref={audioPreviewElRef}
-            src={audioPreview.url}
-            onPlay={() => setAudioPreviewPlaying(true)}
-            onPause={() => setAudioPreviewPlaying(false)}
-            onTimeUpdate={e => setAudioPreviewTime((e.target as HTMLAudioElement).currentTime)}
-            onEnded={() => { setAudioPreviewPlaying(false); setAudioPreviewTime(0); }}
-            style={{ display: "none" }}
-          />
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
-            <div onClick={cancelAudioPreview} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
-            <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.82rem", fontWeight: 600 }}>Message vocal</span>
-            <div style={{ width: 38 }} />
+      {/* Modale Moyo : demande d'autorisation du micro, AVANT le popup natif du navigateur/OS */}
+      {showMicIntro && (
+        <div onClick={() => setShowMicIntro(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 520, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "30px 24px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+            </div>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, margin: "0 0 8px" }}>Autoriser le micro</h3>
+            <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.55, margin: "0 0 22px" }}>Moyo Dating a besoin d'accéder à ton micro pour enregistrer tes messages vocaux. Ton téléphone va te demander de confirmer juste après — une seule fois.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn variant="ghost" onClick={() => setShowMicIntro(false)} style={{ flex: 1 }}>Annuler</Btn>
+              <Btn variant="primary" onClick={confirmMicIntro} style={{ flex: 1 }}>Autoriser</Btn>
+            </div>
           </div>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 28px", gap: 22 }}>
-            <div onClick={() => { const el = audioPreviewElRef.current; if (!el) return; if (audioPreviewPlaying) el.pause(); else el.play().catch(() => {}); }}
-              style={{ width: 74, height: 74, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.4)" }}>
-              {audioPreviewPlaying ? (
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-              ) : (
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-              )}
+        </div>
+      )}
+
+      {/* Modale Moyo : micro déjà refusé, impossible de re-déclencher le popup natif depuis le JS */}
+      {showMicBlocked && (
+        <div onClick={() => setShowMicBlocked(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 520, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "30px 24px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
             </div>
-            <div onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const el = audioPreviewElRef.current; if (el && el.duration) el.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * el.duration; }}
-              style={{ display: "flex", alignItems: "center", gap: 2.5, height: 60, width: "100%", maxWidth: 320, cursor: "pointer" }}>
-              {audioPreview.wave.map((v, i) => {
-                const played = audioPreview.duration > 0 && i / audioPreview.wave.length <= audioPreviewTime / audioPreview.duration;
-                return <div key={i} style={{ width: 4, borderRadius: 2, height: `${Math.max(12, v * 100)}%`, background: played ? G.rouge : "rgba(255,255,255,0.25)", flexShrink: 0 }} />;
-              })}
-            </div>
-            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.85rem", fontWeight: 600 }}>{fmtAudioTime(audioPreviewPlaying || audioPreviewTime > 0 ? audioPreviewTime : audioPreview.duration)} / {fmtAudioTime(audioPreview.duration)}</span>
-          </div>
-          <div style={{ padding: "16px 18px 26px" }}>
-            {/* Sélecteur de mode : Vocal normal vs Vocal à écoute unique, à la manière des photos vue unique */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-              <div onClick={() => setAudioPreviewOnce(false)} style={{ flex: 1, textAlign: "center", padding: "11px 8px", borderRadius: 14, cursor: "pointer", background: !audioPreviewOnce ? G.rouge : "rgba(255,255,255,0.08)", border: `1px solid ${!audioPreviewOnce ? G.rouge : "rgba(255,255,255,0.14)"}`, transition: "all 0.15s" }}>
-                <div style={{ fontSize: "1.15rem", marginBottom: 2 }}>🎤</div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem" }}>Vocal normal</div>
-              </div>
-              <div onClick={() => setAudioPreviewOnce(true)} style={{ flex: 1, textAlign: "center", padding: "11px 8px", borderRadius: 14, cursor: "pointer", background: audioPreviewOnce ? G.rouge : "rgba(255,255,255,0.08)", border: `1px solid ${audioPreviewOnce ? G.rouge : "rgba(255,255,255,0.14)"}`, transition: "all 0.15s" }}>
-                <div style={{ fontSize: "1.15rem", marginBottom: 2 }}>🔥</div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem" }}>Écoute unique</div>
-              </div>
-            </div>
-            {audioPreviewOnce && (
-              <div style={{ color: "#aaa", fontSize: "0.74rem", textAlign: "center", marginBottom: 14, lineHeight: 1.4 }}>Ce vocal sera détruit dès que ton/ta partenaire aura fini de l'écouter.</div>
-            )}
-            <Btn variant="primary" onClick={confirmSendAudio} loading={audioSending} style={{ width: "100%" }}>Envoyer</Btn>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, margin: "0 0 8px" }}>Micro bloqué</h3>
+            <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.55, margin: "0 0 22px" }}>L'accès au micro a été refusé. Active-le depuis les réglages de ton navigateur ou de ton téléphone pour Moyo Dating, puis reviens ici.</p>
+            <Btn variant="primary" onClick={() => setShowMicBlocked(false)} style={{ width: "100%" }}>Compris</Btn>
           </div>
         </div>
       )}
