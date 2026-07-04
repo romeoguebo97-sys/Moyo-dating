@@ -9422,6 +9422,36 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     setReviewOnce(false); setReviewPlaying(false); setReviewTime(0); setReviewSpeed(1);
     setRecState("idle");
   };
+  // ── Sécurité critique : tout ce qui est "en cours de composition" (texte tapé mais pas envoyé,
+  //    note vocale enregistrée mais pas envoyée, citation en réponse, message en cours d'édition)
+  //    est strictement local à LA conversation ouverte au moment où c'est créé. Si on change de
+  //    conversation (quel que soit le chemin : fermeture normale, swipe-back, clic sur une autre
+  //    conversation dans la liste), tout ça doit disparaître — jamais se retrouver visible, et pire,
+  //    jamais pouvoir être envoyé par erreur, dans une AUTRE conversation. On se base sur l'identité
+  //    de la conversation ouverte (open?.id) plutôt que de patcher chaque fonction de sortie une par
+  //    une : ça couvre tous les chemins de navigation actuels ET futurs. ──
+  const prevOpenIdForDraftRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const newId = open?.id ?? null;
+    if (prevOpenIdForDraftRef.current === undefined) { prevOpenIdForDraftRef.current = newId; return; } // tout premier montage : rien à purger
+    if (prevOpenIdForDraftRef.current === newId) return;
+    prevOpenIdForDraftRef.current = newId;
+    setText("");
+    setReplyTo(null);
+    setEditingMsg(null);
+    if (recState === "review") {
+      discardReview();
+    } else if (recState === "recording" || recState === "locked") {
+      recCancelRef.current = true;
+      finishRecording(true);
+    } else if (recState === "requestingPermission" || recState === "cancelled") {
+      setRecState("idle");
+    }
+    activePointerIdRef.current = null;
+    recPointerStartRef.current = null;
+    recLockedRef.current = false;
+    recSuppressClickRef.current = false;
+  }, [open?.id]);
   // Écoute unique : simple bascule visuelle, appliquée seulement à l'envoi.
   const toggleReviewOnce = () => setReviewOnce(v => !v);
   // ▶ Préécouter : joue/mette en pause le vocal en cours de révision (la forme d'onde reste animée pendant la lecture).
