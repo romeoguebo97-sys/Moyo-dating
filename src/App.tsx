@@ -7867,6 +7867,7 @@ type ReportRowLike = { id?: string; reason: string; reporter_id: string; reporte
 export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
+  const [showGroup, setShowGroup] = useState(false); // Groupe Premium : écran séparé, indépendant de la logique 1-à-1
   useEffect(() => { onConvOpen?.(open !== null); }, [open]);
   // ── Favoris de conversations (swipe vers la droite) — persistés par appareil ──
   const FAV_KEY = `moyo_fav_convs_${auth.userId}`;
@@ -9603,6 +9604,14 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         <span>Statuts visibles uniquement par vos matchs</span>
       </div>
     </div>
+    <div style={{ display: "flex", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+        <div onClick={() => setShowGroup(false)} style={{ flex: 1, textAlign: "center", padding: "13px 0 11px", cursor: "pointer", borderBottom: !showGroup ? `2px solid ${G.rouge}` : "2px solid transparent" }}>
+          <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? G.rouge : "#999" }}>Messages privés</span>
+        </div>
+        <div onClick={() => { if (!auth.isPremium) { onShowPremium("L'accès au Groupe Premium est réservé aux membres Premium."); return; } setShowGroup(true); }} style={{ flex: 1, textAlign: "center", padding: "13px 0 11px", cursor: "pointer", borderBottom: showGroup ? `2px solid ${G.rouge}` : "2px solid transparent" }}>
+          <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? G.rouge : "#999" }}>Groupe</span>
+        </div>
+    </div>
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0" }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
@@ -11103,7 +11112,326 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     )}
     {/* Mobile : liste des convs (seulement si pas de conv ouverte) */}
     {!isWideMsg && !open && convList}
+    {/* Groupe Premium : overlay plein écran indépendant, pour ne pas toucher à la logique 1-à-1 */}
+    {showGroup && (
+      <div style={{ position: "fixed", inset: 0, zIndex: 600, background: G.blanc }}>
+        <GroupChat auth={auth} onBack={() => setShowGroup(false)} onShowPremium={onShowPremium} />
+      </div>
+    )}
   </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// GROUPE PREMIUM — un seul groupe global, accès réservé aux membres Premium.
+// Écran volontairement autonome (ne réutilise pas la logique de conversation 1-à-1, qui suppose
+// toujours exactement 2 participants). Réutilise en revanche VoiceMessage/isAudioMsg pour l'affichage
+// des vocaux si un jour on les active ici (voir note de bas de fichier).
+// V1 : texte + photos + réaction ❤️ + modération complète (retirer/restaurer un membre, nommer/
+// démettre un modérateur). Pas de note vocale, pas de citation en réponse, pas de "vue unique" pour
+// l'instant — voir l'explication donnée au développeur en fin de réponse.
+// ═══════════════════════════════════════════════════════════════════════
+type GroupMessage = { id?: string; sender_id: string; content: string; created_at?: string; reactions?: Record<string, string[]> };
+type GroupMemberRow = { user_id: string; role: "admin" | "moderator" | "member"; removed_at?: string | null };
+
+function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => void; onShowPremium: (r: string) => void }) {
+  // Garde-fou : si l'abonnement Premium se termine pendant que la personne est déjà dans cet écran
+  // (ou si elle y accède par un autre chemin), on bloque immédiatement l'accès — cohérent avec les
+  // policies RLS côté base de données qui font déjà la même vérification sur is_premium.
+  if (!auth.isPremium) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+          <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </div>
+          <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Groupe Premium</div>
+        </div>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 30, textAlign: "center" }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg, ${G.or}, ${G.rouge})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun }}>Réservé aux membres Premium</div>
+          <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.5, maxWidth: 260 }}>Ton abonnement Premium n'est plus actif. Réabonne-toi pour retrouver l'accès au Groupe.</p>
+          <Btn variant="primary" onClick={() => onShowPremium("L'accès au Groupe Premium est réservé aux membres Premium.")} style={{ width: "100%", maxWidth: 240 }}>Passer Premium</Btn>
+        </div>
+      </div>
+    );
+  }
+  const [msgs, setMsgs] = useState<GroupMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
+  const [myRole, setMyRole] = useState<"admin" | "moderator" | "member">("member");
+  const [isRemoved, setIsRemoved] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
+  const [members, setMembers] = useState<GroupMemberRow[]>([]);
+  const [imgLoading, setImgLoading] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [imgViewer, setImgViewer] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isModerator = myRole === "admin" || myRole === "moderator";
+
+  // Mon statut dans le groupe (rôle + éventuelle exclusion)
+  useEffect(() => {
+    (async () => {
+      try {
+        const rows = await sb.query<GroupMemberRow>(auth.token, "group_members", `?user_id=eq.${auth.userId}&select=user_id,role,removed_at`);
+        if (rows[0]) { setMyRole(rows[0].role); setIsRemoved(!!rows[0].removed_at); }
+      } catch {}
+    })();
+  }, [auth.userId, auth.token]);
+
+  // Messages + temps réel
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const rows = await sb.query<GroupMessage>(auth.token, "group_messages", `?order=created_at.asc&limit=300`);
+        if (alive) setMsgs(rows);
+      } catch {}
+      if (alive) setLoading(false);
+    })();
+    const ws = sb.subscribeRealtime(auth.token, "group_messages", `id=neq.null`, async () => {
+      try {
+        const rows = await sb.query<GroupMessage>(auth.token, "group_messages", `?order=created_at.asc&limit=300`);
+        if (alive) setMsgs(rows);
+      } catch {}
+    });
+    return () => { alive = false; ws?.close(); };
+  }, [auth.token]);
+
+  // Profils des expéditeurs affichés (nom + photo), chargés au fil des besoins
+  useEffect(() => {
+    const ids = Array.from(new Set(msgs.map(m => m.sender_id))).filter(id => !profilesById[id]);
+    if (!ids.length) return;
+    (async () => {
+      try {
+        const rows = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids.join(",")})&select=id,name,photo_url,gender,is_premium`);
+        setProfilesById(prev => { const next = { ...prev }; rows.forEach(p => { next[p.id] = p; }); return next; });
+      } catch {}
+    })();
+  }, [msgs, auth.token]);
+
+  useEffect(() => { listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }); }, [msgs.length]);
+
+  const sendText = async () => {
+    if (!text.trim() || isRemoved) return;
+    const content = text.trim();
+    setText("");
+    try {
+      const res = await sb.insert<GroupMessage>(auth.token, "group_messages", { sender_id: auth.userId, content });
+      if (res[0]) setMsgs(m => [...m, res[0]]);
+    } catch {}
+  };
+
+  const isImage = (content: string) => content.startsWith("[img]") && content.endsWith("[/img]");
+  const getImageUrl = (content: string) => content.slice(5, -6);
+
+  const onPickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file || isRemoved) return;
+    setPendingPreview(URL.createObjectURL(file));
+    setPendingFile(file);
+  };
+  const cancelPending = () => { setPendingPreview(p => { if (p) URL.revokeObjectURL(p); return null; }); setPendingFile(null); };
+  const confirmSendImage = async () => {
+    if (!pendingFile) return;
+    const file = pendingFile;
+    cancelPending();
+    setImgLoading(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `group/${auth.userId}/${Date.now()}.${ext}`;
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/messages/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${auth.token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
+        body: file,
+      });
+      if (r.ok) {
+        const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
+        const res = await sb.insert<GroupMessage>(auth.token, "group_messages", { sender_id: auth.userId, content: `[img]${url}[/img]` });
+        if (res[0]) setMsgs(m => [...m, res[0]]);
+      }
+    } catch {}
+    setImgLoading(false);
+  };
+
+  const toggleReaction = async (m: GroupMessage) => {
+    if (!m.id) return;
+    const mine = m.reactions?.["❤️"] || [];
+    const has = mine.includes(auth.userId);
+    const newReactions = { ...(m.reactions || {}), "❤️": has ? mine.filter(id => id !== auth.userId) : [...mine, auth.userId] };
+    setMsgs(list => list.map(x => x.id === m.id ? { ...x, reactions: newReactions } : x));
+    try { await sb.update(auth.token, "group_messages", m.id, { reactions: newReactions }); } catch {}
+  };
+
+  const deleteMessage = async (m: GroupMessage) => {
+    if (!m.id) return;
+    setMsgs(list => list.filter(x => x.id !== m.id));
+    try { await sb.delete(auth.token, "group_messages", `?id=eq.${m.id}`); } catch {}
+  };
+
+  // ── Modération ──
+  const loadMembers = async () => {
+    try {
+      const rows = await sb.query<GroupMemberRow>(auth.token, "group_members", `?select=user_id,role,removed_at`);
+      setMembers(rows);
+      const ids = rows.map(r => r.user_id).filter(id => !profilesById[id]);
+      if (ids.length) {
+        const rows2 = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids.join(",")})&select=id,name,photo_url,gender,is_premium`);
+        setProfilesById(prev => { const next = { ...prev }; rows2.forEach(p => { next[p.id] = p; }); return next; });
+      }
+    } catch {}
+  };
+  const openMembers = () => { setShowMembers(true); loadMembers(); };
+  const removeMember = async (userId: string) => {
+    try { await sb.upsert(auth.token, "group_members", { user_id: userId, removed_at: new Date().toISOString(), removed_by: auth.userId }); loadMembers(); } catch {}
+  };
+  const restoreMember = async (userId: string) => {
+    try { await sb.upsert(auth.token, "group_members", { user_id: userId, removed_at: null }); loadMembers(); } catch {}
+  };
+  const setRole = async (userId: string, role: "admin" | "moderator" | "member") => {
+    try { await sb.upsert(auth.token, "group_members", { user_id: userId, role, removed_at: null }); loadMembers(); } catch {}
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
+      {/* En-tête */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+        <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg, ${G.or}, ${G.rouge})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Groupe Premium</div>
+          <div onClick={openMembers} style={{ fontSize: "0.74rem", color: "#999", cursor: "pointer" }}>Voir les membres{isModerator ? " · Modération" : ""}</div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div ref={listRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 12px" }}>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+        ) : msgs.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 16px", color: "#999", fontSize: "0.85rem" }}>Sois le premier à écrire dans le groupe !</div>
+        ) : msgs.map((m, i) => {
+          const isMine = m.sender_id === auth.userId;
+          const prof = profilesById[m.sender_id];
+          const showSender = !isMine && (i === 0 || msgs[i - 1].sender_id !== m.sender_id);
+          const heartCount = (m.reactions?.["❤️"] || []).length;
+          const iReacted = (m.reactions?.["❤️"] || []).includes(auth.userId);
+          return (
+            <div key={m.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: 10 }}>
+              {showSender && <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.rouge, marginLeft: 44, marginBottom: 2 }}>{prof?.name || "..."}</div>}
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-end", maxWidth: "82%", flexDirection: isMine ? "row-reverse" : "row" }}>
+                {!isMine && <Avatar url={prof?.photo_url} gender={prof?.gender} size={30} />}
+                <div style={{ position: "relative" }}>
+                  <div onDoubleClick={() => toggleReaction(m)} style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? "#fff" : G.brun, borderRadius: 16, padding: isImage(m.content) ? 4 : "9px 13px", fontSize: "0.88rem", lineHeight: 1.4, boxShadow: "0 1px 2px rgba(0,0,0,0.06)", wordBreak: "break-word" }}>
+                    {isImage(m.content) ? (
+                      <img src={getImageUrl(m.content)} onClick={() => setImgViewer(getImageUrl(m.content))} style={{ maxWidth: 220, borderRadius: 12, display: "block", cursor: "pointer" }} />
+                    ) : m.content}
+                  </div>
+                  {heartCount > 0 && (
+                    <div onClick={() => toggleReaction(m)} style={{ position: "absolute", bottom: -10, [isMine ? "left" : "right"]: 6, background: G.blanc, borderRadius: 50, padding: "2px 6px", fontSize: "0.68rem", boxShadow: "0 1px 3px rgba(0,0,0,0.15)", display: "flex", alignItems: "center", gap: 3, cursor: "pointer", border: iReacted ? `1px solid ${G.rouge}` : "none" } as React.CSSProperties}>
+                      ❤️ {heartCount}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {(isMine || isModerator) && (
+                <div style={{ display: "flex", gap: 10, marginTop: 4, marginRight: isMine ? 4 : 0, marginLeft: isMine ? 0 : 44 }}>
+                  {!isMine && <span onClick={() => toggleReaction(m)} style={{ fontSize: "0.68rem", color: "#999", cursor: "pointer" }}>❤️ Réagir</span>}
+                  {isMine && <span onClick={() => toggleReaction(m)} style={{ fontSize: "0.68rem", color: "#999", cursor: "pointer" }}>❤️ Réagir</span>}
+                  {(isMine || isModerator) && <span onClick={() => deleteMessage(m)} style={{ fontSize: "0.68rem", color: "#c00", cursor: "pointer" }}>Supprimer</span>}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Composer */}
+      {isRemoved ? (
+        <div style={{ padding: "14px 16px", textAlign: "center", background: G.blanc, borderTop: `1px solid ${G.gris}`, color: "#999", fontSize: "0.82rem" }}>Tu as été retiré(e) de ce groupe.</div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}` }}>
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPickImage} />
+          <div onClick={() => fileInputRef.current?.click()} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <textarea value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } }} placeholder="Écrire au groupe…" rows={1} style={{ flex: 1, border: "none", outline: "none", resize: "none", fontSize: "0.9rem", padding: "9px 14px", borderRadius: 20, background: "#F0F1F5", maxHeight: 90 }} />
+          <div onClick={sendText} style={{ width: 38, height: 38, borderRadius: "50%", background: text.trim() ? G.rouge : "#ccc", display: "flex", alignItems: "center", justifyContent: "center", cursor: text.trim() ? "pointer" : "default", flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+          </div>
+        </div>
+      )}
+
+      {/* Aperçu photo avant envoi */}
+      {pendingPreview && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 610, display: "flex", flexDirection: "column" }}>
+          <img src={pendingPreview} style={{ flex: 1, objectFit: "contain", width: "100%" }} />
+          <div style={{ display: "flex", gap: 10, padding: 16 }}>
+            <Btn variant="ghost" onClick={cancelPending} style={{ flex: 1 }}>Annuler</Btn>
+            <Btn variant="primary" onClick={confirmSendImage} loading={imgLoading} style={{ flex: 1 }}>Envoyer</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* Visionneuse photo */}
+      {imgViewer && (
+        <div onClick={() => setImgViewer(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 615, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <img src={imgViewer} style={{ maxWidth: "94%", maxHeight: "88%", objectFit: "contain" }} />
+        </div>
+      )}
+
+      {/* Membres & modération */}
+      {showMembers && (
+        <div onClick={() => setShowMembers(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 620, display: "flex", alignItems: "flex-end" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxHeight: "78vh", overflowY: "auto", padding: "20px 16px 30px" }}>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, marginBottom: 4 }}>Membres du groupe</h3>
+            <p style={{ fontSize: "0.78rem", color: "#999", marginBottom: 16 }}>Tous les membres Premium ont accès au groupe, sauf ceux retirés ci-dessous.</p>
+            {members.length === 0 ? (
+              <p style={{ fontSize: "0.82rem", color: "#999" }}>Aucun rôle particulier ni exclusion pour l'instant.</p>
+            ) : members.map(mem => {
+              const prof = profilesById[mem.user_id];
+              const excluded = !!mem.removed_at;
+              return (
+                <div key={mem.user_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
+                  <Avatar url={prof?.photo_url} gender={prof?.gender} size={38} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.86rem", color: G.brun }}>{prof?.name || mem.user_id.slice(0, 8)}</div>
+                    <div style={{ fontSize: "0.72rem", color: excluded ? "#c00" : mem.role === "admin" ? G.or : mem.role === "moderator" ? G.rouge : "#999" }}>
+                      {excluded ? "Retiré du groupe" : mem.role === "admin" ? "Administrateur" : mem.role === "moderator" ? "Modérateur" : "Membre"}
+                    </div>
+                  </div>
+                  {isModerator && mem.user_id !== auth.userId && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {excluded ? (
+                        <span onClick={() => restoreMember(mem.user_id)} style={{ fontSize: "0.7rem", fontWeight: 700, color: G.rouge, cursor: "pointer" }}>Réintégrer</span>
+                      ) : (
+                        <>
+                          {myRole === "admin" && mem.role !== "moderator" && <span onClick={() => setRole(mem.user_id, "moderator")} style={{ fontSize: "0.7rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>Nommer modérateur</span>}
+                          {myRole === "admin" && mem.role === "moderator" && <span onClick={() => setRole(mem.user_id, "member")} style={{ fontSize: "0.7rem", fontWeight: 700, color: "#999", cursor: "pointer" }}>Retirer le rôle</span>}
+                          {mem.role !== "admin" && <span onClick={() => removeMember(mem.user_id)} style={{ fontSize: "0.7rem", fontWeight: 700, color: "#c00", cursor: "pointer" }}>Retirer du groupe</span>}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {isModerator && (
+              <p style={{ fontSize: "0.72rem", color: "#bbb", marginTop: 14, lineHeight: 1.5 }}>Pour retirer ou promouvoir un membre qui n'apparaît pas ici, il doit d'abord avoir envoyé un message dans le groupe (sa fiche est chargée à ce moment-là).</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
