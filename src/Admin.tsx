@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
   APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -641,6 +641,9 @@ export function AdminDesktopPage() {
             </OffCanvasSection>}
             {configTab === "general" && <OffCanvasSection title="Notice de confidentialité">
               <PrivacyNoticeConfig auth={auth!} />
+            </OffCanvasSection>}
+            {configTab === "general" && <OffCanvasSection title="Mise en avant Premium">
+              <PremiumBoostConfig auth={auth!} />
             </OffCanvasSection>}
             {configTab === "equipe" && <OffCanvasSection title="Notifications admin">
               <AdminNotifPrefs auth={auth!} />
@@ -1431,6 +1434,58 @@ function PrivacyNoticeConfig({ auth }: { auth: Auth }) {
   );
 }
 
+// Activer/désactiver la mise en avant des profils Premium/Vérifiés dans le fil Découvrir.
+// Activé : Premium/Vérifié apparaissent statistiquement plus souvent en tête de fil (mais pas garanti à 100%).
+// Désactivé : mélange totalement équitable, aucun avantage pour personne.
+function PremiumBoostConfig({ auth }: { auth: Auth }) {
+  const [on, setOn] = React.useState(true);
+  const [loading, setLoading] = React.useState(true);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_boost_enabled&select=value`, { headers: H })
+      .then(r => r.json()).then((data: { value: string }[]) => {
+        if (Array.isArray(data) && data[0]?.value !== undefined) setOn(data[0].value !== "false");
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const toggle = async () => {
+    const next = !on;
+    setOn(next);
+    setPREMIUM_BOOST_ENABLED(next);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key: "premium_boost_enabled", value: String(next) }),
+      });
+      if (!r.ok) throw new Error();
+    } catch {
+      setOn(!next);
+      setPREMIUM_BOOST_ENABLED(!next);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        Si activé, les profils Premium et Vérifiés apparaissent plus souvent en tête du fil Découvrir (avantage statistique, pas une garantie absolue). Si désactivé, mélange totalement équitable pour tous.
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+          <div>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: on ? G.brun : "#aaa" }}>Mise en avant Premium</div>
+            <div style={{ fontSize: "0.68rem", color: "#999" }}>{on ? "Activée" : "Désactivée"}</div>
+          </div>
+          <SwitchBtn on={on} onToggle={toggle} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
@@ -1564,6 +1619,9 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
       </OffCanvasSection>
       <OffCanvasSection title="Notice de confidentialité">
         <PrivacyNoticeConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Mise en avant Premium">
+        <PremiumBoostConfig auth={auth} />
       </OffCanvasSection>
       {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
         <OffCanvasSection title="Mon code d'accès (PIN)">
@@ -4622,6 +4680,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     totalLikes: 0, likesToday: 0,
     likesPerDay: [] as { date: string; count: number }[],
     topLikedProfiles: [] as { name: string; city: string; count: number }[],
+    completionRate: null as number | null,
+    incompleteCount: 0,
+    retentionD1: null as number | null,
+    retentionD7: null as number | null,
+    retentionD30: null as number | null,
+    retentionSample: 0,
   });
 
   // ── Reports ──
@@ -4698,6 +4762,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [stLink, setStLink] = useState("");
   const [stCtaType, setStCtaType] = useState<"none" | "link" | "phone">("none");
   const [stPhone, setStPhone] = useState("");
+  const [stDurationHours, setStDurationHours] = useState(""); // vide = 24h par défaut
   const [stPublishing, setStPublishing] = useState(false);
   const [stDeleting, setStDeleting] = useState<string | null>(null);
   const stFileRef = useRef<HTMLInputElement>(null);
@@ -4739,7 +4804,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         body: stFile,
       });
       if (!up.ok) throw new Error("upload_failed");
-      const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const durationH = parseFloat(stDurationHours);
+      const effectiveHours = durationH > 0 ? durationH : 24;
+      const expires_at = new Date(Date.now() + effectiveHours * 60 * 60 * 1000).toISOString();
       // CTA : soit un lien (« En savoir plus »), soit un numéro stocké en tel: (bouton « Contacter » = WhatsApp + appel)
       const phoneClean = stPhone.trim().replace(/[^\d+]/g, "");
       const linkUrl = stCtaType === "phone"
@@ -4752,8 +4819,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         caption: stCaption.trim() || null, is_official: true, is_sponsored: stSponsored,
         link_url: linkUrl, expires_at,
       });
-      showToast("Statut Moyo Dating publié pour 24h.", "success");
-      setStFile(null); setStPreview(null); setStCaption(""); setStSponsored(false); setStLink(""); setStCtaType("none"); setStPhone("");
+      showToast(`Statut Moyo Dating publié pour ${effectiveHours}h.`, "success");
+      setStFile(null); setStPreview(null); setStCaption(""); setStSponsored(false); setStLink(""); setStCtaType("none"); setStPhone(""); setStDurationHours("");
       if (stFileRef.current) stFileRef.current.value = "";
       loadOfficialStatuses();
     } catch {
@@ -5037,7 +5104,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
       // ── Charger un échantillon de profils pour top villes + derniers inscrits ──
       const [recentProfilesRes, reps] = await Promise.all([
-        sb.query<AdminProfile>(auth.token, "profiles", "?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen&order=created_at.desc&limit=500"),
+        sb.query<AdminProfile>(auth.token, "profiles", "?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,is_complete&order=created_at.desc&limit=500"),
         sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&order=created_at.desc&limit=50"),
       ]);
 
@@ -5046,6 +5113,24 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       recentProfilesRes.forEach(u => { if (u.city) cityMap[u.city] = (cityMap[u.city] || 0) + 1; });
       const topCities = Object.entries(cityMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([city, count]) => ({ city, count }));
       const recentUsers = recentProfilesRes.slice(0, 5);
+
+      // ── Rétention & complétion d'inscription (sur l'échantillon des 500 derniers inscrits) ──
+      const sample = recentProfilesRes as (AdminProfile & { is_complete?: boolean })[];
+      const completedCount = sample.filter(u => u.is_complete).length;
+      const completionRate = sample.length ? Math.round((completedCount / sample.length) * 100) : null;
+      const incompleteCount = sample.length - completedCount;
+
+      const retentionAt = (days: number): number | null => {
+        const msWindow = days * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const eligible = sample.filter(u => u.created_at && (now - new Date(u.created_at).getTime()) >= msWindow);
+        if (eligible.length === 0) return null;
+        const retained = eligible.filter(u => u.last_seen && (new Date(u.last_seen).getTime() - new Date(u.created_at).getTime()) >= msWindow);
+        return Math.round((retained.length / eligible.length) * 100);
+      };
+      const retentionD1 = retentionAt(1);
+      const retentionD7 = retentionAt(7);
+      const retentionD30 = retentionAt(30);
 
       setStats({
         users: parseCount(rTotalUsers),
@@ -5064,6 +5149,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         likesToday: parseCount(rLikesToday),
         likesPerDay,
         topLikedProfiles,
+        completionRate,
+        incompleteCount,
+        retentionD1,
+        retentionD7,
+        retentionD30,
+        retentionSample: sample.length,
       });
       setReports(reps);
       // ── Charger automatiquement les profils reporter + reported ──
@@ -6901,6 +6992,40 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              {/* Rétention & complétion d'inscription */}
+              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 4 }}>Rétention</h3>
+                <p style={{ fontSize: "0.68rem", color: "#999", marginBottom: 14, lineHeight: 1.5 }}>
+                  Calculée sur l'échantillon des {stats.retentionSample} derniers inscrits.
+                </p>
+                <div data-admgrid="retention" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 12 }}>
+                  {([
+                    ["Rétention J+1", stats.retentionD1, "#2980b9", "% revenus le lendemain de leur inscription"],
+                    ["Rétention J+7", stats.retentionD7, "#8e44ad", "% encore actifs 7 jours après"],
+                    ["Rétention J+30", stats.retentionD30, "#D4A843", "% encore actifs 30 jours après"],
+                    ["Profils incomplets", stats.incompleteCount, "#e74c3c", "n'ont jamais fini leur inscription"],
+                  ] as [string, number | null, string, string][]).map(([label, val, color, help]) => (
+                    <div key={label} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25` }}>
+                      <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val === null ? "—" : label === "Profils incomplets" ? val : `${val}%`}</div>
+                      <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2, fontWeight: 600 }}>{label}</div>
+                      <div style={{ fontSize: "0.62rem", color: "#999", marginTop: 2, lineHeight: 1.4 }}>{help}</div>
+                    </div>
+                  ))}
+                </div>
+                {stats.completionRate !== null && (
+                  <div style={{ background: G.creme, borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: G.brun }}>Taux de complétion d'inscription</span>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 800, color: stats.completionRate >= 70 ? "#27ae60" : stats.completionRate >= 40 ? "#e67e22" : "#e74c3c" }}>{stats.completionRate}%</span>
+                    </div>
+                    <div style={{ height: 8, borderRadius: 50, background: "#e8e0d0", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${stats.completionRate}%`, background: stats.completionRate >= 70 ? "#27ae60" : stats.completionRate >= 40 ? "#e67e22" : "#e74c3c", borderRadius: 50, transition: "width 0.4s" }} />
+                    </div>
+                    <div style={{ fontSize: "0.68rem", color: "#999", marginTop: 6 }}>% de personnes qui vont jusqu'au bout des 5 étapes d'inscription (photo, infos...) au lieu d'abandonner en route.</div>
+                  </div>
+                )}
+              </div>
+
               <div data-admgrid="row">
               {/* Ratio Genre */}
               <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
@@ -8523,6 +8648,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <input type="checkbox" checked={stSponsored} onChange={e => setStSponsored(e.target.checked)} style={{ marginTop: 2 }} />
                   <span>Marquer comme sponsorisé<br /><span style={{ color: "#999", fontSize: "0.74rem" }}>(pub payée par un tiers)</span></span>
                 </label>
+
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#555", marginBottom: 6, fontWeight: 600 }}>Durée d'affichage (en heures)</label>
+                  <div style={{ position: "relative" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/></svg>
+                    <input type="number" min="1" step="1" value={stDurationHours} onChange={e => setStDurationHours(e.target.value)} placeholder="24 (par défaut si vide)" style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 12, padding: "12px 12px 12px 34px", fontSize: "0.85rem", outline: "none" }} />
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: "#999", marginTop: 5 }}>Laisse vide pour garder 24h par défaut. Ex : 6 pour 6h, 48 pour 2 jours…</div>
+                </div>
 
                 <button onClick={publishOfficialStatus} disabled={!stFile || stPublishing} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: (!stFile || stPublishing) ? "rgba(192,57,43,0.45)" : G.rouge, color: "#fff", border: "none", borderRadius: 14, padding: "14px", fontWeight: 800, fontSize: "0.95rem", cursor: (!stFile || stPublishing) ? "not-allowed" : "pointer", boxShadow: "0 6px 18px rgba(192,57,43,0.28)" }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>

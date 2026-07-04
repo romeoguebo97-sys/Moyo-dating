@@ -26,6 +26,7 @@ export function setCONTACT_EMAIL(v: any) { CONTACT_EMAIL = v; }
 export function setCONTACT_WHATSAPP(v: any) { CONTACT_WHATSAPP = v; }
 export function setDISCOVER_DEFAULT_MODE(v: any) { DISCOVER_DEFAULT_MODE = v; }
 export function setPRIVACY_NOTICE_ENABLED(v: any) { PRIVACY_NOTICE_ENABLED = v; }
+export function setPREMIUM_BOOST_ENABLED(v: any) { PREMIUM_BOOST_ENABLED = v; }
 export function setEUR_TO_FCFA(v: any) { EUR_TO_FCFA = v; }
 export function setLANDING_MEMBERS(v: any) { LANDING_MEMBERS = v; }
 export function setLANDING_SLOGAN(v: any) { LANDING_SLOGAN = v; }
@@ -216,6 +217,8 @@ export let PLAN_2MONTH_ENABLED = true;
 export let DISCOVER_DEFAULT_MODE: "card" | "list" | "full" = "card";
 // Notice de confidentialité affichée à la première connexion après inscription (activable/désactivable par l'admin)
 export let PRIVACY_NOTICE_ENABLED = true;
+// Mise en avant des profils Premium/Vérifiés dans le fil Découvrir (activable/désactivable par l'admin)
+export let PREMIUM_BOOST_ENABLED = true;
 // Prix le plus bas parmi les formules actuellement ACTIVES (ignore les formules désactivées)
 function minEnabledPremiumPrice(): number {
   const prices = [
@@ -316,7 +319,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -353,6 +356,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["plan_2month_enabled"] !== undefined) PLAN_2MONTH_ENABLED = map["plan_2month_enabled"] !== "false";
   if (map["discover_default_mode"] === "card" || map["discover_default_mode"] === "list" || map["discover_default_mode"] === "full") DISCOVER_DEFAULT_MODE = map["discover_default_mode"];
   if (map["privacy_notice_enabled"] !== undefined) PRIVACY_NOTICE_ENABLED = map["privacy_notice_enabled"] !== "false";
+  if (map["premium_boost_enabled"] !== undefined) PREMIUM_BOOST_ENABLED = map["premium_boost_enabled"] !== "false";
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
   if (map["premium_stat_couples"] !== undefined) PREMIUM_STAT_COUPLES = map["premium_stat_couples"];
   if (map["premium_stat_members"] !== undefined) PREMIUM_STAT_MEMBERS = map["premium_stat_members"];
@@ -908,15 +912,16 @@ const shuffleArray = <T,>(items: T[]): T[] => {
 };
 
 const priorityRandomizeProfiles = (items: Profile[]): Profile[] => {
-  const score = (p: Profile) => (p.is_premium ? 4 : 0) + (p.is_verified ? 3 : 0) + ((p as any).is_certified ? 2 : 0);
-  const buckets = new Map<number, Profile[]>();
-  for (const item of items) {
-    const key = score(item);
-    const list = buckets.get(key) || [];
-    list.push(item);
-    buckets.set(key, list);
-  }
-  return Array.from(buckets.keys()).sort((a,b)=>b-a).flatMap(k => shuffleArray(buckets.get(k) || []));
+  // Si la mise en avant Premium est désactivée par l'admin : mélange 100% équitable, aucun avantage.
+  if (!PREMIUM_BOOST_ENABLED) return shuffleArray(items);
+  // Sinon : mélange pondéré. Premium/Vérifié/Certifié ont un bonus statistique (plus de chances
+  // d'apparaître en tête), mais n'ont plus la garantie absolue de passer avant tout le monde à chaque fois
+  // (contrairement à l'ancien système par blocs, qui montrait toujours les mêmes profils en premier).
+  const bonus = (p: Profile) => (p.is_premium ? 0.35 : 0) + (p.is_verified ? 0.22 : 0) + ((p as any).is_certified ? 0.12 : 0);
+  return items
+    .map(p => ({ p, r: Math.random() + bonus(p) }))
+    .sort((a, b) => b.r - a.r)
+    .map(x => x.p);
 };
 
 
