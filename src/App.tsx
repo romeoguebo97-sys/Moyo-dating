@@ -1325,6 +1325,7 @@ const GLOBAL_CSS = `
      sur toutes les plateformes (APK Android, PWA, Safari iOS, navigateur desktop). Le !important et
      le sélecteur descendant "*" sont nécessaires car certaines WebView (notamment Android) ignorent
      -webkit-user-select posé uniquement sur un ancêtre sans répétition explicite sur les enfants. */
+  .voice-recording-zone, .voice-recording-zone *,
   .no-select-callout, .no-select-callout *{
     -webkit-touch-callout:none !important;
     -webkit-user-select:none !important;
@@ -7990,13 +7991,18 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   useEffect(() => {
     const blockIfInsideRecordingUi = (e: Event) => {
       const target = e.target as HTMLElement | null;
-      if (target?.closest?.(".no-select-callout")) e.preventDefault();
+      if (target?.closest?.(".no-select-callout") || target?.closest?.(".voice-recording-zone")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     };
     document.addEventListener("selectstart", blockIfInsideRecordingUi, true);
     document.addEventListener("contextmenu", blockIfInsideRecordingUi, true);
+    document.addEventListener("dragstart", blockIfInsideRecordingUi, true);
     return () => {
       document.removeEventListener("selectstart", blockIfInsideRecordingUi, true);
       document.removeEventListener("contextmenu", blockIfInsideRecordingUi, true);
+      document.removeEventListener("dragstart", blockIfInsideRecordingUi, true);
     };
   }, []);
   // Défilement vers le message cité (clic sur la citation)
@@ -9215,6 +9221,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   // et une seule fois pour toute la durée de vie de l'app sur cet appareil.
   const onMicPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
     if (!micGestureAllowed) return;
     const mic = micHandleRef.current;
@@ -9238,6 +9245,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   };
   const onMicPointerMove = (e: React.PointerEvent) => {
     if (e.pointerId !== activePointerIdRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
     if (recState !== "recording" || !recPointerStartRef.current) return;
     if (recLockedRef.current) return; // déjà en train de se verrouiller/verrouillé : on ignore la suite du glissement,
                                        // sinon le retour à sa place se faisait écraser par les mouvements du doigt encore en cours
@@ -10291,7 +10300,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
 
             {/* Pastille d'enregistrement — masquée (pas démontée) en dehors de recording/locked */}
-            <div className="no-select-callout" style={{ display: (recState === "recording" || recState === "locked") ? "block" : "none", flex: 1, minWidth: 0, marginLeft: recState === "recording" ? 42 : 0, transition: "margin-left 0.15s" }}>
+            <div className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: (recState === "recording" || recState === "locked") ? "block" : "none", flex: 1, minWidth: 0, marginLeft: recState === "recording" ? 42 : 0, transition: "margin-left 0.15s" }}>
               <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 30, padding: "10px 16px", minHeight: 48 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
                 <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
@@ -10304,7 +10313,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
 
             {/* Corbeille : élément indépendant, posé dans l'espace libre à gauche — visible seulement pendant "recording" */}
-            <div ref={trashElRef} className="no-select-callout" style={{ display: recState === "recording" ? "flex" : "none", position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), height: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(44,26,14,0.08)", color: recCanceling ? "#fff" : G.rouge, alignItems: "center", justifyContent: "center", zIndex: 3, transition: "background 0.15s, color 0.15s" }}>
+            <div ref={trashElRef} className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: recState === "recording" ? "flex" : "none", position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), height: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(44,26,14,0.08)", color: recCanceling ? "#fff" : G.rouge, alignItems: "center", justifyContent: "center", zIndex: 3, transition: "background 0.15s, color 0.15s" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
 
@@ -10318,7 +10327,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               // c'est ce qui permet au navigateur de ne jamais couper le geste tactile en cours.
               <div
                 ref={micHandleRef}
-                className="no-select-callout"
+                className="no-select-callout voice-recording-zone"
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
                 onPointerDown={onMicPointerDown}
                 onPointerMove={onMicPointerMove}
                 onPointerUp={onMicPointerUp}
@@ -10351,7 +10362,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
           </div>
 
           {/* Indices sous la barre */}
-          <div className="no-select-callout" style={{ display: recState === "recording" ? "flex" : "none", alignItems: "center", justifyContent: "space-between", margin: "8px 12px 10px", padding: "0 6px" }}>
+          <div className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: recState === "recording" ? "flex" : "none", alignItems: "center", justifyContent: "space-between", margin: "8px 12px 10px", padding: "0 6px" }}>
             <span style={{ fontSize: "0.68rem", fontWeight: 700, color: recCanceling ? G.rouge : "#999", display: "flex", alignItems: "center", gap: 4 }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               {recCanceling ? "Relâche pour annuler" : "Glisser pour annuler"}
@@ -10361,7 +10372,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
             </span>
           </div>
-          <div className="no-select-callout" style={{ display: recState === "locked" ? "block" : "none", textAlign: "center", margin: "8px 12px 10px" }}>
+          <div className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: recState === "locked" ? "block" : "none", textAlign: "center", margin: "8px 12px 10px" }}>
             <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999" }}>Appuie sur le micro pour arrêter</span>
           </div>
         </div>
