@@ -9096,7 +9096,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 
     if (alreadyGranted) {
       // Flux déjà chaud : on peut démarrer réellement, dans la continuité du geste en cours.
-      beginRecordingWithStream(cachedStream!, false);
+      beginRecordingWithStream(cachedStream!, true);
       return;
     }
 
@@ -9380,13 +9380,15 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     else { snapMicBack(() => finishRecordingInstant()); }
   };
   // Tap sur le micro une fois verrouillé (mains libres) : arrête l'enregistrement.
-  // Tap sur le micro : arrête l'enregistrement, quel que soit l'état exact (mains libres verrouillé,
-  // OU enregistrement "normal" resté actif suite à un relâchement de doigt mal détecté par l'appareil).
-  // Filet de sécurité volontairement large : peu importe la cause, un tap sur le micro doit TOUJOURS
-  // pouvoir arrêter et envoyer/annuler une note en cours — l'utilisateur ne doit jamais rester bloqué.
+  // Tap sur le micro : démarre l'enregistrement (mains libres) si repos, l'arrête si actif.
+  // Plus aucun geste maintenu : un simple tap suffit dans les deux sens. C'est ce qui élimine
+  // définitivement le déclenchement de la sélection de texte / loupe native sur certains Android
+  // (déclenchée par le système dès qu'un doigt reste posé plusieurs secondes au même endroit —
+  // ce qui était inévitable avec un enregistrement à maintenir).
   const onMicClick = () => {
     if (recSuppressClickRef.current) { recSuppressClickRef.current = false; return; }
-    if (recState === "locked" || recState === "recording") stopLockedRecording();
+    if (recState === "locked" || recState === "recording") { stopLockedRecording(); return; }
+    if (micGestureAllowed) startRecording();
   };
   // Tap sur le micro verrouillé : arrête l'enregistrement et ouvre le panneau "review" (4 actions).
   const stopLockedRecording = () => {
@@ -10365,7 +10367,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
 
             {/* Pastille d'enregistrement — masquée (pas démontée) en dehors de recording/locked */}
-            <div className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: (recState === "recording" || recState === "locked") ? "block" : "none", flex: 1, minWidth: 0, marginLeft: recState === "recording" ? 42 : 0, transition: "margin-left 0.15s" }}>
+            <div className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: (recState === "recording" || recState === "locked") ? "block" : "none", flex: 1, minWidth: 0, marginLeft: recState === "locked" ? 42 : 0, transition: "margin-left 0.15s" }}>
               <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 30, padding: "10px 16px", minHeight: 48 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
                 <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
@@ -10377,8 +10379,10 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               </div>
             </div>
 
-            {/* Corbeille : élément indépendant, posé dans l'espace libre à gauche — visible seulement pendant "recording" */}
-            <div ref={trashElRef} className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: recState === "recording" ? "flex" : "none", position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), height: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(44,26,14,0.08)", color: recCanceling ? "#fff" : G.rouge, alignItems: "center", justifyContent: "center", zIndex: 3, transition: "background 0.15s, color 0.15s" }}>
+            {/* Bouton annuler : tap pour jeter l'enregistrement en cours (remplace l'ancien glisser-pour-annuler) */}
+            <div onClick={() => { recCancelRef.current = true; finishRecording(true); }}
+              className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()}
+              style={{ display: recState === "locked" ? "flex" : "none", position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.08)", color: G.rouge, alignItems: "center", justifyContent: "center", zIndex: 3, cursor: "pointer" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
 
@@ -10395,10 +10399,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                 className="no-select-callout voice-recording-zone"
                 onContextMenu={(e) => e.preventDefault()}
                 onDragStart={(e) => e.preventDefault()}
-                onPointerDown={onMicPointerDown}
-                onPointerMove={onMicPointerMove}
-                onPointerUp={onMicPointerUp}
-                onPointerCancel={onMicPointerUp}
                 onClick={onMicClick}
                 style={{
                   width: (recState === "recording" || recState === "locked") ? 52 : 44,
@@ -10426,17 +10426,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             )}
           </div>
 
-          {/* Indices sous la barre */}
-          <div className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: recState === "recording" ? "flex" : "none", alignItems: "center", justifyContent: "space-between", margin: "8px 12px 10px", padding: "0 6px" }}>
-            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: recCanceling ? G.rouge : "#999", display: "flex", alignItems: "center", gap: 4 }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-              {recCanceling ? "Relâche pour annuler" : "Glisser pour annuler"}
-            </span>
-            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", display: "flex", alignItems: "center", gap: 4 }}>
-              Verrouiller
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-            </span>
-          </div>
+          {/* Indice sous la barre pendant l'enregistrement */}
           <div className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: recState === "locked" ? "block" : "none", textAlign: "center", margin: "8px 12px 10px" }}>
             <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999" }}>Appuie sur le micro pour arrêter</span>
           </div>
