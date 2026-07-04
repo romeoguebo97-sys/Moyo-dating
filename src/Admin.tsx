@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
-  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS,
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -647,6 +647,9 @@ export function AdminDesktopPage() {
             </OffCanvasSection>}
             {configTab === "equipe" && <OffCanvasSection title="Notifications admin">
               <AdminNotifPrefs auth={auth!} />
+            </OffCanvasSection>}
+            {configTab === "equipe" && <OffCanvasSection title="Photo de l'Assistant Moyo Dating">
+              <AssistantPhotoConfig auth={auth!} />
             </OffCanvasSection>}
             {configTab === "equipe" && <OffCanvasSection title="Relance notifications">
               <EditableRow label="Notif likes après (heures)" value={appConfig.likesNotifDelayHours} type="number" open={editingConfig === "likes_notification_delay_hours"}
@@ -1486,6 +1489,77 @@ function PremiumBoostConfig({ auth }: { auth: Auth }) {
   );
 }
 
+// ── Photo de l'Assistant Moyo Dating : upload dans le bucket Storage "assistant", clé app_settings "assistant_photo_url" ──
+function AssistantPhotoConfig({ auth }: { auth: Auth }) {
+  const [photo, setPhoto] = React.useState(SUPPORT_TEAM_PHOTO);
+  const [uploading, setUploading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  const applyNewPhoto = async (url: string) => {
+    const ok = await saveSetting("assistant_photo_url", url, auth.token);
+    if (!ok) { setError("Échec de l'enregistrement. Réessaie."); return; }
+    setSUPPORT_TEAM_PHOTO(url);
+    setPhoto(url);
+  };
+
+  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setError("Merci de choisir une image."); return; }
+    setUploading(true); setError("");
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `assistant-photo-${Date.now()}.${ext}`;
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/assistant/${path}`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
+        body: file,
+      });
+      if (!r.ok) throw new Error();
+      const url = `${SUPABASE_URL}/storage/v1/object/public/assistant/${path}`;
+      await applyNewPhoto(url);
+    } catch {
+      setError("Échec de l'upload. Vérifie que le bucket Storage \"assistant\" existe et est public.");
+    }
+    setUploading(false);
+  };
+
+  const resetToDefault = async () => {
+    setUploading(true); setError("");
+    try { await applyNewPhoto(""); } finally { setUploading(false); }
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 14, lineHeight: 1.5 }}>
+        Photo affichée pour {SUPPORT_TEAM_NAME} dans les conversations. Vide = icône par défaut.
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: G.creme, border: `1.5px solid ${G.gris}`, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          )}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+          <input ref={fileRef} type="file" accept="image/*" onChange={onPickFile} style={{ display: "none" }} />
+          <Btn variant="primary" onClick={() => fileRef.current?.click()} loading={uploading} style={{ padding: "9px 16px", fontSize: "0.82rem" }}>
+            {uploading ? "Envoi..." : "Changer la photo"}
+          </Btn>
+          {photo && !uploading && (
+            <button onClick={resetToDefault} style={{ background: "transparent", border: "none", color: "#999", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", textAlign: "left", padding: 0 }}>
+              Réinitialiser (icône par défaut)
+            </button>
+          )}
+        </div>
+      </div>
+      {error && <div style={{ marginTop: 10, fontSize: "0.72rem", color: G.rouge, fontWeight: 600 }}>{error}</div>}
+    </div>
+  );
+}
+
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
@@ -1622,6 +1696,9 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
       </OffCanvasSection>
       <OffCanvasSection title="Mise en avant Premium">
         <PremiumBoostConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Photo de l'Assistant Moyo Dating">
+        <AssistantPhotoConfig auth={auth} />
       </OffCanvasSection>
       {((auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID) && (
         <OffCanvasSection title="Mon code d'accès (PIN)">
@@ -2238,13 +2315,14 @@ const HELP_SECTIONS: HelpSection[] = [
     blocks: [
       { kind: "rows", color: G.vert, items: [
         ["Membres total", "Nombre total de comptes créés sur la plateforme."],
-        ["Matchs", "Nombre de paires qui se sont mutuellement likées."],
+        ["Matchs", "Nombre de paires qui se sont mutuellement likées. Carte cliquable → ouvre la liste des matchs."],
         ["Messages", "Volume total de messages échangés."],
         ["Signalements", "Nombre de signalements reçus toutes sources confondues."],
-        ["Nouveaux membres", "Inscriptions du jour en cours."],
-        ["Premium actifs", "Utilisateurs ayant un abonnement Premium actif."],
-        ["Profils vérifiés", "Comptes ayant obtenu le badge de vérification."],
-        ["Profils bannis", "Comptes actuellement bannis de la plateforme."],
+        ["Nouveaux aujourd'hui", "Inscriptions du jour en cours (minuit UTC). Carte cliquable → liste des profils inscrits aujourd'hui."],
+        ["Premium actifs", "Utilisateurs ayant un abonnement Premium actif. Carte cliquable → liste des membres Premium."],
+        ["Profils vérifiés", "Comptes ayant obtenu le badge de vérification. Carte cliquable → liste des profils vérifiés."],
+        ["Profils bannis", "Comptes actuellement bannis de la plateforme. Carte cliquable → liste des profils bannis."],
+        ["Profils incomplets", "Comptes dont l'inscription n'a jamais été terminée (section Rétention). Carte cliquable → liste des profils incomplets."],
       ] },
     ],
   },
@@ -2480,6 +2558,7 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Prix & Abonnement", "Prix Premium en FCFA et durée en jours. ⚠️ Le prix modifie les boutons de paiement. La durée s'applique aux nouveaux abonnements."],
         ["Fonctionnalités on/off", "Activer/désactiver Statuts, Cadeau Premium et Assistant IA. Effet au prochain chargement de l'app."],
         ["🔔 Notifications admin", "Pour chaque admin, choisir ses notifications push : Signalements, Matchs, Paiements. Ex : activer 'Paiements' pour le responsable des paiements."],
+        ["🖼 Photo de l'Assistant", "Onglet Équipe → 'Photo de l'Assistant Moyo Dating' : changez la photo affichée pour l'Assistant Moyo Dating en un clic (upload direct), ou réinitialisez à l'icône par défaut. Effet immédiat sur toutes les conversations."],
         ["💳 Moyens de paiement", "Couper rapidement un moyen de paiement (MTN, Airtel, Visa/Mastercard). Une fois coupé : grisé et 'Temporairement indisponible' partout."],
         ["🔴 Mode maintenance", "Active un écran de maintenance pour tous. Seuls les admins peuvent encore accéder. Message personnalisable."],
         ["Gestion des admins", "Visible par le Super Admin uniquement : nommer Admin, Super Admin ou retirer les droits via l'email."],
@@ -2492,6 +2571,9 @@ const HELP_SECTIONS: HelpSection[] = [
     icon: helpIco(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />, G.or),
     blocks: [
       { kind: "rows", color: G.or, items: [
+        ["🎙 Notes vocales", "Nouvelle messagerie vocale dans les conversations (Premium) : enregistrement par appui long avec glisser pour annuler/verrouiller, aperçu avant envoi, vitesses de lecture x1/x1.5/x2, et un mode exclusif 🔥 vocal à écoute unique qui se détruit après la première écoute."],
+        ["🖼 Photo de l'Assistant modifiable", "Configuration ☰ → Équipe : la photo de l'Assistant Moyo Dating se change désormais en un clic depuis l'admin, sans toucher au code."],
+        ["📊 Cartes stats cliquables", "Nouveaux aujourd'hui, Profils vérifiés, Profils bannis et Profils incomplets fonctionnent maintenant comme Premium actifs : cliquez pour voir la liste des profils concernés."],
         ["📝 Notes internes", "Sur chaque fiche utilisateur et signalement, un bloc de notes visibles uniquement par les admins. Idéal pour se coordonner. N'importe quel admin peut supprimer une note."],
         ["🗂 Archives repliées", "Dans Signalements → Archivés, chaque carte est repliée. Cliquez pour le détail, 'Replier' pour refermer."],
         ["🔔 Notifications utilisateur", "Les utilisateurs peuvent (ré)activer leurs notifications depuis leur Profil, même après un refus initial."],
@@ -4388,6 +4470,34 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [showPremiumList, setShowPremiumList] = useState(false);
   const [premiumProfiles, setPremiumProfiles] = useState<AdminProfile[]>([]);
   const [premiumListLoading, setPremiumListLoading] = useState(false);
+
+  // ── Listes cliquables des cartes stats "Nouveaux aujourd'hui / Profils vérifiés / bannis / incomplets" ──
+  // (même principe que "Premium actifs" ci-dessus, mutualisé pour éviter 4 x 3 states dupliqués)
+  type SimpleUserListType = "today" | "verified" | "banned" | "incomplete";
+  const [userListModal, setUserListModal] = useState<SimpleUserListType | null>(null);
+  const [userListProfiles, setUserListProfiles] = useState<AdminProfile[]>([]);
+  const [userListLoading, setUserListLoading] = useState(false);
+  const userListMeta = (t: SimpleUserListType) => ({
+    today: { title: "Nouveaux aujourd'hui", icon: "🆕", gradient: "linear-gradient(135deg,#27ae60,#1e8449)" },
+    verified: { title: "Profils vérifiés", icon: "✔️", gradient: `linear-gradient(135deg,${G.vert},#134429)` },
+    banned: { title: "Profils bannis", icon: "⛔", gradient: "linear-gradient(135deg,#e74c3c,#c0392b)" },
+    incomplete: { title: "Profils incomplets", icon: "📝", gradient: "linear-gradient(135deg,#e67e22,#c0392b)" },
+  }[t]);
+  useEffect(() => {
+    if (!userListModal || !auth) return;
+    setUserListLoading(true); setUserListProfiles([]);
+    const now = new Date();
+    const todayIso = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+    const filterQs: Record<SimpleUserListType, string> = {
+      today: `created_at=gte.${todayIso}&order=created_at.desc`,
+      verified: `is_verified=eq.true&order=created_at.desc`,
+      banned: `is_banned=eq.true&order=created_at.desc`,
+      incomplete: `is_complete=eq.false&order=created_at.desc`,
+    };
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,name,age,city,gender,photo_url,is_verified,is_banned,is_complete,created_at&${filterQs[userListModal]}&limit=200`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    }).then(r => r.json()).then(data => { setUserListProfiles(Array.isArray(data) ? data : []); setUserListLoading(false); }).catch(() => setUserListLoading(false));
+  }, [userListModal]);
 
   // ── Liste des matchs ──
   const [showMatchList, setShowMatchList] = useState(false);
@@ -6388,6 +6498,50 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {userListModal && (() => {
+        const meta = userListMeta(userListModal);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+            <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+              {/* Header */}
+              <div style={{ background: meta.gradient, padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff" }}>{meta.icon} {meta.title}</div>
+                  <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{userListProfiles.length} profil{userListProfiles.length > 1 ? "s" : ""}</div>
+                </div>
+                <button onClick={() => setUserListModal(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              {/* Liste */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+                {userListLoading ? (
+                  <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement...</div>
+                ) : userListProfiles.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Aucun profil</div>
+                ) : userListProfiles.map((p: any) => (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
+                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden" }}>
+                      {p.photo_url && <img src={p.photo_url ?? undefined} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 5 }}>{p.name || "Sans nom"}{p.is_verified && <VerifiedBadge size={13} />}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#888" }}>{p.age ? `${p.age} ans · ` : ""}{p.city || "Ville inconnue"}</div>
+                    </div>
+                    <div style={{ fontSize: "0.66rem", color: meta.gradient.includes("#e74c3c") ? "#e74c3c" : meta.gradient.includes("#27ae60") ? "#27ae60" : meta.gradient.includes("#e67e22") ? "#e67e22" : G.vert, fontWeight: 700, textAlign: "right", flexShrink: 0, lineHeight: 1.4 }}>
+                      {userListModal === "today" && p.created_at && new Date(p.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      {userListModal === "verified" && "✔ Vérifié"}
+                      {userListModal === "banned" && "⛔ Banni"}
+                      {userListModal === "incomplete" && "Inscription non finie"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {pwResetModal && (() => {
         const u = pwResetModal;
         const close = () => { setPwResetModal(null); setPwResetValue(""); setPwResetResult(null); };
@@ -6978,12 +7132,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 14 }}>Statistiques avancées</h3>
                 <div data-admgrid="adv" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
                   {([
-                    ["Nouveaux aujourd'hui", stats.todayUsers, "#27ae60", null],
+                    ["Nouveaux aujourd'hui", stats.todayUsers, "#27ae60", "today"],
                     ["Premium actifs", stats.premiumUsers, "#D4A843", "premium"],
-                    ["Profils vérifiés", stats.verifiedUsers, G.vert, null],
-                    ["Profils bannis", stats.bannedUsers, "#e74c3c", null],
+                    ["Profils vérifiés", stats.verifiedUsers, G.vert, "verified"],
+                    ["Profils bannis", stats.bannedUsers, "#e74c3c", "banned"],
                   ] as [string, number, string, string | null][]).map(([label, val, color, action]) => (
-                    <div key={label} onClick={() => { if (action === "premium") setShowPremiumList(true); if (action === "matches") setShowMatchList(true); }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
+                    <div key={label} onClick={() => {
+                      if (action === "premium") setShowPremiumList(true);
+                      else if (action === "matches") setShowMatchList(true);
+                      else if (action === "today" || action === "verified" || action === "banned") setUserListModal(action);
+                    }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
                       <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val}</div>
                       <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>{label}</div>
                       {action && <div style={{ position: "absolute", top: 8, right: 8, fontSize: "0.55rem", color, fontWeight: 700, opacity: 0.7 }}>Voir ›</div>}
@@ -7004,13 +7162,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Rétention J+7", stats.retentionD7, "#8e44ad", "% encore actifs 7 jours après"],
                     ["Rétention J+30", stats.retentionD30, "#D4A843", "% encore actifs 30 jours après"],
                     ["Profils incomplets", stats.incompleteCount, "#e74c3c", "n'ont jamais fini leur inscription"],
-                  ] as [string, number | null, string, string][]).map(([label, val, color, help]) => (
-                    <div key={label} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25` }}>
-                      <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val === null ? "—" : label === "Profils incomplets" ? val : `${val}%`}</div>
+                  ] as [string, number | null, string, string][]).map(([label, val, color, help]) => {
+                    const isIncomplete = label === "Profils incomplets";
+                    return (
+                    <div key={label} onClick={() => { if (isIncomplete) setUserListModal("incomplete"); }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: isIncomplete ? "pointer" : "default", position: "relative" }}>
+                      <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val === null ? "—" : isIncomplete ? val : `${val}%`}</div>
                       <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2, fontWeight: 600 }}>{label}</div>
                       <div style={{ fontSize: "0.62rem", color: "#999", marginTop: 2, lineHeight: 1.4 }}>{help}</div>
+                      {isIncomplete && <div style={{ position: "absolute", top: 8, right: 8, fontSize: "0.55rem", color, fontWeight: 700, opacity: 0.7 }}>Voir ›</div>}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 {stats.completionRate !== null && (
                   <div style={{ background: G.creme, borderRadius: 12, padding: "12px 14px" }}>

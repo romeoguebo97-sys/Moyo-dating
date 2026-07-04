@@ -319,7 +319,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -357,6 +357,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["discover_default_mode"] === "card" || map["discover_default_mode"] === "list" || map["discover_default_mode"] === "full") DISCOVER_DEFAULT_MODE = map["discover_default_mode"];
   if (map["privacy_notice_enabled"] !== undefined) PRIVACY_NOTICE_ENABLED = map["privacy_notice_enabled"] !== "false";
   if (map["premium_boost_enabled"] !== undefined) PREMIUM_BOOST_ENABLED = map["premium_boost_enabled"] !== "false";
+  if (map["assistant_photo_url"] !== undefined) SUPPORT_TEAM_PHOTO = map["assistant_photo_url"];
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
   if (map["premium_stat_couples"] !== undefined) PREMIUM_STAT_COUPLES = map["premium_stat_couples"];
   if (map["premium_stat_members"] !== undefined) PREMIUM_STAT_MEMBERS = map["premium_stat_members"];
@@ -404,7 +405,9 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
 export const SUPPORT_TEAM_ID = "moyo-support-team";
 export const SUPPORT_TEAM_NAME = "Assistance Moyo Dating";
 // Photo de l'équipe Assistance Moyo Dating (uploadée dans Supabase Storage). Vide = icône par défaut.
-const SUPPORT_TEAM_PHOTO = "https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/assistant/Image%2031%20mai%202026,%2004_26_29.png";
+// Configurable depuis Admin > Configuration > Équipe > Photo de l'Assistant (bucket Storage "assistant").
+export let SUPPORT_TEAM_PHOTO = "https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/assistant/Image%2031%20mai%202026,%2004_26_29.png";
+export function setSUPPORT_TEAM_PHOTO(v: string) { SUPPORT_TEAM_PHOTO = v; }
 export const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
 export const SUPPORT_PREFIX_REPLY = "[SUPPORT_REPLY]";
 // Message envoyé automatiquement par l'Assistant Moyo Dating lors d'une tentative de partage de contact (gratuit) — éditable depuis la config admin
@@ -4118,6 +4121,7 @@ const BOT_FAQ = [
   { q: ["sombre", "thème", "dark", "nuit"], r: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
   { q: ["annuler", "unmatch", "fin"], r: "Dans Matchs → 3 traits → Annuler le match. La conversation et les messages sont supprimés. L'autre personne n'est pas notifiée." },
   { q: ["répondre", "citer", "reply", "bandeau", "réponse message"], r: "Appuyez longuement sur un message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
+  { q: ["vocal", "note vocale", "message vocal", "micro", "audio", "enregistrer message"], r: "L'envoi de messages vocaux est réservé aux membres Premium (l'écoute d'un vocal reçu est libre pour tous). Maintenez appuyé le bouton micro pour enregistrer (1 minute max), glissez vers la gauche pour annuler ou vers le haut pour verrouiller l'enregistrement mains libres. Avant l'envoi, vous pouvez réécouter votre vocal et choisir entre 🎤 Vocal normal (lecture illimitée, vitesses x1/x1.5/x2) ou 🔥 Vocal à écoute unique (il se détruit automatiquement dès que le destinataire a fini de l'écouter)." },
   { q: ["offrir premium", "demander premium", "cadeau premium", "offrir abonnement", "demander abonnement", "demander cadeau", "cadeau doré"], r: "Dans une conversation : si vous êtes Premium et que l'autre ne l'est pas, un bouton cadeau doré 🎁 permet de lui offrir Premium. Si vous n'êtes pas Premium et que l'autre l'est, un bouton 💝 permet de lui demander de vous l'offrir (une fenêtre de confirmation s'ouvre ; limite de 2 demandes par mois et par conversation). La personne reçoit alors un message avec un bouton pour offrir Premium en un clic." },
   { q: ["modifier message", "éditer message", "corriger message"], r: "Appuyez longuement sur l'un de vos messages → Modifier (possible pendant 15 minutes après l'envoi). Le message modifié affiche la mention 'modifié'." },
   { q: ["supprimer message", "effacer message", "pour moi", "pour tous"], r: "Appuyez longuement sur un message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté)." },
@@ -7589,8 +7593,9 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
   const name = isMine ? "Toi" : (partnerName ?? "…");
   const accent = isMine ? G.vert : G.rouge;
   const isImg = replyTo.content.startsWith("[img]") && !replyTo.is_view_once && !replyTo.is_destroyed;
+  const isAudio = replyTo.content.startsWith("[audio]") && replyTo.content.endsWith("[/audio]");
   const raw = replyTo.content.replace(/^\[↩.*?\]\n/, "");
-  const preview = replyTo.is_destroyed ? "Photo détruite" : replyTo.is_view_once ? "Photo vue unique" : (!isImg && raw.length > 80 ? raw.slice(0, 80) + "…" : raw);
+  const preview = replyTo.is_destroyed ? (isAudio ? "Vocal détruit" : "Photo détruite") : replyTo.is_view_once ? (isAudio ? "Vocal vue unique" : "Photo vue unique") : (!isImg && !isAudio && raw.length > 80 ? raw.slice(0, 80) + "…" : raw);
   return (
     // ── ReplyBanner v2 : visible, robuste iOS, sans overflow caché ──
     <div style={{
@@ -7622,6 +7627,13 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
               </svg>
               <span style={{ color: "#888" }}>Photo</span>
             </span>
+          ) : isAudio && !replyTo.is_view_once && !replyTo.is_destroyed ? (
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>
+              </svg>
+              <span style={{ color: "#888" }}>Message vocal</span>
+            </span>
           ) : preview}
         </div>
       </div>
@@ -7635,6 +7647,141 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ── Formatage mm:ss pour les durées audio ──
+const fmtAudioTime = (s: number) => { const t = Math.max(0, Math.round(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
+
+// ── Lecteur de note vocale unique, mutualisé entre le vocal "normal" et le vocal "vue unique". ──
+// La seule différence de comportement est pilotée par m.is_view_once (comme pour les photos).
+const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, onExpireOnce, time, isPremium }: {
+  m: Message; isMine: boolean; time: string; isPremium: boolean;
+  onOpenOnce: (m: Message) => Promise<string | null>; // fetch + destruction serveur → renvoie une blob URL locale
+  onExpireOnce: (m: Message) => void; // appelé quand la lecture unique se termine (marque détruit localement)
+}) {
+  const { url, duration, wave } = parseAudioContent(m.content);
+  const bars = wave.length ? wave : Array.from({ length: 32 }, () => 0.3);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [curTime, setCurTime] = useState(0);
+  const [speed, setSpeed] = useState(1);
+  const [onceUrl, setOnceUrl] = useState<string | null>(null);
+  const [onceLoading, setOnceLoading] = useState(false);
+  const [onceEnded, setOnceEnded] = useState(false);
+  useEffect(() => () => { if (onceUrl) URL.revokeObjectURL(onceUrl); }, [onceUrl]);
+  const effectiveUrl = m.is_view_once ? onceUrl : url;
+  const ratio = duration > 0 ? Math.min(1, curTime / duration) : 0;
+
+  const togglePlay = async () => {
+    if (m.is_view_once && !isMine && !onceUrl && !onceEnded) {
+      setOnceLoading(true);
+      const blobUrl = await onOpenOnce(m);
+      setOnceLoading(false);
+      if (!blobUrl) return;
+      setOnceUrl(blobUrl);
+      requestAnimationFrame(() => { const el = audioRef.current; if (el) { el.playbackRate = speed; el.play().catch(() => {}); } });
+      return;
+    }
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) el.pause(); else { el.playbackRate = speed; el.play().catch(() => {}); }
+  };
+  const cycleSpeed = () => {
+    const next = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1;
+    setSpeed(next);
+    if (audioRef.current) audioRef.current.playbackRate = next;
+  };
+  const seekTo = (r: number) => {
+    if (m.is_view_once) return; // pas de retour arrière possible sur un vocal à écoute unique
+    const el = audioRef.current;
+    if (!el || !el.duration) return;
+    el.currentTime = r * el.duration;
+  };
+
+  // ── États "détruit" (déjà consulté, comme les photos) ──
+  if (m.is_destroyed) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", minWidth: 200 }}>
+        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#444" }}>{isMine ? "Vocal consulté et détruit" : "Vocal détruit"}</div>
+          {!isMine && <div style={{ fontSize: "0.72rem", color: "#999" }}>Ce message vocal a été écouté.</div>}
+        </div>
+      </div>
+    );
+  }
+  // ── Vocal vue unique côté expéditeur : pas de lecture possible, juste un état "Envoyé" ──
+  if (m.is_view_once && isMine) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "18px 18px 4px 18px", background: G.rouge, minWidth: 200 }}>
+        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff" }}>🔥 Vocal à écoute unique</div>
+          <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.85)" }}>Envoyé</div>
+        </div>
+      </div>
+    );
+  }
+  // ── Vocal vue unique côté destinataire, pas encore ouvert ──
+  if (m.is_view_once && !isMine && !onceUrl && !onceEnded) {
+    return (
+      <div onClick={togglePlay} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "18px 18px 18px 4px", background: G.blanc, border: `1px solid ${G.gris}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", cursor: "pointer", minWidth: 200 }}>
+        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          {onceLoading ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg> :
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>🔥 Vocal à écoute unique</div>
+          <div style={{ fontSize: "0.72rem", color: G.rouge, fontWeight: 600 }}>{onceLoading ? "Chargement…" : "Appuie pour écouter"}</div>
+        </div>
+      </div>
+    );
+  }
+  // ── Lecteur plein (vocal normal, ou vocal vue unique en cours d'écoute) ──
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMine ? G.rouge : G.blanc, border: isMine ? "none" : `1px solid ${G.gris}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", minWidth: 220, maxWidth: 260 }}>
+      <audio ref={audioRef} src={effectiveUrl || undefined} preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onTimeUpdate={e => setCurTime((e.target as HTMLAudioElement).currentTime)}
+        onEnded={() => {
+          setPlaying(false); setCurTime(0);
+          if (m.is_view_once && !isMine) { setOnceEnded(true); onExpireOnce(m); }
+        }}
+        style={{ display: "none" }}
+      />
+      <div onClick={togglePlay} style={{ width: 34, height: 34, borderRadius: "50%", background: isMine ? "rgba(255,255,255,0.2)" : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
+        {playing ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={isMine ? "#fff" : G.rouge}><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={isMine ? "#fff" : G.rouge}><polygon points="6 3 20 12 6 21 6 3"/></svg>
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div onClick={e => { const r = e.currentTarget.getBoundingClientRect(); seekTo(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))); }}
+          style={{ display: "flex", alignItems: "center", gap: 1.5, height: 24, cursor: m.is_view_once ? "default" : "pointer" }}>
+          {bars.map((v, idx) => {
+            const played = idx / bars.length <= ratio;
+            return <div key={idx} style={{ width: 3, borderRadius: 2, height: `${Math.max(15, v * 100)}%`, background: isMine ? (played ? "#fff" : "rgba(255,255,255,0.4)") : (played ? G.rouge : "rgba(44,26,14,0.18)"), flexShrink: 0 }} />;
+          })}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 3 }}>
+          <span style={{ fontSize: "0.66rem", color: isMine ? "rgba(255,255,255,0.75)" : "#999" }}>{fmtAudioTime(playing || curTime > 0 ? curTime : duration)}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {!m.is_view_once && (
+              <span onClick={cycleSpeed} style={{ fontSize: "0.62rem", fontWeight: 700, color: isMine ? "#fff" : G.rouge, background: isMine ? "rgba(255,255,255,0.2)" : "rgba(192,57,43,0.1)", borderRadius: 8, padding: "1px 6px", cursor: "pointer" }}>{speed}×</span>
+            )}
+            <span style={{ fontSize: "0.62rem", color: isMine ? "rgba(255,255,255,0.65)" : "#bbb" }}>{time}</span>
+            {isMine && <TickIcon read={m.is_read} isPremium={isPremium} white />}
+          </div>
         </div>
       </div>
     </div>
@@ -7693,6 +7840,36 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const [partnerActionLoading, setPartnerActionLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+
+  // ══════════════════════════ Notes vocales ══════════════════════════
+  const AUDIO_MAX_MS = 60_000; // 1 minute max
+  const AUDIO_CANCEL_PX = 90;  // glissement gauche pour révéler/déclencher la corbeille
+  const AUDIO_LOCK_PX = 70;    // glissement haut pour verrouiller
+  const [recState, setRecState] = useState<"idle" | "recording" | "locked">("idle");
+  const [recDuration, setRecDuration] = useState(0); // secondes, mis à jour ~10x/s pendant l'enregistrement
+  const [recLevels, setRecLevels] = useState<number[]>([]); // ondes en temps réel (fenêtre glissante affichée)
+  const [recDragX, setRecDragX] = useState(0); // décalage horizontal du doigt (0 → -AUDIO_CANCEL_PX)
+  const [recCanceling, setRecCanceling] = useState(false);
+  const [audioPreview, setAudioPreview] = useState<{ url: string; blob: Blob; duration: number; wave: number[] } | null>(null);
+  const [audioPreviewOnce, setAudioPreviewOnce] = useState(false);
+  const [audioPreviewPlaying, setAudioPreviewPlaying] = useState(false);
+  const [audioPreviewTime, setAudioPreviewTime] = useState(0);
+  const [audioSending, setAudioSending] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const recAudioCtxRef = useRef<AudioContext | null>(null);
+  const recAnalyserRef = useRef<AnalyserNode | null>(null);
+  const recRafRef = useRef<number | null>(null);
+  const recStartRef = useRef(0);
+  const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recAllLevelsRef = useRef<number[]>([]); // capture complète pour générer la forme d'onde finale (40 barres)
+  const recPointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const recLockedRef = useRef(false);
+  const recCancelRef = useRef(false);
+  const recPendingReleaseRef = useRef(false); // doigt relâché avant même que getUserMedia() ait résolu
+  const audioPreviewElRef = useRef<HTMLAudioElement | null>(null);
+  const destroyedAudioIdsRef = useRef<Set<string>>(new Set());
   // Défilement vers le message cité (clic sur la citation)
   const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
@@ -8560,7 +8737,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       return;
     }
     if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
-    const rawQuoted = replyTo ? (replyTo.is_destroyed ? "Photo détruite" : replyTo.is_view_once ? "Photo vue unique" : replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
+    const replyIsAudio = !!replyTo && isAudioMsg(replyTo.content);
+    const rawQuoted = replyTo ? (replyTo.is_destroyed ? (replyIsAudio ? "Vocal détruit" : "Photo détruite") : replyTo.is_view_once ? (replyIsAudio ? "Vocal vue unique" : "Photo vue unique") : replyIsAudio ? "Message vocal" : replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
     // Supprimer la citation imbriquée si le message cité est lui-même une réponse
     const cleanQuoted = rawQuoted.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/\]/g, "）").substring(0, 60);
     const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${cleanQuoted}]\n` : "";
@@ -8622,6 +8800,15 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const isImage = (content: string) => content.startsWith("[img]") && content.endsWith("[/img]");
   const getImageUrl = (content: string) => content.slice(5, -6);
 
+  // ── Notes vocales : encodage compact dans content → "[audio]url::durée::forme_onde[/audio]" ──
+  const isAudioMsg = (content: string) => content.startsWith("[audio]") && content.endsWith("[/audio]");
+  const parseAudioContent = (content: string): { url: string; duration: number; wave: number[] } => {
+    const inner = content.slice(7, -8);
+    const [url, durStr, waveStr] = inner.split("::");
+    return { url: url || "", duration: parseFloat(durStr) || 0, wave: waveStr ? waveStr.split(",").map(n => parseFloat(n) || 0) : [] };
+  };
+  const encodeAudioContent = (url: string, duration: number, wave: number[]) => `[audio]${url}::${duration.toFixed(1)}::${wave.map(n => n.toFixed(2)).join(",")}[/audio]`;
+
   // Ouvre une photo vue unique : précharge en mémoire → détruit le fichier côté serveur → affiche le blob.
   // Ainsi la photo est déjà détruite serveur dès l'ouverture (robuste même si l'app se ferme/recharge).
   const openViewOnce = async (m: Message) => {
@@ -8650,6 +8837,220 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const closePreview = () => {
     setPreviewImg(prev => { if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev); return null; });
     setBurnMsg(null);
+  };
+
+  // ══════════════════════ Notes vocales : enregistrement, upload, vue unique ══════════════════════
+  // Réduit la capture brute (plusieurs centaines de valeurs) à 40 barres pour la forme d'onde stockée.
+  const downsampleWave = (levels: number[], n = 40): number[] => {
+    if (levels.length === 0) return Array.from({ length: n }, () => 0.15);
+    const out: number[] = [];
+    const bucket = levels.length / n;
+    for (let i = 0; i < n; i++) {
+      const slice = levels.slice(Math.floor(i * bucket), Math.floor((i + 1) * bucket));
+      const avg = slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : 0;
+      out.push(Math.max(0.08, Math.min(1, avg * 1.6)));
+    }
+    return out;
+  };
+
+  const stopAnalyserLoop = () => {
+    if (recRafRef.current) cancelAnimationFrame(recRafRef.current);
+    recRafRef.current = null;
+    if (recAudioCtxRef.current) { recAudioCtxRef.current.close().catch(() => {}); recAudioCtxRef.current = null; }
+    recAnalyserRef.current = null;
+  };
+  const cleanupRecordingStream = () => {
+    mediaStreamRef.current?.getTracks().forEach(t => t.stop());
+    mediaStreamRef.current = null;
+    mediaRecorderRef.current = null;
+  };
+
+  // Démarre l'enregistrement (appui long sur le micro). Réservé Premium.
+  const startRecording = async () => {
+    if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
+    if (!open || recState !== "idle") return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      recChunksRef.current = [];
+      recAllLevelsRef.current = [];
+      recCancelRef.current = false;
+      recLockedRef.current = false;
+      recPendingReleaseRef.current = false;
+      setRecCanceling(false); setRecDragX(0); setRecDuration(0); setRecLevels([]);
+      const mimeType = (window as any).MediaRecorder?.isTypeSupported?.("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : ((window as any).MediaRecorder?.isTypeSupported?.("audio/mp4") ? "audio/mp4" : "");
+      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = rec;
+      rec.ondataavailable = (e) => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
+      rec.start();
+      recStartRef.current = Date.now();
+      setRecState("recording");
+      // Si le doigt a déjà été relâché pendant l'attente de la permission micro, on termine tout de suite.
+      if (recPendingReleaseRef.current) { setTimeout(() => finishRecording(recCancelRef.current), 0); return; }
+      try { (navigator as any).vibrate?.(15); } catch {}
+      // Analyse en temps réel du niveau sonore → alimente l'animation des ondes de la bulle flottante
+      const ctx = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
+      recAudioCtxRef.current = ctx;
+      const src = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      src.connect(analyser);
+      recAnalyserRef.current = analyser;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteFrequencyData(data);
+        const avg = data.reduce((a, b) => a + b, 0) / data.length / 255;
+        recAllLevelsRef.current.push(avg);
+        setRecLevels(prev => { const next = [...prev, avg]; return next.length > 40 ? next.slice(-40) : next; });
+        const elapsed = (Date.now() - recStartRef.current) / 1000;
+        setRecDuration(elapsed);
+        if (elapsed * 1000 >= AUDIO_MAX_MS) { finishRecording(false); return; }
+        recRafRef.current = requestAnimationFrame(tick);
+      };
+      recRafRef.current = requestAnimationFrame(tick);
+    } catch {
+      setToast({ msg: "Micro inaccessible. Vérifie les autorisations de l'application.", type: "error" });
+    }
+  };
+
+  // Termine l'enregistrement : cancel=true → jette tout ; cancel=false → ouvre l'écran d'aperçu.
+  const finishRecording = (cancel: boolean) => {
+    const rec = mediaRecorderRef.current;
+    stopAnalyserLoop();
+    if (!rec) { cleanupRecordingStream(); setRecState("idle"); setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0); return; }
+    rec.onstop = () => {
+      cleanupRecordingStream();
+      if (cancel) {
+        setRecState("idle"); setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0);
+        return;
+      }
+      const mime = rec.mimeType || "audio/webm";
+      const blob = new Blob(recChunksRef.current, { type: mime });
+      const duration = (Date.now() - recStartRef.current) / 1000;
+      const wave = downsampleWave(recAllLevelsRef.current, 40);
+      const url = URL.createObjectURL(blob);
+      setRecState("idle"); setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0);
+      setAudioPreviewOnce(false); setAudioPreviewPlaying(false); setAudioPreviewTime(0);
+      setAudioPreview({ url, blob, duration, wave });
+    };
+    if (rec.state !== "inactive") rec.stop(); else rec.onstop(null as any);
+  };
+
+  // Envoi rapide depuis la barre verrouillée (raccourci : envoie directement en vocal normal, sans passer par l'aperçu).
+  const quickSendLockedRecording = () => {
+    const rec = mediaRecorderRef.current;
+    stopAnalyserLoop();
+    if (!rec) return;
+    rec.onstop = async () => {
+      cleanupRecordingStream();
+      const mime = rec.mimeType || "audio/webm";
+      const blob = new Blob(recChunksRef.current, { type: mime });
+      const duration = (Date.now() - recStartRef.current) / 1000;
+      const wave = downsampleWave(recAllLevelsRef.current, 40);
+      setRecState("idle"); setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0);
+      await uploadAndSendAudio(blob, duration, wave, false);
+    };
+    if (rec.state !== "inactive") rec.stop();
+  };
+
+  // Gestes sur le bouton micro : appui long = enregistrer, glisser à gauche = annuler, glisser en haut = verrouiller.
+  const onMicPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    recPointerStartRef.current = { x: e.clientX, y: e.clientY };
+    startRecording();
+  };
+  const onMicPointerMove = (e: React.PointerEvent) => {
+    if (recState !== "recording" || !recPointerStartRef.current) return;
+    const dx = e.clientX - recPointerStartRef.current.x;
+    const dy = e.clientY - recPointerStartRef.current.y;
+    if (!recLockedRef.current && dy < -AUDIO_LOCK_PX) {
+      recLockedRef.current = true;
+      setRecState("locked");
+      try { (navigator as any).vibrate?.(20); } catch {}
+      return;
+    }
+    if (dx < 0) {
+      setRecDragX(Math.max(dx, -AUDIO_CANCEL_PX * 1.4));
+      const canceling = dx < -AUDIO_CANCEL_PX;
+      if (canceling !== recCancelRef.current) {
+        recCancelRef.current = canceling; setRecCanceling(canceling);
+        if (canceling) { try { (navigator as any).vibrate?.(20); } catch {} }
+      }
+    }
+  };
+  const onMicPointerUp = () => {
+    if (recState === "locked") { recPointerStartRef.current = null; return; } // reste enregistré, attend un geste manuel
+    if (recState !== "recording") { recPointerStartRef.current = null; return; }
+    const shouldCancel = recCancelRef.current;
+    recPointerStartRef.current = null;
+    if (shouldCancel) { try { (navigator as any).vibrate?.(30); } catch {} }
+    finishRecording(shouldCancel);
+  };
+
+  // Upload Supabase Storage (bucket "messages", déjà utilisé pour les photos) puis insertion du message.
+  const uploadAndSendAudio = async (blob: Blob, duration: number, wave: number[], once: boolean) => {
+    if (!open) return;
+    setAudioSending(true);
+    try {
+      const ext = blob.type.includes("mp4") ? "m4a" : "webm";
+      const path = `${auth.userId}/audio_${Date.now()}.${ext}`;
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/messages/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${auth.token}`, "Content-Type": blob.type || "audio/webm", "x-upsert": "true" },
+        body: blob,
+      });
+      if (r.ok) {
+        const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
+        const content = encodeAudioContent(url, duration, wave);
+        const row: Record<string, unknown> = { match_id: open.id, sender_id: auth.userId, content, is_read: false };
+        if (once) row.is_view_once = true;
+        const res = await sb.insert<Message>(auth.token, "messages", row);
+        if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
+      } else {
+        setToast({ msg: "Échec de l'envoi du vocal", type: "error" });
+      }
+    } catch { setToast({ msg: "Échec de l'envoi du vocal", type: "error" }); }
+    setAudioSending(false);
+  };
+  // Envoi depuis l'écran d'aperçu (avec le mode choisi : normal ou vue unique)
+  const confirmSendAudio = async () => {
+    if (!audioPreview) return;
+    const { blob, duration, wave, url } = audioPreview;
+    const once = audioPreviewOnce;
+    setAudioPreview(null); setAudioPreviewOnce(false); setAudioPreviewPlaying(false); setAudioPreviewTime(0);
+    URL.revokeObjectURL(url);
+    await uploadAndSendAudio(blob, duration, wave, once);
+  };
+  const cancelAudioPreview = () => {
+    setAudioPreview(prev => { if (prev) URL.revokeObjectURL(prev.url); return null; });
+    setAudioPreviewOnce(false); setAudioPreviewPlaying(false); setAudioPreviewTime(0);
+  };
+
+  // Vocal à écoute unique : charge le fichier en mémoire pour lecture (la destruction serveur
+  // n'intervient qu'à la FIN de la lecture, cf. expireAudioOnce — logique propre à l'audio,
+  // différente des photos qui se détruisent dès l'ouverture).
+  const openAudioOnce = async (m: Message): Promise<string | null> => {
+    if (!m.id || m.is_destroyed) return null;
+    try {
+      const { url } = parseAudioContent(m.content);
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      return URL.createObjectURL(blob);
+    } catch { return null; }
+  };
+  // Appelée quand la lecture unique se termine : détruit le message côté base + fichier Storage.
+  const expireAudioOnce = (m: Message) => {
+    if (!m.id || destroyedAudioIdsRef.current.has(m.id)) return;
+    destroyedAudioIdsRef.current.add(m.id);
+    const now = new Date().toISOString();
+    setMsgs(list => list.map(x => x.id === m.id ? { ...x, is_destroyed: true, viewed_at: now, destroyed_at: now } : x));
+    sb.update(auth.token, "messages", m.id, { is_destroyed: true, viewed_at: now, destroyed_at: now }).catch(() => {});
+    // Suppression du fichier Storage : nécessite une Edge Function avec droits admin (comme burn-photo).
+    fetch(`${SUPABASE_URL}/functions/v1/burn-voice`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+      body: JSON.stringify({ message_id: m.id }),
+    }).catch(() => {});
   };
 
   const [showGift, setShowGift] = useState(false);
@@ -8837,11 +9238,13 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                           const lm = c.lastMsg; const ct = lm?.content;
                           if (!ct) return "Dis bonjour !";
                           const isPhoto = ct.startsWith("[img]") && ct.endsWith("[/img]");
-                          if (isPhoto || lm?.is_destroyed || lm?.is_view_once) {
-                            let label = "Photo";
-                            let icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
-                            if (lm?.is_destroyed) { label = "Photo détruite"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>; }
-                            else if (lm?.is_view_once) { label = "Photo vue unique"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>; }
+                          const isVoiceMsg = ct.startsWith("[audio]") && ct.endsWith("[/audio]");
+                          if (isPhoto || isVoiceMsg || lm?.is_destroyed || lm?.is_view_once) {
+                            const micIcon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>;
+                            let label = isVoiceMsg ? "Message vocal" : "Photo";
+                            let icon = isVoiceMsg ? micIcon : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
+                            if (lm?.is_destroyed) { label = isVoiceMsg ? "Vocal détruit" : "Photo détruite"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>; }
+                            else if (lm?.is_view_once) { label = isVoiceMsg ? "Vocal vue unique" : "Photo vue unique"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>; }
                             return <span style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "middle" }}>{icon}<span>{label}</span></span>;
                           }
                           return ct;
@@ -9135,6 +9538,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
           const isImg = isImage(m.content);
+          const isVoice = isAudioMsg(m.content);
           const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
           const reactions = m.reactions || {};
           const reactionEntries = Object.entries(reactions).filter(([, users]) => users.length > 0);
@@ -9255,6 +9659,43 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                     )}
                   </div>
                 </div>
+              ) : isVoice ? (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", width: "100%", justifyContent: isMine ? "flex-start" : "flex-start" }}>
+                  <div
+                    style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
+                    onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
+                  >
+                    {!m.is_view_once && !m.is_destroyed && (
+                      <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 6, right: isMine ? "auto" : 6, left: isMine ? 6 : "auto", zIndex: 3, cursor: "pointer", width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.78)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      </div>
+                    )}
+                    <VoiceMessage m={m} isMine={isMine} time={time} isPremium={auth.isPremium} onOpenOnce={openAudioOnce} onExpireOnce={expireAudioOnce} />
+                    {reactionEntries.length > 0 && (
+                      <div style={{ position: "relative", alignSelf: isMine ? "flex-end" : "flex-start", marginTop: -14, [isMine ? "marginRight" : "marginLeft"]: 4, display: "flex", gap: 3 }}>
+                        {reactionEntries.map(([emoji, users]) => (
+                          <div key={emoji} onClick={async () => {
+                            if (!m.id) return;
+                            const current = m.reactions || {};
+                            const usersOnThis = (current[emoji] || []) as string[];
+                            const hasReacted = usersOnThis.includes(auth.userId);
+                            const cleaned: Record<string, string[]> = {};
+                            for (const [e, us] of Object.entries(current)) {
+                              cleaned[e] = (us as string[]).filter((u: string) => u !== auth.userId);
+                            }
+                            const base: string[] = cleaned[emoji] || [];
+                            const updated = hasReacted ? base : [...base, auth.userId];
+                            const newReactions = { ...cleaned, [emoji]: updated };
+                            await sb.update(auth.token, "messages", m.id, { reactions: newReactions });
+                            setMsgs(prev => prev.map(msg => msg.id === m.id ? { ...msg, reactions: newReactions } : msg));
+                          }} style={{ background: G.blanc, borderRadius: 50, padding: "2px 6px", fontSize: "0.75rem", boxShadow: "0 1px 4px rgba(0,0,0,0.15)", cursor: "pointer", display: "flex", alignItems: "center", gap: 2, border: `1px solid ${G.gris}` }}>
+                            {emoji}<span style={{ fontSize: "0.65rem", color: "#555", fontWeight: 600 }}>{users.length > 1 ? users.length : ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               ) : (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", width: "100%", justifyContent: isMine ? "flex-start" : "flex-start" }}>
                   <div style={{ position: "relative", maxWidth: "72%" }}>
@@ -9294,6 +9735,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                             .trim()
                             .substring(0, 80);
                           const isPhoto = cleanQuoted === "Photo";
+                          const isAudioQuote = cleanQuoted === "Message vocal" || cleanQuoted === "Vocal détruit" || cleanQuoted === "Vocal vue unique";
                           return <>
                             <div onClick={(e) => { e.stopPropagation(); scrollToQuoted(who, cleanQuoted, m.id); }} title="Aller au message" style={{ background: isMine ? "rgba(0,0,0,0.18)" : "rgba(192,57,43,0.07)", borderRadius: 8, marginBottom: 6, overflow: "hidden", display: "flex", cursor: "pointer" }}>
                               {/* Barre colorée gauche */}
@@ -9303,6 +9745,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: isMine ? "rgba(255,255,255,0.9)" : G.rouge, marginBottom: 2 }}>{who}</div>
                                 <div style={{ fontSize: "0.75rem", color: isMine ? "rgba(255,255,255,0.7)" : "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
                                   {isPhoto && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>}
+                                  {isAudioQuote && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>}
                                   {cleanQuoted}
                                 </div>
                               </div>
@@ -9430,6 +9873,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
           </>
         )}
+        {recState === "idle" ? (
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", padding: "10px 12px" }}>
           {/* Bouton image - Premium */}
           <input ref={imgRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
@@ -9485,8 +9929,82 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               WebkitOverflowScrolling: "touch",
             }}
           />
-          <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0, marginBottom: 2 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+          {text.trim().length > 0 ? (
+            <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0, marginBottom: 2 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+          ) : (
+            <div
+              onPointerDown={onMicPointerDown}
+              onPointerUp={() => { recPendingReleaseRef.current = true; onMicPointerUp(); }}
+              onPointerCancel={() => { recPendingReleaseRef.current = true; onMicPointerUp(); }}
+              style={{ width: 44, height: 44, borderRadius: "50%", background: auth.isPremium ? G.rouge : "#ccc", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0, marginBottom: 2, touchAction: "none", userSelect: "none", WebkitUserSelect: "none" }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+            </div>
+          )}
         </div>
+        ) : recState === "recording" ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", position: "relative" }}>
+          {/* Bulle flottante façon Snapchat, au-dessus de la barre : ondes en temps réel + durée + hint d'annulation */}
+          <div style={{ position: "absolute", bottom: "100%", left: 12, right: 12, marginBottom: 10, background: "#1c1c1e", borderRadius: 18, padding: "14px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.32)", display: "flex", flexDirection: "column", gap: 9 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite" }} />
+              <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.85rem" }}>{fmtAudioTime(recDuration)}</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", marginLeft: "auto" }}>max 1:00</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 2, height: 30 }}>
+              {(recLevels.length ? recLevels : Array.from({ length: 20 }, () => 0.12)).map((v, i) => (
+                <div key={i} style={{ width: 3, borderRadius: 2, height: `${Math.max(10, v * 100)}%`, background: "#fff", flexShrink: 0 }} />
+              ))}
+            </div>
+            {recCanceling ? (
+              <div style={{ textAlign: "center", color: "#ff3b30", fontSize: "0.78rem", fontWeight: 700 }}>Relâche pour annuler</div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: "rgba(255,255,255,0.5)", fontSize: "0.72rem" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                Glisser pour annuler · vers le haut pour verrouiller
+              </div>
+            )}
+          </div>
+          {/* Zone de gauche : poubelle qui grossit pendant le glissement */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+            <div style={{ width: 36 + Math.min(16, -recDragX * 0.22), height: 36 + Math.min(16, -recDragX * 0.22), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s, width 0.05s, height 0.05s", flexShrink: 0 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={recCanceling ? "#fff" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </div>
+            <span style={{ fontSize: "0.8rem", color: "#888", fontWeight: 600 }}>Enregistrement…</span>
+          </div>
+          {/* Bouton micro : reste au même endroit, capte le glissement du doigt */}
+          <div
+            onPointerMove={onMicPointerMove}
+            onPointerUp={onMicPointerUp}
+            onPointerCancel={onMicPointerUp}
+            style={{ width: 52, height: 52, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, boxShadow: "0 0 0 8px rgba(192,57,43,0.12)", touchAction: "none" }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+          </div>
+        </div>
+        ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
+          {/* Verrouillé : poubelle (annuler) */}
+          <div onClick={() => finishRecording(true)} style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: G.creme, border: `2px solid ${G.gris}`, borderRadius: 20, padding: "8px 12px", minWidth: 0 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
+            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 1.5, height: 20, flex: 1, overflow: "hidden" }}>
+              {(recLevels.length ? recLevels.slice(-26) : Array.from({ length: 20 }, () => 0.15)).map((v, i) => (
+                <div key={i} style={{ width: 3, borderRadius: 2, height: `${Math.max(15, v * 100)}%`, background: G.rouge, flexShrink: 0 }} />
+              ))}
+            </div>
+          </div>
+          <div onClick={() => finishRecording(false)} title="Arrêter et prévisualiser" style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(44,26,14,0.06)", border: `1.5px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={G.brun}><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+          </div>
+          <div onClick={quickSendLockedRecording} title="Envoyer" style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </div>
+        </div>
+        )}
       </div>
 
       {/* Menu contextuel style WhatsApp */}
@@ -9526,9 +10044,10 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                 const m = contextMenu.msg;
                 const isMine = m.sender_id === auth.userId;
                 const isImage = m.content.startsWith("[img]");
+                const isAudioCtx = isAudioMsg(m.content);
                 const ageMs = m.created_at ? Date.now() - new Date(m.created_at).getTime() : Infinity;
                 const within15min = ageMs <= 15 * 60 * 1000;
-                if (!isMine || isImage || !within15min) return null;
+                if (!isMine || isImage || isAudioCtx || !within15min) return null;
                 return (
                   <div onClick={() => {
                     const msg = contextMenu!.msg;
@@ -9549,7 +10068,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: G.brun }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
               </div>
               <div onClick={async () => {
-                const contentToCopy = contextMenu.msg.content.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/^\[img\](.*)\[\/img\]$/, "$1");
+                const contentToCopy = contextMenu.msg.content.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/^\[img\](.*)\[\/img\]$/, "$1").replace(/^\[audio\][\s\S]*\[\/audio\]$/, "Message vocal");
                 setContextMenu(null);
                 try {
                   await navigator.clipboard.writeText(contentToCopy);
@@ -9650,6 +10169,61 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               </div>
             </div>
             <Btn variant="primary" onClick={confirmSendImage} style={{ width: "100%" }}>Envoyer</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* Écran d'aperçu du vocal avant envoi : lecture, forme d'onde, mode normal / écoute unique */}
+      {audioPreview && (
+        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 510, display: "flex", flexDirection: "column" }}>
+          <audio
+            ref={audioPreviewElRef}
+            src={audioPreview.url}
+            onPlay={() => setAudioPreviewPlaying(true)}
+            onPause={() => setAudioPreviewPlaying(false)}
+            onTimeUpdate={e => setAudioPreviewTime((e.target as HTMLAudioElement).currentTime)}
+            onEnded={() => { setAudioPreviewPlaying(false); setAudioPreviewTime(0); }}
+            style={{ display: "none" }}
+          />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
+            <div onClick={cancelAudioPreview} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
+            <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.82rem", fontWeight: 600 }}>Message vocal</span>
+            <div style={{ width: 38 }} />
+          </div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 28px", gap: 22 }}>
+            <div onClick={() => { const el = audioPreviewElRef.current; if (!el) return; if (audioPreviewPlaying) el.pause(); else el.play().catch(() => {}); }}
+              style={{ width: 74, height: 74, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.4)" }}>
+              {audioPreviewPlaying ? (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              ) : (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              )}
+            </div>
+            <div onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const el = audioPreviewElRef.current; if (el && el.duration) el.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * el.duration; }}
+              style={{ display: "flex", alignItems: "center", gap: 2.5, height: 60, width: "100%", maxWidth: 320, cursor: "pointer" }}>
+              {audioPreview.wave.map((v, i) => {
+                const played = audioPreview.duration > 0 && i / audioPreview.wave.length <= audioPreviewTime / audioPreview.duration;
+                return <div key={i} style={{ width: 4, borderRadius: 2, height: `${Math.max(12, v * 100)}%`, background: played ? G.rouge : "rgba(255,255,255,0.25)", flexShrink: 0 }} />;
+              })}
+            </div>
+            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.85rem", fontWeight: 600 }}>{fmtAudioTime(audioPreviewPlaying || audioPreviewTime > 0 ? audioPreviewTime : audioPreview.duration)} / {fmtAudioTime(audioPreview.duration)}</span>
+          </div>
+          <div style={{ padding: "16px 18px 26px" }}>
+            {/* Sélecteur de mode : Vocal normal vs Vocal à écoute unique, à la manière des photos vue unique */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <div onClick={() => setAudioPreviewOnce(false)} style={{ flex: 1, textAlign: "center", padding: "11px 8px", borderRadius: 14, cursor: "pointer", background: !audioPreviewOnce ? G.rouge : "rgba(255,255,255,0.08)", border: `1px solid ${!audioPreviewOnce ? G.rouge : "rgba(255,255,255,0.14)"}`, transition: "all 0.15s" }}>
+                <div style={{ fontSize: "1.15rem", marginBottom: 2 }}>🎤</div>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem" }}>Vocal normal</div>
+              </div>
+              <div onClick={() => setAudioPreviewOnce(true)} style={{ flex: 1, textAlign: "center", padding: "11px 8px", borderRadius: 14, cursor: "pointer", background: audioPreviewOnce ? G.rouge : "rgba(255,255,255,0.08)", border: `1px solid ${audioPreviewOnce ? G.rouge : "rgba(255,255,255,0.14)"}`, transition: "all 0.15s" }}>
+                <div style={{ fontSize: "1.15rem", marginBottom: 2 }}>🔥</div>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem" }}>Écoute unique</div>
+              </div>
+            </div>
+            {audioPreviewOnce && (
+              <div style={{ color: "#aaa", fontSize: "0.74rem", textAlign: "center", marginBottom: 14, lineHeight: 1.4 }}>Ce vocal sera détruit dès que ton/ta partenaire aura fini de l'écouter.</div>
+            )}
+            <Btn variant="primary" onClick={confirmSendAudio} loading={audioSending} style={{ width: "100%" }}>Envoyer</Btn>
           </div>
         </div>
       )}
