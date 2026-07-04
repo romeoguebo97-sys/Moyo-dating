@@ -1321,6 +1321,9 @@ const GLOBAL_CSS = `
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
   @keyframes waveBounce{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
   .wave-bar-live{animation:waveBounce 0.9s ease-in-out infinite}
+  /* Empêche iOS Safari de déclencher la sélection de texte / loupe pendant l'appui long sur le micro
+     ou sur les libellés de la barre d'enregistrement (bug remonté : "Glisser pour annuler" se sélectionnait). */
+  .no-select-callout{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
   @keyframes shimmer{0%{background-position:-450px 0}100%{background-position:450px 0}}
   .skeleton{background:#e7e4dd;background-image:linear-gradient(90deg,rgba(255,255,255,0) 0,rgba(255,255,255,0.7) 50%,rgba(255,255,255,0) 100%);background-size:450px 100%;background-repeat:no-repeat;animation:shimmer 1.25s ease-in-out infinite;border-radius:10px}
   button{transition:transform .12s cubic-bezier(.34,1.56,.64,1)}
@@ -7892,6 +7895,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const barRowRef = useRef<HTMLDivElement | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const gestureAxisRef = useRef<"x" | "y" | null>(null); // trajectoire déterminée UNE FOIS par geste : jamais de diagonale
+  const cancelTravelMaxRef = useRef(0); // distance réelle (en px) entre le micro et la corbeille, mesurée au début du geste
   const curTXRef = useRef(0);
   const curTYRef = useRef(0);
   const lastGhostPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -9018,6 +9022,25 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     if (rec.state !== "inactive") rec.stop(); else rec.onstop(null as any);
   };
 
+  // Appui simple relâché sans aucun geste (ni annulation ni verrouillage) : le vocal part
+  // immédiatement, comme un vocal classique — pas d'écran de révision pour ce cas rapide.
+  // (Le panneau à 4 actions reste réservé au parcours "verrouillage" + tap sur le cadenas.)
+  const finishRecordingInstant = () => {
+    const rec = mediaRecorderRef.current;
+    stopAnalyserLoop();
+    if (!rec) { cleanupRecordingStream(); setRecState("idle"); setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0); return; }
+    rec.onstop = async () => {
+      cleanupRecordingStream();
+      const mime = rec.mimeType || "audio/webm";
+      const blob = new Blob(recChunksRef.current, { type: mime });
+      const duration = (Date.now() - recStartRef.current) / 1000;
+      const wave = downsampleWave(recAllLevelsRef.current, 40);
+      setRecState("idle"); setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0);
+      await uploadAndSendAudio(blob, duration, wave, false);
+    };
+    if (rec.state !== "inactive") rec.stop();
+  };
+
   // ══════════════ Animation premium du micro (traînée fantôme, trajectoire unique, absorption magnétique) ══════════════
   // Laisse une ombre semi-transparente derrière le micro pendant son déplacement (sensation de vitesse/fluidité).
   const spawnGhost = () => {
@@ -9117,6 +9140,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     if (mic) { try { mic.setPointerCapture(e.pointerId); } catch {} mic.style.transition = ""; mic.style.transform = "translate(0px,0px)"; mic.style.opacity = "1"; }
     activePointerIdRef.current = e.pointerId;
     gestureAxisRef.current = null;
+    cancelTravelMaxRef.current = 0;
     curTXRef.current = 0; curTYRef.current = 0;
     lastGhostPosRef.current = null;
     recPointerStartRef.current = { x: e.clientX, y: e.clientY };
@@ -9125,6 +9149,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const onMicPointerMove = (e: React.PointerEvent) => {
     if (e.pointerId !== activePointerIdRef.current) return;
     if (recState !== "recording" || !recPointerStartRef.current) return;
+    if (recLockedRef.current) return; // déjà en train de se verrouiller/verrouillé : on ignore la suite du glissement,
+                                       // sinon le retour à sa place se faisait écraser par les mouvements du doigt encore en cours
     const dx = e.clientX - recPointerStartRef.current.x;
     const dy = e.clientY - recPointerStartRef.current.y;
     const mic = micHandleRef.current;
@@ -9138,7 +9164,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     }
 
     if (gestureAxisRef.current === "y") {
-      if (!recLockedRef.current && dy < -AUDIO_LOCK_PX) {
+      if (dy < -AUDIO_LOCK_PX) {
         recLockedRef.current = true;
         recSuppressClickRef.current = true; // le pointerup qui suit ne doit pas aussi déclencher un "stop"
         try { (navigator as any).vibrate?.(20); } catch {}
@@ -9153,7 +9179,22 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     }
 
     // gestureAxisRef.current === "x" : seule la trajectoire d'annulation est active ici.
-    const followX = Math.max(dx, -AUDIO_CANCEL_PX * 1.3);
+    // Le micro doit pouvoir parcourir toute la distance réelle jusqu'à la corbeille (mesurée une
+    // fois au tout début du geste), pas une petite distance arbitraire qui le laissait bloqué au milieu.
+    if (!cancelTravelMaxRef.current) {
+      const trash = trashElRef.current;
+      if (trash) {
+        const micRect0 = mic.getBoundingClientRect();
+        const trashRect0 = trash.getBoundingClientRect();
+        cancelTravelMaxRef.current = Math.max(
+          AUDIO_CANCEL_PX * 1.3,
+          (micRect0.left + micRect0.width / 2) - (trashRect0.left + trashRect0.width / 2)
+        );
+      } else {
+        cancelTravelMaxRef.current = AUDIO_CANCEL_PX * 1.3;
+      }
+    }
+    const followX = Math.max(dx, -cancelTravelMaxRef.current);
     curTXRef.current = Math.min(0, followX); curTYRef.current = 0;
     mic.style.transform = `translate(${curTXRef.current}px, 0px)`;
     maybeSpawnGhost();
@@ -9167,15 +9208,18 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const onMicPointerUp = (e: React.PointerEvent) => {
     if (e.pointerId !== activePointerIdRef.current) return;
     activePointerIdRef.current = null;
-    if (recState !== "recording" && recState !== "locked") {
+    // recLockedRef (ref, mis à jour immédiatement) plutôt que recState (qui ne se met à jour qu'à
+    // la fin des ~320ms de l'animation de retour) : sinon un relâchement pendant cette fenêtre
+    // pouvait encore déclencher une annulation/un envoi au lieu de laisser le verrouillage se faire.
+    if (recLockedRef.current || recState === "locked") return; // reste enregistré mains libres, attend un tap sur le micro pour arrêter
+    if (recState !== "recording") {
       recPendingReleaseRef.current = true; // doigt relâché avant même que l'enregistrement démarre vraiment
       return;
     }
-    if (recState === "locked") return; // reste enregistré mains libres, attend un tap sur le micro pour arrêter
     const shouldCancel = recCancelRef.current;
     recPointerStartRef.current = null;
     if (shouldCancel) { try { (navigator as any).vibrate?.(30); } catch {} flyAwayToTrashAndCancel(); }
-    else { snapMicBack(() => finishRecording(false)); }
+    else { snapMicBack(() => finishRecordingInstant()); }
   };
   // Tap sur le micro une fois verrouillé (mains libres) : arrête l'enregistrement.
   const onMicClick = () => {
@@ -10129,7 +10173,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
 
             {/* Pastille d'enregistrement — masquée (pas démontée) en dehors de recording/locked */}
-            <div style={{ display: recState === "idle" ? "none" : "block", flex: 1, minWidth: 0, marginLeft: recState === "recording" ? 42 : 0, transition: "margin-left 0.15s" }}>
+            <div className="no-select-callout" style={{ display: recState === "idle" ? "none" : "block", flex: 1, minWidth: 0, marginLeft: recState === "recording" ? 42 : 0, transition: "margin-left 0.15s" }}>
               <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 30, padding: "10px 16px", minHeight: 48 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
                 <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
@@ -10142,7 +10186,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
 
             {/* Corbeille : élément indépendant, posé dans l'espace libre à gauche — visible seulement pendant "recording" */}
-            <div ref={trashElRef} style={{ display: recState === "recording" ? "flex" : "none", position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), height: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(44,26,14,0.08)", color: recCanceling ? "#fff" : G.rouge, alignItems: "center", justifyContent: "center", zIndex: 3, transition: "background 0.15s, color 0.15s" }}>
+            <div ref={trashElRef} className="no-select-callout" style={{ display: recState === "recording" ? "flex" : "none", position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), height: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(44,26,14,0.08)", color: recCanceling ? "#fff" : G.rouge, alignItems: "center", justifyContent: "center", zIndex: 3, transition: "background 0.15s, color 0.15s" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
 
@@ -10156,6 +10200,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               // c'est ce qui permet au navigateur de ne jamais couper le geste tactile en cours.
               <div
                 ref={micHandleRef}
+                className="no-select-callout"
                 onPointerDown={onMicPointerDown}
                 onPointerMove={onMicPointerMove}
                 onPointerUp={onMicPointerUp}
@@ -10184,7 +10229,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
           </div>
 
           {/* Indices sous la barre */}
-          <div style={{ display: recState === "recording" ? "flex" : "none", alignItems: "center", justifyContent: "space-between", margin: "8px 12px 10px", padding: "0 6px" }}>
+          <div className="no-select-callout" style={{ display: recState === "recording" ? "flex" : "none", alignItems: "center", justifyContent: "space-between", margin: "8px 12px 10px", padding: "0 6px" }}>
             <span style={{ fontSize: "0.68rem", fontWeight: 700, color: recCanceling ? G.rouge : "#999", display: "flex", alignItems: "center", gap: 4 }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               {recCanceling ? "Relâche pour annuler" : "Glisser pour annuler"}
@@ -10194,7 +10239,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
             </span>
           </div>
-          <div style={{ display: recState === "locked" ? "block" : "none", textAlign: "center", margin: "8px 12px 10px" }}>
+          <div className="no-select-callout" style={{ display: recState === "locked" ? "block" : "none", textAlign: "center", margin: "8px 12px 10px" }}>
             <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999" }}>Appuie sur le micro pour arrêter</span>
           </div>
         </div>
