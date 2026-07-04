@@ -7674,6 +7674,16 @@ const fmtAudioTime = (s: number) => { const t = Math.max(0, Math.round(s)); retu
 
 // ── Notes vocales : encodage compact dans content → "[audio]url::durée::forme_onde[/audio]" ──
 // Niveau module (et non local à Messages) car utilisé aussi par le composant VoiceMessage ci-dessous.
+// ── Registre global des <audio> de notes vocales actuellement montées à l'écran (clé = message.id).
+//    Sert à deux choses : 1) mettre en pause toute autre note en cours dès qu'une nouvelle démarre
+//    (une seule lecture possible à la fois) ; 2) enchaîner automatiquement sur la note suivante d'une
+//    série quand la lecture en cours se termine. Niveau module (pas de useContext) car VoiceMessage
+//    est mémoïsé et rendu en boucle indépendamment pour chaque message. ──
+const voiceAudioRegistry = new Map<string, HTMLAudioElement>();
+const pauseAllVoiceAudiosExcept = (except: HTMLAudioElement | null) => {
+  voiceAudioRegistry.forEach(el => { if (el !== except && !el.paused) el.pause(); });
+};
+
 const isAudioMsg = (content: string) => content.startsWith("[audio]") && content.endsWith("[/audio]");
 const parseAudioContent = (content: string): { url: string; duration: number; wave: number[] } => {
   const inner = content.slice(7, -8);
@@ -7684,10 +7694,11 @@ const encodeAudioContent = (url: string, duration: number, wave: number[]) => `[
 
 // ── Lecteur de note vocale unique, mutualisé entre le vocal "normal" et le vocal "vue unique". ──
 // La seule différence de comportement est pilotée par m.is_view_once (comme pour les photos).
-const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, onExpireOnce, time, isPremium }: {
+const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, onExpireOnce, time, isPremium, nextMsg }: {
   m: Message; isMine: boolean; time: string; isPremium: boolean;
   onOpenOnce: (m: Message) => Promise<string | null>; // fetch + destruction serveur → renvoie une blob URL locale
   onExpireOnce: (m: Message) => void; // appelé quand la lecture unique se termine (marque détruit localement)
+  nextMsg?: Message; // message suivant dans la conversation : si c'est aussi un vocal, on enchaîne dessus automatiquement
 }) {
   const { url, duration, wave } = parseAudioContent(m.content);
   const bars = wave.length ? wave : Array.from({ length: 32 }, () => 0.3);
@@ -7699,8 +7710,21 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
   const [onceLoading, setOnceLoading] = useState(false);
   const [onceEnded, setOnceEnded] = useState(false);
   useEffect(() => () => { if (onceUrl) URL.revokeObjectURL(onceUrl); }, [onceUrl]);
+  // Enregistrement/désenregistrement dans le registre global des lecteurs de notes vocales.
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !m.id) return;
+    voiceAudioRegistry.set(m.id, el);
+    return () => { if (voiceAudioRegistry.get(m.id) === el) voiceAudioRegistry.delete(m.id); };
+  }, [m.id]);
   const effectiveUrl = m.is_view_once ? onceUrl : url;
   const ratio = duration > 0 ? Math.min(1, curTime / duration) : 0;
+  // Le bouton menu contextuel (la flèche) est positionné en absolu par le parent, au-dessus du coin
+  // supérieur droit de cette bulle, exactement là où se trouve la fin de la waveform. On réserve donc
+  // une marge à droite de la waveform (largeur de la flèche 22px + petit espace) pour qu'aucun trait
+  // ne soit jamais masqué dessous. La flèche n'existe que si le vocal n'est ni "vue unique" ni détruit
+  // — même condition que côté parent.
+  const reserveArrowSpace = !m.is_view_once && !m.is_destroyed;
 
   const togglePlay = async () => {
     if (m.is_view_once && !isMine && !onceUrl && !onceEnded) {
@@ -7709,12 +7733,12 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
       setOnceLoading(false);
       if (!blobUrl) return;
       setOnceUrl(blobUrl);
-      requestAnimationFrame(() => { const el = audioRef.current; if (el) { el.playbackRate = speed; el.play().catch(() => {}); } });
+      requestAnimationFrame(() => { const el = audioRef.current; if (el) { pauseAllVoiceAudiosExcept(el); el.playbackRate = speed; el.play().catch(() => {}); } });
       return;
     }
     const el = audioRef.current;
     if (!el) return;
-    if (playing) el.pause(); else { el.playbackRate = speed; el.play().catch(() => {}); }
+    if (playing) el.pause(); else { pauseAllVoiceAudiosExcept(el); el.playbackRate = speed; el.play().catch(() => {}); }
   };
   const cycleSpeed = () => {
     const next = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1;
@@ -7775,12 +7799,19 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMine ? G.rouge : G.blanc, border: isMine ? "none" : `1px solid ${G.gris}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", minWidth: 220, maxWidth: 260 }}>
       <audio ref={audioRef} src={effectiveUrl || undefined} preload="metadata"
-        onPlay={() => setPlaying(true)}
+        onPlay={() => { setPlaying(true); pauseAllVoiceAudiosExcept(audioRef.current); }}
         onPause={() => setPlaying(false)}
         onTimeUpdate={e => setCurTime((e.target as HTMLAudioElement).currentTime)}
         onEnded={() => {
           setPlaying(false); setCurTime(0);
           if (m.is_view_once && !isMine) { setOnceEnded(true); onExpireOnce(m); }
+          // Enchaînement automatique : si le message suivant de la conversation est lui aussi un
+          // vocal normal (pas "vue unique", qui exige toujours un tap explicite pour s'ouvrir), on
+          // lance sa lecture. Le message suivant est déjà monté (donc déjà présent dans le registre).
+          if (nextMsg && isAudioMsg(nextMsg.content) && !nextMsg.is_destroyed && !nextMsg.is_view_once) {
+            const nextEl = voiceAudioRegistry.get(nextMsg.id);
+            if (nextEl) nextEl.play().catch(() => {});
+          }
         }}
         style={{ display: "none" }}
       />
@@ -7793,7 +7824,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div onClick={e => { const r = e.currentTarget.getBoundingClientRect(); seekTo(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))); }}
-          style={{ display: "flex", alignItems: "center", gap: 1.5, height: 24, cursor: m.is_view_once ? "default" : "pointer" }}>
+          style={{ display: "flex", alignItems: "center", gap: 1.5, height: 24, cursor: m.is_view_once ? "default" : "pointer", paddingRight: reserveArrowSpace ? 26 : 0 }}>
           {bars.map((v, idx) => {
             const played = idx / bars.length <= ratio;
             return <div key={idx} className={playing ? "wave-bar-live" : undefined} style={{ width: 3, borderRadius: 2, height: `${Math.max(15, v * 100)}%`, background: isMine ? (played ? "#fff" : "rgba(255,255,255,0.4)") : (played ? G.rouge : "rgba(44,26,14,0.18)"), flexShrink: 0, animationDelay: playing ? `${(idx % 8) * 0.07}s` : undefined }} />;
@@ -9628,7 +9659,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                             let label = isVoiceMsg ? "Message vocal" : "Photo";
                             let icon = isVoiceMsg ? micIcon : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
                             if (lm?.is_destroyed) { label = isVoiceMsg ? "Vocal détruit" : "Photo détruite"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>; }
-                            else if (lm?.is_view_once) { label = isVoiceMsg ? "Vocal vue unique" : "Photo vue unique"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>; }
+                            else if (lm?.is_view_once) { label = isVoiceMsg ? "Vocal vue unique" : "Photo vue unique"; icon = isVoiceMsg ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="2.4" y="9" width="2.4" height="6" rx="1.2" fill="currentColor"/><rect x="7.2" y="6" width="2.4" height="12" rx="1.2" fill="currentColor"/><rect x="12" y="3" width="2.4" height="18" rx="1.2" fill="currentColor"/><rect x="16.8" y="6" width="2.4" height="12" rx="1.2" fill="currentColor"/><rect x="21.6" y="9" width="2.4" height="6" rx="1.2" fill="currentColor"/></svg> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>; }
                             return <span style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "middle" }}>{icon}<span>{label}</span></span>;
                           }
                           return ct;
@@ -10054,7 +10085,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                       </div>
                     )}
-                    <VoiceMessage m={m} isMine={isMine} time={time} isPremium={auth.isPremium} onOpenOnce={openAudioOnce} onExpireOnce={expireAudioOnce} />
+                    <VoiceMessage m={m} isMine={isMine} time={time} isPremium={auth.isPremium} onOpenOnce={openAudioOnce} onExpireOnce={expireAudioOnce} nextMsg={msgs[i + 1]} />
                     {reactionEntries.length > 0 && (
                       <div style={{ position: "relative", alignSelf: isMine ? "flex-end" : "flex-start", marginTop: -14, [isMine ? "marginRight" : "marginLeft"]: 4, display: "flex", gap: 3 }}>
                         {reactionEntries.map(([emoji, users]) => (
@@ -10391,7 +10422,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
           <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 24, padding: "10px 16px", marginBottom: 16 }}>
             <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.76rem", flexShrink: 0 }}>{fmtAudioTime(reviewPlaying || reviewTime > 0 ? reviewTime : reviewData.duration)}</span>
             <div onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const el = reviewAudioRef.current; if (el && el.duration) el.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * el.duration; }}
-              style={{ flex: 1, display: "flex", alignItems: "center", gap: 2, height: 28, cursor: "pointer" }}>
+              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, height: 28, cursor: "pointer" }}>
               {reviewData.wave.map((v, i) => {
                 const ratio = reviewData.duration > 0 ? reviewTime / reviewData.duration : 0;
                 const played = i / reviewData.wave.length <= ratio;
@@ -10423,7 +10454,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
             <div onClick={toggleReviewOnce} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
               <div style={{ width: 46, height: 46, borderRadius: "50%", background: reviewOnce ? G.rouge : "rgba(44,26,14,0.06)", border: reviewOnce ? "none" : `1.5px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={reviewOnce ? "#fff" : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2.4" y="9" width="2.4" height="6" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/><rect x="7.2" y="6" width="2.4" height="12" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/><rect x="12" y="3" width="2.4" height="18" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/><rect x="16.8" y="6" width="2.4" height="12" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/><rect x="21.6" y="9" width="2.4" height="6" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/></svg>
               </div>
               <span style={{ fontSize: "0.66rem", fontWeight: 600, color: reviewOnce ? G.rouge : "#888" }}>Écoute unique</span>
             </div>
@@ -10451,7 +10482,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
           {reviewOnce && (
             <div style={{ textAlign: "center", marginTop: 12 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#1c1c1e", color: "#fff", borderRadius: 50, padding: "6px 14px", fontSize: "0.7rem", fontWeight: 700 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="2.4" y="9" width="2.4" height="6" rx="1.2" fill="#fff"/><rect x="7.2" y="6" width="2.4" height="12" rx="1.2" fill="#fff"/><rect x="12" y="3" width="2.4" height="18" rx="1.2" fill="#fff"/><rect x="16.8" y="6" width="2.4" height="12" rx="1.2" fill="#fff"/><rect x="21.6" y="9" width="2.4" height="6" rx="1.2" fill="#fff"/></svg>
                 Écoute unique activée
               </span>
             </div>
