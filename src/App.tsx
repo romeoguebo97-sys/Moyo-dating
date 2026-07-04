@@ -7936,11 +7936,21 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       const target = e.target as HTMLElement | null;
       if (target?.closest?.(".no-select-callout")) e.preventDefault();
     };
+    // "selectstart"/"contextmenu" arrivent trop tard sur iOS : la loupe de sélection est un geste
+    // système déclenché dès le touchstart, avant que ces events ne soient émis. On bloque donc
+    // AUSSI au niveau touchstart, avec un listener non-passif (les listeners tactiles synthétiques
+    // de React sont passifs par défaut, donc un preventDefault() dans onTouchStart ne suffit pas).
+    const blockTouchStart = (e: TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.(".no-select-callout")) e.preventDefault();
+    };
     document.addEventListener("selectstart", blockIfInsideRecordingUi, true);
     document.addEventListener("contextmenu", blockIfInsideRecordingUi, true);
+    document.addEventListener("touchstart", blockTouchStart, { capture: true, passive: false });
     return () => {
       document.removeEventListener("selectstart", blockIfInsideRecordingUi, true);
       document.removeEventListener("contextmenu", blockIfInsideRecordingUi, true);
+      document.removeEventListener("touchstart", blockTouchStart, true);
     };
   }, []);
   // Défilement vers le message cité (clic sur la citation)
@@ -8991,9 +9001,14 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const startRecording = async () => {
     if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
     if (!open || recState !== "idle") return;
+    const hadStreamAlready = !!(mediaStreamRef.current && mediaStreamRef.current.getAudioTracks().some(t => t.readyState === "live"));
     const stream = await getMicStream();
     if (!stream) { setShowMicBlocked(true); return; }
-    beginRecordingWithStream(stream, false);
+    // Si le flux vient d'être (re)demandé au système, le popup natif a pu perturber le doigt de
+    // l'utilisateur (relâché sans event fiable pendant l'attente). On démarre alors TOUJOURS en
+    // mode verrouillé "mains libres" : bouton stop garanti (tap sur le micro), au lieu d'un
+    // enregistrement accroché à un doigt qui n'est plus suivi correctement.
+    beginRecordingWithStream(stream, !hadStreamAlready);
   };
 
   // Appelée depuis le modal Moyo (voir plus bas) une fois que l'utilisateur a confirmé vouloir
