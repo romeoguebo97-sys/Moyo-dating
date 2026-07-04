@@ -1321,9 +1321,19 @@ const GLOBAL_CSS = `
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
   @keyframes waveBounce{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
   .wave-bar-live{animation:waveBounce 0.9s ease-in-out infinite}
-  /* Empêche iOS Safari de déclencher la sélection de texte / loupe pendant l'appui long sur le micro
-     ou sur les libellés de la barre d'enregistrement (bug remonté : "Glisser pour annuler" se sélectionnait). */
-  .no-select-callout{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
+  /* Empêche toute sélection de texte / loupe / menu contextuel sur la zone d'enregistrement vocal,
+     sur toutes les plateformes (APK Android, PWA, Safari iOS, navigateur desktop). Le !important et
+     le sélecteur descendant "*" sont nécessaires car certaines WebView (notamment Android) ignorent
+     -webkit-user-select posé uniquement sur un ancêtre sans répétition explicite sur les enfants. */
+  .no-select-callout, .no-select-callout *{
+    -webkit-touch-callout:none !important;
+    -webkit-user-select:none !important;
+    -moz-user-select:none !important;
+    -ms-user-select:none !important;
+    user-select:none !important;
+    -webkit-tap-highlight-color:transparent !important;
+    touch-action:none !important;
+  }
   @keyframes shimmer{0%{background-position:-450px 0}100%{background-position:450px 0}}
   .skeleton{background:#e7e4dd;background-image:linear-gradient(90deg,rgba(255,255,255,0) 0,rgba(255,255,255,0.7) 50%,rgba(255,255,255,0) 100%);background-size:450px 100%;background-repeat:no-repeat;animation:shimmer 1.25s ease-in-out infinite;border-radius:10px}
   button{transition:transform .12s cubic-bezier(.34,1.56,.64,1)}
@@ -7861,7 +7871,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const AUDIO_CANCEL_PX = 90;  // glissement gauche pour révéler/déclencher la corbeille
   const AUDIO_LOCK_PX = 70;    // glissement haut pour verrouiller
   const [recState, setRecState] = useState<"idle" | "recording" | "locked" | "review">("idle");
-  const [micPermState, setMicPermState] = useState<"unknown" | "granted" | "denied" | "prompt">("unknown");
   const [showMicIntro, setShowMicIntro] = useState(false); // modal Moyo affiché AVANT la demande native du navigateur
   const [showMicBlocked, setShowMicBlocked] = useState(false); // micro refusé précédemment : on ne peut pas re-déclencher le popup natif
   const [recDuration, setRecDuration] = useState(0); // secondes, mis à jour ~10x/s pendant l'enregistrement
@@ -7874,6 +7883,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const [reviewOnce, setReviewOnce] = useState(false);
   const [reviewPlaying, setReviewPlaying] = useState(false);
   const [reviewTime, setReviewTime] = useState(0);
+  const [reviewSpeed, setReviewSpeed] = useState(1);
   const [audioSending, setAudioSending] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -7896,38 +7906,44 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const activePointerIdRef = useRef<number | null>(null);
   const gestureAxisRef = useRef<"x" | "y" | null>(null); // trajectoire déterminée UNE FOIS par geste : jamais de diagonale
   const cancelTravelMaxRef = useRef(0); // distance réelle (en px) entre le micro et la corbeille, mesurée au début du geste
+  const lockTravelMaxRef = useRef(0); // distance de glissement vers le haut avant verrouillage (75% de la hauteur d'écran)
   const curTXRef = useRef(0);
   const curTYRef = useRef(0);
   const lastGhostPosRef = useRef<{ x: number; y: number } | null>(null);
   const recSuppressClickRef = useRef(false); // évite qu'un pointerup de fin de verrouillage ne déclenche aussi un "stop" immédiat
   const destroyedAudioIdsRef = useRef<Set<string>>(new Set());
 
-  // ── Détecte l'état actuel de la permission micro (une seule fois), pour éviter de redemander
-  //    inutilement l'autorisation à chaque enregistrement. Repli sur localStorage si l'API
-  //    Permissions n'est pas disponible (Safari notamment). ──
-  useEffect(() => {
-    let status: any = null;
-    (async () => {
-      try {
-        status = await (navigator as any).permissions?.query?.({ name: "microphone" });
-        if (status) {
-          setMicPermState(status.state);
-          status.onchange = () => setMicPermState(status.state);
-          return;
-        }
-      } catch {}
-      try {
-        if (localStorage.getItem(`moyo_mic_granted_${auth.userId}`) === "1") setMicPermState("granted");
-      } catch {}
-    })();
-    return () => { if (status) status.onchange = null; };
-  }, [auth.userId]);
+  // ── Autorisation micro : on ne la demande QU'UNE SEULE FOIS pour toujours sur cet appareil,
+  //    exactement comme les notifications (Notification.permission !== "default" → jamais redemandé).
+  //    On n'utilise PAS navigator.permissions.query("microphone") : Safari ne le supporte pas pour le
+  //    micro (échec silencieux), ce qui faisait réapparaître notre modal Moyo à quasiment chaque
+  //    connexion. Un simple repère local, propre à cet utilisateur sur cet appareil, suffit. ──
+  const micAskedKey = `moyo_mic_asked_${auth.userId}`;
+  const hasMicBeenAsked = () => { try { return localStorage.getItem(micAskedKey) === "1"; } catch { return false; } };
+  const markMicAsked = () => { try { localStorage.setItem(micAskedKey, "1"); } catch {} };
 
   // ── Le flux micro est mis en cache (voir getMicStream) pour ne demander l'autorisation qu'une
   //    seule fois par session : on ne le coupe VRAIMENT qu'à la fermeture de la messagerie. ──
   useEffect(() => () => {
     mediaStreamRef.current?.getTracks().forEach(t => t.stop());
     mediaStreamRef.current = null;
+  }, []);
+
+  // ── Filet de sécurité JS (en plus du CSS ci-dessus) : certaines WebView (notamment sur Android)
+  //    déclenchent quand même la sélection de texte / loupe native malgré -webkit-user-select:none.
+  //    On intercepte donc directement l'événement au niveau document et on l'annule dès que la cible
+  //    se trouve dans la zone d'enregistrement vocal — quelle que soit la plateforme (APK, PWA, web). ──
+  useEffect(() => {
+    const blockIfInsideRecordingUi = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.(".no-select-callout")) e.preventDefault();
+    };
+    document.addEventListener("selectstart", blockIfInsideRecordingUi, true);
+    document.addEventListener("contextmenu", blockIfInsideRecordingUi, true);
+    return () => {
+      document.removeEventListener("selectstart", blockIfInsideRecordingUi, true);
+      document.removeEventListener("contextmenu", blockIfInsideRecordingUi, true);
+    };
   }, []);
   // Défilement vers le message cité (clic sur la citation)
   const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -8925,11 +8941,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
-      setMicPermState("granted");
-      try { localStorage.setItem(`moyo_mic_granted_${auth.userId}`, "1"); } catch {}
       return stream;
     } catch {
-      setMicPermState("denied");
       return null;
     }
   };
@@ -8981,7 +8994,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
     if (!open || recState !== "idle") return;
     const stream = await getMicStream();
-    if (!stream) { setToast({ msg: "Micro inaccessible. Vérifie les autorisations de l'application.", type: "error" }); return; }
+    if (!stream) { setShowMicBlocked(true); return; }
     beginRecordingWithStream(stream, false);
   };
 
@@ -8990,6 +9003,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   // démarre directement en mode mains libres (verrouillé) : l'utilisateur peut parler tout de suite.
   const confirmMicIntro = async () => {
     setShowMicIntro(false);
+    markMicAsked(); // plus jamais notre modal après cette toute première fois, quel que soit le choix natif
     if (!open || recState !== "idle") return;
     const stream = await getMicStream();
     if (!stream) { setShowMicBlocked(true); return; }
@@ -9015,7 +9029,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       const wave = downsampleWave(recAllLevelsRef.current, 40);
       const url = URL.createObjectURL(blob);
       setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0);
-      setReviewOnce(false); setReviewPlaying(false); setReviewTime(0);
+      setReviewOnce(false); setReviewPlaying(false); setReviewTime(0); setReviewSpeed(1);
       setReviewData({ url, blob, duration, wave });
       setRecState("review");
     };
@@ -9038,7 +9052,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       setRecState("idle"); setRecDragX(0); setRecCanceling(false); setRecLevels([]); setRecDuration(0);
       await uploadAndSendAudio(blob, duration, wave, false);
     };
-    if (rec.state !== "inactive") rec.stop();
+    if (rec.state !== "inactive") rec.stop(); else rec.onstop(null as any);
   };
 
   // ══════════════ Animation premium du micro (traînée fantôme, trajectoire unique, absorption magnétique) ══════════════
@@ -9133,14 +9147,13 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     e.preventDefault();
     if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
     if (recState !== "idle") return;
-    if (micPermState === "denied") { setShowMicBlocked(true); return; }
-    const hasLiveStream = mediaStreamRef.current?.getAudioTracks().some(t => t.readyState === "live");
-    if (micPermState !== "granted" && !hasLiveStream) { setShowMicIntro(true); return; }
+    if (!hasMicBeenAsked()) { setShowMicIntro(true); return; } // une seule fois pour toujours sur cet appareil
     const mic = micHandleRef.current;
     if (mic) { try { mic.setPointerCapture(e.pointerId); } catch {} mic.style.transition = ""; mic.style.transform = "translate(0px,0px)"; mic.style.opacity = "1"; }
     activePointerIdRef.current = e.pointerId;
     gestureAxisRef.current = null;
     cancelTravelMaxRef.current = 0;
+    lockTravelMaxRef.current = 0;
     curTXRef.current = 0; curTYRef.current = 0;
     lastGhostPosRef.current = null;
     recPointerStartRef.current = { x: e.clientX, y: e.clientY };
@@ -9164,14 +9177,22 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     }
 
     if (gestureAxisRef.current === "y") {
-      if (dy < -AUDIO_LOCK_PX) {
+      // Le micro doit pouvoir monter haut (75% de la hauteur d'écran) avant que le verrouillage ne
+      // se déclenche, pour un geste ample façon iOS — calculé une seule fois au début du geste.
+      if (!lockTravelMaxRef.current) lockTravelMaxRef.current = window.innerHeight * 0.75;
+      if (dy < -lockTravelMaxRef.current) {
         recLockedRef.current = true;
         recSuppressClickRef.current = true; // le pointerup qui suit ne doit pas aussi déclencher un "stop"
+        // Sécurité : la plupart des navigateurs ne synthétisent PAS de clic après un aussi grand
+        // déplacement (jusqu'à 75% de l'écran) — donc ce clic fantôme n'arrive en général jamais.
+        // On auto-expire la protection pour ne jamais avaler par erreur le VRAI tap suivant de
+        // l'utilisateur (c'était le bug : il fallait taper 2-3 fois pour arrêter).
+        setTimeout(() => { recSuppressClickRef.current = false; }, 400);
         try { (navigator as any).vibrate?.(20); } catch {}
         snapMicBack(() => setRecState("locked"));
         return;
       }
-      const followY = Math.max(dy, -AUDIO_LOCK_PX * 1.3);
+      const followY = Math.max(dy, -lockTravelMaxRef.current);
       curTXRef.current = 0; curTYRef.current = Math.min(0, followY);
       mic.style.transform = `translate(0px, ${curTYRef.current}px)`;
       maybeSpawnGhost();
@@ -9261,7 +9282,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   // 🗑 Supprimer : jette l'enregistrement, retour à la barre normale.
   const discardReview = () => {
     setReviewData(prev => { if (prev) URL.revokeObjectURL(prev.url); return null; });
-    setReviewOnce(false); setReviewPlaying(false); setReviewTime(0);
+    setReviewOnce(false); setReviewPlaying(false); setReviewTime(0); setReviewSpeed(1);
     setRecState("idle");
   };
   // Écoute unique : simple bascule visuelle, appliquée seulement à l'envoi.
@@ -9277,7 +9298,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     if (!reviewData) return;
     const { blob, duration, wave, url } = reviewData;
     const once = reviewOnce;
-    setReviewData(null); setReviewOnce(false); setReviewPlaying(false); setReviewTime(0);
+    setReviewData(null); setReviewOnce(false); setReviewPlaying(false); setReviewTime(0); setReviewSpeed(1);
     URL.revokeObjectURL(url);
     setRecState("idle");
     await uploadAndSendAudio(blob, duration, wave, once);
@@ -10268,6 +10289,17 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                 );
               })}
             </div>
+            {/* Vitesse de préécoute : même cycle ×1 / ×1.5 / ×2 que le lecteur du vocal déjà envoyé */}
+            <span
+              onClick={() => {
+                const next = reviewSpeed === 1 ? 1.5 : reviewSpeed === 1.5 ? 2 : 1;
+                setReviewSpeed(next);
+                if (reviewAudioRef.current) reviewAudioRef.current.playbackRate = next;
+              }}
+              style={{ flexShrink: 0, fontSize: "0.68rem", fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.16)", borderRadius: 10, padding: "3px 8px", cursor: "pointer" }}
+            >
+              {reviewSpeed}×
+            </span>
           </div>
           {/* Les 4 actions, exactement comme demandé : Supprimer / Écoute unique / Préécouter / Envoyer */}
           <div style={{ display: "flex", justifyContent: "space-around" }}>
