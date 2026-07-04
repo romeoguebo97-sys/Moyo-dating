@@ -9618,7 +9618,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 
   // ── Liste des conversations (commun mobile + desktop) ──
   const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0 }}>
-    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0" }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", padding: "0" }}>
     {/* ── Bandeau collé en haut (statuts + onglets) : position:sticky à l'intérieur de la zone qui
         défile, plutôt qu'un frère externe dont la hauteur doit être calculée au pixel près. Ne peut
         pas être "arraché" par un scroll, quelle que soit la précision du calcul de viewport. ── */}
