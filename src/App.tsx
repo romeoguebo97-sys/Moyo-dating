@@ -7685,6 +7685,16 @@ const pauseAllVoiceAudiosExcept = (except: HTMLAudioElement | null) => {
 };
 
 const isAudioMsg = (content: string) => content.startsWith("[audio]") && content.endsWith("[/audio]");
+
+// ── Flux micro partagé au niveau module (pas un useRef) : le composant Messages est démonté/remonté
+//    à chaque changement d'onglet de la barre du bas ({tab === "messages" && <Messages .../>}), ce qui
+//    réinitialiserait un useRef classique et forcerait un nouvel appel getUserMedia() à chaque retour
+//    sur l'onglet Messages. En le sortant du cycle de vie du composant, le même flux survit tant que
+//    l'onglet/l'app reste ouvert(e), quel que soit le nombre d'allers-retours entre les onglets.
+//    Contrepartie assumée : le micro reste "actif" (pastille système visible) pendant toute la session,
+//    même en dehors de l'écran Messages — c'est le compromis nécessaire pour ne jamais redemander
+//    l'autorisation entre deux onglets.
+const sharedMicStreamRef: { current: MediaStream | null } = { current: null };
 const parseAudioContent = (content: string): { url: string; duration: number; wave: number[] } => {
   const inner = content.slice(7, -8);
   const [url, durStr, waveStr] = inner.split("::");
@@ -7936,7 +7946,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const [reviewSpeed, setReviewSpeed] = useState(1);
   const [audioSending, setAudioSending] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
+  // mediaStreamRef pointe désormais vers le holder partagé (survit aux changements d'onglet) —
+  // voir sharedMicStreamRef plus haut pour le raisonnement complet.
+  const mediaStreamRef = sharedMicStreamRef;
   const recChunksRef = useRef<Blob[]>([]);
   const recAudioCtxRef = useRef<AudioContext | null>(null);
   const recAnalyserRef = useRef<AnalyserNode | null>(null);
@@ -7971,11 +7983,22 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   //    utilisateurs. getUserMedia() ci-dessous suffit : le navigateur ne (re)demande qu'une seule
   //    fois par origine de toute façon, tant que la personne n'a pas révoqué l'accès elle-même. ──
 
-  // ── Le flux micro est mis en cache (voir getMicStream) pour ne demander l'autorisation qu'une
-  //    seule fois par session : on ne le coupe VRAIMENT qu'à la fermeture de la messagerie. ──
+  // ── Le flux micro est désormais partagé au niveau module (sharedMicStreamRef) : on ne le coupe
+  //    PLUS au démontage de Messages, pour qu'il survive aux changements d'onglet (voir le
+  //    raisonnement complet à la définition de sharedMicStreamRef). En contrepartie, si un
+  //    enregistrement est activement en cours au moment où l'utilisateur quitte l'onglet Messages,
+  //    on l'annule proprement ici — sinon le MediaRecorder continuerait à tourner sans plus aucune
+  //    interface pour l'arrêter (orphelin). ──
   useEffect(() => () => {
-    mediaStreamRef.current?.getTracks().forEach(t => t.stop());
-    mediaStreamRef.current = null;
+    const rec = mediaRecorderRef.current;
+    if (rec && rec.state !== "inactive") {
+      rec.onstop = null; // on ne veut plus qu'un callback s'exécute après le démontage (setState sur composant démonté)
+      try { rec.stop(); } catch {}
+    }
+    mediaRecorderRef.current = null;
+    if (recRafRef.current) cancelAnimationFrame(recRafRef.current);
+    recRafRef.current = null;
+    if (recAudioCtxRef.current) { recAudioCtxRef.current.close().catch(() => {}); recAudioCtxRef.current = null; }
   }, []);
 
   // ── Filet de sécurité : si l'app passe en arrière-plan (changement d'onglet, verrouillage du
@@ -10436,6 +10459,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
           {/* Indice sous la barre pendant l'enregistrement */}
           <div className="no-select-callout voice-recording-zone" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ display: recState === "locked" ? "block" : "none", textAlign: "center", margin: "8px 12px 10px" }}>
             <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999" }}>Appuie sur le micro pour arrêter</span>
+          </div>
+          {/* Message simple pendant l'attente de la réponse au popup d'autorisation du navigateur —
+              aucune action requise, juste pour que l'attente ne semble pas être un bug. */}
+          <div style={{ display: recState === "requestingPermission" ? "block" : "none", textAlign: "center", margin: "8px 12px 10px" }}>
+            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999" }}>Autorisation du micro…</span>
           </div>
         </div>
         ) : recState === "review" && reviewData ? (
@@ -13476,6 +13504,13 @@ export default function App() {
     // Enregistrer le Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+    // Demande un stockage "persistant" : signale au navigateur que ce site est important, ce qui
+    // réduit (sans le garantir totalement — décision finale du système/OS) le risque que le
+    // téléphone efface les données du site en arrière-plan sous pression mémoire/batterie
+    // (gestion agressive de certains Android : Xiaomi, Oppo, Realme, Vivo...).
+    if (typeof navigator !== "undefined" && (navigator as any).storage?.persist) {
+      (navigator as any).storage.persist().catch(() => {});
     }
 
     // Ne pas afficher si déjà installé ou déjà dismissé
