@@ -7871,7 +7871,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const AUDIO_CANCEL_PX = 90;  // glissement gauche pour révéler/déclencher la corbeille
   const AUDIO_LOCK_PX = 70;    // glissement haut pour verrouiller
   const [recState, setRecState] = useState<"idle" | "recording" | "locked" | "review">("idle");
-  const [showMicIntro, setShowMicIntro] = useState(false); // modal Moyo affiché AVANT la demande native du navigateur
   const [showMicBlocked, setShowMicBlocked] = useState(false); // micro refusé précédemment : on ne peut pas re-déclencher le popup natif
   const [recDuration, setRecDuration] = useState(0); // secondes, mis à jour ~10x/s pendant l'enregistrement
   const [recLevels, setRecLevels] = useState<number[]>([]); // ondes en temps réel (fenêtre glissante affichée)
@@ -7898,6 +7897,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const recLockedRef = useRef(false);
   const recCancelRef = useRef(false);
   const recPendingReleaseRef = useRef(false); // doigt relâché avant même que getUserMedia() ait résolu
+  const micHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // délai avant qu'un appui ne soit considéré comme un VRAI appui long
   const reviewAudioRef = useRef<HTMLAudioElement | null>(null);
   // ── Animation premium du micro (traînée fantôme, trajectoire unique, absorption magnétique) ──
   const micHandleRef = useRef<HTMLDivElement | null>(null); // LE bouton micro : un seul élément DOM, jamais démonté
@@ -7913,14 +7913,12 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const recSuppressClickRef = useRef(false); // évite qu'un pointerup de fin de verrouillage ne déclenche aussi un "stop" immédiat
   const destroyedAudioIdsRef = useRef<Set<string>>(new Set());
 
-  // ── Autorisation micro : on ne la demande QU'UNE SEULE FOIS pour toujours sur cet appareil,
-  //    exactement comme les notifications (Notification.permission !== "default" → jamais redemandé).
-  //    On n'utilise PAS navigator.permissions.query("microphone") : Safari ne le supporte pas pour le
-  //    micro (échec silencieux), ce qui faisait réapparaître notre modal Moyo à quasiment chaque
-  //    connexion. Un simple repère local, propre à cet utilisateur sur cet appareil, suffit. ──
-  const micAskedKey = `moyo_mic_asked_${auth.userId}`;
-  const hasMicBeenAsked = () => { try { return localStorage.getItem(micAskedKey) === "1"; } catch { return false; } };
-  const markMicAsked = () => { try { localStorage.setItem(micAskedKey, "1"); } catch {} };
+  // ── Autorisation micro : UN SEUL popup, celui du navigateur/OS, exactement comme pour les
+  //    notifications (qui n'ont elles-mêmes jamais de modal Moyo avant Notification.requestPermission).
+  //    On avait initialement ajouté un modal Moyo explicatif avant le popup natif, mais ça donnait
+  //    deux fenêtres coup sur coup demandant la même chose — mauvais signal, ça peut faire fuir les
+  //    utilisateurs. getUserMedia() ci-dessous suffit : le navigateur ne (re)demande qu'une seule
+  //    fois par origine de toute façon, tant que la personne n'a pas révoqué l'accès elle-même. ──
 
   // ── Le flux micro est mis en cache (voir getMicStream) pour ne demander l'autorisation qu'une
   //    seule fois par session : on ne le coupe VRAIMENT qu'à la fermeture de la messagerie. ──
@@ -8965,7 +8963,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     recStartRef.current = Date.now();
     setRecState(locked ? "locked" : "recording");
     // Si le doigt a déjà été relâché pendant l'attente de la permission micro, on termine tout de suite.
-    if (!locked && recPendingReleaseRef.current) { setTimeout(() => finishRecording(recCancelRef.current), 0); return; }
+    if (!locked && recPendingReleaseRef.current) { setTimeout(() => (recCancelRef.current ? finishRecording(true) : finishRecordingInstant()), 0); return; }
     try { (navigator as any).vibrate?.(15); } catch {}
     // Analyse en temps réel du niveau sonore → alimente l'animation des ondes de la bulle flottante
     const ctx = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
@@ -9001,15 +8999,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   // Appelée depuis le modal Moyo (voir plus bas) une fois que l'utilisateur a confirmé vouloir
   // autoriser le micro. Comme le doigt n'est plus sur le bouton à ce moment-là, l'enregistrement
   // démarre directement en mode mains libres (verrouillé) : l'utilisateur peut parler tout de suite.
-  const confirmMicIntro = async () => {
-    setShowMicIntro(false);
-    markMicAsked(); // plus jamais notre modal après cette toute première fois, quel que soit le choix natif
-    if (!open || recState !== "idle") return;
-    const stream = await getMicStream();
-    if (!stream) { setShowMicBlocked(true); return; }
-    beginRecordingWithStream(stream, true);
-  };
-
   // Termine l'enregistrement : cancel=true → jette tout ; cancel=false → ouvre l'écran d'aperçu.
   // Termine l'enregistrement : cancel=true → jette tout ; cancel=false → passe en mode "review"
   // (panneau inline sous la barre, jamais un écran plein écran).
@@ -9147,7 +9136,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     e.preventDefault();
     if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
     if (recState !== "idle") return;
-    if (!hasMicBeenAsked()) { setShowMicIntro(true); return; } // une seule fois pour toujours sur cet appareil
     const mic = micHandleRef.current;
     if (mic) { try { mic.setPointerCapture(e.pointerId); } catch {} mic.style.transition = ""; mic.style.transform = "translate(0px,0px)"; mic.style.opacity = "1"; }
     activePointerIdRef.current = e.pointerId;
@@ -9157,7 +9145,15 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     curTXRef.current = 0; curTYRef.current = 0;
     lastGhostPosRef.current = null;
     recPointerStartRef.current = { x: e.clientX, y: e.clientY };
-    startRecording();
+    // L'enregistrement ne démarre qu'après un vrai appui MAINTENU (200ms) — un simple tap rapide
+    // (down+up quasi instantané) ne déclenche plus rien du tout. Avant ce correctif, un tap créait
+    // une course : l'enregistrement démarrait de façon asynchrone après que le doigt soit déjà
+    // relâché, laissant un enregistrement "fantôme" impossible à arrêter d'un simple tap.
+    if (micHoldTimerRef.current) clearTimeout(micHoldTimerRef.current);
+    micHoldTimerRef.current = setTimeout(() => {
+      micHoldTimerRef.current = null;
+      startRecording();
+    }, 200);
   };
   const onMicPointerMove = (e: React.PointerEvent) => {
     if (e.pointerId !== activePointerIdRef.current) return;
@@ -9177,9 +9173,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     }
 
     if (gestureAxisRef.current === "y") {
-      // Le micro doit pouvoir monter haut (75% de la hauteur d'écran) avant que le verrouillage ne
-      // se déclenche, pour un geste ample façon iOS — calculé une seule fois au début du geste.
-      if (!lockTravelMaxRef.current) lockTravelMaxRef.current = window.innerHeight * 0.75;
+      // Le seuil de verrouillage doit rester atteignable par un pouce qui tient le téléphone d'une
+      // main (75% de la hauteur d'écran était physiquement impossible à atteindre → le verrouillage
+      // ne se déclenchait jamais, d'où le bug "ça envoie directement au lieu de se verrouiller").
+      // On garde en revanche un geste ample (~140px) plutôt que les 70px d'origine, jugés trop courts.
+      if (!lockTravelMaxRef.current) lockTravelMaxRef.current = 140;
       if (dy < -lockTravelMaxRef.current) {
         recLockedRef.current = true;
         recSuppressClickRef.current = true; // le pointerup qui suit ne doit pas aussi déclencher un "stop"
@@ -9229,6 +9227,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const onMicPointerUp = (e: React.PointerEvent) => {
     if (e.pointerId !== activePointerIdRef.current) return;
     activePointerIdRef.current = null;
+    // Relâché avant la fin du délai d'appui maintenu : c'était un simple tap, pas un appui long.
+    // On annule tout sans jamais avoir démarré le moindre enregistrement.
+    if (micHoldTimerRef.current) {
+      clearTimeout(micHoldTimerRef.current);
+      micHoldTimerRef.current = null;
+      recPointerStartRef.current = null;
+      const mic = micHandleRef.current;
+      if (mic) { mic.style.transform = "translate(0,0)"; }
+      return;
+    }
     // recLockedRef (ref, mis à jour immédiatement) plutôt que recState (qui ne se met à jour qu'à
     // la fin des ~320ms de l'animation de retour) : sinon un relâchement pendant cette fenêtre
     // pouvait encore déclencher une annulation/un envoi au lieu de laisser le verrouillage se faire.
@@ -10516,23 +10524,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               </div>
             </div>
             <Btn variant="primary" onClick={confirmSendImage} style={{ width: "100%" }}>Envoyer</Btn>
-          </div>
-        </div>
-      )}
-
-      {/* Modale Moyo : demande d'autorisation du micro, AVANT le popup natif du navigateur/OS */}
-      {showMicIntro && (
-        <div onClick={() => setShowMicIntro(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 520, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "30px 24px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
-            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
-            </div>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, margin: "0 0 8px" }}>Autoriser le micro</h3>
-            <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.55, margin: "0 0 22px" }}>Moyo Dating a besoin d'accéder à ton micro pour enregistrer tes messages vocaux. Ton téléphone va te demander de confirmer juste après — une seule fois.</p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <Btn variant="ghost" onClick={() => setShowMicIntro(false)} style={{ flex: 1 }}>Annuler</Btn>
-              <Btn variant="primary" onClick={confirmMicIntro} style={{ flex: 1 }}>Autoriser</Btn>
-            </div>
           </div>
         </div>
       )}
