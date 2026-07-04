@@ -7815,20 +7815,27 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
         }}
         style={{ display: "none" }}
       />
-      <div onClick={togglePlay} style={{ width: 34, height: 34, borderRadius: "50%", background: isMine ? "rgba(255,255,255,0.2)" : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
-        {playing ? (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill={isMine ? "#fff" : G.rouge}><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-        ) : (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill={isMine ? "#fff" : G.rouge}><polygon points="6 3 20 12 6 21 6 3"/></svg>
-        )}
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <div onClick={togglePlay} style={{ width: 34, height: 34, borderRadius: "50%", background: isMine ? "rgba(255,255,255,0.2)" : "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          {playing ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={isMine ? "#fff" : G.rouge}><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={isMine ? "#fff" : G.rouge}><polygon points="6 3 20 12 6 21 6 3"/></svg>
+          )}
+        </div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div onClick={e => { const r = e.currentTarget.getBoundingClientRect(); seekTo(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))); }}
-          style={{ display: "flex", alignItems: "center", gap: 1.5, height: 24, cursor: m.is_view_once ? "default" : "pointer", paddingRight: reserveArrowSpace ? 26 : 0 }}>
-          {bars.map((v, idx) => {
-            const played = idx / bars.length <= ratio;
-            return <div key={idx} className={playing ? "wave-bar-live" : undefined} style={{ width: 3, borderRadius: 2, height: `${Math.max(15, v * 100)}%`, background: isMine ? (played ? "#fff" : "rgba(255,255,255,0.4)") : (played ? G.rouge : "rgba(44,26,14,0.18)"), flexShrink: 0, animationDelay: playing ? `${(idx % 8) * 0.07}s` : undefined }} />;
-          })}
+        <div style={{ position: "relative" }}>
+          <div onClick={e => { const r = e.currentTarget.getBoundingClientRect(); seekTo(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))); }}
+            style={{ display: "flex", alignItems: "center", gap: 1.5, height: 24, cursor: m.is_view_once ? "default" : "pointer", paddingRight: reserveArrowSpace ? 26 : 0 }}>
+            {bars.map((v, idx) => {
+              const played = idx / bars.length <= ratio;
+              return <div key={idx} className={playing ? "wave-bar-live" : undefined} style={{ width: 3, borderRadius: 2, height: `${Math.max(15, v * 100)}%`, background: isMine ? (played ? "#fff" : "rgba(255,255,255,0.4)") : (played ? G.rouge : "rgba(44,26,14,0.18)"), flexShrink: 0, animationDelay: playing ? `${(idx % 8) * 0.07}s` : undefined }} />;
+            })}
+          </div>
+          {m.is_view_once && (
+            <div title="Écoute unique" style={{ position: "absolute", top: -3, right: reserveArrowSpace ? 26 : 0, width: 15, height: 15, borderRadius: "50%", background: isMine ? "#fff" : G.rouge, color: isMine ? G.rouge : "#fff", border: `1.5px solid ${isMine ? G.rouge : G.blanc}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.58rem", fontWeight: 800, lineHeight: 1 }}>1</div>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 3 }}>
           <span style={{ fontSize: "0.66rem", color: isMine ? "rgba(255,255,255,0.75)" : "#999" }}>{fmtAudioTime(playing || curTime > 0 ? curTime : duration)}</span>
