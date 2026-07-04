@@ -9617,7 +9617,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   })).filter(g => !!g.first), [statuses]);
 
   // ── Liste des conversations (commun mobile + desktop) ──
-  const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+  const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0 }}>
     <div style={{ padding: isWideMsg ? "16px 16px 8px" : "12px 16px 8px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0, display: FEATURE_STATUSES ? undefined : "none" }}>
 
       <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
