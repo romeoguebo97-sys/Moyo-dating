@@ -7870,7 +7870,19 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const AUDIO_MAX_MS = 60_000; // 1 minute max
   const AUDIO_CANCEL_PX = 90;  // glissement gauche pour révéler/déclencher la corbeille
   const AUDIO_LOCK_PX = 70;    // glissement haut pour verrouiller
-  const [recState, setRecState] = useState<"idle" | "recording" | "locked" | "review">("idle");
+  // Machine à états explicite du cycle de vie de l'enregistrement vocal :
+  //   idle                → repos, rien en cours
+  //   requestingPermission → popup micro (natif) en attente de réponse, AUCUN enregistrement en cours
+  //   ready               → permission acquise, mic "chaud", en attente d'un nouvel appui volontaire
+  //   recording           → enregistrement en cours, doigt maintenu sur le micro
+  //   locked              → enregistrement en cours, mains libres (verrouillé)
+  //   cancelled           → transition brève pendant l'animation d'annulation (corbeille)
+  //   review              → enregistrement terminé, panneau de prévisualisation avant envoi
+  const [recState, setRecState] = useState<"idle" | "requestingPermission" | "ready" | "recording" | "locked" | "cancelled" | "review">("idle");
+  // "idle" et "ready" sont visuellement identiques (bouton micro au repos) : la seule différence est
+  // que "ready" a déjà un flux micro chaud en cache. Ce helper regroupe les deux partout où le composant
+  // doit simplement savoir "on peut lancer un nouveau geste d'enregistrement".
+  const micGestureAllowed = recState === "idle" || recState === "ready";
   const [showMicBlocked, setShowMicBlocked] = useState(false); // micro refusé précédemment : on ne peut pas re-déclencher le popup natif
   const [recDuration, setRecDuration] = useState(0); // secondes, mis à jour ~10x/s pendant l'enregistrement
   const [recLevels, setRecLevels] = useState<number[]>([]); // ondes en temps réel (fenêtre glissante affichée)
@@ -7927,30 +7939,64 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     mediaStreamRef.current = null;
   }, []);
 
+  // ── Filet de sécurité : si l'app passe en arrière-plan (changement d'onglet, verrouillage du
+  //    téléphone, navigation, fermeture) PENDANT un enregistrement réellement actif ("recording" ou
+  //    "locked"), on l'annule proprement plutôt que de laisser un micro ouvert tourner dans le vide
+  //    (mauvais pour la vie privée, la batterie, et source d'états incohérents au retour).
+  //    Volontairement PAS appliqué à "requestingPermission" : sur certains navigateurs, le popup natif
+  //    du micro déclenche lui-même un blur/visibilitychange — l'annuler à ce moment casserait la
+  //    demande d'autorisation en cours. On laisse cette étape suivre son cours naturellement, aucun
+  //    micro n'est encore ouvert à ce stade.
+  //    "pointercancel"/"touchcancel" du geste en cours sont eux gérés localement sur le bouton micro
+  //    (onPointerCancel) : un filet global les interromprait à tort dès qu'un AUTRE geste ailleurs
+  //    dans l'app (scroll, etc.) est annulé pendant un enregistrement verrouillé mains libres. ──
+  useEffect(() => {
+    const forceStopIfActiveRecording = () => {
+      if (recState !== "recording" && recState !== "locked") return;
+      recCancelRef.current = true;
+      setRecState("cancelled");
+      finishRecording(true);
+      activePointerIdRef.current = null;
+      recPointerStartRef.current = null;
+      recLockedRef.current = false;
+      recSuppressClickRef.current = false;
+      const mic = micHandleRef.current;
+      if (mic) { mic.style.transition = ""; mic.style.transform = "translate(0px,0px)"; mic.style.opacity = "1"; }
+      const trash = trashElRef.current;
+      if (trash) { trash.style.transform = "translateY(-50%) scale(1)"; trash.style.background = ""; trash.style.color = ""; }
+    };
+    const onVisibility = () => { if (document.hidden) forceStopIfActiveRecording(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", forceStopIfActiveRecording);
+    window.addEventListener("pagehide", forceStopIfActiveRecording);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", forceStopIfActiveRecording);
+      window.removeEventListener("pagehide", forceStopIfActiveRecording);
+    };
+  }, [recState]);
+
   // ── Filet de sécurité JS (en plus du CSS ci-dessus) : certaines WebView (notamment sur Android)
   //    déclenchent quand même la sélection de texte / loupe native malgré -webkit-user-select:none.
   //    On intercepte donc directement l'événement au niveau document et on l'annule dès que la cible
   //    se trouve dans la zone d'enregistrement vocal — quelle que soit la plateforme (APK, PWA, web). ──
+  // ── Filet de sécurité JS (en plus du CSS ci-dessus) : certaines WebView (notamment sur Android)
+  //    déclenchent quand même la sélection de texte / loupe native malgré -webkit-user-select:none.
+  //    On intercepte donc directement l'événement au niveau document et on l'annule dès que la cible
+  //    se trouve dans la zone d'enregistrement vocal — quelle que soit la plateforme (APK, PWA, web).
+  //    Volontairement PAS de preventDefault() global sur touchstart ici : ça casserait les gestes de
+  //    glisser (annuler / verrouiller) sur iOS. On ne bloque que les deux événements réellement
+  //    responsables de la loupe/sélection/menu contextuel, jamais le geste tactile lui-même. ──
   useEffect(() => {
     const blockIfInsideRecordingUi = (e: Event) => {
       const target = e.target as HTMLElement | null;
       if (target?.closest?.(".no-select-callout")) e.preventDefault();
     };
-    // "selectstart"/"contextmenu" arrivent trop tard sur iOS : la loupe de sélection est un geste
-    // système déclenché dès le touchstart, avant que ces events ne soient émis. On bloque donc
-    // AUSSI au niveau touchstart, avec un listener non-passif (les listeners tactiles synthétiques
-    // de React sont passifs par défaut, donc un preventDefault() dans onTouchStart ne suffit pas).
-    const blockTouchStart = (e: TouchEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target?.closest?.(".no-select-callout")) e.preventDefault();
-    };
     document.addEventListener("selectstart", blockIfInsideRecordingUi, true);
     document.addEventListener("contextmenu", blockIfInsideRecordingUi, true);
-    document.addEventListener("touchstart", blockTouchStart, { capture: true, passive: false });
     return () => {
       document.removeEventListener("selectstart", blockIfInsideRecordingUi, true);
       document.removeEventListener("contextmenu", blockIfInsideRecordingUi, true);
-      document.removeEventListener("touchstart", blockTouchStart, true);
     };
   }, []);
   // Défilement vers le message cité (clic sur la citation)
@@ -8998,17 +9044,36 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   };
 
   // Démarre l'enregistrement (appui long sur le micro, permission déjà acquise). Réservé Premium.
+  // Démarre l'enregistrement (appui long sur le micro). Réservé Premium.
+  // Autorisation ≠ Démarrage : si le micro n'est pas encore "chaud" (jamais utilisé, ou flux coupé),
+  // ce premier appui se contente d'obtenir la permission/le flux et repasse l'état à "ready" — il NE
+  // déclenche PLUS d'enregistrement automatiquement. L'utilisateur doit refaire un appui long, volontaire,
+  // pour enregistrer réellement. C'est ce qui évite un enregistrement "fantôme" démarré à l'aveugle
+  // pendant que le popup natif du navigateur avait perturbé le geste tactile en cours.
   const startRecording = async () => {
     if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
-    if (!open || recState !== "idle") return;
-    const hadStreamAlready = !!(mediaStreamRef.current && mediaStreamRef.current.getAudioTracks().some(t => t.readyState === "live"));
+    if (!open || !micGestureAllowed) return;
+
+    const cachedStream = mediaStreamRef.current;
+    const alreadyGranted = !!(cachedStream && cachedStream.getAudioTracks().some(t => t.readyState === "live"));
+
+    if (alreadyGranted) {
+      // Flux déjà chaud : on peut démarrer réellement, dans la continuité du geste en cours.
+      beginRecordingWithStream(cachedStream!, false);
+      return;
+    }
+
+    // Flux pas encore obtenu : on le demande, SANS démarrer d'enregistrement dans la foulée.
+    activePointerIdRef.current = null;
+    recPointerStartRef.current = null;
+    const mic = micHandleRef.current;
+    if (mic) { mic.style.transition = ""; mic.style.transform = "translate(0px,0px)"; }
+    setRecState("requestingPermission");
     const stream = await getMicStream();
-    if (!stream) { setShowMicBlocked(true); return; }
-    // Si le flux vient d'être (re)demandé au système, le popup natif a pu perturber le doigt de
-    // l'utilisateur (relâché sans event fiable pendant l'attente). On démarre alors TOUJOURS en
-    // mode verrouillé "mains libres" : bouton stop garanti (tap sur le micro), au lieu d'un
-    // enregistrement accroché à un doigt qui n'est plus suivi correctement.
-    beginRecordingWithStream(stream, !hadStreamAlready);
+    if (!open) return; // la conversation a pu être fermée pendant l'attente du popup
+    if (!stream) { setShowMicBlocked(true); setRecState("idle"); return; }
+    // Permission acquise : mic chaud, prêt — mais on attend un NOUVEL appui volontaire pour enregistrer.
+    setRecState("ready");
   };
 
   // Appelée depuis le modal Moyo (voir plus bas) une fois que l'utilisateur a confirmé vouloir
@@ -9113,6 +9178,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   // Le micro est "aspiré" magnétiquement par la corbeille : il file vers elle, rétrécit, disparaît ;
   // la corbeille grossit pour le recevoir ; l'enregistrement est ensuite réellement annulé.
   const flyAwayToTrashAndCancel = () => {
+    setRecState("cancelled");
     const mic = micHandleRef.current, trash = trashElRef.current;
     if (!mic || !trash) { finishRecording(true); return; }
     const micRect = mic.getBoundingClientRect();
@@ -9150,7 +9216,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const onMicPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
     if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
-    if (recState !== "idle") return;
+    if (!micGestureAllowed) return;
     const mic = micHandleRef.current;
     if (mic) { try { mic.setPointerCapture(e.pointerId); } catch {} mic.style.transition = ""; mic.style.transform = "translate(0px,0px)"; mic.style.opacity = "1"; }
     activePointerIdRef.current = e.pointerId;
@@ -9247,6 +9313,14 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     if (micHoldTimerRef.current) {
       clearTimeout(micHoldTimerRef.current);
       micHoldTimerRef.current = null;
+      recPointerStartRef.current = null;
+      const mic = micHandleRef.current;
+      if (mic) { mic.style.transform = "translate(0,0)"; }
+      return;
+    }
+    // Le popup de permission a pu être déclenché entre-temps (voir startRecording) : aucun
+    // enregistrement n'est en cours dans ce cas, on se contente de ranger le geste tactile.
+    if (recState === "requestingPermission") {
       recPointerStartRef.current = null;
       const mic = micHandleRef.current;
       if (mic) { mic.style.transform = "translate(0,0)"; }
@@ -10174,11 +10248,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
           </>
         )}
-        {(recState === "idle" || recState === "recording" || recState === "locked") ? (
+        {recState !== "review" ? (
         <div>
           <div ref={barRowRef} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", position: "relative" }}>
             {/* Bloc idle : image / emoji / texte — masqué (pas démonté) pendant l'enregistrement */}
-            <div style={{ display: recState === "idle" ? "flex" : "none", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
+            <div style={{ display: (recState === "recording" || recState === "locked") ? "none" : "flex", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
               <input ref={imgRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
               <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
                 style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
@@ -10217,7 +10291,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
 
             {/* Pastille d'enregistrement — masquée (pas démontée) en dehors de recording/locked */}
-            <div className="no-select-callout" style={{ display: recState === "idle" ? "none" : "block", flex: 1, minWidth: 0, marginLeft: recState === "recording" ? 42 : 0, transition: "margin-left 0.15s" }}>
+            <div className="no-select-callout" style={{ display: (recState === "recording" || recState === "locked") ? "block" : "none", flex: 1, minWidth: 0, marginLeft: recState === "recording" ? 42 : 0, transition: "margin-left 0.15s" }}>
               <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 30, padding: "10px 16px", minHeight: 48 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
                 <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
@@ -10235,7 +10309,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
 
             {/* Bouton envoyer texte, uniquement au repos avec du texte saisi (aucune incidence sur le geste micro) */}
-            {recState === "idle" && text.trim().length > 0 ? (
+            {micGestureAllowed && text.trim().length > 0 ? (
               <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0, marginBottom: 2 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </div>
@@ -10258,12 +10332,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                   border: recState === "locked" ? `3px solid ${G.rouge}` : "none",
                   display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0,
                   boxShadow: recState === "recording" ? "0 0 0 8px rgba(192,57,43,0.12)" : "none",
+                  opacity: recState === "requestingPermission" ? 0.55 : 1,
+                  pointerEvents: recState === "requestingPermission" ? "none" : "auto",
                   cursor: "pointer", touchAction: "none", userSelect: "none", WebkitUserSelect: "none",
-                  position: "relative", zIndex: 2, marginBottom: recState === "idle" ? 2 : 0,
-                  transition: "width 0.15s, height 0.15s, box-shadow 0.15s, background 0.15s",
+                  position: "relative", zIndex: 2, marginBottom: micGestureAllowed ? 2 : 0,
+                  transition: "width 0.15s, height 0.15s, box-shadow 0.15s, background 0.15s, opacity 0.15s",
                 }}
               >
-                {recState === "locked" ? (
+                {recState === "requestingPermission" ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
+                ) : recState === "locked" ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                 ) : (
                   <svg width={recState === "recording" ? "20" : "18"} height={recState === "recording" ? "20" : "18"} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
