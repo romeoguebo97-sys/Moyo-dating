@@ -3908,6 +3908,31 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [groupMembers, setGroupMembers] = useState<{ user_id: string; role: "admin" | "moderator" | "member"; status: "pending" | "approved" | "rejected"; removed_at?: string | null; profile?: { name: string; photo_url?: string | null; gender?: string } }[]>([]);
   const [groupMembersLoading, setGroupMembersLoading] = useState(false);
   const groupPendingCount = groupMembers.filter(m => m.status === "pending").length;
+  const [groupSubTab, setGroupSubTab] = useState<"demandes" | "membres" | "messages">("demandes");
+  const [groupMessages, setGroupMessages] = useState<{ id: string; sender_id: string; content: string; created_at: string; profile?: { name: string; photo_url?: string | null } }[]>([]);
+  const [groupMessagesLoading, setGroupMessagesLoading] = useState(false);
+  const loadGroupMessages = async () => {
+    if (!auth) return;
+    setGroupMessagesLoading(true);
+    try {
+      const rows = await fetch(`${SUPABASE_URL}/rest/v1/group_messages?select=id,sender_id,content,created_at&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json());
+      const list = Array.isArray(rows) ? rows : [];
+      const ids = Array.from(new Set(list.map((r: any) => r.sender_id)));
+      let profiles: any[] = [];
+      if (ids.length) {
+        profiles = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,name,photo_url`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).catch(() => []);
+      }
+      const profById: Record<string, any> = {};
+      (Array.isArray(profiles) ? profiles : []).forEach(p => { profById[p.id] = p; });
+      setGroupMessages(list.map((r: any) => ({ ...r, profile: profById[r.sender_id] })));
+    } catch {}
+    setGroupMessagesLoading(false);
+  };
+  const deleteGroupMessage = async (id: string) => {
+    if (!auth) return;
+    setGroupMessages(list => list.filter(m => m.id !== id));
+    await fetch(`${SUPABASE_URL}/rest/v1/group_messages?id=eq.${id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+  };
 
   const loadGroupMembers = async () => {
     if (!auth) return;
@@ -5961,7 +5986,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const messagingPendingCount = reports.filter(r => isPending(r) && isSupportInbox(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   // ── Badge global = signalements en attente + avis non lus + paiements en attente + nouvelles demandes de mise en relation ──
-  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge + featurePendingCount + appointmentsPendingCount;
+  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge + featurePendingCount + appointmentsPendingCount + groupPendingCount;
   const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
@@ -9439,67 +9464,100 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════ ONGLET GROUPE PREMIUM (demandes d'adhésion + modération) */}
+      {/* ═══════════════════════════════════════════ ONGLET GROUPE PREMIUM (demandes, membres, messages — tout centralisé ici) */}
       {activeTab === "groupe" && (
         <div style={{ padding: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>⭐ Groupe Premium</div>
+            <Btn variant="ghost" onClick={() => { loadGroupMembers(); if (groupSubTab === "messages") loadGroupMessages(); }} style={{ fontSize: "0.78rem", padding: "6px 12px" }}>↻ Rafraîchir</Btn>
+          </div>
+          <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Un seul groupe global, accès réservé aux membres Premium, validé manuellement. L'activation/désactivation du groupe se fait dans Configuration ☰ → Fonctionnalités.</p>
+
+          <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+            {([["demandes", `Demandes${groupPendingCount > 0 ? ` (${groupPendingCount})` : ""}`], ["membres", "Membres"], ["messages", "Messages"]] as ["demandes" | "membres" | "messages", string][]).map(([k, lbl]) => (
+              <button key={k} onClick={() => { setGroupSubTab(k); if (k === "messages" && groupMessages.length === 0) loadGroupMessages(); }} style={{ flexShrink: 0, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: groupSubTab === k ? G.or : "#fff", color: groupSubTab === k ? "#fff" : "#555", border: groupSubTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: groupSubTab === k ? "0 4px 12px rgba(212,168,67,0.3)" : "none" }}>{lbl}</button>
+            ))}
+          </div>
+
           {groupMembersLoading && groupMembers.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
           ) : (
             <>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>⭐ Groupe Premium</div>
-                <Btn variant="ghost" onClick={loadGroupMembers} style={{ fontSize: "0.78rem", padding: "6px 12px" }}>↻ Rafraîchir</Btn>
-              </div>
-              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 20 }}>Un seul groupe global, accès réservé aux membres Premium, validé manuellement.</p>
+              {/* ── Sous-onglet Demandes ── */}
+              {groupSubTab === "demandes" && (
+                groupMembers.filter(m => m.status === "pending").length === 0 ? (
+                  <p style={{ fontSize: "0.82rem", color: "#999" }}>Aucune demande en attente.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {groupMembers.filter(m => m.status === "pending").map(mem => (
+                      <div key={mem.user_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(212,168,67,0.06)", borderRadius: 12 }}>
+                        <Avatar url={mem.profile?.photo_url} gender={mem.profile?.gender} size={38} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.86rem", color: G.brun }}>{mem.profile?.name || mem.user_id.slice(0, 8)}</div>
+                        </div>
+                        <Btn variant="ghost" onClick={() => rejectGroupRequest(mem.user_id)} style={{ fontSize: "0.75rem", padding: "6px 12px", color: "#c00" }}>Refuser</Btn>
+                        <Btn variant="primary" onClick={() => approveGroupRequest(mem.user_id)} style={{ fontSize: "0.75rem", padding: "6px 12px" }}>Valider</Btn>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
 
-              {/* Demandes en attente */}
-              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.rouge, marginBottom: 8 }}>Demandes en attente ({groupPendingCount})</div>
-              {groupMembers.filter(m => m.status === "pending").length === 0 ? (
-                <p style={{ fontSize: "0.82rem", color: "#999", marginBottom: 22 }}>Aucune demande en attente.</p>
-              ) : (
-                <div style={{ marginBottom: 22, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {groupMembers.filter(m => m.status === "pending").map(mem => (
-                    <div key={mem.user_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(212,168,67,0.06)", borderRadius: 12 }}>
+              {/* ── Sous-onglet Membres ── */}
+              {groupSubTab === "membres" && (
+                groupMembers.filter(m => m.status === "approved").length === 0 ? (
+                  <p style={{ fontSize: "0.82rem", color: "#999" }}>Aucun membre validé pour l'instant.</p>
+                ) : groupMembers.filter(m => m.status === "approved").map(mem => {
+                  const excluded = !!mem.removed_at;
+                  return (
+                    <div key={mem.user_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
                       <Avatar url={mem.profile?.photo_url} gender={mem.profile?.gender} size={38} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: "0.86rem", color: G.brun }}>{mem.profile?.name || mem.user_id.slice(0, 8)}</div>
+                        <div style={{ fontSize: "0.72rem", color: excluded ? "#c00" : mem.role === "admin" ? G.or : mem.role === "moderator" ? G.rouge : "#999" }}>
+                          {excluded ? "Retiré du groupe" : mem.role === "admin" ? "Administrateur" : mem.role === "moderator" ? "Modérateur" : "Membre"}
+                        </div>
                       </div>
-                      <Btn variant="ghost" onClick={() => rejectGroupRequest(mem.user_id)} style={{ fontSize: "0.75rem", padding: "6px 12px", color: "#c00" }}>Refuser</Btn>
-                      <Btn variant="primary" onClick={() => approveGroupRequest(mem.user_id)} style={{ fontSize: "0.75rem", padding: "6px 12px" }}>Valider</Btn>
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        {excluded ? (
+                          <span onClick={() => restoreGroupMember(mem.user_id)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.rouge, cursor: "pointer" }}>Réintégrer</span>
+                        ) : (
+                          <>
+                            {mem.role !== "moderator" && mem.role !== "admin" && <span onClick={() => setGroupMemberRole(mem.user_id, "moderator")} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>Nommer modérateur</span>}
+                            {mem.role === "moderator" && <span onClick={() => setGroupMemberRole(mem.user_id, "member")} style={{ fontSize: "0.75rem", fontWeight: 700, color: "#999", cursor: "pointer" }}>Retirer le rôle</span>}
+                            {mem.role !== "admin" && <span onClick={() => removeGroupMember(mem.user_id)} style={{ fontSize: "0.75rem", fontWeight: 700, color: "#c00", cursor: "pointer" }}>Retirer du groupe</span>}
+                          </>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })
               )}
 
-              {/* Membres validés */}
-              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun, marginBottom: 8 }}>Membres validés ({groupMembers.filter(m => m.status === "approved").length})</div>
-              {groupMembers.filter(m => m.status === "approved").length === 0 ? (
-                <p style={{ fontSize: "0.82rem", color: "#999" }}>Aucun membre validé pour l'instant.</p>
-              ) : groupMembers.filter(m => m.status === "approved").map(mem => {
-                const excluded = !!mem.removed_at;
-                return (
-                  <div key={mem.user_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
-                    <Avatar url={mem.profile?.photo_url} gender={mem.profile?.gender} size={38} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.86rem", color: G.brun }}>{mem.profile?.name || mem.user_id.slice(0, 8)}</div>
-                      <div style={{ fontSize: "0.72rem", color: excluded ? "#c00" : mem.role === "admin" ? G.or : mem.role === "moderator" ? G.rouge : "#999" }}>
-                        {excluded ? "Retiré du groupe" : mem.role === "admin" ? "Administrateur" : mem.role === "moderator" ? "Modérateur" : "Membre"}
+              {/* ── Sous-onglet Messages (modération du contenu, sans avoir à ouvrir l'app) ── */}
+              {groupSubTab === "messages" && (
+                groupMessagesLoading && groupMessages.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: 30 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
+                ) : groupMessages.length === 0 ? (
+                  <p style={{ fontSize: "0.82rem", color: "#999" }}>Aucun message pour l'instant.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {groupMessages.map(m => (
+                      <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", background: G.creme, borderRadius: 12 }}>
+                        <Avatar url={m.profile?.photo_url} size={32} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                            <span style={{ fontWeight: 700, fontSize: "0.82rem", color: G.brun }}>{m.profile?.name || m.sender_id.slice(0, 8)}</span>
+                            <span style={{ fontSize: "0.68rem", color: "#aaa" }}>{fmtDate(m.created_at)}</span>
+                          </div>
+                          <div style={{ fontSize: "0.82rem", color: "#555", wordBreak: "break-word" }}>{m.content.startsWith("[img]") ? "📷 Photo" : m.content.startsWith("[audio]") ? "🎤 Vocal" : m.content}</div>
+                        </div>
+                        <span onClick={() => deleteGroupMessage(m.id)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#c00", cursor: "pointer", flexShrink: 0 }}>Supprimer</span>
                       </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      {excluded ? (
-                        <span onClick={() => restoreGroupMember(mem.user_id)} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.rouge, cursor: "pointer" }}>Réintégrer</span>
-                      ) : (
-                        <>
-                          {mem.role !== "moderator" && mem.role !== "admin" && <span onClick={() => setGroupMemberRole(mem.user_id, "moderator")} style={{ fontSize: "0.75rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>Nommer modérateur</span>}
-                          {mem.role === "moderator" && <span onClick={() => setGroupMemberRole(mem.user_id, "member")} style={{ fontSize: "0.75rem", fontWeight: 700, color: "#999", cursor: "pointer" }}>Retirer le rôle</span>}
-                          {mem.role !== "admin" && <span onClick={() => removeGroupMember(mem.user_id)} style={{ fontSize: "0.75rem", fontWeight: 700, color: "#c00", cursor: "pointer" }}>Retirer du groupe</span>}
-                        </>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                );
-              })}
+                )
+              )}
             </>
           )}
         </div>

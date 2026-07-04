@@ -9645,16 +9645,31 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       </div>
     </div>
     {FEATURE_GROUP_PREMIUM && (
-    <div style={{ display: "flex", gap: 8, padding: "10px 12px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-        <div onClick={() => setShowGroup(false)} style={{ flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 10, cursor: "pointer", background: !showGroup ? G.rouge : G.creme, transition: "background 0.15s" }}>
-          <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? "#fff" : "#999" }}>Messages privés</span>
-        </div>
-        <div onClick={requestJoinGroup} style={{ flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 10, cursor: "pointer", background: showGroup ? G.rouge : G.creme, position: "relative", transition: "background 0.15s" }}>
-          <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#999" }}>Groupe</span>
-          {groupPendingCount > 0 && (
-            <span style={{ position: "absolute", top: -6, right: 10, background: G.or, color: "#fff", fontSize: "0.58rem", fontWeight: 800, borderRadius: 50, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)" }}>{groupPendingCount > 99 ? "99+" : groupPendingCount}</span>
-          )}
-        </div>
+    <div style={{ display: "flex", padding: "10px 12px 0", background: G.blanc, borderBottom: `1px solid ${G.gris}` }}>
+      <div onClick={() => setShowGroup(false)} style={{
+        width: "calc(50% + 9px)", textAlign: "center", padding: "11px 0 13px", cursor: "pointer",
+        background: !showGroup ? G.rouge : G.creme,
+        borderRadius: "14px 14px 0 0",
+        position: "relative", zIndex: !showGroup ? 2 : 1,
+        boxShadow: !showGroup ? "0 -3px 10px rgba(0,0,0,0.12)" : "none",
+        transition: "background 0.15s",
+      }}>
+        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? "#fff" : "#999" }}>Messages privés</span>
+      </div>
+      <div onClick={requestJoinGroup} style={{
+        width: "calc(50% + 9px)", textAlign: "center", padding: "11px 0 13px", cursor: "pointer",
+        background: showGroup ? G.rouge : G.creme,
+        borderRadius: "14px 14px 0 0",
+        position: "relative", zIndex: showGroup ? 2 : 1,
+        marginLeft: -18,
+        boxShadow: showGroup ? "0 -3px 10px rgba(0,0,0,0.12)" : "none",
+        transition: "background 0.15s",
+      }}>
+        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#999" }}>Groupe</span>
+        {groupPendingCount > 0 && (
+          <span style={{ position: "absolute", top: -6, right: 10, background: G.or, color: "#fff", fontSize: "0.58rem", fontWeight: 800, borderRadius: 50, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)", zIndex: 3 }}>{groupPendingCount > 99 ? "99+" : groupPendingCount}</span>
+        )}
+      </div>
     </div>
     )}
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0" }}>
