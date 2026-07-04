@@ -7886,6 +7886,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const recCancelRef = useRef(false);
   const recPendingReleaseRef = useRef(false); // doigt relâché avant même que getUserMedia() ait résolu
   const reviewAudioRef = useRef<HTMLAudioElement | null>(null);
+  // ── Animation premium du micro (traînée fantôme, trajectoire unique, absorption magnétique) ──
+  const micHandleRef = useRef<HTMLDivElement | null>(null); // LE bouton micro : un seul élément DOM, jamais démonté
+  const trashElRef = useRef<HTMLDivElement | null>(null);
+  const barRowRef = useRef<HTMLDivElement | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
+  const gestureAxisRef = useRef<"x" | "y" | null>(null); // trajectoire déterminée UNE FOIS par geste : jamais de diagonale
+  const curTXRef = useRef(0);
+  const curTYRef = useRef(0);
+  const lastGhostPosRef = useRef<{ x: number; y: number } | null>(null);
+  const recSuppressClickRef = useRef(false); // évite qu'un pointerup de fin de verrouillage ne déclenche aussi un "stop" immédiat
   const destroyedAudioIdsRef = useRef<Set<string>>(new Set());
 
   // ── Détecte l'état actuel de la permission micro (une seule fois), pour éviter de redemander
@@ -9008,6 +9018,90 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     if (rec.state !== "inactive") rec.stop(); else rec.onstop(null as any);
   };
 
+  // ══════════════ Animation premium du micro (traînée fantôme, trajectoire unique, absorption magnétique) ══════════════
+  // Laisse une ombre semi-transparente derrière le micro pendant son déplacement (sensation de vitesse/fluidité).
+  const spawnGhost = () => {
+    const mic = micHandleRef.current, row = barRowRef.current;
+    if (!mic || !row) return;
+    const micRect = mic.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const ghost = document.createElement("div");
+    ghost.style.position = "absolute";
+    ghost.style.left = `${micRect.left - rowRect.left}px`;
+    ghost.style.top = `${micRect.top - rowRect.top}px`;
+    ghost.style.width = `${micRect.width}px`;
+    ghost.style.height = `${micRect.height}px`;
+    ghost.style.borderRadius = "50%";
+    ghost.style.background = G.rouge;
+    ghost.style.opacity = "0.32";
+    ghost.style.pointerEvents = "none";
+    ghost.style.zIndex = "1";
+    row.appendChild(ghost);
+    requestAnimationFrame(() => {
+      ghost.style.transition = "opacity 0.4s ease-out, transform 0.4s ease-out";
+      ghost.style.opacity = "0";
+      ghost.style.transform = "scale(0.75)";
+    });
+    setTimeout(() => ghost.remove(), 420);
+  };
+  const maybeSpawnGhost = () => {
+    const mic = micHandleRef.current;
+    if (!mic) return;
+    const rect = mic.getBoundingClientRect();
+    const last = lastGhostPosRef.current;
+    if (!last || Math.hypot(rect.left - last.x, rect.top - last.y) > 10) {
+      spawnGhost();
+      lastGhostPosRef.current = { x: rect.left, y: rect.top };
+    }
+  };
+  // Ramène le micro à sa place d'origine avec un mouvement fluide sans rebond (traînée comprise).
+  const snapMicBack = (after?: () => void) => {
+    const mic = micHandleRef.current;
+    if (!mic) { after?.(); return; }
+    mic.style.transition = "transform 0.32s cubic-bezier(0.22,1,0.36,1)";
+    mic.style.transform = "translate(0px, 0px)";
+    const ticker = setInterval(maybeSpawnGhost, 30);
+    setTimeout(() => {
+      clearInterval(ticker);
+      mic.style.transition = "";
+      curTXRef.current = 0; curTYRef.current = 0;
+      lastGhostPosRef.current = null;
+      after?.();
+    }, 320);
+  };
+  // Le micro est "aspiré" magnétiquement par la corbeille : il file vers elle, rétrécit, disparaît ;
+  // la corbeille grossit pour le recevoir ; l'enregistrement est ensuite réellement annulé.
+  const flyAwayToTrashAndCancel = () => {
+    const mic = micHandleRef.current, trash = trashElRef.current;
+    if (!mic || !trash) { finishRecording(true); return; }
+    const micRect = mic.getBoundingClientRect();
+    const trashRect = trash.getBoundingClientRect();
+    // Le transform CSS s'applique depuis la position de BASE du micro (pas depuis sa position déjà
+    // décalée par le glissement) : on réinjecte le décalage courant pour éviter tout saut visuel.
+    const dxToTrash = (trashRect.left + trashRect.width / 2) - (micRect.left + micRect.width / 2) + curTXRef.current;
+    const dyToTrash = (trashRect.top + trashRect.height / 2) - (micRect.top + micRect.height / 2) + curTYRef.current;
+    mic.style.transition = "transform 0.26s cubic-bezier(0.55,0,0.85,0.35), opacity 0.26s ease-in";
+    trash.style.transform = "translateY(-50%) scale(1.4)";
+    trash.style.background = G.rouge;
+    trash.style.color = "#fff";
+    try { (navigator as any).vibrate?.(25); } catch {}
+    const ticker = setInterval(maybeSpawnGhost, 25);
+    mic.style.transform = `translate(${dxToTrash}px, ${dyToTrash}px) scale(0.25)`;
+    mic.style.opacity = "0";
+    setTimeout(() => {
+      clearInterval(ticker);
+      finishRecording(true);
+      mic.style.transition = "";
+      mic.style.transform = "translate(0,0) scale(1)";
+      mic.style.opacity = "1";
+      trash.style.transform = "translateY(-50%) scale(1)";
+      trash.style.background = "";
+      trash.style.color = "";
+      curTXRef.current = 0; curTYRef.current = 0;
+      lastGhostPosRef.current = null;
+    }, 260);
+  };
+
   // Gestes sur le bouton micro : appui long = enregistrer, glisser à gauche = annuler, glisser en haut = verrouiller.
   // Si la permission micro n'a jamais été accordée (ou n'est pas encore confirmée dans ce navigateur),
   // on affiche d'abord notre propre modal Moyo — le popup natif du navigateur n'apparaît qu'ensuite,
@@ -9015,38 +9109,78 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const onMicPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
     if (!auth.isPremium) { onShowPremium("Les messages vocaux sont réservés aux membres Premium !"); return; }
+    if (recState !== "idle") return;
     if (micPermState === "denied") { setShowMicBlocked(true); return; }
     const hasLiveStream = mediaStreamRef.current?.getAudioTracks().some(t => t.readyState === "live");
     if (micPermState !== "granted" && !hasLiveStream) { setShowMicIntro(true); return; }
+    const mic = micHandleRef.current;
+    if (mic) { try { mic.setPointerCapture(e.pointerId); } catch {} mic.style.transition = ""; mic.style.transform = "translate(0px,0px)"; mic.style.opacity = "1"; }
+    activePointerIdRef.current = e.pointerId;
+    gestureAxisRef.current = null;
+    curTXRef.current = 0; curTYRef.current = 0;
+    lastGhostPosRef.current = null;
     recPointerStartRef.current = { x: e.clientX, y: e.clientY };
     startRecording();
   };
   const onMicPointerMove = (e: React.PointerEvent) => {
+    if (e.pointerId !== activePointerIdRef.current) return;
     if (recState !== "recording" || !recPointerStartRef.current) return;
     const dx = e.clientX - recPointerStartRef.current.x;
     const dy = e.clientY - recPointerStartRef.current.y;
-    if (!recLockedRef.current && dy < -AUDIO_LOCK_PX) {
-      recLockedRef.current = true;
-      setRecState("locked");
-      try { (navigator as any).vibrate?.(20); } catch {}
+    const mic = micHandleRef.current;
+    if (!mic) return;
+
+    // La trajectoire (gauche OU haut) est déterminée UNE SEULE FOIS, dès 8px de mouvement, en
+    // comparant la direction dominante. Ensuite le micro ne suit plus QUE cet axe — jamais en diagonale.
+    if (gestureAxisRef.current === null) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      gestureAxisRef.current = Math.abs(dy) > Math.abs(dx) ? "y" : "x";
+    }
+
+    if (gestureAxisRef.current === "y") {
+      if (!recLockedRef.current && dy < -AUDIO_LOCK_PX) {
+        recLockedRef.current = true;
+        recSuppressClickRef.current = true; // le pointerup qui suit ne doit pas aussi déclencher un "stop"
+        try { (navigator as any).vibrate?.(20); } catch {}
+        snapMicBack(() => setRecState("locked"));
+        return;
+      }
+      const followY = Math.max(dy, -AUDIO_LOCK_PX * 1.3);
+      curTXRef.current = 0; curTYRef.current = Math.min(0, followY);
+      mic.style.transform = `translate(0px, ${curTYRef.current}px)`;
+      maybeSpawnGhost();
       return;
     }
-    if (dx < 0) {
-      setRecDragX(Math.max(dx, -AUDIO_CANCEL_PX * 1.4));
-      const canceling = dx < -AUDIO_CANCEL_PX;
-      if (canceling !== recCancelRef.current) {
-        recCancelRef.current = canceling; setRecCanceling(canceling);
-        if (canceling) { try { (navigator as any).vibrate?.(20); } catch {} }
-      }
+
+    // gestureAxisRef.current === "x" : seule la trajectoire d'annulation est active ici.
+    const followX = Math.max(dx, -AUDIO_CANCEL_PX * 1.3);
+    curTXRef.current = Math.min(0, followX); curTYRef.current = 0;
+    mic.style.transform = `translate(${curTXRef.current}px, 0px)`;
+    maybeSpawnGhost();
+    setRecDragX(Math.max(dx, -AUDIO_CANCEL_PX * 1.4));
+    const canceling = dx < -AUDIO_CANCEL_PX;
+    if (canceling !== recCancelRef.current) {
+      recCancelRef.current = canceling; setRecCanceling(canceling);
+      if (canceling) { try { (navigator as any).vibrate?.(20); } catch {} }
     }
   };
-  const onMicPointerUp = () => {
-    if (recState === "locked") { recPointerStartRef.current = null; return; } // reste enregistré, attend un tap sur le micro verrouillé
-    if (recState !== "recording") { recPointerStartRef.current = null; return; }
+  const onMicPointerUp = (e: React.PointerEvent) => {
+    if (e.pointerId !== activePointerIdRef.current) return;
+    activePointerIdRef.current = null;
+    if (recState !== "recording" && recState !== "locked") {
+      recPendingReleaseRef.current = true; // doigt relâché avant même que l'enregistrement démarre vraiment
+      return;
+    }
+    if (recState === "locked") return; // reste enregistré mains libres, attend un tap sur le micro pour arrêter
     const shouldCancel = recCancelRef.current;
     recPointerStartRef.current = null;
-    if (shouldCancel) { try { (navigator as any).vibrate?.(30); } catch {} }
-    finishRecording(shouldCancel);
+    if (shouldCancel) { try { (navigator as any).vibrate?.(30); } catch {} flyAwayToTrashAndCancel(); }
+    else { snapMicBack(() => finishRecording(false)); }
+  };
+  // Tap sur le micro une fois verrouillé (mains libres) : arrête l'enregistrement.
+  const onMicClick = () => {
+    if (recSuppressClickRef.current) { recSuppressClickRef.current = false; return; }
+    if (recState === "locked") stopLockedRecording();
   };
   // Tap sur le micro verrouillé : arrête l'enregistrement et ouvre le panneau "review" (4 actions).
   const stopLockedRecording = () => {
@@ -9952,104 +10086,105 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
             </div>
           </>
         )}
-        {recState === "idle" ? (
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", padding: "10px 12px" }}>
-          {/* Bouton image - Premium */}
-          <input ref={imgRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
-          <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
-            style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
-            {imgLoading ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-              </svg>
-            )}
-          </div>
-          {/* Bouton emoji */}
-          <div onClick={() => setShowEmojiPicker(prev => !prev)}
-            style={{ width: 40, height: 40, borderRadius: "50%", background: showEmojiPicker ? "rgba(192,57,43,0.12)" : "rgba(44,26,14,0.06)", border: `1.5px solid ${showEmojiPicker ? "rgba(192,57,43,0.35)" : G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.15s", marginBottom: 2 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={showEmojiPicker ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-              <line x1="9" y1="9" x2="9.01" y2="9"/>
-              <line x1="15" y1="9" x2="15.01" y2="9"/>
-            </svg>
-          </div>
-          <textarea
-            ref={textareaRef}
-            className="chat-textarea"
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onFocus={() => setShowEmojiPicker(false)}
-            placeholder="Écris un message..."
-            rows={1}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              width: "auto",
-              display: "block",
-              boxSizing: "border-box",
-              padding: "11px 14px",
-              border: `2px solid ${G.gris}`,
-              borderRadius: 20,
-              fontSize: "16px",
-              outline: "none",
-              background: G.creme,
-              color: G.brun,
-              resize: "none",
-              fontFamily: "inherit",
-              lineHeight: "1.4",
-              minHeight: 44,
-              maxHeight: 120,
-              overflowY: "auto",
-              overflowX: "hidden",
-              verticalAlign: "bottom",
-              wordBreak: "break-word",
-              WebkitOverflowScrolling: "touch",
-            }}
-          />
-          {text.trim().length > 0 ? (
-            <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0, marginBottom: 2 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
-          ) : (
-            <div
-              onPointerDown={onMicPointerDown}
-              onPointerUp={() => { recPendingReleaseRef.current = true; onMicPointerUp(); }}
-              onPointerCancel={() => { recPendingReleaseRef.current = true; onMicPointerUp(); }}
-              style={{ width: 44, height: 44, borderRadius: "50%", background: auth.isPremium ? G.rouge : "#ccc", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0, marginBottom: 2, touchAction: "none", userSelect: "none", WebkitUserSelect: "none" }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        {(recState === "idle" || recState === "recording" || recState === "locked") ? (
+        <div>
+          <div ref={barRowRef} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", position: "relative" }}>
+            {/* Bloc idle : image / emoji / texte — masqué (pas démonté) pendant l'enregistrement */}
+            <div style={{ display: recState === "idle" ? "flex" : "none", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
+              <input ref={imgRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
+              <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
+                style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
+                {imgLoading ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                )}
+              </div>
+              <div onClick={() => setShowEmojiPicker(prev => !prev)}
+                style={{ width: 40, height: 40, borderRadius: "50%", background: showEmojiPicker ? "rgba(192,57,43,0.12)" : "rgba(44,26,14,0.06)", border: `1.5px solid ${showEmojiPicker ? "rgba(192,57,43,0.35)" : G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.15s", marginBottom: 2 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={showEmojiPicker ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                  <line x1="9" y1="9" x2="9.01" y2="9"/>
+                  <line x1="15" y1="9" x2="15.01" y2="9"/>
+                </svg>
+              </div>
+              <textarea
+                ref={textareaRef}
+                className="chat-textarea"
+                value={text}
+                onChange={e => setText(e.target.value)}
+                onFocus={() => setShowEmojiPicker(false)}
+                placeholder="Écris un message..."
+                rows={1}
+                style={{
+                  flex: 1, minWidth: 0, width: "auto", display: "block", boxSizing: "border-box",
+                  padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 20, fontSize: "16px",
+                  outline: "none", background: G.creme, color: G.brun, resize: "none", fontFamily: "inherit",
+                  lineHeight: "1.4", minHeight: 44, maxHeight: 120, overflowY: "auto", overflowX: "hidden",
+                  verticalAlign: "bottom", wordBreak: "break-word", WebkitOverflowScrolling: "touch",
+                }}
+              />
             </div>
-          )}
-        </div>
-        ) : recState === "recording" ? (
-        <div style={{ padding: "10px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 30, padding: "10px 18px 10px 16px", minHeight: 48 }}>
-              {/* Poubelle qui apparaît et grossit à gauche pendant le glissement */}
-              {recDragX < -4 && (
-                <div style={{ position: "absolute", left: -8, top: "50%", transform: "translateY(-50%)", width: 34 + Math.min(16, -recDragX * 0.2), height: 34 + Math.min(16, -recDragX * 0.2), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+
+            {/* Pastille d'enregistrement — masquée (pas démontée) en dehors de recording/locked */}
+            <div style={{ display: recState === "idle" ? "none" : "block", flex: 1, minWidth: 0, marginLeft: recState === "recording" ? 42 : 0, transition: "margin-left 0.15s" }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 30, padding: "10px 16px", minHeight: 48 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
+                <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 2, height: 26, overflow: "hidden" }}>
+                  {(recLevels.length ? recLevels : Array.from({ length: 22 }, () => 0.12)).map((v, i) => (
+                    <div key={i} style={{ width: 3, borderRadius: 2, height: `${Math.max(10, v * 100)}%`, background: "#fff", flexShrink: 0 }} />
+                  ))}
                 </div>
-              )}
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
-              <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
-              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 2, height: 26, overflow: "hidden" }}>
-                {(recLevels.length ? recLevels : Array.from({ length: 24 }, () => 0.12)).map((v, i) => (
-                  <div key={i} style={{ width: 3, borderRadius: 2, height: `${Math.max(10, v * 100)}%`, background: "#fff", flexShrink: 0 }} />
-                ))}
               </div>
             </div>
-            {/* Bouton micro : chevauche le bord droit de la pastille, capte le glissement du doigt */}
-            <div
-              onPointerMove={onMicPointerMove}
-              onPointerUp={onMicPointerUp}
-              onPointerCancel={onMicPointerUp}
-              style={{ width: 52, height: 52, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, boxShadow: "0 0 0 8px rgba(192,57,43,0.12)", touchAction: "none", marginLeft: -26, zIndex: 2 }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+
+            {/* Corbeille : élément indépendant, posé dans l'espace libre à gauche — visible seulement pendant "recording" */}
+            <div ref={trashElRef} style={{ display: recState === "recording" ? "flex" : "none", position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), height: 34 + Math.min(16, Math.max(0, -recDragX * 0.2)), borderRadius: "50%", background: recCanceling ? G.rouge : "rgba(44,26,14,0.08)", color: recCanceling ? "#fff" : G.rouge, alignItems: "center", justifyContent: "center", zIndex: 3, transition: "background 0.15s, color 0.15s" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
+
+            {/* Bouton envoyer texte, uniquement au repos avec du texte saisi (aucune incidence sur le geste micro) */}
+            {recState === "idle" && text.trim().length > 0 ? (
+              <div onClick={() => { send(); setShowEmojiPicker(false); }} style={{ width: 44, height: 44, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0, marginBottom: 2 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </div>
+            ) : (
+              // LE bouton micro : un seul élément DOM, JAMAIS démonté entre idle / recording / locked —
+              // c'est ce qui permet au navigateur de ne jamais couper le geste tactile en cours.
+              <div
+                ref={micHandleRef}
+                onPointerDown={onMicPointerDown}
+                onPointerMove={onMicPointerMove}
+                onPointerUp={onMicPointerUp}
+                onPointerCancel={onMicPointerUp}
+                onClick={onMicClick}
+                style={{
+                  width: (recState === "recording" || recState === "locked") ? 52 : 44,
+                  height: (recState === "recording" || recState === "locked") ? 52 : 44,
+                  borderRadius: "50%",
+                  background: recState === "locked" ? "#1c1c1e" : (auth.isPremium ? G.rouge : "#ccc"),
+                  border: recState === "locked" ? `3px solid ${G.rouge}` : "none",
+                  display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0,
+                  boxShadow: recState === "recording" ? "0 0 0 8px rgba(192,57,43,0.12)" : "none",
+                  cursor: "pointer", touchAction: "none", userSelect: "none", WebkitUserSelect: "none",
+                  position: "relative", zIndex: 2, marginBottom: recState === "idle" ? 2 : 0,
+                  transition: "width 0.15s, height 0.15s, box-shadow 0.15s, background 0.15s",
+                }}
+              >
+                {recState === "locked" ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                ) : (
+                  <svg width={recState === "recording" ? "20" : "18"} height={recState === "recording" ? "20" : "18"} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                )}
+              </div>
+            )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, padding: "0 6px" }}>
+
+          {/* Indices sous la barre */}
+          <div style={{ display: recState === "recording" ? "flex" : "none", alignItems: "center", justifyContent: "space-between", margin: "8px 12px 10px", padding: "0 6px" }}>
             <span style={{ fontSize: "0.68rem", fontWeight: 700, color: recCanceling ? G.rouge : "#999", display: "flex", alignItems: "center", gap: 4 }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               {recCanceling ? "Relâche pour annuler" : "Glisser pour annuler"}
@@ -10059,27 +10194,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
             </span>
           </div>
-        </div>
-        ) : recState === "locked" ? (
-        <div style={{ padding: "10px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, background: "#1c1c1e", borderRadius: 30, padding: "10px 18px 10px 16px", minHeight: 48 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
-              <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{fmtAudioTime(recDuration)}</span>
-              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 2, height: 26, overflow: "hidden" }}>
-                {(recLevels.length ? recLevels : Array.from({ length: 24 }, () => 0.12)).map((v, i) => (
-                  <div key={i} style={{ width: 3, borderRadius: 2, height: `${Math.max(10, v * 100)}%`, background: "#fff", flexShrink: 0 }} />
-                ))}
-              </div>
-            </div>
-            {/* Micro verrouillé : un tap arrête l'enregistrement et ouvre le panneau à 4 actions */}
-            <div onClick={stopLockedRecording} title="Arrêter l'enregistrement"
-              style={{ width: 52, height: 52, borderRadius: "50%", background: "#1c1c1e", border: `3px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, cursor: "pointer", marginLeft: -26, zIndex: 2 }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            </div>
-          </div>
-          <div style={{ textAlign: "center", marginTop: 8 }}>
+          <div style={{ display: recState === "locked" ? "block" : "none", textAlign: "center", margin: "8px 12px 10px" }}>
             <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999" }}>Appuie sur le micro pour arrêter</span>
           </div>
         </div>
