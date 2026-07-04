@@ -10484,8 +10484,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
               <span style={{ fontSize: "0.66rem", fontWeight: 600, color: "#888" }}>Supprimer</span>
             </div>
             <div onClick={toggleReviewOnce} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
-              <div style={{ width: 46, height: 46, borderRadius: "50%", background: reviewOnce ? G.rouge : "rgba(44,26,14,0.06)", border: reviewOnce ? "none" : `1.5px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+              <div style={{ position: "relative", width: 46, height: 46, borderRadius: "50%", background: reviewOnce ? G.rouge : "rgba(44,26,14,0.06)", border: reviewOnce ? "none" : `1.5px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2.4" y="9" width="2.4" height="6" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/><rect x="7.2" y="6" width="2.4" height="12" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/><rect x="12" y="3" width="2.4" height="18" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/><rect x="16.8" y="6" width="2.4" height="12" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/><rect x="21.6" y="9" width="2.4" height="6" rx="1.2" fill={reviewOnce ? "#fff" : "#888"}/></svg>
+                <div style={{ position: "absolute", bottom: -1, right: -1, width: 16, height: 16, borderRadius: "50%", background: reviewOnce ? "#fff" : G.rouge, color: reviewOnce ? G.rouge : "#fff", border: `1.5px solid ${reviewOnce ? G.rouge : G.blanc}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", fontWeight: 800, lineHeight: 1 }}>1</div>
               </div>
               <span style={{ fontSize: "0.66rem", fontWeight: 600, color: reviewOnce ? G.rouge : "#888" }}>Écoute unique</span>
             </div>
