@@ -7656,6 +7656,16 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
 // ── Formatage mm:ss pour les durées audio ──
 const fmtAudioTime = (s: number) => { const t = Math.max(0, Math.round(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
 
+// ── Notes vocales : encodage compact dans content → "[audio]url::durée::forme_onde[/audio]" ──
+// Niveau module (et non local à Messages) car utilisé aussi par le composant VoiceMessage ci-dessous.
+const isAudioMsg = (content: string) => content.startsWith("[audio]") && content.endsWith("[/audio]");
+const parseAudioContent = (content: string): { url: string; duration: number; wave: number[] } => {
+  const inner = content.slice(7, -8);
+  const [url, durStr, waveStr] = inner.split("::");
+  return { url: url || "", duration: parseFloat(durStr) || 0, wave: waveStr ? waveStr.split(",").map(n => parseFloat(n) || 0) : [] };
+};
+const encodeAudioContent = (url: string, duration: number, wave: number[]) => `[audio]${url}::${duration.toFixed(1)}::${wave.map(n => n.toFixed(2)).join(",")}[/audio]`;
+
 // ── Lecteur de note vocale unique, mutualisé entre le vocal "normal" et le vocal "vue unique". ──
 // La seule différence de comportement est pilotée par m.is_view_once (comme pour les photos).
 const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, onExpireOnce, time, isPremium }: {
@@ -8799,15 +8809,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 
   const isImage = (content: string) => content.startsWith("[img]") && content.endsWith("[/img]");
   const getImageUrl = (content: string) => content.slice(5, -6);
-
-  // ── Notes vocales : encodage compact dans content → "[audio]url::durée::forme_onde[/audio]" ──
-  const isAudioMsg = (content: string) => content.startsWith("[audio]") && content.endsWith("[/audio]");
-  const parseAudioContent = (content: string): { url: string; duration: number; wave: number[] } => {
-    const inner = content.slice(7, -8);
-    const [url, durStr, waveStr] = inner.split("::");
-    return { url: url || "", duration: parseFloat(durStr) || 0, wave: waveStr ? waveStr.split(",").map(n => parseFloat(n) || 0) : [] };
-  };
-  const encodeAudioContent = (url: string, duration: number, wave: number[]) => `[audio]${url}::${duration.toFixed(1)}::${wave.map(n => n.toFixed(2)).join(",")}[/audio]`;
 
   // Ouvre une photo vue unique : précharge en mémoire → détruit le fichier côté serveur → affiche le blob.
   // Ainsi la photo est déjà détruite serveur dès l'ouverture (robuste même si l'app se ferme/recharge).
