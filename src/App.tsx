@@ -9380,9 +9380,13 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     else { snapMicBack(() => finishRecordingInstant()); }
   };
   // Tap sur le micro une fois verrouillé (mains libres) : arrête l'enregistrement.
+  // Tap sur le micro : arrête l'enregistrement, quel que soit l'état exact (mains libres verrouillé,
+  // OU enregistrement "normal" resté actif suite à un relâchement de doigt mal détecté par l'appareil).
+  // Filet de sécurité volontairement large : peu importe la cause, un tap sur le micro doit TOUJOURS
+  // pouvoir arrêter et envoyer/annuler une note en cours — l'utilisateur ne doit jamais rester bloqué.
   const onMicClick = () => {
     if (recSuppressClickRef.current) { recSuppressClickRef.current = false; return; }
-    if (recState === "locked") stopLockedRecording();
+    if (recState === "locked" || recState === "recording") stopLockedRecording();
   };
   // Tap sur le micro verrouillé : arrête l'enregistrement et ouvre le panneau "review" (4 actions).
   const stopLockedRecording = () => {
