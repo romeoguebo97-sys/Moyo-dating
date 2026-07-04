@@ -1298,12 +1298,12 @@ const GLOBAL_CSS = `
   :root{ --c-creme:#F0F1F5; --c-cremeDark:#E4E6ED; --c-blanc:#FFFFFF; --c-gris:#E8DDD0; --c-brun:#2C1A0E; --c-brunLight:#5C3D2A; --c-card-bd:#E8E8E8; --c-ghost-bg:rgba(44,26,14,0.06); }
   :root[data-theme="dark"], [data-theme="dark"]{ --c-creme:#0D0E12; --c-cremeDark:#171920; --c-blanc:#000000; --c-gris:#2A1F12; --c-brun:#F1DFD3; --c-brunLight:#D7B8A5; --c-card-bd:rgba(255,255,255,0.12); --c-ghost-bg:rgba(255,255,255,0.1); }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
-  html{overflow-x:hidden;width:100%;max-width:100vw;background-color:var(--c-creme);-webkit-text-size-adjust:100%;text-size-adjust:100%}
-  body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:var(--c-creme)}
+  html{overflow:hidden;height:100dvh;width:100%;max-width:100vw;background-color:var(--c-creme);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{overflow:hidden;height:100dvh;width:100%;max-width:100vw;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:var(--c-creme)}
   /* PWA iOS 18 : forcer touch-action:auto sur les champs pour que le clavier natif apparaisse */
   input,textarea,select{touch-action:auto !important}
   html{background-color:var(--c-creme)}
-  #root{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;background-color:var(--c-creme)}
+  #root{overflow:hidden;height:100dvh;width:100%;max-width:100vw;background-color:var(--c-creme)}
   /* Fix clavier iOS - la barre reste fixe au-dessus du clavier */
   [data-chat-container]{height:100%;height:-webkit-fill-available;}
   @supports(height:100dvh){[data-chat-container]{height:100dvh;}}
@@ -4688,7 +4688,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <>
         {/* Header mobile */}
         <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
-          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span> <span style={{ fontSize: "0.5rem", background: "lime", color: "#000", padding: "2px 6px", borderRadius: 6, verticalAlign: "middle" }}>TEST-V3</span></div>
+          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span> <span style={{ fontSize: "0.5rem", background: "lime", color: "#000", padding: "2px 6px", borderRadius: 6, verticalAlign: "middle" }}>TEST-V4</span></div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
             <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#333", background: "white", borderRadius: 50, padding: "5px 14px", cursor: "pointer", border: "1.5px solid #ddd", letterSpacing: "0.02em" }}>Guide</div>
           </div>
