@@ -2164,6 +2164,14 @@ function useWindowWidth() {
 function Landing({ onNav }: { onNav: (p: string) => void }) {
   const [featuredAvis, setFeaturedAvis] = React.useState<{ id: string; name: string; city: string; comment: string; rating: number }[]>([]);
   const [showMobileLanding, setShowMobileLanding] = React.useState(true);
+  const isMobile = useWindowWidth() < 768;
+  useEffect(() => {
+    if (isMobile && showMobileLanding) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = prevOverflow; };
+    }
+  }, [isMobile, showMobileLanding]);
   const [installModal, setInstallModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
 
   // Lance l'installation native Android (la vraie pop-up Chrome)
@@ -2226,7 +2234,6 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [ratingComment, setRatingComment] = useState("");
-  const isMobile = useWindowWidth() < 768;
   const toggleSection = (s: string) => setOpenMenuSection(prev => prev === s ? null : s);
 
   const landingMenuSections = [
@@ -2325,7 +2332,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
       {/* ── VERSION MOBILE ── */}
       {isMobile && showMobileLanding && (
-        <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "#1a0505", display: "flex", flexDirection: "column", alignItems: "stretch", zIndex: 9999, fontFamily: "Arial, sans-serif" }}>
+        <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "#1a0505", display: "flex", flexDirection: "column", alignItems: "stretch", zIndex: 9999, fontFamily: "Arial, sans-serif", overflow: "hidden", touchAction: "none" }}>
           <style>{`
             @keyframes amePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
             @keyframes mfadeInDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
@@ -8195,19 +8202,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const [showStatusComposer, setShowStatusComposer] = useState(false);
   const [showStatusSheet, setShowStatusSheet] = useState(false);
   // Écoute le clic sur la pile de statuts (rendue dans l'en-tête partagé, hors de cet arbre React)
-  useEffect(() => {
-    const handler = () => {
-      setShowStatusSheet(true);
-      try { localStorage.setItem(`moyo_status_last_seen_${auth.userId}`, String(Date.now())); } catch {}
-      onStatusStackChange?.({
-        count: statusGroups.length + (myStatuses.length ? 1 : 0),
-        groups: statusGroups.slice(0, 3).map(g => ({ userId: g.userId, photo_url: g.first.profile?.photo_url, gender: g.first.profile?.gender })),
-        hasNew: false,
-      });
-    };
-    window.addEventListener("moyo-open-status-sheet", handler);
-    return () => window.removeEventListener("moyo-open-status-sheet", handler);
-  }, [statusGroups, myStatuses.length]);
   const [statusUploading, setStatusUploading] = useState(false);
   const [statusDeleting, setStatusDeleting] = useState(false);
   const [statusPreview, setStatusPreview] = useState<StatusPost | null>(null);
@@ -9701,6 +9695,21 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       hasNew: newestOther > lastSeen,
     });
     return () => onStatusStackChange?.(null);
+  }, [statusGroups, myStatuses.length]);
+
+  // Écoute le clic sur la pile de statuts (rendue dans l'en-tête partagé, hors de cet arbre React)
+  useEffect(() => {
+    const handler = () => {
+      setShowStatusSheet(true);
+      try { localStorage.setItem(`moyo_status_last_seen_${auth.userId}`, String(Date.now())); } catch {}
+      onStatusStackChange?.({
+        count: statusGroups.length + (myStatuses.length ? 1 : 0),
+        groups: statusGroups.slice(0, 3).map(g => ({ userId: g.userId, photo_url: g.first.profile?.photo_url, gender: g.first.profile?.gender })),
+        hasNew: false,
+      });
+    };
+    window.addEventListener("moyo-open-status-sheet", handler);
+    return () => window.removeEventListener("moyo-open-status-sheet", handler);
   }, [statusGroups, myStatuses.length]);
 
   // ── Bandeau (statuts + onglets) en position:fixed sur mobile — jamais affecté par un scroll,
