@@ -9730,7 +9730,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 
   // ── Liste des conversations (commun mobile + desktop) ──
   const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0, background: G.blanc }}>
-    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", padding: "0", background: G.blanc, paddingTop: isWideMsg ? 0 : msgBannerHeight }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc, paddingTop: isWideMsg ? 0 : msgBannerHeight }}>
     {/* ── Bandeau (statuts + onglets) : position:fixed sur mobile (jamais scrollable, quel que soit
         l'appareil), position:sticky sur desktop (colonne latérale déjà bornée, jamais posé problème). ── */}
     <div ref={msgBannerRef} style={isWideMsg ? { position: "sticky", top: 0, zIndex: 5, background: G.blanc } : { position: "fixed", top: 45, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 90, background: G.blanc }}>
@@ -11744,7 +11744,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
       {isRemoved ? (
         <div style={{ padding: "14px 16px", textAlign: "center", background: G.blanc, borderTop: `1px solid ${G.gris}`, color: "#999", fontSize: "0.82rem" }}>Tu as été retiré(e) de ce groupe.</div>
       ) : (
-        <div style={{ background: G.blanc, borderTop: `1px solid ${G.gris}` }}>
+        <div style={{ background: G.blanc, borderTop: `1px solid ${G.gris}`, paddingBottom: "env(safe-area-inset-bottom)" }}>
           {replyTo && (
             <div style={{ padding: "8px 12px 0" }}>
               <ReplyBanner replyTo={replyTo as any} partnerName={profilesById[replyTo.sender_id]?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />
