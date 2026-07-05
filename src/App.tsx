@@ -9788,54 +9788,35 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     <div ref={msgBannerRef} style={isWideMsg ? { position: "sticky", top: 0, zIndex: 5, background: G.blanc } : { position: "fixed", top: 45, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 90, background: G.blanc }}>
     <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     {FEATURE_GROUP_PREMIUM && (
-    <div style={{ display: "flex", alignItems: "flex-end", padding: "10px 10px 0", background: "#E4E1DC", gap: 2 }}>
-      <div onClick={() => setShowGroup(false)} style={{
-        flex: 1, textAlign: "center", padding: "12px 0 14px", cursor: "pointer",
-        background: !showGroup ? G.rouge : "#D6D2CB",
-        borderRadius: "16px 16px 0 0",
-        position: "relative", zIndex: !showGroup ? 2 : 1,
-        boxShadow: !showGroup ? "0 -2px 8px rgba(0,0,0,0.15)" : "none",
-        transition: "background 0.15s",
+    <div className="moyo-tactile" style={{ display: "flex", alignItems: "center", padding: "10px 12px", background: G.blanc, gap: 8 }}>
+      <div onClick={() => setShowGroup(false)} className="moyo-tactile" style={{
+        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+        padding: "11px 0", cursor: "pointer",
+        background: !showGroup ? G.rouge : "#EEEBE6",
+        borderRadius: 50,
+        boxShadow: !showGroup ? "0 3px 12px rgba(192,57,43,0.3)" : "none",
+        transition: "background 0.2s, box-shadow 0.2s",
       }}>
-        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? "#fff" : "#7a7568" }}>Messages privés</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={!showGroup ? "#fff" : "#8a8378"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? "#fff" : "#8a8378" }}>Messages privés</span>
       </div>
-      <div onClick={requestJoinGroup} style={{
-        flex: 1, textAlign: "center", padding: "12px 0 14px", cursor: "pointer",
-        background: showGroup ? G.rouge : "#D6D2CB",
-        borderRadius: "16px 16px 0 0",
-        position: "relative", zIndex: showGroup ? 2 : 1,
-        boxShadow: showGroup ? "0 -2px 8px rgba(0,0,0,0.15)" : "none",
-        transition: "background 0.15s",
+      <div onClick={requestJoinGroup} className="moyo-tactile" style={{
+        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+        padding: "11px 0", cursor: "pointer", position: "relative",
+        background: showGroup ? G.rouge : "#EEEBE6",
+        borderRadius: 50,
+        boxShadow: showGroup ? "0 3px 12px rgba(192,57,43,0.3)" : "none",
+        transition: "background 0.2s, box-shadow 0.2s",
       }}>
-        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#7a7568" }}>Groupe</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={showGroup ? "#fff" : "#8a8378"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#8a8378" }}>Groupe</span>
         {groupPendingCount > 0 && (
-          <span style={{ position: "absolute", top: -6, right: 10, background: G.or, color: "#fff", fontSize: "0.58rem", fontWeight: 800, borderRadius: 50, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)", zIndex: 3 }}>{groupPendingCount > 99 ? "99+" : groupPendingCount}</span>
+          <span style={{ position: "absolute", top: -5, right: 10, background: G.or, color: "#fff", fontSize: "0.58rem", fontWeight: 800, borderRadius: 50, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)", zIndex: 3 }}>{groupPendingCount > 99 ? "99+" : groupPendingCount}</span>
         )}
       </div>
     </div>
     )}
     </div>
-      {/* ── BOUTON DE DIAGNOSTIC TEMPORAIRE — à retirer une fois le problème résolu.
-          Ne dépend d'AUCUNE autre logique : action brute, résultat exact en popup native. ── */}
-      <div
-        onClick={async () => {
-          alert(`ÉTAPE 1 : je vais insérer une ligne pour user_id=${auth.userId} dans group_members.`);
-          try {
-            const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-              body: JSON.stringify({ user_id: auth.userId, role: "member", status: "pending" }),
-            });
-            const text = await r.text().catch(() => "(pas de corps)");
-            alert(`ÉTAPE 2 (résultat) :\nStatut HTTP = ${r.status}\n\nRéponse brute du serveur :\n${text}`);
-          } catch (e: any) {
-            alert(`ÉTAPE 2 (erreur JS, la requête n'a même pas pu partir) :\n${String(e?.message || e)}`);
-          }
-        }}
-        style={{ margin: "10px 12px", padding: "12px", background: "#000", color: "#0f0", fontFamily: "monospace", fontSize: "0.75rem", fontWeight: 700, textAlign: "center", borderRadius: 8, cursor: "pointer" }}
-      >
-        🧪 TEST DIAGNOSTIC — appuyer ici (résultat en popup)
-      </div>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
         : (() => {
