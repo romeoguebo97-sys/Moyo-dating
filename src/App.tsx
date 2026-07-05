@@ -4507,7 +4507,7 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
 // Un seul mode actif à la fois (comportement type radio, via 3 switches).
 
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true, statusStackData }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; statusStackData?: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[] } | null; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
   const [showBot, setShowBot] = useState(false);
@@ -4695,7 +4695,26 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             <div style={{ color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
-            <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#333", background: "white", borderRadius: 50, padding: "5px 14px", cursor: "pointer", border: "1.5px solid #ddd", letterSpacing: "0.02em" }}>Guide</div>
+            {tab === "messages" ? (
+              statusStackData && FEATURE_STATUSES ? (
+                <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-status-sheet"))} style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.6rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}`, zIndex: 4, position: "relative" }}>+</div>
+                    {statusStackData.groups.slice(0, 3).map((g, idx) => (
+                      <div key={g.userId} style={{ marginLeft: -8, zIndex: 3 - idx, position: "relative" }}>
+                        <Avatar url={g.photo_url} gender={g.gender} size={22} premium={false} />
+                      </div>
+                    ))}
+                    {statusStackData.count > 3 && (
+                      <div style={{ marginLeft: -8, width: 22, height: 22, borderRadius: "50%", background: G.brun, color: "#fff", fontSize: "0.5rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}>+{statusStackData.count - 3}</div>
+                    )}
+                  </div>
+                  <span style={{ fontSize: "0.52rem", fontWeight: 800, color: G.rouge, letterSpacing: "0.02em" }}>Statuts</span>
+                </div>
+              ) : <div />
+            ) : (
+              <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#333", background: "white", borderRadius: 50, padding: "5px 14px", cursor: "pointer", border: "1.5px solid #ddd", letterSpacing: "0.02em" }}>Guide</div>
+            )}
           </div>
         </div>
         <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
@@ -7877,7 +7896,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
 
 type ReportRowLike = { id?: string; reason: string; reporter_id: string; reported_id: string | null; status?: string; created_at?: string };
 
-export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void }) {
+export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[] } | null) => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   const [showGroup, setShowGroup] = useState(false); // Groupe Premium : écran séparé, indépendant de la logique 1-à-1
@@ -8172,6 +8191,12 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const [myStatuses, setMyStatuses] = useState<StatusPost[]>([]);
   const [showStatusComposer, setShowStatusComposer] = useState(false);
   const [showStatusSheet, setShowStatusSheet] = useState(false);
+  // Écoute le clic sur la pile de statuts (rendue dans l'en-tête partagé, hors de cet arbre React)
+  useEffect(() => {
+    const handler = () => setShowStatusSheet(true);
+    window.addEventListener("moyo-open-status-sheet", handler);
+    return () => window.removeEventListener("moyo-open-status-sheet", handler);
+  }, []);
   const [statusUploading, setStatusUploading] = useState(false);
   const [statusDeleting, setStatusDeleting] = useState(false);
   const [statusPreview, setStatusPreview] = useState<StatusPost | null>(null);
@@ -9652,6 +9677,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     first: [...items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0],
   })).filter(g => !!g.first), [statuses]);
 
+  // Transmet les données de la pile de statuts au parent, qui les fait suivre à AppShell pour
+  // affichage dans l'en-tête partagé (à la place de Guide, uniquement sur cet onglet).
+  useEffect(() => {
+    onStatusStackChange?.({
+      count: statusGroups.length + (myStatuses.length ? 1 : 0),
+      groups: statusGroups.slice(0, 3).map(g => ({ userId: g.userId, photo_url: g.first.profile?.photo_url, gender: g.first.profile?.gender })),
+    });
+    return () => onStatusStackChange?.(null);
+  }, [statusGroups, myStatuses.length]);
+
   // ── Bandeau (statuts + onglets) en position:fixed sur mobile — jamais affecté par un scroll,
   //    contrairement à sticky qui s'est montré peu fiable sur certains iPhone. Sa hauteur réelle est
   //    mesurée en JS (elle varie selon FEATURE_STATUSES/FEATURE_GROUP_PREMIUM) pour décaler d'autant
@@ -9674,27 +9709,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     {/* ── Bandeau (statuts + onglets) : position:fixed sur mobile (jamais scrollable, quel que soit
         l'appareil), position:sticky sur desktop (colonne latérale déjà bornée, jamais posé problème). ── */}
     <div ref={msgBannerRef} style={isWideMsg ? { position: "sticky", top: 0, zIndex: 5, background: G.blanc } : { position: "fixed", top: 45, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 90, background: G.blanc }}>
-    <div style={{ padding: "8px 12px", borderBottom: `1px solid ${G.gris}`, display: FEATURE_STATUSES ? "flex" : "none", alignItems: "center", justifyContent: "space-between" }}>
-      <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
-      <div onClick={() => setShowStatusSheet(true)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ width: 26, height: 26, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.68rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}`, zIndex: 4, position: "relative" }}>+</div>
-          {statusGroups.slice(0, 3).map((group, idx) => (
-            <div key={group.userId} style={{ marginLeft: -9, zIndex: 3 - idx, position: "relative" }}>
-              <Avatar url={group.first.profile?.photo_url} gender={group.first.profile?.gender} size={26} premium={false} />
-            </div>
-          ))}
-          {statusGroups.length > 3 && (
-            <div style={{ marginLeft: -9, width: 26, height: 26, borderRadius: "50%", background: G.brun, color: "#fff", fontSize: "0.55rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}>+{statusGroups.length - 3}</div>
-          )}
-        </div>
-        <span style={{ fontSize: "0.68rem", fontWeight: 800, color: G.rouge }}>{statusGroups.length > 0 ? `${statusGroups.length + (myStatuses.length ? 1 : 0)} statut${statusGroups.length > 1 ? "s" : ""}` : "Statuts"}</span>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.6rem", color: "#bbb" }}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-        <span>Visible par vos matchs</span>
-      </div>
-    </div>
+    <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     {FEATURE_GROUP_PREMIUM && (
     <div style={{ display: "flex", padding: "10px 12px 0", background: G.blanc, borderBottom: `1px solid ${G.gris}` }}>
       <div onClick={() => setShowGroup(false)} style={{
@@ -11278,6 +11293,10 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
           {statusGroups.length === 0 && myStatuses.length === 0 && (
             <p style={{ textAlign: "center", color: "#999", fontSize: "0.8rem", padding: "10px 0" }}>Aucun statut actif pour l'instant.</p>
           )}
+          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.65rem", color: "#bbb", marginTop: 10, justifyContent: "center" }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span>Statuts visibles uniquement par vos matchs</span>
+          </div>
         </div>
       </div>
     )}
@@ -11364,7 +11383,22 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   }, [auth.userId, auth.token, myStatus]);
 
   const reapply = async () => {
-    try { await sb.upsert(auth.token, "group_members", { user_id: auth.userId, role: "member", status: "pending" }); setMyStatus("pending"); } catch {}
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${auth.userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ status: "pending", removed_at: null, decided_at: null, decided_by: null }),
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => "");
+        console.error("[Groupe] Échec de la nouvelle demande :", r.status, t);
+        setToast({ msg: "Ta demande n'a pas pu être renvoyée. Réessaie dans un instant.", type: "error" });
+        return;
+      }
+      setMyStatus("pending");
+    } catch (e: any) {
+      setToast({ msg: "Erreur réseau, réessaie dans un instant.", type: "error" });
+    }
   };
 
   // Messages + temps réel. Le WebSocket temps réel peut parfois se figer silencieusement (pas
@@ -11888,7 +11922,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
               <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
             <h2 style={{ fontSize: "2rem", color: G.or, marginBottom: 8 }}>Bienvenue dans le groupe !</h2>
-            <p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Ta demande a été validée — tu fais maintenant partie du Groupe Premium, libre à toi d'échanger avec tout le monde.</p>
+            <p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Ta demande a été validée, tu fais maintenant partie du Groupe Premium, libre à toi d'échanger avec tout le monde.</p>
             <Btn variant="white" onClick={() => setShowWelcome(false)}>Continuer →</Btn>
           </div>
         </div>
@@ -14167,6 +14201,10 @@ export default function App() {
   const [showInstall, setShowInstall] = useState(false);
   const [openConvPartnerId, setOpenConvPartnerId] = useState<string | null>(null);
   const [inConv, setInConv] = useState(false);
+  // ── Pile de statuts affichée dans l'en-tête (remplace Guide sur l'onglet Messages) : Messages
+  //    remplit ces données via callback, AppShell les affiche — aucun portail/ReactDOM nécessaire,
+  //    juste une donnée transmise normalement de composant à composant. ──
+  const [statusStackData, setStatusStackData] = useState<{ count: number; groups: { userId: string; photo_url?: string; gender?: string }[] } | null>(null);
   const [adminBadgeCount, setAdminBadgeCount] = useState(0);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showAdminConfig, setShowAdminConfig] = useState(false);
@@ -15082,13 +15120,13 @@ export default function App() {
       }
       if (t === "likes") { setLikesReceived(0); try { localStorage.setItem(`moyo_likes_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
       if (t === "visitors") { setViewsReceived(0); try { localStorage.setItem(`moyo_visitors_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
-    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv} assistantEnabled={assistantEnabled}>
+    }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv} assistantEnabled={assistantEnabled} statusStackData={statusStackData}>
       <div key={tab} className="page-anim" style={{ width: "100%", height: "100%" }}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
-      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} />}
+      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} assistantEnabled={assistantEnabled} onToggleAssistant={toggleAssistant} />}
       {tab === "admin" && <Suspense fallback={<AdminLoadingFallback />}><AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} /></Suspense>}
       </div>
