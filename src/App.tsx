@@ -9736,27 +9736,26 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     <div ref={msgBannerRef} style={isWideMsg ? { position: "sticky", top: 0, zIndex: 5, background: G.blanc } : { position: "fixed", top: 45, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 90, background: G.blanc }}>
     <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     {FEATURE_GROUP_PREMIUM && (
-    <div style={{ display: "flex", padding: "10px 12px 0", background: G.blanc, borderBottom: `1px solid ${G.gris}` }}>
+    <div style={{ display: "flex", alignItems: "flex-end", padding: "10px 10px 0", background: "#E4E1DC", gap: 2 }}>
       <div onClick={() => setShowGroup(false)} style={{
-        width: "calc(50% + 9px)", textAlign: "center", padding: "11px 0 13px", cursor: "pointer",
-        background: !showGroup ? G.rouge : G.creme,
-        borderRadius: "14px 14px 0 0",
+        flex: 1, textAlign: "center", padding: "12px 0 14px", cursor: "pointer",
+        background: !showGroup ? G.rouge : "#D6D2CB",
+        borderRadius: "16px 16px 0 0",
         position: "relative", zIndex: !showGroup ? 2 : 1,
-        boxShadow: !showGroup ? "0 -3px 10px rgba(0,0,0,0.12)" : "none",
+        boxShadow: !showGroup ? "0 -2px 8px rgba(0,0,0,0.15)" : "none",
         transition: "background 0.15s",
       }}>
-        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? "#fff" : "#999" }}>Messages privés</span>
+        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? "#fff" : "#7a7568" }}>Messages privés</span>
       </div>
       <div onClick={requestJoinGroup} style={{
-        width: "calc(50% + 9px)", textAlign: "center", padding: "11px 0 13px", cursor: "pointer",
-        background: showGroup ? G.rouge : G.creme,
-        borderRadius: "14px 14px 0 0",
+        flex: 1, textAlign: "center", padding: "12px 0 14px", cursor: "pointer",
+        background: showGroup ? G.rouge : "#D6D2CB",
+        borderRadius: "16px 16px 0 0",
         position: "relative", zIndex: showGroup ? 2 : 1,
-        marginLeft: -18,
-        boxShadow: showGroup ? "0 -3px 10px rgba(0,0,0,0.12)" : "none",
+        boxShadow: showGroup ? "0 -2px 8px rgba(0,0,0,0.15)" : "none",
         transition: "background 0.15s",
       }}>
-        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#999" }}>Groupe</span>
+        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#7a7568" }}>Groupe</span>
         {groupPendingCount > 0 && (
           <span style={{ position: "absolute", top: -6, right: 10, background: G.or, color: "#fff", fontSize: "0.58rem", fontWeight: 800, borderRadius: 50, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)", zIndex: 3 }}>{groupPendingCount > 99 ? "99+" : groupPendingCount}</span>
         )}
@@ -11373,6 +11372,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [replyTo, setReplyTo] = useState<GroupMessage | null>(null);
+  const [showGroupEmojiPicker, setShowGroupEmojiPicker] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: GroupMessage } | null>(null);
   const [toast, setToast] = useState<{ msg: string; type?: "success" | "error" } | null>(null);
   const isModerator = myRole === "admin" || myRole === "moderator";
@@ -11750,18 +11750,36 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
               <ReplyBanner replyTo={replyTo as any} partnerName={profilesById[replyTo.sender_id]?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />
             </div>
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
+          {/* Palette emojis — même liste que la messagerie privée */}
+          {showGroupEmojiPicker && (
+            <>
+              <div onClick={() => setShowGroupEmojiPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
+              <div style={{ padding: "10px 12px 4px 12px", borderBottom: `1px solid ${G.gris}`, position: "relative", zIndex: 11 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 160, overflowY: "auto" }}>
+                  {["😊","😍","🥰","😘","😁","😂","🤣","😅","😆","😉","😋","😎","🤩","😏","🥳","😔","😢","😭","😤","😡","🤔","🫠","😶","🫡","🥺","🙏","👏","💪","🤝","👍","❤️","🧡","💛","💚","💙","💜","🖤","💔","💕","💞","💓","💗","💖","💝","🌹","🌸","🌺","🌷","✨","🎉","🎊","🥂","🍀","🌍","🔥","💫","⭐","🌟","🌈","🎶","🎵","💃","🕺","😴","🤗","🫶","🙌","👀","💯","🫀","🥹","🤭","😇","🤠","🥸","😼","🫣","🤫","🫦",
+                  "🇨🇬","🇨🇩","🇩🇿","🇦🇴","🇧🇯","🇧🇼","🇧🇫","🇧🇮","🇨🇲","🇨🇻","🇨🇫","🇹🇩","🇰🇲","🇨🇮","🇩🇯","🇪🇬","🇬🇶","🇪🇷","🇸🇿","🇪🇹","🇬🇦","🇬🇲","🇬🇭","🇬🇳","🇬🇼","🇰🇪","🇱🇸","🇱🇷","🇱🇾","🇲🇬","🇲🇼","🇲🇱","🇲🇷","🇲🇺","🇲🇦","🇲🇿","🇳🇦","🇳🇪","🇳🇬","🇷🇼","🇸🇹","🇸🇳","🇸🇨","🇸🇱","🇸🇴","🇿🇦","🇸🇸","🇸🇩","🇹🇿","🇹🇬","🇹🇳","🇺🇬","🇿🇲","🇿🇼",
+                  "🇫🇷","🇧🇪","🇨🇦","🇺🇸","🇬🇧","🇨🇭","🇩🇪","🇮🇹","🇵🇹","🇪🇸","🇳🇱","🇨🇳","🇦🇪","🇹🇷","🇧🇷","🇦🇺"].map(em => (
+                    <span key={em} className="no-invert" onClick={() => { setText(prev => prev + em); autoResizeTextarea(); }} style={{ fontSize: "1.45rem", cursor: "pointer", lineHeight: 1, padding: "3px 2px", borderRadius: 6, userSelect: "none", WebkitUserSelect: "none" }}>{em}</span>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 8, padding: "10px 12px" }}>
             {FEATURE_GROUP_PHOTOS && (
               <>
                 <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPickImage} />
-                <div onClick={() => fileInputRef.current?.click()} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <div onClick={() => fileInputRef.current?.click()} style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.25)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 </div>
               </>
             )}
-            <textarea ref={textareaRef} value={text} onChange={e => { setText(e.target.value); autoResizeTextarea(); }} placeholder="Écrire au groupe…" rows={1} style={{ flex: 1, border: "none", outline: "none", resize: "none", fontSize: "16px", padding: "9px 14px", borderRadius: 20, background: "#F0F1F5", minHeight: 44, maxHeight: 120, overflowY: "auto", lineHeight: 1.4, fontFamily: "inherit" }} />
-            <div onClick={sendText} style={{ width: 38, height: 38, borderRadius: "50%", background: text.trim() ? G.rouge : "#ccc", display: "flex", alignItems: "center", justifyContent: "center", cursor: text.trim() ? "pointer" : "default", flexShrink: 0 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+            <div onClick={() => setShowGroupEmojiPicker(prev => !prev)} style={{ width: 40, height: 40, borderRadius: "50%", background: showGroupEmojiPicker ? "rgba(192,57,43,0.12)" : "rgba(44,26,14,0.06)", border: `1.5px solid ${showGroupEmojiPicker ? "rgba(192,57,43,0.35)" : G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.15s", marginBottom: 2 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={showGroupEmojiPicker ? G.rouge : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            </div>
+            <textarea ref={textareaRef} value={text} onChange={e => { setText(e.target.value); autoResizeTextarea(); }} onFocus={() => setShowGroupEmojiPicker(false)} placeholder="Écris un message..." rows={1} style={{ flex: 1, minWidth: 0, boxSizing: "border-box", padding: "11px 14px", border: `2px solid ${G.gris}`, borderRadius: 20, fontSize: "16px", outline: "none", background: G.creme, color: G.brun, resize: "none", fontFamily: "inherit", lineHeight: "1.4", minHeight: 44, maxHeight: 120, overflowY: "auto", WebkitOverflowScrolling: "touch" }} />
+            <div onClick={sendText} style={{ width: 40, height: 40, borderRadius: "50%", background: text.trim() ? G.rouge : "#ccc", display: "flex", alignItems: "center", justifyContent: "center", cursor: text.trim() ? "pointer" : "default", flexShrink: 0, marginBottom: 2 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
             </div>
           </div>
         </div>
