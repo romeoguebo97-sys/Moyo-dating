@@ -5239,6 +5239,14 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "", religion: "" });
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list" | "full">(DISCOVER_DEFAULT_MODE);
+  // ── Synchronise TOUJOURS l'état plein écran de l'AppShell avec viewMode, de façon déclarative.
+  //    Avant, l'événement n'était envoyé que dans les onClick des boutons — donc si "full" est déjà
+  //    le mode par défaut au chargement (réglage admin discover_default_mode), la navbar ne recevait
+  //    jamais l'info et restait visible tant qu'on n'avait pas manuellement fermé/rouvert le plein
+  //    écran. Un useEffect sur viewMode couvre TOUS les cas : clic, valeur par défaut, etc. ──
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: viewMode === "full" } }));
+  }, [viewMode]);
   const [modalTexts, setModalTexts] = useState({
     sameGenderHomme: "Eh frère, reste du bon côté ! 😂",
     sameGenderFemme: "Eh sœur, reste du bon côté ! 😂",
@@ -5666,13 +5674,11 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
         <div onClick={() => {
           const next = viewMode === "list" ? "card" : "list";
           setViewMode(next);
-          window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } }));
         }} style={{ background: G.blanc, color: "var(--c-pill-fg)", border: `1.5px solid ${viewMode === "list" ? "var(--c-pill-fg)" : "var(--c-pill-bd)"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           {viewMode === "list" ? "≡ Liste" : "≡ Liste"}
         </div>
         <div onClick={() => {
           setViewMode("full");
-          window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: true } }));
         }} style={{ background: G.blanc, color: "var(--c-pill-fg)", border: `1.5px solid var(--c-pill-bd)`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           ⛶ Plein écran
         </div>
@@ -5722,7 +5728,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       {prof.photo_url ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
       {/* ✕ haut droite - sur chaque carte */}
-      <button onClick={() => { setViewMode("card"); window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: false } })); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
+      <button onClick={() => { setViewMode("card"); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
       {/* Indicateur "En ligne" - haut gauche, en face de la croix. Rien si hors ligne ou statut masqué. */}
@@ -5920,7 +5926,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
               { key: "list", label: "Vue Liste", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
               { key: "full", label: "Plein écran", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> },
             ].map(v => (
-              <div key={v.key} onClick={() => { setViewMode(v.key as "card" | "list" | "full"); window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: v.key === "full" } })); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 11, border: `1.5px solid ${viewMode === v.key ? G.rouge : G.gris}`, background: viewMode === v.key ? "rgba(192,57,43,0.05)" : G.blanc, color: viewMode === v.key ? G.rouge : "#555", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, transition: "all 0.15s" }}>
+              <div key={v.key} onClick={() => { setViewMode(v.key as "card" | "list" | "full"); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 11, border: `1.5px solid ${viewMode === v.key ? G.rouge : G.gris}`, background: viewMode === v.key ? "rgba(192,57,43,0.05)" : G.blanc, color: viewMode === v.key ? G.rouge : "#555", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, transition: "all 0.15s" }}>
                 <div style={{ width: 26, height: 26, borderRadius: 7, background: viewMode === v.key ? "rgba(192,57,43,0.1)" : "#F5F5F7", display: "flex", alignItems: "center", justifyContent: "center" }}>{v.icon}</div>
                 {v.label}
               </div>
@@ -7917,17 +7923,15 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
         body: JSON.stringify({ user_id: auth.userId, role: "member", status: "pending" }),
       });
-      const bodyText = await r.text().catch(() => "");
       if (!r.ok) {
-        // On affiche le VRAI message renvoyé par Supabase (policy RLS, contrainte, etc.) au lieu
-        // d'un message générique — ça permet de voir précisément pourquoi ça échoue, sans deviner.
-        console.error("[Groupe] Échec de la demande d'adhésion :", r.status, bodyText);
-        setToast({ msg: `Demande refusée par le serveur (${r.status}) : ${bodyText.slice(0, 180)}`, type: "error" });
+        const bodyText = await r.text().catch(() => "");
+        console.error("[Groupe] Échec de la demande d'adhésion :", r.status, bodyText); // détail technique, pour le suivi uniquement
+        setToast({ msg: "Ta demande n'a pas pu être envoyée. Réessaie dans un instant, ou contacte le support si ça persiste.", type: "error" });
         return;
       }
     } catch (e: any) {
       console.error("[Groupe] Erreur réseau lors de la demande d'adhésion :", e);
-      setToast({ msg: `Erreur réseau : ${String(e?.message || e).slice(0, 180)}`, type: "error" });
+      setToast({ msg: "Ta demande n'a pas pu être envoyée. Réessaie dans un instant, ou contacte le support si ça persiste.", type: "error" });
       return;
     }
     setShowGroup(true);
@@ -11270,7 +11274,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 // démettre un modérateur). Pas de note vocale, pas de citation en réponse, pas de "vue unique" pour
 // l'instant — voir l'explication donnée au développeur en fin de réponse.
 // ═══════════════════════════════════════════════════════════════════════
-type GroupMessage = { id?: string; sender_id: string; content: string; created_at?: string; reactions?: Record<string, string[]> };
+type GroupMessage = { id?: string; sender_id: string; content: string; created_at?: string; reactions?: Record<string, string[]>; deleted_for?: string[] };
 type GroupMemberRow = { user_id: string; role: "admin" | "moderator" | "member"; status: "pending" | "approved" | "rejected"; removed_at?: string | null };
 
 function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => void; onShowPremium: (r: string) => void }) {
@@ -11289,6 +11293,10 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
   const [imgViewer, setImgViewer] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [replyTo, setReplyTo] = useState<GroupMessage | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ msg: GroupMessage } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type?: "success" | "error" } | null>(null);
   const isModerator = myRole === "admin" || myRole === "moderator";
   const isApproved = myStatus === "approved" && !isRemoved;
 
@@ -11314,23 +11322,22 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
     try { await sb.upsert(auth.token, "group_members", { user_id: auth.userId, role: "member", status: "pending" }); setMyStatus("pending"); } catch {}
   };
 
-  // Messages + temps réel
+  // Messages + temps réel. Le WebSocket temps réel peut parfois se figer silencieusement (pas
+  // d'erreur, juste plus aucun événement reçu) — on ajoute donc un filet de sécurité qui réinterroge
+  // périodiquement, pour ne jamais dépendre uniquement du socket pour voir les nouveaux messages.
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const load = async () => {
       try {
         const rows = await sb.query<GroupMessage>(auth.token, "group_messages", `?order=created_at.asc&limit=300`);
-        if (alive) setMsgs(rows);
+        if (alive) setMsgs(rows.filter(m => !(m.deleted_for || []).includes(auth.userId)));
       } catch {}
       if (alive) setLoading(false);
-    })();
-    const ws = sb.subscribeRealtime(auth.token, "group_messages", `id=neq.null`, async () => {
-      try {
-        const rows = await sb.query<GroupMessage>(auth.token, "group_messages", `?order=created_at.asc&limit=300`);
-        if (alive) setMsgs(rows);
-      } catch {}
-    });
-    return () => { alive = false; ws?.close(); };
+    };
+    load();
+    const ws = sb.subscribeRealtime(auth.token, "group_messages", `id=neq.null`, load);
+    const iv = setInterval(load, 15000); // filet de sécurité, indépendant du WebSocket
+    return () => { alive = false; ws?.close(); clearInterval(iv); };
   }, [auth.token]);
 
   // Profils des expéditeurs affichés (nom + photo), chargés au fil des besoins
@@ -11349,12 +11356,23 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
 
   const sendText = async () => {
     if (!text.trim() || isRemoved) return;
-    const content = text.trim();
-    setText("");
+    const rawQuoted = replyTo ? (isImage(replyTo.content) ? "Photo" : replyTo.content) : "";
+    const cleanQuoted = rawQuoted.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/\]/g, "）").substring(0, 60);
+    const replyName = replyTo ? (replyTo.sender_id === auth.userId ? "Toi" : (profilesById[replyTo.sender_id]?.name || "...")) : "";
+    const prefix = replyTo ? `[↩ ${replyName} : ${cleanQuoted}]\n` : "";
+    const content = prefix + text.trim();
+    setText(""); setReplyTo(null);
+    if (textareaRef.current) textareaRef.current.style.height = "44px";
     try {
       const res = await sb.insert<GroupMessage>(auth.token, "group_messages", { sender_id: auth.userId, content });
       if (res[0]) setMsgs(m => [...m, res[0]]);
     } catch {}
+  };
+  const autoResizeTextarea = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
 
   const isImage = (content: string) => content.startsWith("[img]") && content.endsWith("[/img]");
@@ -11389,19 +11407,33 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
     setImgLoading(false);
   };
 
-  const toggleReaction = async (m: GroupMessage) => {
+  const toggleReaction = async (m: GroupMessage, emoji: string) => {
     if (!m.id) return;
-    const mine = m.reactions?.["❤️"] || [];
-    const has = mine.includes(auth.userId);
-    const newReactions = { ...(m.reactions || {}), "❤️": has ? mine.filter(id => id !== auth.userId) : [...mine, auth.userId] };
+    const current = m.reactions || {};
+    // Une seule réaction autorisée par personne : on la retire de tous les emojis avant de la reposer
+    const cleaned: Record<string, string[]> = {};
+    for (const [e, us] of Object.entries(current)) cleaned[e] = (us as string[]).filter(u => u !== auth.userId);
+    const already = (current[emoji] || []).includes(auth.userId);
+    const updated = already ? (cleaned[emoji] || []) : [...(cleaned[emoji] || []), auth.userId];
+    const newReactions = { ...cleaned, [emoji]: updated };
     setMsgs(list => list.map(x => x.id === m.id ? { ...x, reactions: newReactions } : x));
     try { await sb.update(auth.token, "group_messages", m.id, { reactions: newReactions }); } catch {}
   };
 
-  const deleteMessage = async (m: GroupMessage) => {
+  // Supprimer pour tout le monde : réservé à l'auteur du message OU à un admin/modérateur du groupe —
+  // contrairement à la messagerie privée (2 personnes seulement), ici on est nombreux, donc on ne
+  // laisse jamais X supprimer un message de Y pour tout le monde, sauf modération.
+  const deleteForEveryone = async (m: GroupMessage) => {
     if (!m.id) return;
+    if (m.sender_id !== auth.userId && !isModerator) return;
     setMsgs(list => list.filter(x => x.id !== m.id));
     try { await sb.delete(auth.token, "group_messages", `?id=eq.${m.id}`); } catch {}
+  };
+  const deleteForMe = async (m: GroupMessage) => {
+    if (!m.id) return;
+    const updated = (m.deleted_for || []).includes(auth.userId) ? (m.deleted_for || []) : [...(m.deleted_for || []), auth.userId];
+    setMsgs(list => list.filter(x => x.id !== m.id));
+    try { await sb.update(auth.token, "group_messages", m.id, { deleted_for: updated }); } catch {}
   };
 
   // ── Modération ──
@@ -11478,6 +11510,7 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {/* En-tête */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
         <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
@@ -11504,33 +11537,49 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
           const isMine = m.sender_id === auth.userId;
           const prof = profilesById[m.sender_id];
           const showSender = !isMine && (i === 0 || msgs[i - 1].sender_id !== m.sender_id);
-          const heartCount = (m.reactions?.["❤️"] || []).length;
-          const iReacted = (m.reactions?.["❤️"] || []).includes(auth.userId);
+          const reactionEntries = Object.entries(m.reactions || {}).filter(([, us]) => (us as string[]).length > 0);
+          const myReactionEmoji = Object.entries(m.reactions || {}).find(([, us]) => (us as string[]).includes(auth.userId))?.[0];
+          const replyMatch = m.content.match(/^\[↩ (.+?) : ([\s\S]+?)\]\n([\s\S]*)$/);
+          const bubbleBody = replyMatch ? replyMatch[3] : m.content;
+          const isImg = isImage(bubbleBody);
+          const canDeleteForEveryone = isMine || isModerator;
           return (
-            <div key={m.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: 10 }}>
+            <div key={m.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: 14 }}>
               {showSender && <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.rouge, marginLeft: 44, marginBottom: 2 }}>{prof?.name || "..."}</div>}
               <div style={{ display: "flex", gap: 8, alignItems: "flex-end", maxWidth: "82%", flexDirection: isMine ? "row-reverse" : "row" }}>
                 {!isMine && <Avatar url={prof?.photo_url} gender={prof?.gender} size={30} />}
                 <div style={{ position: "relative" }}>
-                  <div onDoubleClick={() => toggleReaction(m)} style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? "#fff" : G.brun, borderRadius: 16, padding: isImage(m.content) ? 4 : "9px 13px", fontSize: "0.88rem", lineHeight: 1.4, boxShadow: "0 1px 2px rgba(0,0,0,0.06)", wordBreak: "break-word" }}>
-                    {isImage(m.content) ? (
-                      <img src={getImageUrl(m.content)} onClick={() => setImgViewer(getImageUrl(m.content))} style={{ maxWidth: 220, borderRadius: 12, display: "block", cursor: "pointer" }} />
-                    ) : m.content}
+                  <div style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? "#fff" : G.brun, borderRadius: 16, padding: isImg ? 4 : "9px 13px", paddingRight: isImg ? 4 : 30, fontSize: "0.88rem", lineHeight: 1.4, boxShadow: "0 1px 2px rgba(0,0,0,0.06)", wordBreak: "break-word", position: "relative" }}>
+                    {/* Citation en réponse */}
+                    {replyMatch && (
+                      <div style={{ background: isMine ? "rgba(0,0,0,0.18)" : "rgba(192,57,43,0.07)", borderRadius: 8, marginBottom: 6, overflow: "hidden", display: "flex" }}>
+                        <div style={{ width: 3, flexShrink: 0, background: isMine ? "rgba(255,255,255,0.6)" : G.rouge }} />
+                        <div style={{ flex: 1, padding: "5px 8px", minWidth: 0 }}>
+                          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: isMine ? "rgba(255,255,255,0.9)" : G.rouge, marginBottom: 2 }}>{replyMatch[1]}</div>
+                          <div style={{ fontSize: "0.75rem", color: isMine ? "rgba(255,255,255,0.7)" : "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{replyMatch[2]}</div>
+                        </div>
+                      </div>
+                    )}
+                    {isImg ? (
+                      <img src={getImageUrl(bubbleBody)} onClick={() => setImgViewer(getImageUrl(bubbleBody))} style={{ maxWidth: 220, borderRadius: 12, display: "block", cursor: "pointer" }} />
+                    ) : bubbleBody}
+                    {/* Petite flèche : ouvre le menu (réagir, répondre, copier, supprimer) */}
+                    <div onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m }); }} style={{ position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: "50%", background: isMine ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={isMine ? "#fff" : "#888"} strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
                   </div>
-                  {heartCount > 0 && (
-                    <div onClick={() => toggleReaction(m)} style={{ position: "absolute", bottom: -10, [isMine ? "left" : "right"]: 6, background: G.blanc, borderRadius: 50, padding: "2px 6px", fontSize: "0.68rem", boxShadow: "0 1px 3px rgba(0,0,0,0.15)", display: "flex", alignItems: "center", gap: 3, cursor: "pointer", border: iReacted ? `1px solid ${G.rouge}` : "none" } as React.CSSProperties}>
-                      ❤️ {heartCount}
+                  {reactionEntries.length > 0 && (
+                    <div onClick={() => setContextMenu({ msg: m })} style={{ position: "absolute", bottom: -10, [isMine ? "left" : "right"]: 6, background: G.blanc, borderRadius: 50, padding: "2px 6px", fontSize: "0.68rem", boxShadow: "0 1px 3px rgba(0,0,0,0.15)", display: "flex", alignItems: "center", gap: 3, cursor: "pointer", border: myReactionEmoji ? `1px solid ${G.rouge}` : "none" } as React.CSSProperties}>
+                      {reactionEntries.map(([e, us]) => `${e}${(us as string[]).length > 1 ? (us as string[]).length : ""}`).join(" ")}
                     </div>
                   )}
                 </div>
               </div>
-              {(isMine || isModerator) && (
-                <div style={{ display: "flex", gap: 10, marginTop: 4, marginRight: isMine ? 4 : 0, marginLeft: isMine ? 0 : 44 }}>
-                  {!isMine && <span onClick={() => toggleReaction(m)} style={{ fontSize: "0.68rem", color: "#999", cursor: "pointer" }}>❤️ Réagir</span>}
-                  {isMine && <span onClick={() => toggleReaction(m)} style={{ fontSize: "0.68rem", color: "#999", cursor: "pointer" }}>❤️ Réagir</span>}
-                  {(isMine || isModerator) && <span onClick={() => deleteMessage(m)} style={{ fontSize: "0.68rem", color: "#c00", cursor: "pointer" }}>Supprimer</span>}
-                </div>
-              )}
+              <div style={{ display: "flex", gap: 10, marginTop: 6, marginRight: isMine ? 4 : 0, marginLeft: isMine ? 0 : 44 }}>
+                <span onClick={() => setReplyTo(m)} style={{ fontSize: "0.68rem", color: "#999", cursor: "pointer" }}>Répondre</span>
+                {canDeleteForEveryone && <span onClick={() => deleteForEveryone(m)} style={{ fontSize: "0.68rem", color: "#c00", cursor: "pointer" }}>Supprimer pour tous</span>}
+                <span onClick={() => deleteForMe(m)} style={{ fontSize: "0.68rem", color: "#999", cursor: "pointer" }}>Supprimer pour moi</span>
+              </div>
             </div>
           );
         })}
@@ -11541,14 +11590,70 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
       {isRemoved ? (
         <div style={{ padding: "14px 16px", textAlign: "center", background: G.blanc, borderTop: `1px solid ${G.gris}`, color: "#999", fontSize: "0.82rem" }}>Tu as été retiré(e) de ce groupe.</div>
       ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: G.blanc, borderTop: `1px solid ${G.gris}` }}>
-          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPickImage} />
-          <div onClick={() => fileInputRef.current?.click()} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <div style={{ background: G.blanc, borderTop: `1px solid ${G.gris}` }}>
+          {replyTo && (
+            <div style={{ padding: "8px 12px 0" }}>
+              <ReplyBanner replyTo={replyTo as any} partnerName={profilesById[replyTo.sender_id]?.name} myId={auth.userId} onCancel={() => setReplyTo(null)} />
+            </div>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPickImage} />
+            <div onClick={() => fileInputRef.current?.click()} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <textarea ref={textareaRef} value={text} onChange={e => { setText(e.target.value); autoResizeTextarea(); }} placeholder="Écrire au groupe…" rows={1} style={{ flex: 1, border: "none", outline: "none", resize: "none", fontSize: "16px", padding: "9px 14px", borderRadius: 20, background: "#F0F1F5", minHeight: 44, maxHeight: 120, overflowY: "auto", lineHeight: 1.4, fontFamily: "inherit" }} />
+            <div onClick={sendText} style={{ width: 38, height: 38, borderRadius: "50%", background: text.trim() ? G.rouge : "#ccc", display: "flex", alignItems: "center", justifyContent: "center", cursor: text.trim() ? "pointer" : "default", flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+            </div>
           </div>
-          <textarea value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } }} placeholder="Écrire au groupe…" rows={1} style={{ flex: 1, border: "none", outline: "none", resize: "none", fontSize: "0.9rem", padding: "9px 14px", borderRadius: 20, background: "#F0F1F5", maxHeight: 90 }} />
-          <div onClick={sendText} style={{ width: 38, height: 38, borderRadius: "50%", background: text.trim() ? G.rouge : "#ccc", display: "flex", alignItems: "center", justifyContent: "center", cursor: text.trim() ? "pointer" : "default", flexShrink: 0 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </div>
+      )}
+
+      {/* Menu contextuel d'un message : réagir, répondre, copier, supprimer */}
+      {contextMenu && (
+        <div onClick={() => setContextMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 700, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "88%", maxWidth: 340, userSelect: "none", WebkitUserSelect: "none" }}>
+            {/* Barre emojis réactions */}
+            <div style={{ background: G.blanc, borderRadius: 50, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+              {["👍","❤️","😂","😮","😢","🙏","🥳","😱","😍","😘","🫣","🫢","💔"].map(emoji => {
+                const hasReacted = (contextMenu.msg.reactions?.[emoji] || []).includes(auth.userId);
+                return (
+                  <div key={emoji} onClick={() => { toggleReaction(contextMenu.msg, emoji); setContextMenu(null); }} style={{ fontSize: hasReacted ? "1.8rem" : "1.5rem", cursor: "pointer", transition: "font-size 0.15s", filter: hasReacted ? "drop-shadow(0 0 4px rgba(192,57,43,0.5))" : "none", padding: "2px", flexShrink: 0 }}>
+                    {emoji}
+                  </div>
+                );
+              })}
+            </div>
+            {/* Actions */}
+            <div style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+              <div onClick={() => { const msg = contextMenu.msg; setContextMenu(null); setReplyTo(msg); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Répondre</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+              </div>
+              {!isImage(contextMenu.msg.content) && (
+                <div onClick={async () => {
+                  const body = contextMenu.msg.content.replace(/^\[↩ .+? : .+?\]\n/, "");
+                  setContextMenu(null);
+                  try { await navigator.clipboard.writeText(body); setToast({ msg: "Message copié", type: "success" }); } catch { setToast({ msg: "Impossible de copier le message", type: "error" }); }
+                }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+                  <span style={{ fontSize: "0.92rem", fontWeight: 600, color: G.brun }}>Copier</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </div>
+              )}
+              {(contextMenu.msg.sender_id === auth.userId || isModerator) && (
+                <div onClick={() => { deleteForEveryone(contextMenu.msg); setContextMenu(null); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer", borderBottom: `1px solid ${G.gris}` }}>
+                  <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#e74c3c" }}>Supprimer pour tous</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </div>
+              )}
+              <div onClick={() => { deleteForMe(contextMenu.msg); setContextMenu(null); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", cursor: "pointer" }}>
+                <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#888" }}>Supprimer pour moi</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+            </div>
+            <div onClick={() => setContextMenu(null)} style={{ background: G.blanc, borderRadius: 14, padding: "15px 20px", textAlign: "center", marginTop: 10, cursor: "pointer", fontWeight: 700, fontSize: "0.92rem", color: G.rouge, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
+              Annuler
+            </div>
           </div>
         </div>
       )}
