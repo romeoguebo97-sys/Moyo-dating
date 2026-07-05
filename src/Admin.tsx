@@ -3960,27 +3960,32 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   }, [auth?.token]);
   const approveGroupRequest = async (userId: string) => {
     if (!auth) return;
-    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "approved", decided_at: new Date().toISOString(), decided_by: auth.userId }) });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "approved", decided_at: new Date().toISOString(), decided_by: auth.userId }) });
+    if (!r.ok) { const t = await r.text().catch(() => ""); console.error("[Groupe] Échec validation:", r.status, t); showToast(`Échec de la validation (${r.status}) : ${t.slice(0, 150)}`, "error"); return; }
     loadGroupMembers();
   };
   const rejectGroupRequest = async (userId: string) => {
     if (!auth) return;
-    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "rejected", decided_at: new Date().toISOString(), decided_by: auth.userId }) });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "rejected", decided_at: new Date().toISOString(), decided_by: auth.userId }) });
+    if (!r.ok) { const t = await r.text().catch(() => ""); console.error("[Groupe] Échec refus:", r.status, t); showToast(`Échec du refus (${r.status}) : ${t.slice(0, 150)}`, "error"); return; }
     loadGroupMembers();
   };
   const removeGroupMember = async (userId: string) => {
     if (!auth) return;
-    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ removed_at: new Date().toISOString(), removed_by: auth.userId }) });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ removed_at: new Date().toISOString(), removed_by: auth.userId }) });
+    if (!r.ok) { const t = await r.text().catch(() => ""); console.error("[Groupe] Échec retrait:", r.status, t); showToast(`Échec du retrait (${r.status}) : ${t.slice(0, 150)}`, "error"); return; }
     loadGroupMembers();
   };
   const restoreGroupMember = async (userId: string) => {
     if (!auth) return;
-    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ removed_at: null }) });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ removed_at: null }) });
+    if (!r.ok) { const t = await r.text().catch(() => ""); console.error("[Groupe] Échec réintégration:", r.status, t); showToast(`Échec de la réintégration (${r.status}) : ${t.slice(0, 150)}`, "error"); return; }
     loadGroupMembers();
   };
   const setGroupMemberRole = async (userId: string, role: "admin" | "moderator" | "member") => {
     if (!auth) return;
-    await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ role }) });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ role }) });
+    if (!r.ok) { const t = await r.text().catch(() => ""); console.error("[Groupe] Échec changement de rôle:", r.status, t); showToast(`Échec du changement de rôle (${r.status}) : ${t.slice(0, 150)}`, "error"); return; }
     loadGroupMembers();
   };
 

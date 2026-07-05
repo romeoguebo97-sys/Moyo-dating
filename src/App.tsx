@@ -7912,15 +7912,22 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const confirmJoinGroup = async () => {
     setShowGroupJoinModal(false);
     try {
-      const res = await sb.insert<{ user_id?: string }>(auth.token, "group_members", { user_id: auth.userId, role: "member", status: "pending" });
-      if (!res[0]?.user_id) {
-        // L'insertion a été refusée (policy de sécurité, ou autre) : on le dit clairement au lieu
-        // de laisser croire que la demande est partie alors qu'elle n'a jamais atteint la base.
-        setToast({ msg: "Ta demande n'a pas pu être envoyée. Réessaie dans un instant, ou contacte le support si ça persiste.", type: "error" });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+        body: JSON.stringify({ user_id: auth.userId, role: "member", status: "pending" }),
+      });
+      const bodyText = await r.text().catch(() => "");
+      if (!r.ok) {
+        // On affiche le VRAI message renvoyé par Supabase (policy RLS, contrainte, etc.) au lieu
+        // d'un message générique — ça permet de voir précisément pourquoi ça échoue, sans deviner.
+        console.error("[Groupe] Échec de la demande d'adhésion :", r.status, bodyText);
+        setToast({ msg: `Demande refusée par le serveur (${r.status}) : ${bodyText.slice(0, 180)}`, type: "error" });
         return;
       }
-    } catch {
-      setToast({ msg: "Ta demande n'a pas pu être envoyée. Réessaie dans un instant, ou contacte le support si ça persiste.", type: "error" });
+    } catch (e: any) {
+      console.error("[Groupe] Erreur réseau lors de la demande d'adhésion :", e);
+      setToast({ msg: `Erreur réseau : ${String(e?.message || e).slice(0, 180)}`, type: "error" });
       return;
     }
     setShowGroup(true);
