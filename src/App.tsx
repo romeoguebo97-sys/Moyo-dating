@@ -4507,7 +4507,7 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
 // Un seul mode actif à la fois (comportement type radio, via 3 switches).
 
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true, statusStackData }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; statusStackData?: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[] } | null; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true, statusStackData }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; statusStackData?: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; hasNew: boolean } | null; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
   const [showBot, setShowBot] = useState(false);
@@ -4697,19 +4697,22 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
             {tab === "messages" ? (
               statusStackData && FEATURE_STATUSES ? (
-                <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-status-sheet"))} style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 1 }}>
+                <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-status-sheet"))} style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 2, position: "relative" }}>
+                  {statusStackData.hasNew && (
+                    <div style={{ position: "absolute", top: -3, right: -3, width: 12, height: 12, borderRadius: "50%", background: G.rouge, border: `2px solid ${G.blanc}`, zIndex: 5 }} />
+                  )}
                   <div style={{ display: "flex", alignItems: "center" }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.6rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}`, zIndex: 4, position: "relative" }}>+</div>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.85rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}`, zIndex: 4, position: "relative", boxShadow: "0 2px 6px rgba(192,57,43,0.35)" }}>+</div>
                     {statusStackData.groups.slice(0, 3).map((g, idx) => (
-                      <div key={g.userId} style={{ marginLeft: -8, zIndex: 3 - idx, position: "relative" }}>
-                        <Avatar url={g.photo_url} gender={g.gender} size={22} premium={false} />
+                      <div key={g.userId} style={{ marginLeft: -11, zIndex: 3 - idx, position: "relative" }}>
+                        <Avatar url={g.photo_url} gender={g.gender} size={30} premium={false} />
                       </div>
                     ))}
                     {statusStackData.count > 3 && (
-                      <div style={{ marginLeft: -8, width: 22, height: 22, borderRadius: "50%", background: G.brun, color: "#fff", fontSize: "0.5rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}>+{statusStackData.count - 3}</div>
+                      <div style={{ marginLeft: -11, width: 30, height: 30, borderRadius: "50%", background: G.brun, color: "#fff", fontSize: "0.62rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}` }}>+{statusStackData.count - 3}</div>
                     )}
                   </div>
-                  <span style={{ fontSize: "0.52rem", fontWeight: 800, color: G.rouge, letterSpacing: "0.02em" }}>Statuts</span>
+                  <span style={{ fontSize: "0.62rem", fontWeight: 800, color: G.rouge, letterSpacing: "0.02em" }}>Statuts</span>
                 </div>
               ) : <div />
             ) : (
@@ -4717,7 +4720,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             )}
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
+        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, background: tab === "messages" ? G.blanc : undefined, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
         {/* Footer mobile */}
         <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "5px 4px 13px", zIndex: 50, visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           {tabs.map(t => {
@@ -7896,7 +7899,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
 
 type ReportRowLike = { id?: string; reason: string; reporter_id: string; reported_id: string | null; status?: string; created_at?: string };
 
-export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[] } | null) => void }) {
+export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; hasNew: boolean } | null) => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   const [showGroup, setShowGroup] = useState(false); // Groupe Premium : écran séparé, indépendant de la logique 1-à-1
@@ -8193,10 +8196,18 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const [showStatusSheet, setShowStatusSheet] = useState(false);
   // Écoute le clic sur la pile de statuts (rendue dans l'en-tête partagé, hors de cet arbre React)
   useEffect(() => {
-    const handler = () => setShowStatusSheet(true);
+    const handler = () => {
+      setShowStatusSheet(true);
+      try { localStorage.setItem(`moyo_status_last_seen_${auth.userId}`, String(Date.now())); } catch {}
+      onStatusStackChange?.({
+        count: statusGroups.length + (myStatuses.length ? 1 : 0),
+        groups: statusGroups.slice(0, 3).map(g => ({ userId: g.userId, photo_url: g.first.profile?.photo_url, gender: g.first.profile?.gender })),
+        hasNew: false,
+      });
+    };
     window.addEventListener("moyo-open-status-sheet", handler);
     return () => window.removeEventListener("moyo-open-status-sheet", handler);
-  }, []);
+  }, [statusGroups, myStatuses.length]);
   const [statusUploading, setStatusUploading] = useState(false);
   const [statusDeleting, setStatusDeleting] = useState(false);
   const [statusPreview, setStatusPreview] = useState<StatusPost | null>(null);
@@ -9680,9 +9691,14 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   // Transmet les données de la pile de statuts au parent, qui les fait suivre à AppShell pour
   // affichage dans l'en-tête partagé (à la place de Guide, uniquement sur cet onglet).
   useEffect(() => {
+    const lastSeenKey = `moyo_status_last_seen_${auth.userId}`;
+    let lastSeen = 0;
+    try { lastSeen = Number(localStorage.getItem(lastSeenKey) || 0); } catch {}
+    const newestOther = statusGroups.reduce((max, g) => Math.max(max, new Date(g.first.created_at || 0).getTime()), 0);
     onStatusStackChange?.({
       count: statusGroups.length + (myStatuses.length ? 1 : 0),
       groups: statusGroups.slice(0, 3).map(g => ({ userId: g.userId, photo_url: g.first.profile?.photo_url, gender: g.first.profile?.gender })),
+      hasNew: newestOther > lastSeen,
     });
     return () => onStatusStackChange?.(null);
   }, [statusGroups, myStatuses.length]);
@@ -14204,7 +14220,7 @@ export default function App() {
   // ── Pile de statuts affichée dans l'en-tête (remplace Guide sur l'onglet Messages) : Messages
   //    remplit ces données via callback, AppShell les affiche — aucun portail/ReactDOM nécessaire,
   //    juste une donnée transmise normalement de composant à composant. ──
-  const [statusStackData, setStatusStackData] = useState<{ count: number; groups: { userId: string; photo_url?: string; gender?: string }[] } | null>(null);
+  const [statusStackData, setStatusStackData] = useState<{ count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; hasNew: boolean } | null>(null);
   const [adminBadgeCount, setAdminBadgeCount] = useState(0);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showAdminConfig, setShowAdminConfig] = useState(false);
