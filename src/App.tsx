@@ -4688,12 +4688,12 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <>
         {/* Header mobile */}
         <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
-          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span> {auth.isAdmin && <span style={{ fontSize: "0.5rem", background: "lime", color: "#000", padding: "2px 6px", borderRadius: 6, verticalAlign: "middle" }}>TEST-V8</span>}</div>
+          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span> {auth.isAdmin && <span style={{ fontSize: "0.5rem", background: "lime", color: "#000", padding: "2px 6px", borderRadius: 6, verticalAlign: "middle" }}>TEST-V9</span>}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
             <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#333", background: "white", borderRadius: 50, padding: "5px 14px", cursor: "pointer", border: "1.5px solid #ddd", letterSpacing: "0.02em" }}>Guide</div>
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
+        <div style={{ flex: 1, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
         {/* Footer mobile */}
         <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "5px 4px 13px", zIndex: 50, visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           {tabs.map(t => {
@@ -9601,25 +9601,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const [giftTxLoading, setGiftTxLoading] = useState(false);
 
   const isWideMsg = window.innerWidth >= 768;
-  // ── Hauteur utilisable mesurée en JS (visualViewport), plus fiable que 100dvh sur iOS où la
-  //    barre d'adresse/les zones de sécurité faussent parfois le calcul CSS de quelques pixels —
-  //    suffisant pour réactiver le scroll de la page entière et faire "bouger" tout l'écran. ──
-  const [msgViewportHeight, setMsgViewportHeight] = useState<number | null>(null);
-  useEffect(() => {
-    const measure = () => {
-      const h = window.visualViewport?.height || window.innerHeight;
-      setMsgViewportHeight(h);
-    };
-    measure();
-    window.visualViewport?.addEventListener("resize", measure);
-    window.addEventListener("resize", measure);
-    window.addEventListener("orientationchange", measure);
-    return () => {
-      window.visualViewport?.removeEventListener("resize", measure);
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("orientationchange", measure);
-    };
-  }, []);
 
   const statusGroups = useMemo(() => Array.from(
     statuses.reduce((acc, st) => {
@@ -9636,8 +9617,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   })).filter(g => !!g.first), [statuses]);
 
   // ── Liste des conversations (commun mobile + desktop) ──
-  const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0, background: G.blanc }}>
-    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", padding: "0", background: G.blanc }}>
+  // Desktop : colonne latérale séparée à côté du chat → garde son propre scroll interne.
+  // Mobile : plus de scroll imbriqué, s'appuie sur l'unique zone de scroll de l'AppShell — le
+  // bandeau (statuts + onglets) reste collé en haut via position:sticky dans CETTE zone-là.
+  const convList = <div style={{ display: "flex", flexDirection: "column", height: isWideMsg ? "100%" : "auto", flex: isWideMsg ? "1 1 auto" : undefined, minHeight: isWideMsg ? 0 : undefined, background: G.blanc }}>
+    <div style={{ flex: isWideMsg ? 1 : undefined, minHeight: isWideMsg ? 0 : undefined, overflowY: isWideMsg ? "auto" : "visible", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", padding: "0", background: G.blanc }}>
     {/* ── Bandeau collé en haut (statuts + onglets) : position:sticky à l'intérieur de la zone qui
         défile, plutôt qu'un frère externe dont la hauteur doit être calculée au pixel près. Ne peut
         pas être "arraché" par un scroll, quelle que soit la précision du calcul de viewport. ── */}
@@ -10962,7 +10946,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
   );
 
-  return <div style={{ padding: 0, display: "flex", flexDirection: isWideMsg ? "row" : "column", height: isWideMsg ? "100%" : (msgViewportHeight ? `${msgViewportHeight - 116}px` : "calc(100dvh - 116px)"), overflow: isWideMsg ? undefined : "hidden" }}>
+  return <div style={{ padding: 0, display: "flex", flexDirection: isWideMsg ? "row" : "column", height: isWideMsg ? "100%" : "auto", minHeight: isWideMsg ? undefined : "100%" }}>
     {isWideMsg ? (
       <>
         {/* ── COLONNE GAUCHE : liste conversations ── */}
