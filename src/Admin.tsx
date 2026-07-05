@@ -297,6 +297,7 @@ export function AdminDesktopPage() {
     featureGiftPremium: "true",
     featureAssistant: "true",
     featureGroupPremium: "true",
+    featureGroupPhotos: "true",
     appointmentsEnabled: "true",
     phoneAppointmentsEnabled: "true",
     physicalAppointmentsEnabled: "true",
@@ -361,6 +362,7 @@ export function AdminDesktopPage() {
         featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium,
         featureAssistant: map["feature_assistant"] || c.featureAssistant,
         featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
+        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos,
         appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
         phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
         physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
@@ -627,6 +629,7 @@ export function AdminDesktopPage() {
                 ["feature_gift_premium", "featureGiftPremium" as keyof typeof appConfig, "Cadeau Premium"],
                 ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
                 ["feature_group_premium", "featureGroupPremium" as keyof typeof appConfig, "Groupe Premium"],
+                ["feature_group_photos", "featureGroupPhotos" as keyof typeof appConfig, "Photos dans le Groupe"],
               ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
                   <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>{label}</div>
@@ -829,7 +832,7 @@ export function AdminDesktopPage() {
 
 function AdminNotifPrefs({ auth }: { auth: Auth }) {
   type Admin = { id: string; name: string };
-  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean };
+  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean; groupe_demandes: boolean };
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [prefs, setPrefs] = React.useState<Record<string, Prefs>>({});
   const [loading, setLoading] = React.useState(true);
@@ -842,11 +845,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       try {
         const [ar, pr] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/profiles?is_admin=eq.true&select=id,name&order=name.asc`, { headers: H }).then(r => r.json()).catch(() => []),
-          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation`, { headers: H }).then(r => r.json()).catch(() => []),
+          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation,groupe_demandes`, { headers: H }).then(r => r.json()).catch(() => []),
         ]);
         if (Array.isArray(ar)) setAdmins(ar.filter((a: any) => a.id !== SUPPORT_TEAM_ID));
         const map: Record<string, Prefs> = {};
-        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation }; });
+        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation, groupe_demandes: !!p.groupe_demandes }; });
         setPrefs(map);
       } catch {}
       setLoading(false);
@@ -854,7 +857,7 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
   }, [auth.token]);
 
   const toggle = async (adminId: string, key: keyof Prefs) => {
-    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false };
+    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false };
     const updated = { ...current, [key]: !current[key] };
     setPrefs(p => ({ ...p, [adminId]: updated }));
     try {
@@ -884,11 +887,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       ) : admins.length === 0 ? (
         <div style={{ textAlign: "center", padding: 20, color: "#aaa", fontSize: "0.8rem", fontStyle: "italic" }}>Aucun admin trouvé.</div>
       ) : admins.map(a => {
-        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false };
+        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false };
         return (
           <div key={a.id} style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
             <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{a.name}{a.id === auth.userId ? " (vous)" : ""}</div>
-            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["paiements", "💳 Paiements"]] as [keyof Prefs, string][]).map(([k, label]) => (
+            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["groupe_demandes", "⭐ Demandes Groupe Premium"], ["paiements", "💳 Paiements"]] as [keyof Prefs, string][]).map(([k, label]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0" }}>
                 <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#444" }}>{label}</div>
                 <SwitchBtn on={p[k]} onToggle={() => toggle(a.id, k)} />
@@ -1566,7 +1569,7 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -1581,7 +1584,8 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
+        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -1630,7 +1634,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
-        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
+        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
           <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
             <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
             <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => { const v = appConfig[ck] !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, [ck]: v })); await patch(key, v); }} />

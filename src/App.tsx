@@ -262,6 +262,7 @@ let FEATURE_STATUSES = true;
 let FEATURE_GIFT_PREMIUM = true;
 let FEATURE_ASSISTANT = true;
 let FEATURE_GROUP_PREMIUM = true;
+let FEATURE_GROUP_PHOTOS = true;
 let APPOINTMENTS_ENABLED = true;
 let APPT_PHONE_ENABLED = true;
 let APPT_PHYSICAL_ENABLED = true;
@@ -320,7 +321,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_group_premium,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_group_premium,feature_group_photos,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -333,6 +334,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_group_premium"] !== undefined) FEATURE_GROUP_PREMIUM = map["feature_group_premium"] !== "false";
+  if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
@@ -4725,7 +4727,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     )}
 
     {/* Bot Widget — fenêtre */}
-    {FEATURE_ASSISTANT && showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
+    {showBot && <BotWidget onClose={() => setShowBot(false)} auth={auth} />}
 
     {/* Bot flottant — masqué quand une conversation est ouverte pour ne pas surcharger
         l'écran de chat (la flèche "descendre" prend sa place). L'Assistant reste accessible
@@ -5985,7 +5987,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Guide
           </div>
-          <div onClick={() => { const evt = new CustomEvent("moyo-show-bot"); window.dispatchEvent(evt); }} style={{ flex: 1, display: FEATURE_ASSISTANT ? "flex" : "none", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.vert}`, background: G.vert, color: "#fff", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
+          <div onClick={() => { const evt = new CustomEvent("moyo-show-bot"); window.dispatchEvent(evt); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${G.vert}`, background: G.vert, color: "#fff", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, transition: "opacity 0.15s" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/><circle cx="9" cy="11" r="1" fill="white"/><circle cx="15" cy="11" r="1" fill="white"/></svg>
             Assistant
           </div>
@@ -11244,7 +11246,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         soit l'état de showGroup — comme si le groupe n'avait jamais existé. */}
     {showGroup && FEATURE_GROUP_PREMIUM && (
       <div style={{ position: "fixed", inset: 0, zIndex: 600, background: G.blanc }}>
-        <GroupChat auth={auth} onBack={() => setShowGroup(false)} onShowPremium={onShowPremium} />
+        <GroupChat auth={auth} onBack={() => setShowGroup(false)} onShowPremium={onShowPremium} onOpenPrivateChat={(partnerId) => {
+          const target = convs.find(c => c.partner?.id === partnerId);
+          if (target) { setShowGroup(false); openChat(target); }
+          else setToast({ msg: "Conversation introuvable — vous êtes bien en match ?", type: "error" });
+        }} />
       </div>
     )}
     {/* Demande d'adhésion : contrairement aux conversations privées, ce groupe rassemble tout le
@@ -11277,7 +11283,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 type GroupMessage = { id?: string; sender_id: string; content: string; created_at?: string; reactions?: Record<string, string[]>; deleted_for?: string[] };
 type GroupMemberRow = { user_id: string; role: "admin" | "moderator" | "member"; status: "pending" | "approved" | "rejected"; removed_at?: string | null };
 
-function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => void; onShowPremium: (r: string) => void }) {
+function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: Auth; onBack: () => void; onShowPremium: (r: string) => void; onOpenPrivateChat: (partnerId: string) => void }) {
   const [msgs, setMsgs] = useState<GroupMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -11354,8 +11360,41 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
 
   useEffect(() => { listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }); }, [msgs.length]);
 
+  const [moderationAlert, setModerationAlert] = useState<"insult" | "scam" | "sexual" | null>(null);
+  const [profileView, setProfileView] = useState<Profile | null>(null);
+  const [profileViewMatchId, setProfileViewMatchId] = useState<string | null>(null);
+  const [profileViewLiked, setProfileViewLiked] = useState(false);
+  const openProfileView = async (userId: string) => {
+    if (userId === auth.userId) return; // pas sa propre fiche
+    setProfileViewMatchId(null);
+    setProfileViewLiked(false);
+    try {
+      const rows = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${userId}&select=id,name,age,city,bio,photo_url,gender,is_premium,is_verified`);
+      if (rows[0]) setProfileView(rows[0]);
+    } catch {}
+    try {
+      const mrows = await sb.query<MatchRecord>(auth.token, "matches", `?or=(and(user1.eq.${auth.userId},user2.eq.${userId}),and(user1.eq.${userId},user2.eq.${auth.userId}))&select=id`);
+      if (mrows[0]) setProfileViewMatchId(mrows[0].id);
+    } catch {}
+  };
+  const likeFromProfileView = async () => {
+    if (!profileView || profileViewLiked) return;
+    setProfileViewLiked(true);
+    try { await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: profileView.id }); setToast({ msg: "Profil liké !", type: "success" }); } catch {}
+  };
   const sendText = async () => {
     if (!text.trim() || isRemoved) return;
+    // Modération : insultes, arnaques, contenu interdit — le partage de contact/réseaux sociaux
+    // reste volontairement libre ici, le groupe étant réservé aux membres Premium (déjà autorisé
+    // pour eux en messagerie privée aussi).
+    const mod = moderateMessage(text);
+    if (mod.blocked && mod.type) {
+      setModerationAlert(mod.type);
+      try {
+        await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: null, reason: `[AUTO-MOD GROUPE ${mod.type.toUpperCase()}] ${text.substring(0, 100)}`, status: "pending" });
+      } catch {}
+      return;
+    }
     const rawQuoted = replyTo ? (isImage(replyTo.content) ? "Photo" : replyTo.content) : "";
     const cleanQuoted = rawQuoted.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/\]/g, "）").substring(0, 60);
     const replyName = replyTo ? (replyTo.sender_id === auth.userId ? "Toi" : (profilesById[replyTo.sender_id]?.name || "...")) : "";
@@ -11449,21 +11488,29 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
     } catch {}
   };
   const openMembers = () => { setShowMembers(true); loadMembers(); };
-  const approveRequest = async (userId: string) => {
-    try { await sb.upsert(auth.token, "group_members", { user_id: userId, status: "approved", decided_at: new Date().toISOString(), decided_by: auth.userId }); loadMembers(); } catch {}
+  const groupPatch = async (userId: string, body: object, label: string) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => "");
+        console.error(`[Groupe] Échec (${label}):`, r.status, t);
+        setToast({ msg: `Action refusée (${r.status}). ${t.slice(0, 120)}`, type: "error" });
+        return;
+      }
+      loadMembers();
+    } catch (e: any) {
+      setToast({ msg: `Erreur réseau : ${String(e?.message || e).slice(0, 120)}`, type: "error" });
+    }
   };
-  const rejectRequest = async (userId: string) => {
-    try { await sb.upsert(auth.token, "group_members", { user_id: userId, status: "rejected", decided_at: new Date().toISOString(), decided_by: auth.userId }); loadMembers(); } catch {}
-  };
-  const removeMember = async (userId: string) => {
-    try { await sb.upsert(auth.token, "group_members", { user_id: userId, removed_at: new Date().toISOString(), removed_by: auth.userId }); loadMembers(); } catch {}
-  };
-  const restoreMember = async (userId: string) => {
-    try { await sb.upsert(auth.token, "group_members", { user_id: userId, removed_at: null }); loadMembers(); } catch {}
-  };
-  const setRole = async (userId: string, role: "admin" | "moderator" | "member") => {
-    try { await sb.upsert(auth.token, "group_members", { user_id: userId, role, removed_at: null }); loadMembers(); } catch {}
-  };
+  const approveRequest = (userId: string) => groupPatch(userId, { status: "approved", decided_at: new Date().toISOString(), decided_by: auth.userId }, "valider");
+  const rejectRequest = (userId: string) => groupPatch(userId, { status: "rejected", decided_at: new Date().toISOString(), decided_by: auth.userId }, "refuser");
+  const removeMember = (userId: string) => groupPatch(userId, { removed_at: new Date().toISOString(), removed_by: auth.userId }, "retirer");
+  const restoreMember = (userId: string) => groupPatch(userId, { removed_at: null }, "réintégrer");
+  const setRole = (userId: string, role: "admin" | "moderator" | "member") => groupPatch(userId, { role, removed_at: null }, "changer le rôle");
 
   // ── Écran-cadre commun aux états "pas encore dans le chat" (en-tête + centre) ──
   const StatusScreen = ({ icon, title, text, action }: { icon: React.ReactNode; title: string; text: string; action?: React.ReactNode }) => (
@@ -11511,6 +11558,7 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* En-tête */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
         <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
@@ -11528,7 +11576,7 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
       {/* Messages */}
       <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
         <img src="/msg-bg.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none" }} />
-        <div ref={listRef} style={{ position: "relative", zIndex: 1, height: "100%", overflowY: "auto", padding: "14px 12px" }}>
+        <div ref={listRef} style={{ position: "relative", zIndex: 1, height: "100%", overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", padding: "14px 12px" }}>
         {loading ? (
           <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
         ) : msgs.length === 0 ? (
@@ -11542,12 +11590,11 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
           const replyMatch = m.content.match(/^\[↩ (.+?) : ([\s\S]+?)\]\n([\s\S]*)$/);
           const bubbleBody = replyMatch ? replyMatch[3] : m.content;
           const isImg = isImage(bubbleBody);
-          const canDeleteForEveryone = isMine || isModerator;
           return (
             <div key={m.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: 14 }}>
-              {showSender && <div style={{ fontSize: "0.68rem", fontWeight: 700, color: G.rouge, marginLeft: 44, marginBottom: 2 }}>{prof?.name || "..."}</div>}
+              {showSender && <div onClick={() => openProfileView(m.sender_id)} style={{ fontSize: "0.68rem", fontWeight: 700, color: G.rouge, marginLeft: 44, marginBottom: 2, cursor: "pointer" }}>{prof?.name || "..."}</div>}
               <div style={{ display: "flex", gap: 8, alignItems: "flex-end", maxWidth: "82%", flexDirection: isMine ? "row-reverse" : "row" }}>
-                {!isMine && <Avatar url={prof?.photo_url} gender={prof?.gender} size={30} />}
+                {!isMine && <div onClick={() => openProfileView(m.sender_id)} style={{ cursor: "pointer" }}><Avatar url={prof?.photo_url} gender={prof?.gender} size={30} /></div>}
                 <div style={{ position: "relative" }}>
                   <div style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? "#fff" : G.brun, borderRadius: 16, padding: isImg ? 4 : "9px 13px", paddingRight: isImg ? 4 : 30, fontSize: "0.88rem", lineHeight: 1.4, boxShadow: "0 1px 2px rgba(0,0,0,0.06)", wordBreak: "break-word", position: "relative" }}>
                     {/* Citation en réponse */}
@@ -11575,11 +11622,6 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
                   )}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 10, marginTop: 6, marginRight: isMine ? 4 : 0, marginLeft: isMine ? 0 : 44 }}>
-                <span onClick={() => setReplyTo(m)} style={{ fontSize: "0.68rem", color: "#999", cursor: "pointer" }}>Répondre</span>
-                {canDeleteForEveryone && <span onClick={() => deleteForEveryone(m)} style={{ fontSize: "0.68rem", color: "#c00", cursor: "pointer" }}>Supprimer pour tous</span>}
-                <span onClick={() => deleteForMe(m)} style={{ fontSize: "0.68rem", color: "#999", cursor: "pointer" }}>Supprimer pour moi</span>
-              </div>
             </div>
           );
         })}
@@ -11597,10 +11639,14 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
-            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPickImage} />
-            <div onClick={() => fileInputRef.current?.click()} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            </div>
+            {FEATURE_GROUP_PHOTOS && (
+              <>
+                <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPickImage} />
+                <div onClick={() => fileInputRef.current?.click()} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
+              </>
+            )}
             <textarea ref={textareaRef} value={text} onChange={e => { setText(e.target.value); autoResizeTextarea(); }} placeholder="Écrire au groupe…" rows={1} style={{ flex: 1, border: "none", outline: "none", resize: "none", fontSize: "16px", padding: "9px 14px", borderRadius: 20, background: "#F0F1F5", minHeight: 44, maxHeight: 120, overflowY: "auto", lineHeight: 1.4, fontFamily: "inherit" }} />
             <div onClick={sendText} style={{ width: 38, height: 38, borderRadius: "50%", background: text.trim() ? G.rouge : "#ccc", display: "flex", alignItems: "center", justifyContent: "center", cursor: text.trim() ? "pointer" : "default", flexShrink: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
@@ -11737,6 +11783,35 @@ function GroupChat({ auth, onBack, onShowPremium }: { auth: Auth; onBack: () => 
             {isModerator && (
               <p style={{ fontSize: "0.72rem", color: "#bbb", marginTop: 14, lineHeight: 1.5 }}>Pour retirer ou promouvoir un membre qui n'apparaît pas ici, il doit d'abord avoir envoyé un message dans le groupe (sa fiche est chargée à ce moment-là).</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Fiche profil (clic sur photo/nom dans un message) : liker, ou écrire en privé si déjà match */}
+      {profileView && (
+        <div onClick={() => setProfileView(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 720, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, overflow: "hidden" }}>
+            <div style={{ position: "relative", width: "100%", height: 320, background: "#eee" }}>
+              {profileView.photo_url ? <img src={profileView.photo_url} alt={profileView.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+              <div onClick={() => setProfileView(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.45)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
+              <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "40px 18px 14px", background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)" }}>
+                <div style={{ color: "#fff", fontSize: "1.3rem", fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+                  {profileView.name}{profileView.age ? `, ${profileView.age} ans` : ""}
+                  {profileView.is_verified && <VerifiedBadge size={18} />}
+                </div>
+                {profileView.city && <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem" }}>{profileView.city}</div>}
+              </div>
+            </div>
+            {profileView.bio && <p style={{ padding: "16px 18px 0", fontSize: "0.88rem", color: "#555", lineHeight: 1.5 }}>{profileView.bio}</p>}
+            <div style={{ display: "flex", gap: 10, padding: 18 }}>
+              {profileViewMatchId ? (
+                <Btn variant="primary" onClick={() => { const id = profileView.id; setProfileView(null); onOpenPrivateChat(id); }} style={{ flex: 1 }}>Écrire en privé</Btn>
+              ) : (
+                <Btn variant="primary" onClick={likeFromProfileView} disabled={profileViewLiked} style={{ flex: 1 }}>{profileViewLiked ? "Déjà liké ❤️" : "❤️ Liker ce profil"}</Btn>
+              )}
+            </div>
           </div>
         </div>
       )}
