@@ -399,7 +399,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
     if (!isAdminUrl && !isAdminUser) {
       const msg = map["maintenance_message"] || "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧";
       const el = document.getElementById("root");
-      if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px">Moyo<span style="color:#1a1a1a;font-size:0.62em;font-weight:600"> Dating</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
+      if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px;line-height:0.82"><span style="display:block">Moyo</span><span style="display:block;color:#1a1a1a;font-size:0.48em;font-weight:800;margin-top:0.06em">Dating</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
     }
   }
 }).catch(() => {});
@@ -2336,7 +2336,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           {/* Nav blanche */}
           <div style={{ background: G.blanc, padding: "10px 20px 10px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
             <div style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-1px" }}>
-              <span style={{ color: "#C0392B" }}>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+              <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em", color: "#C0392B" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span>
             </div>
           </div>
 
@@ -2628,7 +2628,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 {/* Téléphone gauche */}
                 <div style={{ width: 90, height: 180, borderRadius: 16, background: "linear-gradient(160deg,#2C1A0E,#5C3A1E)", border: "3px solid rgba(255,255,255,0.15)", overflow: "hidden", boxShadow: "0 12px 32px rgba(44,26,14,0.25)", flexShrink: 0, transform: "rotate(-8deg) translateY(20px)" }}>
                   <div style={{ background: G.rouge, padding: "4px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.45rem" }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></span>
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.45rem" }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></span>
                   </div>
                   <div style={{ height: 100, overflow: "hidden", position: "relative" }}>
                     <img src="/phone-femme.webp" alt="Sandrine" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
@@ -2642,7 +2642,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 {/* Téléphone central */}
                 <div style={{ width: 112, height: 220, borderRadius: 18, background: "linear-gradient(160deg,#1a1a2e,#16213e)", border: "3px solid rgba(255,255,255,0.2)", overflow: "hidden", boxShadow: "0 20px 50px rgba(0,0,0,0.35)", flexShrink: 0, zIndex: 2 }}>
                   <div style={{ background: `linear-gradient(135deg,${G.vert},#0D4020)`, padding: "5px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.55rem" }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></span>
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.55rem" }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></span>
                     <div style={{ width: 16, height: 16, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.4rem", color: "#fff" }}>CG</div>
                   </div>
                   <div style={{ height: 128, overflow: "hidden", position: "relative" }}>
@@ -2662,7 +2662,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 {/* Téléphone droit */}
                 <div style={{ width: 90, height: 180, borderRadius: 16, background: "linear-gradient(160deg,#1a1a2e,#2d2d44)", border: "3px solid rgba(255,255,255,0.15)", overflow: "hidden", boxShadow: "0 12px 32px rgba(0,0,0,0.25)", flexShrink: 0, transform: "rotate(8deg) translateY(20px)" }}>
                   <div style={{ background: G.brun, padding: "4px 6px" }}>
-                    <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.45rem" }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></span>
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.45rem" }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></span>
                   </div>
                   <div style={{ padding: "4px 6px", background: "rgba(255,255,255,0.05)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 3 }}>
@@ -2731,7 +2731,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <div style={{ background: G.creme, borderRadius: 20, overflow: "hidden", height: 310 }}>
                     {/* Header app */}
                     <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "14px 12px 10px", display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{  fontSize: "0.9rem", color: "#fff", fontWeight: 700 }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+                      <div style={{  fontSize: "0.9rem", color: "#fff", fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></div>
                       <div style={{ marginLeft: "auto", width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
                     </div>
                     {/* Profil card */}
@@ -2762,7 +2762,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <div style={{ background: G.blanc, borderRadius: 22, overflow: "hidden", height: 310 }}>
                     {/* Header */}
                     <div style={{ background: `linear-gradient(135deg,${G.vert},#0D4020)`, padding: "14px 14px 10px", display: "flex", alignItems: "center" }}>
-                      <div style={{  fontSize: "1rem", color: "#fff", fontWeight: 700 }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+                      <div style={{  fontSize: "1rem", color: "#fff", fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></div>
                       <div style={{ marginLeft: "auto", fontSize: "0.7rem", color: "rgba(255,255,255,0.7)" }}>🇨🇬</div>
                     </div>
                     {/* Match notification */}
@@ -2807,7 +2807,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <div style={{ width: 38, height: 8, background: "#0D0B1A", borderRadius: 8, margin: "0 auto 10px" }} />
                   <div style={{ background: G.creme, borderRadius: 20, overflow: "hidden", height: 270 }}>
                     <div style={{ background: `linear-gradient(135deg,${G.brun},#5C3A1E)`, padding: "12px 10px 8px", display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{  fontSize: "0.85rem", color: "#fff", fontWeight: 700 }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+                      <div style={{  fontSize: "0.85rem", color: "#fff", fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></div>
                     </div>
                     {/* Conversation */}
                     <div style={{ padding: "8px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
@@ -3149,7 +3149,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           {installModal === "android" ? (
             <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", overflow: "hidden" }}>
               <div style={{ background: `linear-gradient(150deg,${G.rouge},${G.rougeDark})`, padding: "26px 22px 30px", textAlign: "center" }}>
-                <div style={{ fontWeight: 800, fontSize: "1.6rem", color: "#fff", letterSpacing: "0.02em" }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+                <div style={{ fontWeight: 800, fontSize: "1.6rem", color: "#fff", letterSpacing: "0.02em" }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></div>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "12px auto 0" }}>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
                 </div>
@@ -3222,7 +3222,7 @@ function About({ onBack }: { onBack: () => void }) {
           </div>
         </div>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "2.5rem", color: "#fff", fontWeight: 700, marginBottom: 4 }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+          <div style={{ fontSize: "2.5rem", color: "#fff", fontWeight: 700, marginBottom: 4 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></div>
           <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.9rem" }}>Le premier site de rencontres congolais</p>
         </div>
       </div>
@@ -4445,7 +4445,7 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
           {modal === "android" ? (
             <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", overflow: "hidden" }}>
               <div style={{ background: `linear-gradient(150deg,${G.rouge},${G.rougeDark})`, padding: "26px 22px 30px", textAlign: "center" }}>
-                <div style={{ fontWeight: 800, fontSize: "1.6rem", color: "#fff" }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+                <div style={{ fontWeight: 800, fontSize: "1.6rem", color: "#fff" }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></div>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "12px auto 0" }}>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/></svg>
                 </div>
@@ -4635,7 +4635,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <div className={`moyo-sidebar${isFullscreen ? " fullscreen-blur" : ""}`}>
         <div className="moyo-sidebar-logo">
           <div style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
-            <span style={{ color: G.rouge }}>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em", color: G.rouge }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span>
           </div>
         </div>
         <nav className="moyo-sidebar-nav">
@@ -5673,7 +5673,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
         <div onClick={() => {
           setViewMode("full");
           window.dispatchEvent(new CustomEvent("moyo-fullscreen", { detail: { active: true } }));
-        }} style={{ background: G.blanc, color: "var(--c-pill-fg)", border: `1.5px solid ${viewMode === "full" ? "var(--c-pill-fg)" : "var(--c-pill-bd)"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
+        }} style={{ background: G.blanc, color: "var(--c-pill-fg)", border: `1.5px solid var(--c-pill-bd)`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1 }}>
           ⛶ Plein écran
         </div>
       </div>
@@ -14755,7 +14755,7 @@ export default function App() {
       <div style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
         {/* Header */}
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "28px 24px 22px", textAlign: "center" }}>
-          <div style={{ fontSize: "2rem", color: "#fff", fontWeight: 800, marginBottom: 4 }}>Moyo<span style={{ color: "#fff", fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+          <div style={{ fontSize: "2rem", color: "#fff", fontWeight: 800, marginBottom: 4 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></div>
           <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "10px auto 0" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
           </div>
