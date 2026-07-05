@@ -2073,7 +2073,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
       <AuthLayout onBack={() => onNav("landing")}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
-            <span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
           </div>
         </div>
         <div style={{ textAlign: "center", padding: "12px 8px 24px" }}>
@@ -2094,7 +2094,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
-          <span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+          <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
         </div>
         <h2 style={{  fontSize: "1.5rem", fontWeight: 700, marginTop: 8 }}>Nouveau mot de passe</h2>
         <p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Choisis un nouveau mot de passe sécurisé</p>
@@ -2404,7 +2404,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: (isMobile && showMobileLanding) ? "none" : "block" }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
-            <span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span>
+            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <span onClick={() => onNav("about")}
@@ -3575,7 +3575,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
         {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2>
         </div>
 
@@ -3639,7 +3639,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     );
   }
 
-  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
 function SignUp({ onNav }: { onNav: (p: string) => void }) {
@@ -3918,7 +3918,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span></div>
+        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
         <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 16px" }}>
           <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "#fff" }}>{step}</div>
@@ -4688,7 +4688,13 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <>
         {/* Header mobile */}
         <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
-          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700 }}><span>Moyo</span><span style={{ color: G.brun, fontSize: "0.62em", fontWeight: 600 }}> Dating</span> {auth.isAdmin && <span style={{ fontSize: "0.5rem", background: "lime", color: "#000", padding: "2px 6px", borderRadius: 6, verticalAlign: "middle" }}>TEST-V10</span>}</div>
+          <div style={{ marginLeft: 4, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: "1.6rem", color: G.rouge, fontWeight: 700, lineHeight: 0.82 }}>
+              <div style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</div>
+              <div style={{ color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
+            </div>
+            {auth.isAdmin && <span style={{ fontSize: "0.5rem", background: "lime", color: "#000", padding: "2px 6px", borderRadius: 6 }}>TEST-V11</span>}
+          </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
             <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#333", background: "white", borderRadius: 50, padding: "5px 14px", cursor: "pointer", border: "1.5px solid #ddd", letterSpacing: "0.02em" }}>Guide</div>
           </div>
@@ -5632,8 +5638,8 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
         </div>
       </div>
     )}
-    {/* Boutons vue/filtres mobile - masqués sur desktop (panneau droit) */}
-    {!isWide && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
+    {/* Boutons vue/filtres mobile - masqués sur desktop (panneau droit) ET en plein écran (immersion totale) */}
+    {!isWide && viewMode !== "full" && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 14, width: "100%" }}>
       {/* Filtres à gauche */}
       <div onClick={() => setShowFilters(s => !s)} style={{ background: showFilters ? "#333" : G.blanc, color: showFilters ? "#fff" : "var(--c-pill-fg)", border: `1.5px solid ${showFilters ? "#333" : "var(--c-pill-bd)"}`, borderRadius: 50, padding: "4px 11px", fontSize: "0.65rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, lineHeight: 1, whiteSpace: "nowrap" }}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={showFilters ? G.blanc : "var(--c-pill-fg)"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -5709,7 +5715,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     setProfiles(prev => shuffleArray([...prev]));
     el.scrollTop = 0;
   }
-}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 100px)", height: isWide ? "calc(100vh - 20px)" : undefined, overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 55px - env(safe-area-inset-bottom))", height: isWide ? "calc(100vh - 20px)" : undefined, overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
     <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 110px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: isWide ? 0 : 12, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
