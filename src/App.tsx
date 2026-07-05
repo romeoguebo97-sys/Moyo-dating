@@ -8171,6 +8171,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const [statuses, setStatuses] = useState<StatusPost[]>([]);
   const [myStatuses, setMyStatuses] = useState<StatusPost[]>([]);
   const [showStatusComposer, setShowStatusComposer] = useState(false);
+  const [showStatusSheet, setShowStatusSheet] = useState(false);
   const [statusUploading, setStatusUploading] = useState(false);
   const [statusDeleting, setStatusDeleting] = useState(false);
   const [statusPreview, setStatusPreview] = useState<StatusPost | null>(null);
@@ -9673,41 +9674,25 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     {/* ── Bandeau (statuts + onglets) : position:fixed sur mobile (jamais scrollable, quel que soit
         l'appareil), position:sticky sur desktop (colonne latérale déjà bornée, jamais posé problème). ── */}
     <div ref={msgBannerRef} style={isWideMsg ? { position: "sticky", top: 0, zIndex: 5, background: G.blanc } : { position: "fixed", top: 45, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 90, background: G.blanc }}>
-    <div style={{ padding: isWideMsg ? "16px 16px 8px" : "12px 16px 8px", borderBottom: `1px solid ${G.gris}`, display: FEATURE_STATUSES ? undefined : "none" }}>
-
+    <div style={{ padding: "8px 12px", borderBottom: `1px solid ${G.gris}`, display: FEATURE_STATUSES ? "flex" : "none", alignItems: "center", justifyContent: "space-between" }}>
       <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
-      <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 8px", WebkitOverflowScrolling: "touch" }}>
-        <div onClick={() => {
-          if (!auth.isPremium) { onShowPremium("Publier un statut est réservé aux membres Premium."); return; }
-          if (myStatuses.length > 0) { openStatusViewer(myStatuses, 0); return; }
-          setShowStatusComposer(true);
-        }} style={{ minWidth: 64, textAlign: "center", cursor: "pointer" }}>
-          <div style={{ position: "relative", width: 52, height: 52, borderRadius: "50%", margin: "0 auto 4px", padding: myStatuses.length ? 3 : 0, border: myStatuses.length ? `2px solid ${G.rouge}` : `2px dashed rgba(192,57,43,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.05)", color: G.rouge, fontSize: "1.4rem", fontWeight: 800 }}>
-            {myStatuses.length ? <Avatar url={myStatuses[0]?.profile?.photo_url} gender={myStatuses[0]?.profile?.gender} size={44} premium={auth.isPremium} /> : "+"}
-            {auth.isPremium && myStatuses.length < STATUS_LIMIT && (
-              <button onClick={(e) => { e.stopPropagation(); setShowStatusComposer(true); }} style={{ position: "absolute", right: -4, bottom: -2, width: 20, height: 20, borderRadius: "50%", border: "2px solid #fff", background: G.rouge, color: "#fff", fontSize: "0.9rem", lineHeight: 1, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>+</button>
-            )}
-          </div>
-          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: G.rouge }}>Mon statut</div>
-          <div style={{ fontSize: "0.58rem", color: "#999" }}>{myStatuses.length}/{STATUS_LIMIT}</div>
-        </div>
-        {statusGroups.slice(0, 12).map(group => {
-          const st = group.first;
-          return (
-          <div key={group.userId} onClick={() => openStatusViewer(group.items, 0)} style={{ minWidth: 64, textAlign: "center", cursor: "pointer" }}>
-            <div style={{ position: "relative", width: 52, height: 52, borderRadius: "50%", margin: "0 auto 4px", padding: 3, border: `2px solid ${group.userId === "moyo-official" ? G.or : st.profile?.is_premium ? G.or : G.rouge}` }}>
-              <Avatar url={st.profile?.photo_url} gender={st.profile?.gender} size={44} premium={false} />
-              {group.userId === "moyo-official"
-                ? <span style={{ position: "absolute", right: -3, bottom: 2, display: "flex" }}><VerifiedBadge size={15} /></span>
-                : <span style={{ position: "absolute", right: -2, bottom: 4, width: 10, height: 10, borderRadius: "50%", background: G.rouge, border: "2px solid #fff" }} />}
+      <div onClick={() => setShowStatusSheet(true)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ width: 26, height: 26, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.68rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}`, zIndex: 4, position: "relative" }}>+</div>
+          {statusGroups.slice(0, 3).map((group, idx) => (
+            <div key={group.userId} style={{ marginLeft: -9, zIndex: 3 - idx, position: "relative" }}>
+              <Avatar url={group.first.profile?.photo_url} gender={group.first.profile?.gender} size={26} premium={false} />
             </div>
-            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.profile?.name || "Statut"}</div>
-          </div>
-        );})}
+          ))}
+          {statusGroups.length > 3 && (
+            <div style={{ marginLeft: -9, width: 26, height: 26, borderRadius: "50%", background: G.brun, color: "#fff", fontSize: "0.55rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}>+{statusGroups.length - 3}</div>
+          )}
+        </div>
+        <span style={{ fontSize: "0.68rem", fontWeight: 800, color: G.rouge }}>{statusGroups.length > 0 ? `${statusGroups.length + (myStatuses.length ? 1 : 0)} statut${statusGroups.length > 1 ? "s" : ""}` : "Statuts"}</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.65rem", color: "#bbb", marginTop: 4 }}>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-        <span>Statuts visibles uniquement par vos matchs</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.6rem", color: "#bbb" }}>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span>Visible par vos matchs</span>
       </div>
     </div>
     {FEATURE_GROUP_PREMIUM && (
@@ -11250,6 +11235,52 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         }} />
       </div>
     )}
+    {/* Tiroir des statuts : ouvert depuis la petite pile dans le bandeau, croix pour fermer */}
+    {showStatusSheet && (
+      <div onClick={() => setShowStatusSheet(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 640, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, padding: "10px 16px 24px", maxHeight: "70vh", overflowY: "auto" }}>
+          <div style={{ width: 36, height: 4, background: G.gris, borderRadius: 50, margin: "0 auto 14px" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Statuts</div>
+            <div onClick={() => setShowStatusSheet(false)} style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 0 8px", WebkitOverflowScrolling: "touch" }}>
+            <div onClick={() => {
+              if (!auth.isPremium) { onShowPremium("Publier un statut est réservé aux membres Premium."); return; }
+              if (myStatuses.length > 0) { openStatusViewer(myStatuses, 0); return; }
+              setShowStatusComposer(true);
+            }} style={{ minWidth: 64, textAlign: "center", cursor: "pointer" }}>
+              <div style={{ position: "relative", width: 52, height: 52, borderRadius: "50%", margin: "0 auto 4px", padding: myStatuses.length ? 3 : 0, border: myStatuses.length ? `2px solid ${G.rouge}` : `2px dashed rgba(192,57,43,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.05)", color: G.rouge, fontSize: "1.4rem", fontWeight: 800 }}>
+                {myStatuses.length ? <Avatar url={myStatuses[0]?.profile?.photo_url} gender={myStatuses[0]?.profile?.gender} size={44} premium={auth.isPremium} /> : "+"}
+                {auth.isPremium && myStatuses.length < STATUS_LIMIT && (
+                  <button onClick={(e) => { e.stopPropagation(); setShowStatusComposer(true); }} style={{ position: "absolute", right: -4, bottom: -2, width: 20, height: 20, borderRadius: "50%", border: "2px solid #fff", background: G.rouge, color: "#fff", fontSize: "0.9rem", lineHeight: 1, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>+</button>
+                )}
+              </div>
+              <div style={{ fontSize: "0.65rem", fontWeight: 700, color: G.rouge }}>Mon statut</div>
+              <div style={{ fontSize: "0.58rem", color: "#999" }}>{myStatuses.length}/{STATUS_LIMIT}</div>
+            </div>
+            {statusGroups.map(group => {
+              const st = group.first;
+              return (
+              <div key={group.userId} onClick={() => { setShowStatusSheet(false); openStatusViewer(group.items, 0); }} style={{ minWidth: 64, textAlign: "center", cursor: "pointer" }}>
+                <div style={{ position: "relative", width: 52, height: 52, borderRadius: "50%", margin: "0 auto 4px", padding: 3, border: `2px solid ${group.userId === "moyo-official" ? G.or : st.profile?.is_premium ? G.or : G.rouge}` }}>
+                  <Avatar url={st.profile?.photo_url} gender={st.profile?.gender} size={44} premium={false} />
+                  {group.userId === "moyo-official"
+                    ? <span style={{ position: "absolute", right: -3, bottom: 2, display: "flex" }}><VerifiedBadge size={15} /></span>
+                    : <span style={{ position: "absolute", right: -2, bottom: 4, width: 10, height: 10, borderRadius: "50%", background: G.rouge, border: "2px solid #fff" }} />}
+                </div>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.profile?.name || "Statut"}</div>
+              </div>
+            );})}
+          </div>
+          {statusGroups.length === 0 && myStatuses.length === 0 && (
+            <p style={{ textAlign: "center", color: "#999", fontSize: "0.8rem", padding: "10px 0" }}>Aucun statut actif pour l'instant.</p>
+          )}
+        </div>
+      </div>
+    )}
     {/* Demande d'adhésion : contrairement aux conversations privées, ce groupe rassemble tout le
         monde — on prévient explicitement avant d'y entrer, geste volontaire requis. */}
     {showGroupJoinModal && (
@@ -11305,13 +11336,24 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
 
   const [statusLoading, setStatusLoading] = useState(true);
 
+  const [showWelcome, setShowWelcome] = useState(false);
   // Mon statut dans le groupe (rôle, statut de la demande, éventuelle exclusion)
   useEffect(() => {
     let alive = true;
     const loadMyStatus = async () => {
       try {
         const rows = await sb.query<GroupMemberRow>(auth.token, "group_members", `?user_id=eq.${auth.userId}&select=user_id,role,status,removed_at`);
-        if (alive && rows[0]) { setMyRole(rows[0].role); setMyStatus(rows[0].status); setIsRemoved(!!rows[0].removed_at); }
+        if (alive && rows[0]) {
+          setMyRole(rows[0].role); setMyStatus(rows[0].status); setIsRemoved(!!rows[0].removed_at);
+          // Message de bienvenue une seule fois, la première fois qu'on se voit approuvé (persistant,
+          // pour le montrer même si la personne était absente au moment exact de la validation).
+          if (rows[0].status === "approved" && !rows[0].removed_at) {
+            const key = `moyo_group_welcome_${auth.userId}`;
+            try {
+              if (!localStorage.getItem(key)) { localStorage.setItem(key, "1"); setShowWelcome(true); }
+            } catch {}
+          }
+        }
       } catch {}
       if (alive) setStatusLoading(false);
     };
@@ -11374,8 +11416,22 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
       if (mrows[0]) setProfileViewMatchId(mrows[0].id);
     } catch {}
   };
+  const [myGender, setMyGender] = useState<string | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const rows = await sb.query<{ gender: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`);
+        if (rows[0]) setMyGender(rows[0].gender);
+      } catch {}
+    })();
+  }, [auth.userId]);
+  const [showSameGenderWarn, setShowSameGenderWarn] = useState(false);
   const likeFromProfileView = async () => {
     if (!profileView || profileViewLiked) return;
+    if (BLOCK_SAME_GENDER && myGender && profileView.gender && myGender === profileView.gender) {
+      setShowSameGenderWarn(true);
+      return;
+    }
     setProfileViewLiked(true);
     try { await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: profileView.id }); setToast({ msg: "Profil liké !", type: "success" }); } catch {}
   };
@@ -11747,9 +11803,9 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
             )}
             <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, marginBottom: 4 }}>Membres du groupe</h3>
             <p style={{ fontSize: "0.78rem", color: "#999", marginBottom: 16 }}>Membres validés par un administrateur, sauf ceux retirés ci-dessous.</p>
-            {members.filter(m => m.status === "approved").length === 0 ? (
+            {members.filter(m => m.status === "approved" && m.role !== "admin").length === 0 ? (
               <p style={{ fontSize: "0.82rem", color: "#999" }}>Aucun membre validé pour l'instant.</p>
-            ) : members.filter(m => m.status === "approved").map(mem => {
+            ) : members.filter(m => m.status === "approved" && m.role !== "admin").map(mem => {
               const prof = profilesById[mem.user_id];
               const excluded = !!mem.removed_at;
               return (
@@ -11809,6 +11865,31 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
                 <Btn variant="primary" onClick={likeFromProfileView} disabled={profileViewLiked} style={{ flex: 1 }}>{profileViewLiked ? "Déjà liké ❤️" : "❤️ Liker ce profil"}</Btn>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {/* Avertissement même sexe (comme Découvrir) : uniquement sur le "like", jamais sur les
+          messages/réactions du groupe, qui restent libres pour tout le monde. */}
+      {showSameGenderWarn && (
+        <div onClick={() => setShowSameGenderWarn(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 730, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "28px 24px 22px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGender === "Homme" ? "🕺" : "💃"}</div>
+            <p style={{ fontSize: "0.95rem", fontWeight: 700, color: G.brun, margin: "0 0 20px" }}>
+              {myGender === "Homme" ? "Eh frère, reste du bon côté ! 😂" : "Eh sœur, reste du bon côté ! 😂"}
+            </p>
+            <Btn variant="primary" onClick={() => setShowSameGenderWarn(false)} style={{ width: "100%" }}>Compris</Btn>
+          </div>
+        </div>
+      )}
+      {showWelcome && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 800, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}>
+          <div style={{ textAlign: "center", color: "#fff" }}>
+            <div style={{ marginBottom: 16 }}>
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h2 style={{ fontSize: "2rem", color: G.or, marginBottom: 8 }}>Bienvenue dans le groupe !</h2>
+            <p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>Ta demande a été validée — tu fais maintenant partie du Groupe Premium, libre à toi d'échanger avec tout le monde.</p>
+            <Btn variant="white" onClick={() => setShowWelcome(false)}>Continuer →</Btn>
           </div>
         </div>
       )}
