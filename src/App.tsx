@@ -9815,6 +9815,27 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
     )}
     </div>
+      {/* ── BOUTON DE DIAGNOSTIC TEMPORAIRE — à retirer une fois le problème résolu.
+          Ne dépend d'AUCUNE autre logique : action brute, résultat exact en popup native. ── */}
+      <div
+        onClick={async () => {
+          alert(`ÉTAPE 1 : je vais insérer une ligne pour user_id=${auth.userId} dans group_members.`);
+          try {
+            const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
+              body: JSON.stringify({ user_id: auth.userId, role: "member", status: "pending" }),
+            });
+            const text = await r.text().catch(() => "(pas de corps)");
+            alert(`ÉTAPE 2 (résultat) :\nStatut HTTP = ${r.status}\n\nRéponse brute du serveur :\n${text}`);
+          } catch (e: any) {
+            alert(`ÉTAPE 2 (erreur JS, la requête n'a même pas pu partir) :\n${String(e?.message || e)}`);
+          }
+        }}
+        style={{ margin: "10px 12px", padding: "12px", background: "#000", color: "#0f0", fontFamily: "monospace", fontSize: "0.75rem", fontWeight: 700, textAlign: "center", borderRadius: 8, cursor: "pointer" }}
+      >
+        🧪 TEST DIAGNOSTIC — appuyer ici (résultat en popup)
+      </div>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
         : (() => {
