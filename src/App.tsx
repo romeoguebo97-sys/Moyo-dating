@@ -1346,14 +1346,66 @@ const GLOBAL_CSS = `
   .tap{transition:transform .14s cubic-bezier(.34,1.56,.64,1)}
   .tap:active{transform:scale(.97)}
   .card-hover:active{transform:scale(.985)}
-  @keyframes pageIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
-  .page-anim{animation:pageIn .26s cubic-bezier(.22,.61,.36,1)}
+  @keyframes pageIn{from{opacity:0;transform:translateY(9px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .page-anim{animation:pageIn .28s cubic-bezier(.22,.61,.36,1)}
   /* ── Transitions d'ouverture/fermeture des conversations (style WhatsApp/iMessage) ── */
   @keyframes convSlideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
   @keyframes convSlideOut{from{transform:translateX(0)}to{transform:translateX(100%)}}
   .conv-enter{animation:convSlideIn .26s cubic-bezier(.22,.61,.36,1)}
   .conv-leave{animation:convSlideOut .24s cubic-bezier(.4,0,.7,.3) forwards}
-  @media(prefers-reduced-motion:reduce){.skeleton{animation:none}.page-anim{animation:none}.conv-enter,.conv-leave{animation:none}button:active,.tap:active,.card-hover:active{transform:none}}
+
+  /* ══════════════════════════════════════════════════════════════════════
+     SYSTÈME D'ANIMATION PREMIUM — inspiré Apple/iOS : ouverture depuis
+     l'élément d'origine (léger zoom + fondu + mouvement doux), fermeture
+     inverse, backdrop flouté progressif, menus contextuels avec pop, cartes
+     qui se réorganisent en douceur. Courbe "spring" cohérente partout :
+     cubic-bezier(.34,1.56,.64,1) = léger rebond élastique, jamais exagéré.
+     ══════════════════════════════════════════════════════════════════════ */
+  :root{ --moyo-spring: cubic-bezier(.34,1.56,.64,1); --moyo-ease: cubic-bezier(.22,.61,.36,1); }
+
+  /* Fond flouté progressif derrière un modal/menu — remplace les backgrounds
+     "rgba(0,0,0,X)" fixes par une apparition douce du voile + flou. */
+  @keyframes moyoBackdropIn{ from{ opacity:0; backdrop-filter:blur(0px); -webkit-backdrop-filter:blur(0px);} to{ opacity:1; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);} }
+  @keyframes moyoBackdropOut{ from{ opacity:1; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);} to{ opacity:0; backdrop-filter:blur(0px); -webkit-backdrop-filter:blur(0px);} }
+  .moyo-backdrop{ animation:moyoBackdropIn .28s var(--moyo-ease) both; }
+  .moyo-backdrop.leaving{ animation:moyoBackdropOut .22s var(--moyo-ease) both; }
+
+  /* Carte de modal centré (confirmation, fiche profil, etc.) : léger zoom +
+     fondu + petit mouvement vers le haut, avec un soupçon d'élasticité. */
+  @keyframes moyoCardIn{ from{ opacity:0; transform:scale(.92) translateY(10px);} to{ opacity:1; transform:scale(1) translateY(0);} }
+  @keyframes moyoCardOut{ from{ opacity:1; transform:scale(1) translateY(0);} to{ opacity:0; transform:scale(.94) translateY(6px);} }
+  .moyo-card-in{ animation:moyoCardIn .32s var(--moyo-spring) both; }
+  .moyo-card-out{ animation:moyoCardOut .18s var(--moyo-ease) both; }
+
+  /* Tiroir du bas (bottom sheet) : glisse depuis le bas avec un petit rebond
+     élastique en fin de course, plus vivant qu'un simple slideUp linéaire. */
+  @keyframes moyoSheetIn{ from{ transform:translateY(100%);} 60%{ transform:translateY(-2%);} to{ transform:translateY(0);} }
+  @keyframes moyoSheetOut{ from{ transform:translateY(0); opacity:1;} to{ transform:translateY(100%); opacity:.4;} }
+  .moyo-sheet-in{ animation:moyoSheetIn .38s var(--moyo-spring) both; }
+  .moyo-sheet-out{ animation:moyoSheetOut .24s var(--moyo-ease) both; }
+
+  /* Menu contextuel (clic sur "⋮" ou petite flèche d'un message) : petit
+     zoom + fondu + translation depuis le point d'origine, jamais un bloc
+     qui apparaît sèchement. */
+  @keyframes moyoMenuIn{ from{ opacity:0; transform:scale(.9) translateY(6px);} to{ opacity:1; transform:scale(1) translateY(0);} }
+  .moyo-menu-in{ animation:moyoMenuIn .2s var(--moyo-spring) both; transform-origin:top center; }
+
+  /* Retour tactile des boutons : transition fluide, rapide, jamais sèche
+     (le scale existe déjà globalement — on ajoute juste la fluidité de
+     l'aller-retour, cohérente avec le reste du système). */
+  .moyo-tactile{ transition:transform .15s var(--moyo-spring); }
+  .moyo-tactile:active{ transform:scale(.96); }
+
+  /* Réorganisation douce des listes/cartes quand l'ordre change (favoris,
+     nouveau message qui remonte une conversation, etc.) */
+  .moyo-list-item{ transition:transform .3s var(--moyo-ease), opacity .2s ease; }
+
+  @media(prefers-reduced-motion:reduce){
+    .skeleton{animation:none}.page-anim{animation:none}.conv-enter,.conv-leave{animation:none}
+    button:active,.tap:active,.card-hover:active{transform:none}
+    .moyo-backdrop,.moyo-backdrop.leaving,.moyo-card-in,.moyo-card-out,.moyo-sheet-in,.moyo-sheet-out,.moyo-menu-in{animation:none}
+    .moyo-tactile:active{transform:none}
+  }
   /* ── Chat textarea : comportement naturel iOS/Android ── */
   .chat-textarea {
     -webkit-appearance: none;
@@ -5920,7 +5972,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       )}
     </div>
   </div>
-</div>}{matchPop && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div style={{ textAlign: "center", color: "#fff" }}><div style={{ marginBottom: 16 }}><svg width="64" height="64" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>{modalTexts.matchTitle}</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>{modalTexts.matchSubtitle.replace("{name}", matchPop.name)}</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
+</div>}{matchPop && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div className="moyo-card-in" style={{ textAlign: "center", color: "#fff" }}><div style={{ marginBottom: 16 }}><svg width="64" height="64" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>{modalTexts.matchTitle}</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>{modalTexts.matchSubtitle.replace("{name}", matchPop.name)}</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
     {/* ── Modal confirmation delike (vue Découvrir) ── */}
     {confirmUnlike && (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -10712,8 +10764,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 
       {/* Menu contextuel style WhatsApp */}
       {contextMenu && (
-        <div onClick={() => setContextMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div onClick={e => e.stopPropagation()} style={{ width: "88%", maxWidth: 340, userSelect: "none", WebkitUserSelect: "none" }}>
+        <div onClick={() => setContextMenu(null)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div onClick={e => e.stopPropagation()} className="moyo-menu-in" style={{ width: "88%", maxWidth: 340, userSelect: "none", WebkitUserSelect: "none" }}>
             {/* Barre emojis réactions */}
             <div style={{ background: G.blanc, borderRadius: 50, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", marginBottom: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
               {["👍","❤️","😂","😮","😢","🙏","🥳","😱","😍","😘","🫣","🫢","💔"].map(emoji => {
@@ -11276,8 +11328,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     )}
     {/* Tiroir des statuts : ouvert depuis la petite pile dans le bandeau, croix pour fermer */}
     {showStatusSheet && (
-      <div onClick={() => setShowStatusSheet(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 640, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, padding: "10px 16px 24px", maxHeight: "70vh", overflowY: "auto" }}>
+      <div onClick={() => setShowStatusSheet(false)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 640, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, padding: "10px 16px 24px", maxHeight: "70vh", overflowY: "auto" }}>
           <div style={{ width: 36, height: 4, background: G.gris, borderRadius: 50, margin: "0 auto 14px" }} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Statuts</div>
@@ -11327,8 +11379,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     {/* Demande d'adhésion : contrairement aux conversations privées, ce groupe rassemble tout le
         monde — on prévient explicitement avant d'y entrer, geste volontaire requis. */}
     {showGroupJoinModal && (
-      <div onClick={() => setShowGroupJoinModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 630, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
-        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "28px 24px 22px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+      <div onClick={() => setShowGroupJoinModal(false)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 630, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+        <div onClick={e => e.stopPropagation()} className="moyo-card-in" style={{ background: G.blanc, borderRadius: 22, padding: "28px 24px 22px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
           <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg, ${G.or}, ${G.rouge})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
@@ -11787,8 +11839,8 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
 
       {/* Menu contextuel d'un message : réagir, répondre, copier, supprimer */}
       {contextMenu && (
-        <div onClick={() => setContextMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 700, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: "88%", maxWidth: 340, userSelect: "none", WebkitUserSelect: "none" }}>
+        <div onClick={() => setContextMenu(null)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, zIndex: 700, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} className="moyo-menu-in" style={{ width: "88%", maxWidth: 340, userSelect: "none", WebkitUserSelect: "none" }}>
             {/* Barre emojis réactions */}
             <div style={{ background: G.blanc, borderRadius: 50, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
               {["👍","❤️","😂","😮","😢","🙏","🥳","😱","😍","😘","🫣","🫢","💔"].map(emoji => {
@@ -11854,8 +11906,8 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
 
       {/* Membres & modération */}
       {showMembers && (
-        <div onClick={() => setShowMembers(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 620, display: "flex", alignItems: "flex-end" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxHeight: "78vh", overflowY: "auto", padding: "20px 16px 30px" }}>
+        <div onClick={() => setShowMembers(false)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 620, display: "flex", alignItems: "flex-end" }}>
+          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxHeight: "78vh", overflowY: "auto", padding: "20px 16px 30px" }}>
             {isModerator && members.filter(m => m.status === "pending").length > 0 && (
               <>
                 <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.rouge, marginBottom: 4 }}>Demandes en attente ({members.filter(m => m.status === "pending").length})</h3>
@@ -11919,8 +11971,8 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
 
       {/* Fiche profil (clic sur photo/nom dans un message) : liker, ou écrire en privé si déjà match */}
       {profileView && (
-        <div onClick={() => setProfileView(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 720, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, overflow: "hidden" }}>
+        <div onClick={() => setProfileView(null)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 720, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, overflow: "hidden" }}>
             <div style={{ position: "relative", width: "100%", height: 320, background: "#eee" }}>
               {profileView.photo_url ? <img src={profileView.photo_url} alt={profileView.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
               <div onClick={() => setProfileView(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.45)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff" }}>
@@ -11948,8 +12000,8 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
       {/* Avertissement même sexe (comme Découvrir) : uniquement sur le "like", jamais sur les
           messages/réactions du groupe, qui restent libres pour tout le monde. */}
       {showSameGenderWarn && (
-        <div onClick={() => setShowSameGenderWarn(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 730, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, padding: "28px 24px 22px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+        <div onClick={() => setShowSameGenderWarn(false)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 730, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+          <div onClick={e => e.stopPropagation()} className="moyo-card-in" style={{ background: G.blanc, borderRadius: 22, padding: "28px 24px 22px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
             <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGender === "Homme" ? "🕺" : "💃"}</div>
             <p style={{ fontSize: "0.95rem", fontWeight: 700, color: G.brun, margin: "0 0 20px" }}>
               {myGender === "Homme" ? "Eh frère, reste du bon côté ! 😂" : "Eh sœur, reste du bon côté ! 😂"}
@@ -11959,8 +12011,8 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
         </div>
       )}
       {showWelcome && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 800, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}>
-          <div style={{ textAlign: "center", color: "#fff" }}>
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 800, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}>
+          <div className="moyo-card-in" style={{ textAlign: "center", color: "#fff" }}>
             <div style={{ marginBottom: 16 }}>
               <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
