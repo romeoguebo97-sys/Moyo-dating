@@ -404,6 +404,12 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
       if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px;line-height:0.82"><span style="display:block">Moyo</span><span style="display:block;color:#1a1a1a;font-size:0.48em;font-weight:800;margin-top:0.06em">Dating</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
     }
   }
+  // ── Signal que les réglages (FEATURE_ASSISTANT etc.) sont enfin à jour — ce fetch tourne en
+  //    dehors de React, donc les composants ne peuvent pas savoir "automatiquement" quand c'est
+  //    fini. Sans ce signal, un calcul fait AVANT que ce chargement se termine (typiquement pour
+  //    un compte tout juste créé, où tout démarre en même temps) reste bloqué sur les valeurs par
+  //    défaut pour toujours. ──
+  window.dispatchEvent(new CustomEvent("moyo-settings-loaded"));
 }).catch(() => {});
 
 export const SUPPORT_TEAM_ID = "moyo-support-team";
@@ -4566,11 +4572,26 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
 // Un seul mode actif à la fois (comportement type radio, via 3 switches).
 
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true, statusStackData }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; statusStackData?: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; hasNew: boolean } | null; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true, statusStackData }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; statusStackData?: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
   const [showBot, setShowBot] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // ── Hauteur réelle de l'en-tête mobile, mesurée en JS : évite de dépendre d'une valeur
+  //    fixe (45px) qui casse dès que le contenu de l'en-tête change de taille (ex: pile de
+  //    statuts agrandie). Utilisée ici pour l'espacement du contenu, et lue depuis Messages
+  //    (via l'attribut data-moyo-header) pour positionner son propre bandeau juste en dessous. ──
+  const mobileHeaderRef = useRef<HTMLDivElement | null>(null);
+  const [mobileHeaderHeight, setMobileHeaderHeight] = useState(45);
+  useEffect(() => {
+    const el = mobileHeaderRef.current;
+    if (!el) return;
+    const measure = () => setMobileHeaderHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [tab]);
 
   // Écoute les événements fullscreen émis par Discover
   useEffect(() => {
@@ -4748,7 +4769,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     ) : (
       <>
         {/* Header mobile */}
-        <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
+        <div ref={mobileHeaderRef} data-moyo-header style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700, lineHeight: 0.82 }}>
             <div style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</div>
             <div style={{ color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
@@ -4756,22 +4777,22 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
             {tab === "messages" ? (
               statusStackData && FEATURE_STATUSES ? (
-                <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-status-sheet"))} style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 2, position: "relative" }}>
-                  {statusStackData.hasNew && (
-                    <div style={{ position: "absolute", top: -3, right: -3, width: 12, height: 12, borderRadius: "50%", background: G.rouge, border: `2px solid ${G.blanc}`, zIndex: 5 }} />
+                <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-status-sheet"))} style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 3, position: "relative" }}>
+                  {statusStackData.newCount > 0 && (
+                    <span style={{ position: "absolute", top: -5, right: -5, minWidth: 17, height: 17, padding: "0 4px", borderRadius: 50, background: G.rouge, color: "#fff", fontSize: "0.6rem", fontWeight: 800, border: `2px solid ${G.blanc}`, zIndex: 5, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>{statusStackData.newCount > 9 ? "9+" : statusStackData.newCount}</span>
                   )}
                   <div style={{ display: "flex", alignItems: "center" }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.85rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}`, zIndex: 4, position: "relative", boxShadow: "0 2px 6px rgba(192,57,43,0.35)" }}>+</div>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "1.05rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}`, zIndex: 4, position: "relative", boxShadow: "0 2px 8px rgba(192,57,43,0.35)" }}>+</div>
                     {statusStackData.groups.slice(0, 3).map((g, idx) => (
-                      <div key={g.userId} style={{ marginLeft: -11, zIndex: 3 - idx, position: "relative" }}>
-                        <Avatar url={g.photo_url} gender={g.gender} size={30} premium={false} />
+                      <div key={g.userId} style={{ marginLeft: -13, zIndex: 3 - idx, position: "relative" }}>
+                        <Avatar url={g.photo_url} gender={g.gender} size={38} premium={false} />
                       </div>
                     ))}
                     {statusStackData.count > 3 && (
-                      <div style={{ marginLeft: -11, width: 30, height: 30, borderRadius: "50%", background: G.brun, color: "#fff", fontSize: "0.62rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}` }}>+{statusStackData.count - 3}</div>
+                      <div style={{ marginLeft: -13, width: 38, height: 38, borderRadius: "50%", background: G.brun, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}` }}>+{statusStackData.count - 3}</div>
                     )}
                   </div>
-                  <span style={{ fontSize: "0.62rem", fontWeight: 800, color: G.rouge, letterSpacing: "0.02em" }}>Statuts</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 800, color: G.rouge, letterSpacing: "0.02em" }}>Statuts</span>
                 </div>
               ) : <div />
             ) : (
@@ -4779,7 +4800,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             )}
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, background: tab === "messages" ? G.blanc : undefined, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
+        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: mobileHeaderHeight, background: tab === "messages" ? G.blanc : undefined, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
         {/* Footer mobile */}
         <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "5px 4px 13px", zIndex: 50, visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           {tabs.map(t => {
@@ -7958,7 +7979,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
 
 type ReportRowLike = { id?: string; reason: string; reporter_id: string; reported_id: string | null; status?: string; created_at?: string };
 
-export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; hasNew: boolean } | null) => void }) {
+export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null) => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   const [showGroup, setShowGroup] = useState(false); // Groupe Premium : écran séparé, indépendant de la logique 1-à-1
@@ -9740,11 +9761,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     const lastSeenKey = `moyo_status_last_seen_${auth.userId}`;
     let lastSeen = 0;
     try { lastSeen = Number(localStorage.getItem(lastSeenKey) || 0); } catch {}
-    const newestOther = statusGroups.reduce((max, g) => Math.max(max, new Date(g.first.created_at || 0).getTime()), 0);
+    // Nombre de personnes ayant posté un statut plus récent que la dernière consultation
+    // (on regarde le plus récent élément de chaque groupe, pas le plus ancien).
+    const newCount = statusGroups.filter(g => {
+      const mostRecent = g.items[g.items.length - 1];
+      return new Date(mostRecent?.created_at || 0).getTime() > lastSeen;
+    }).length;
     onStatusStackChange?.({
       count: statusGroups.length + (myStatuses.length ? 1 : 0),
       groups: statusGroups.slice(0, 3).map(g => ({ userId: g.userId, photo_url: g.first.profile?.photo_url, gender: g.first.profile?.gender })),
-      hasNew: newestOther > lastSeen,
+      newCount,
     });
     return () => onStatusStackChange?.(null);
   }, [statusGroups, myStatuses.length]);
@@ -9757,7 +9783,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       onStatusStackChange?.({
         count: statusGroups.length + (myStatuses.length ? 1 : 0),
         groups: statusGroups.slice(0, 3).map(g => ({ userId: g.userId, photo_url: g.first.profile?.photo_url, gender: g.first.profile?.gender })),
-        hasNew: false,
+        newCount: 0,
       });
     };
     window.addEventListener("moyo-open-status-sheet", handler);
@@ -9770,6 +9796,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   //    le début de la liste, qui reste la SEULE chose à défiler. ──
   const msgBannerRef = useRef<HTMLDivElement | null>(null);
   const [msgBannerHeight, setMsgBannerHeight] = useState(0);
+  const [msgHeaderHeight, setMsgHeaderHeight] = useState(45);
+  useEffect(() => {
+    const el = document.querySelector("[data-moyo-header]") as HTMLElement | null;
+    if (!el) return;
+    const measure = () => setMsgHeaderHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => {
     const el = msgBannerRef.current;
     if (!el) return;
@@ -9785,10 +9821,10 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc, paddingTop: isWideMsg ? 0 : msgBannerHeight }}>
     {/* ── Bandeau (statuts + onglets) : position:fixed sur mobile (jamais scrollable, quel que soit
         l'appareil), position:sticky sur desktop (colonne latérale déjà bornée, jamais posé problème). ── */}
-    <div ref={msgBannerRef} style={isWideMsg ? { position: "sticky", top: 0, zIndex: 5, background: G.blanc } : { position: "fixed", top: 45, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 90, background: G.blanc }}>
+    <div ref={msgBannerRef} style={isWideMsg ? { position: "sticky", top: 0, zIndex: 5, background: G.blanc } : { position: "fixed", top: msgHeaderHeight, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 90, background: G.blanc }}>
     <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     {FEATURE_GROUP_PREMIUM && (
-    <div className="moyo-tactile" style={{ display: "flex", alignItems: "center", padding: "10px 12px", background: G.blanc, gap: 8 }}>
+    <div className="moyo-tactile" style={{ display: "flex", alignItems: "center", padding: "4px 12px 8px", background: G.blanc, gap: 8 }}>
       <div onClick={() => setShowGroup(false)} className="moyo-tactile" style={{
         flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
         padding: "11px 0", cursor: "pointer",
@@ -9810,9 +9846,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={showGroup ? "#fff" : "#8a8378"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#8a8378" }}>Groupe</span>
-        {groupPendingCount > 0 && (
-          <span style={{ position: "absolute", top: -5, right: 10, background: G.or, color: "#fff", fontSize: "0.58rem", fontWeight: 800, borderRadius: 50, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)", zIndex: 3 }}>{groupPendingCount > 99 ? "99+" : groupPendingCount}</span>
-        )}
       </div>
     </div>
     )}
@@ -14253,13 +14286,21 @@ export default function App() {
   const [assistantEnabled, setAssistantEnabled] = useState(true);
   useEffect(() => {
     if (!auth) return;
-    try {
-      const stored = localStorage.getItem(`moyo_assistant_${auth.userId}`);
-      // Si la personne n'a jamais touché son propre interrupteur, on suit le réglage général (admin).
-      // Si elle a fait un choix explicite (une fois ou l'autre), ce choix prime toujours, même si
-      // l'admin désactive l'assistant pour tout le monde — chacun garde la main sur son propre écran.
-      setAssistantEnabled(stored === null ? FEATURE_ASSISTANT : stored !== "0");
-    } catch {}
+    const recompute = () => {
+      try {
+        const stored = localStorage.getItem(`moyo_assistant_${auth.userId}`);
+        // Si la personne n'a jamais touché son propre interrupteur, on suit le réglage général (admin).
+        // Si elle a fait un choix explicite (une fois ou l'autre), ce choix prime toujours, même si
+        // l'admin désactive l'assistant pour tout le monde — chacun garde la main sur son propre écran.
+        setAssistantEnabled(stored === null ? FEATURE_ASSISTANT : stored !== "0");
+      } catch {}
+    };
+    recompute();
+    // Les réglages (FEATURE_ASSISTANT) se chargent en tâche de fond, en dehors de React — pour un
+    // compte tout juste créé, ce chargement peut encore être en cours au moment du premier calcul
+    // ci-dessus. On réécoute donc ce signal pour corriger dès que la vraie valeur est connue.
+    window.addEventListener("moyo-settings-loaded", recompute);
+    return () => window.removeEventListener("moyo-settings-loaded", recompute);
   }, [auth?.userId]);
   const toggleAssistant = () => {
     setAssistantEnabled(prev => {
@@ -14301,7 +14342,7 @@ export default function App() {
   // ── Pile de statuts affichée dans l'en-tête (remplace Guide sur l'onglet Messages) : Messages
   //    remplit ces données via callback, AppShell les affiche — aucun portail/ReactDOM nécessaire,
   //    juste une donnée transmise normalement de composant à composant. ──
-  const [statusStackData, setStatusStackData] = useState<{ count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; hasNew: boolean } | null>(null);
+  const [statusStackData, setStatusStackData] = useState<{ count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null>(null);
   const [adminBadgeCount, setAdminBadgeCount] = useState(0);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showAdminConfig, setShowAdminConfig] = useState(false);
