@@ -4690,12 +4690,9 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
       <>
         {/* Header mobile */}
         <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
-          <div style={{ marginLeft: 4, display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ fontSize: "1.6rem", color: G.rouge, fontWeight: 700, lineHeight: 0.82 }}>
-              <div style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</div>
-              <div style={{ color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
-            </div>
-            {auth.isAdmin && <span style={{ fontSize: "0.5rem", background: "lime", color: "#000", padding: "2px 6px", borderRadius: 6 }}>TEST-V11</span>}
+          <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700, lineHeight: 0.82 }}>
+            <div style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</div>
+            <div style={{ color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
             <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#333", background: "white", borderRadius: 50, padding: "5px 14px", cursor: "pointer", border: "1.5px solid #ddd", letterSpacing: "0.02em" }}>Guide</div>
@@ -4732,7 +4729,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     {/* Bot flottant — masqué quand une conversation est ouverte pour ne pas surcharger
         l'écran de chat (la flèche "descendre" prend sa place). L'Assistant reste accessible
         depuis le bouton dédié dans le header/menu Découvrir. */}
-    {FEATURE_ASSISTANT && assistantEnabled && !isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
+    {assistantEnabled && !isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
     {showGuide && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
       <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
         {/* Header */}
@@ -11596,7 +11593,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
               <div style={{ display: "flex", gap: 8, alignItems: "flex-end", maxWidth: "82%", flexDirection: isMine ? "row-reverse" : "row" }}>
                 {!isMine && <div onClick={() => openProfileView(m.sender_id)} style={{ cursor: "pointer" }}><Avatar url={prof?.photo_url} gender={prof?.gender} size={30} /></div>}
                 <div style={{ position: "relative" }}>
-                  <div style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? "#fff" : G.brun, borderRadius: 16, padding: isImg ? 4 : "9px 13px", paddingRight: isImg ? 4 : 30, fontSize: "0.88rem", lineHeight: 1.4, boxShadow: "0 1px 2px rgba(0,0,0,0.06)", wordBreak: "break-word", position: "relative" }}>
+                  <div style={{ background: isMine ? G.rouge : G.blanc, color: isMine ? "#fff" : G.brun, borderRadius: 16, padding: isImg ? 4 : "9px 13px", paddingRight: isImg ? 4 : 30, fontSize: "0.88rem", lineHeight: 1.4, boxShadow: "0 1px 2px rgba(0,0,0,0.06)", wordBreak: "break-word", whiteSpace: "pre-wrap", position: "relative" }}>
                     {/* Citation en réponse */}
                     {replyMatch && (
                       <div style={{ background: isMine ? "rgba(0,0,0,0.18)" : "rgba(192,57,43,0.07)", borderRadius: 8, marginBottom: 6, overflow: "hidden", display: "flex" }}>
@@ -14044,7 +14041,13 @@ export default function App() {
   const [assistantEnabled, setAssistantEnabled] = useState(true);
   useEffect(() => {
     if (!auth) return;
-    try { setAssistantEnabled(localStorage.getItem(`moyo_assistant_${auth.userId}`) !== "0"); } catch {}
+    try {
+      const stored = localStorage.getItem(`moyo_assistant_${auth.userId}`);
+      // Si la personne n'a jamais touché son propre interrupteur, on suit le réglage général (admin).
+      // Si elle a fait un choix explicite (une fois ou l'autre), ce choix prime toujours, même si
+      // l'admin désactive l'assistant pour tout le monde — chacun garde la main sur son propre écran.
+      setAssistantEnabled(stored === null ? FEATURE_ASSISTANT : stored !== "0");
+    } catch {}
   }, [auth?.userId]);
   const toggleAssistant = () => {
     setAssistantEnabled(prev => {
