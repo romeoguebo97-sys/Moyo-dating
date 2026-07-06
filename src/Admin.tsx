@@ -1969,6 +1969,7 @@ function getPremiumCountdown(approvedAt?: string, amount?: number): { label: str
 }
 function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onReject, onDelete, onViewProfile }: { p: PaymentRequest; isPending: boolean; isApproved: boolean; isRejected: boolean; onActivate: (p: PaymentRequest) => void; onReject: (p: PaymentRequest) => void; onDelete: (p: PaymentRequest) => void; onViewProfile: (userId: string) => void }) {
   const [adminRef, setAdminRef] = useState("");
+  const [manualClientRef, setManualClientRef] = useState("");
   const [verified, setVerified] = useState<null | "match" | "mismatch">(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showScreenshot, setShowScreenshot] = useState(false);
@@ -1976,7 +1977,10 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
   // sous la forme "[capture] https://...png" — on l'affiche joliment au lieu du lien brut.
   const screenshotMatch = p.tx_ref.match(/^\[capture\]\s*(https?:\/\/\S+)/);
   const screenshotUrl = screenshotMatch ? screenshotMatch[1] : null;
-  const match = adminRef.trim().toLowerCase() === p.tx_ref.trim().toLowerCase();
+  // Pour une capture d'écran, il n'y a pas de texte à comparer automatiquement : l'admin lit le
+  // numéro affiché dans l'image et le saisit lui-même dans "Réf. client", exceptionnellement.
+  const clientRefForMatch = screenshotUrl ? manualClientRef : p.tx_ref;
+  const match = adminRef.trim().toLowerCase() === clientRefForMatch.trim().toLowerCase();
   const countdown = getPremiumCountdown(p.approved_at, p.amount);
   const isExpired = isApproved && countdown.expired;
   return (
@@ -1986,6 +1990,11 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
           <div onClick={() => onViewProfile(p.user_id)} title="Voir le profil" style={{ width: 36, height: 36, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", border: "2px solid transparent" }} onMouseOver={e => (e.currentTarget as HTMLDivElement).style.borderColor = G.rouge} onMouseOut={e => (e.currentTarget as HTMLDivElement).style.borderColor = "transparent"}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
+          {screenshotUrl && (
+            <div onClick={() => setShowScreenshot(true)} title="Voir la capture d'écran envoyée" style={{ width: 36, height: 36, borderRadius: 8, overflow: "hidden", flexShrink: 0, cursor: "pointer", border: `1.5px solid ${G.rouge}` }}>
+              <img src={screenshotUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+          )}
           <div>
             <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, display: "flex", alignItems: "center", gap: 6 }}>
               {p.operator === "MTN"
@@ -2012,12 +2021,9 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
       </div>
       <div style={{ display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row", gap: 8, marginBottom: isPending ? 10 : 0 }}>
         <div style={{ flex: 1, background: G.creme, borderRadius: 8, padding: "8px 10px" }}>
-          <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. client</div>
+          <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. client{screenshotUrl ? " (lue sur la capture)" : ""}</div>
           {screenshotUrl ? (
-            <div onClick={() => setShowScreenshot(true)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: G.rouge, fontWeight: 700, fontSize: "0.82rem" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              📷 Capture d'écran — voir
-            </div>
+            <input value={manualClientRef} onChange={e => { setManualClientRef(e.target.value); setVerified(null); }} placeholder="Recopie le numéro vu sur la capture…" style={{ width: "100%", border: "none", background: "transparent", fontSize: "0.82rem", fontWeight: 700, outline: "none", color: G.brun, letterSpacing: 0.5, fontFamily: "inherit", padding: 0 }} />
           ) : (
             <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#888", letterSpacing: 0.5, wordBreak: "break-all" }}>{p.tx_ref}</div>
           )}
@@ -2033,10 +2039,10 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
       {verified === "mismatch" && <div style={{ background: "rgba(231,76,60,0.07)", border: "1px solid rgba(231,76,60,0.25)", borderRadius: 8, padding: "7px 12px", marginBottom: 10, fontSize: "0.78rem", fontWeight: 600, color: "#e74c3c" }}>❌ Les références ne correspondent pas</div>}
       {isPending && (
         <div style={{ display: "flex", gap: 8 }}>
-          {verified === null && <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim()} style={{ flex: 1, background: adminRef.trim() ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: adminRef.trim() ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: adminRef.trim() ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>}
+          {verified === null && <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim() || (!!screenshotUrl && !manualClientRef.trim())} style={{ flex: 1, background: (adminRef.trim() && (!screenshotUrl || manualClientRef.trim())) ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: (adminRef.trim() && (!screenshotUrl || manualClientRef.trim())) ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: (adminRef.trim() && (!screenshotUrl || manualClientRef.trim())) ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>}
           {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>{p.kind === "appointment" ? "✓ Valider le paiement RDV" : "✓ Activer Premium"}</button>}
           {verified === "mismatch" && <button onClick={() => onReject(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter & notifier</button>}
-          {verified !== null && <button onClick={() => { setVerified(null); setAdminRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>}
+          {verified !== null && <button onClick={() => { setVerified(null); setAdminRef(""); setManualClientRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>}
         </div>
       )}
       {confirmDelete && (
@@ -2072,10 +2078,15 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
         </div>
       )}
       {showScreenshot && screenshotUrl && (
-        <div onClick={() => setShowScreenshot(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, cursor: "pointer" }}>
-          <img src={screenshotUrl} style={{ maxWidth: "94%", maxHeight: "88vh", objectFit: "contain", borderRadius: 8 }} />
-          <div onClick={() => setShowScreenshot(false)} style={{ position: "absolute", top: 20, right: 20, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <div onClick={() => setShowScreenshot(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 16, padding: 12, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun }}>Capture d'écran envoyée</div>
+              <div onClick={() => setShowScreenshot(false)} style={{ cursor: "pointer", width: 26, height: 26, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
+            </div>
+            <img src={screenshotUrl} style={{ width: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: 8, display: "block" }} />
           </div>
         </div>
       )}
