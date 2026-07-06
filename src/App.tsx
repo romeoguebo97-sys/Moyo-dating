@@ -10215,37 +10215,19 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   }, [statusGroups, myStatuses.length]);
 
   // ── Bandeau (statuts + onglets) en position:fixed sur mobile — jamais affecté par un scroll,
-  //    contrairement à sticky qui s'est montré peu fiable sur certains iPhone. Sa hauteur réelle est
-  //    mesurée en JS (elle varie selon FEATURE_STATUSES/FEATURE_GROUP_PREMIUM) pour décaler d'autant
-  //    le début de la liste, qui reste la SEULE chose à défiler. ──
+  //    contrairement à sticky, qui avait posé problème avant que les vrais soucis de structure de
+  //    scroll (double zone de défilement) ne soient corrigés. Maintenant que c'est réglé, sticky
+  //    est la solution la plus robuste : le navigateur garantit lui-même le bon comportement, sans
+  //    calcul de hauteur à synchroniser manuellement en JS. ──
   const msgBannerRef = useRef<HTMLDivElement | null>(null);
-  const [msgBannerHeight, setMsgBannerHeight] = useState(0);
-  const [msgHeaderHeight, setMsgHeaderHeight] = useState(45);
-  useEffect(() => {
-    const el = document.querySelector("[data-moyo-header]") as HTMLElement | null;
-    if (!el) return;
-    const measure = () => setMsgHeaderHeight(el.offsetHeight);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  useEffect(() => {
-    const el = msgBannerRef.current;
-    if (!el) return;
-    const measure = () => setMsgBannerHeight(el.offsetHeight);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [isWideMsg]);
 
   // ── Liste des conversations (commun mobile + desktop) ──
   const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0, background: G.blanc }}>
-    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc, paddingTop: isWideMsg ? 0 : msgBannerHeight }}>
-    {/* ── Bandeau (statuts + onglets) : position:fixed sur mobile (jamais scrollable, quel que soit
-        l'appareil), position:sticky sur desktop (colonne latérale déjà bornée, jamais posé problème). ── */}
-    <div ref={msgBannerRef} style={isWideMsg ? { position: "sticky", top: 0, zIndex: 5, background: G.blanc } : { position: "fixed", top: msgHeaderHeight, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 90, background: G.blanc }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc }}>
+    {/* ── Bandeau (statuts + onglets) : position:sticky à l'intérieur de la MÊME zone de défilement
+        que la liste — jamais de calcul de hauteur séparé à synchroniser, le navigateur garantit
+        lui-même qu'il reste collé en haut, quel que soit l'appareil. ── */}
+    <div ref={msgBannerRef} style={{ position: "sticky", top: 0, zIndex: 5, background: G.blanc }}>
     <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     {FEATURE_GROUP_PREMIUM && (
     <div className="moyo-tactile" style={{ display: "flex", alignItems: "center", padding: "4px 12px 8px", background: G.blanc, gap: 8 }}>
