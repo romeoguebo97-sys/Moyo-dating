@@ -674,6 +674,9 @@ export function AdminDesktopPage() {
             {configTab === "tarifs" && <OffCanvasSection title="Formules Premium">
               <PremiumPlansConfig auth={auth!} />
             </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Écran Premium — A/B testing">
+              <PremiumVariantConfig auth={auth!} />
+            </OffCanvasSection>}
             {configTab === "securite" && <OffCanvasSection title="Mode maintenance">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "rgba(231,76,60,0.07)", borderRadius: 12, border: "1px solid rgba(231,76,60,0.25)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
