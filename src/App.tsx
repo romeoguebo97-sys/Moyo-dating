@@ -261,6 +261,8 @@ export let BLOCK_SAME_GENDER = true;
 let FEATURE_STATUSES = true;
 let FEATURE_GIFT_PREMIUM = true;
 let FEATURE_ASSISTANT = true;
+let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
+export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
 let FEATURE_GROUP_PHOTOS = true;
 let APPOINTMENTS_ENABLED = true;
@@ -321,7 +323,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_group_premium,feature_group_photos,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_group_premium,feature_group_photos,premium_screen_variant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -340,6 +342,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
   if (map["appointment_physical_price"]) APPOINTMENT_PHYSICAL_PRICE = parseInt(map["appointment_physical_price"]) || 10000;
   if (map["feature_assistant"] !== undefined) FEATURE_ASSISTANT = map["feature_assistant"] !== "false";
+  if (map["premium_screen_variant"] === "b" || map["premium_screen_variant"] === "a") PREMIUM_SCREEN_VARIANT = map["premium_screen_variant"];
   if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
   if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
   if (map["pay_mtn_number"]) PAY_MTN_NUMBER = map["pay_mtn_number"];
@@ -1754,7 +1757,15 @@ function UploadRingOverlay({ active, size, ringColor, children }: { active: bool
 }
 
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
-  const [step, setStep] = useState<"offer" | "mtn" | "airtel">("offer");
+  const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3">(PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer");
+  // ── Parcours guidé Version B (3 étapes) : opérateur choisi à l'étape 2, mode de preuve
+  //    (numéro ID ou capture d'écran) choisi à l'étape 3. ──
+  const [b2Operator, setB2Operator] = useState<"mtn" | "airtel" | "cb" | null>(null);
+  const [proofMode, setProofMode] = useState<"id" | "screenshot">("id");
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [screenshotUploading, setScreenshotUploading] = useState(false);
+  const [screenshotSent, setScreenshotSent] = useState(false);
   const PREMIUM_PLANS = [
     PLAN_WEEK_ENABLED && { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA, days: PREMIUM_DAYS_WEEK },
     PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: true },
@@ -1856,7 +1867,248 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   const mtnLogo = (h = 18) => <svg viewBox="0 0 120 60" width={h * 2} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="8" /><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="5" /><text x="60" y="39" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="24" fill="#1a1a1a">MTN</text></svg>;
   const airtelLogo = (h = 22) => <svg viewBox="0 0 80 60" width={h * 1.4} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="80" height="60" fill="#E40000" rx="8" /><path d="M14 40 Q9 18 24 12 Q39 6 41 21 Q43 35 30 37 Q17 39 15 31" fill="white" stroke="none" /><text x="46" y="30" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="white">airtel</text><text x="46" y="46" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="12" fill="#fff">money</text></svg>;
 
-  // ════════ ÉCRAN 1 : OFFRE ════════
+  // ════════ VERSION B — ÉTAPE 1/3 : CHOIX DE LA FORMULE (épuré, aucun chiffre annexe) ════════
+  if (step === "b1") return (
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 1 SUR 3</div>
+            <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </div>
+          </div>
+          <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+            <svg width="27" height="27" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
+          </div>
+          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#1a1a2e", marginBottom: 6 }}>Choisis ta formule</div>
+          <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>Combien de temps veux-tu profiter de Premium ?</div>
+        </div>
+        <div style={{ flex: 1, padding: "0 20px" }}>
+          {PREMIUM_PLANS.map(pl => {
+            const sel = pl.id === planId;
+            return (
+              <div key={pl.id} onClick={() => setPlanId(pl.id)} className="moyo-tactile" style={{ position: "relative", cursor: "pointer", background: sel ? "#FBF1D8" : G.blanc, border: `2px solid ${sel ? gold : "#ece9e2"}`, borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: sel ? "0 4px 14px rgba(212,168,67,0.28)" : "0 1px 4px rgba(0,0,0,0.04)", transition: "all 0.15s" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "#1a1a2e" }}>{pl.label}</span>
+                    {pl.popular && <span style={{ background: gold, color: "#fff", fontSize: "0.55rem", fontWeight: 800, padding: "2px 8px", borderRadius: 50 }}>POPULAIRE</span>}
+                    {pl.badge && <span style={{ background: G.vert, color: "#fff", fontSize: "0.55rem", fontWeight: 800, padding: "2px 8px", borderRadius: 50 }}>{pl.badge}</span>}
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "#9a9a9a", marginTop: 3 }}>{pl.amount.toLocaleString("fr-FR")} FCFA</div>
+                </div>
+                <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid ${sel ? gold : "#ddd"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {sel && <div style={{ width: 13, height: 13, borderRadius: "50%", background: gold }} />}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ padding: "16px 20px", flexShrink: 0 }}>
+          <button onClick={() => setStep("b2")} style={{ width: "100%", background: gold, color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: "pointer" }}>Suivant →</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ════════ VERSION B — ÉTAPE 2/3 : CHOIX DE L'OPÉRATEUR (simple, direct) ════════
+  if (step === "b2") return (
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+            <div onClick={() => setStep("b1")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+            </div>
+            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 2 SUR 3</div>
+            <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </div>
+          </div>
+          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#1a1a2e", marginBottom: 6 }}>Comment veux-tu payer ?</div>
+          <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>{selectedPlan.label} · {planAmount.toLocaleString("fr-FR")} FCFA</div>
+        </div>
+        <div style={{ flex: 1, padding: "0 20px" }}>
+          <div onClick={() => { if (!PAY_MTN_ENABLED) return; setB2Operator("mtn"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_MTN_ENABLED ? 1 : 0.5, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+            {mtnLogo(24)}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#1a1a2e" }}>MTN MoMo</div>
+              <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_MTN_ENABLED ? "Congo" : "Indisponible"}</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </div>
+          <div onClick={() => { if (!PAY_AIRTEL_ENABLED) return; setB2Operator("airtel"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_AIRTEL_ENABLED ? 1 : 0.5, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+            {airtelLogo(26)}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#1a1a2e" }}>Airtel Money</div>
+              <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_AIRTEL_ENABLED ? "Congo" : "Indisponible"}</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </div>
+          <div onClick={async () => {
+            if (!PAY_CB_ENABLED) return;
+            try {
+              const win = window.open("", "_blank");
+              const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
+              const data = await r.json();
+              if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
+            } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
+          }} className="moyo-tactile" style={{ opacity: PAY_CB_ENABLED ? 1 : 0.5, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", background: "#1a1a2e", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 32, height: 24, background: "rgba(255,255,255,0.12)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#fff" }}>Visa / Mastercard</div>
+              <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.6)" }}>{PAY_CB_ENABLED ? "Diaspora" : "Indisponible"}</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ════════ VERSION B — ÉTAPE 3/3 : PAIEMENT + PREUVE (ID ou capture d'écran) ════════
+  if (step === "b3" && b2Operator) {
+    const B3OP = b2Operator === "mtn"
+      ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", logo: mtnLogo(20) }
+      : { name: "Airtel Money", main: "#E40000", onColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", logo: airtelLogo(22) };
+    const b3Tel = `tel:${B3OP.ussd.replace(/#/g, "%23")}`;
+
+    const submitId = async () => {
+      setTxLoading(true); setTxErr(null);
+      const ref = txRef.trim();
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
+          method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ p_transaction_id: ref, p_user_id: userId }),
+        });
+        const data = await r.json().catch(() => null);
+        if (r.ok && data && data.success) {
+          setTxGrantDays(typeof data.days === "number" ? data.days : null);
+          setTxActivated(true); setTxSent(true); setTxLoading(false); return;
+        }
+        if (data && data.error === "already_used") {
+          setTxErr("Paiement déjà utilisé. Ce numéro de transaction a déjà servi à activer un abonnement.");
+          setTxLoading(false); return;
+        }
+        const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: ref, amount: planAmount, status: "pending" }) });
+        setTxActivated(false); setTxSent(true);
+      } catch {
+        setTxActivated(false); setTxSent(true);
+      }
+      setTxLoading(false);
+    };
+
+    const submitScreenshot = async () => {
+      if (!screenshotFile) return;
+      setScreenshotUploading(true);
+      try {
+        const ext = (screenshotFile.name.split(".").pop() || "jpg").toLowerCase();
+        const path = `${userId}/${Date.now()}.${ext}`;
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/payment-proofs/${path}`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY, "Content-Type": screenshotFile.type || "image/jpeg", "x-upsert": "true" },
+          body: screenshotFile,
+        });
+        if (!uploadRes.ok) throw new Error("upload_failed");
+        const screenshotUrl = `${SUPABASE_URL}/storage/v1/object/public/payment-proofs/${path}`;
+        const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: null, screenshot_url: screenshotUrl, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: `[capture] ${screenshotUrl}`, amount: planAmount, status: "pending" }) });
+        setScreenshotSent(true);
+      } catch {
+        setTxErr("Envoi impossible, réessaie dans un instant.");
+      }
+      setScreenshotUploading(false);
+    };
+
+    if (txSent || screenshotSent) return (
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "32px 26px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", background: txActivated ? "rgba(26,92,58,0.1)" : "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={txActivated ? "#1A5C3A" : gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+          </div>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#1a1a2e", marginBottom: 8 }}>{txActivated ? "Premium activé !" : "Demande envoyée"}</div>
+          <p style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 20 }}>{txActivated ? `Ton abonnement ${selectedPlan.label} est actif dès maintenant.` : "Notre équipe vérifie ton paiement, ça ne prend généralement pas longtemps."}</p>
+          <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>Terminer</Btn>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
+          <div style={{ padding: "18px 20px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div onClick={() => setStep("b2")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+              </div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 3 SUR 3</div>
+              <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </div>
+            </div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", marginBottom: 16 }}>Effectue ton paiement</div>
+          </div>
+
+          <div style={{ padding: "0 20px 20px" }}>
+            <a href={b3Tel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", background: B3OP.main, color: B3OP.onColor, borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, textDecoration: "none", boxSizing: "border-box" as any, marginBottom: 10 }}>
+              {B3OP.logo}
+              Appuyer pour payer - {planAmount.toLocaleString("fr-FR")} FCFA
+            </a>
+            <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "12px", textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>ou composez ce code depuis ton mobile</div>
+              <div style={{ fontSize: "1rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace" }}>{B3OP.ussd}</div>
+            </div>
+
+            {/* Choix du mode de preuve : ID ou capture d'écran */}
+            <div style={{ display: "flex", background: "#F0EDE6", borderRadius: 50, padding: 4, marginBottom: 16 }}>
+              <div onClick={() => setProofMode("id")} className="moyo-tactile" style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "id" ? gold : "transparent", color: proofMode === "id" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Envoyer l'ID</div>
+              <div onClick={() => setProofMode("screenshot")} className="moyo-tactile" style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "screenshot" ? gold : "transparent", color: proofMode === "screenshot" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Capture d'écran</div>
+            </div>
+
+            {proofMode === "id" ? (
+              <>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Après ton paiement, tu reçois un SMS avec un numéro de transaction (ID). Entre-le ici :</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? B3OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                  <input value={txRef} onChange={e => { setTxRef(e.target.value); setTxErr(null); }} placeholder={B3OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: "#1a1a2e", background: "transparent" }} />
+                </div>
+                {txErr && <div style={{ color: "#C0392B", fontSize: "0.78rem", marginBottom: 12 }}>{txErr}</div>}
+                <button onClick={submitId} disabled={!txRef.trim() || txLoading} style={{ width: "100%", background: txRef.trim() ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: txRef.trim() ? "pointer" : "not-allowed" }}>{txLoading ? "Vérification…" : "Confirmer mon paiement"}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Envoie une capture d'écran de la confirmation de paiement reçue sur ton téléphone :</div>
+                <input type="file" accept="image/*" id="moyo-b3-screenshot" style={{ display: "none" }} onChange={e => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  setScreenshotFile(f); setScreenshotPreview(URL.createObjectURL(f));
+                }} />
+                {screenshotPreview ? (
+                  <div onClick={() => document.getElementById("moyo-b3-screenshot")?.click()} style={{ borderRadius: 14, overflow: "hidden", marginBottom: 16, cursor: "pointer", position: "relative" }}>
+                    <img src={screenshotPreview} style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: "0.7rem", fontWeight: 700, padding: "4px 10px", borderRadius: 50 }}>Changer</div>
+                  </div>
+                ) : (
+                  <div onClick={() => document.getElementById("moyo-b3-screenshot")?.click()} style={{ border: "2px dashed #ddd", borderRadius: 14, padding: "28px 16px", textAlign: "center", cursor: "pointer", marginBottom: 16 }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 8px" }}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                    <div style={{ fontSize: "0.82rem", color: "#999", fontWeight: 600 }}>Touche pour choisir une image</div>
+                  </div>
+                )}
+                {txErr && <div style={{ color: "#C0392B", fontSize: "0.78rem", marginBottom: 12 }}>{txErr}</div>}
+                <button onClick={submitScreenshot} disabled={!screenshotFile || screenshotUploading} style={{ width: "100%", background: screenshotFile ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: screenshotFile ? "pointer" : "not-allowed" }}>{screenshotUploading ? "Envoi…" : "Envoyer la capture"}</button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ════════ ÉCRAN 1 : OFFRE — VERSION A (par défaut) ════════
   if (step === "offer") return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "18px 20px 16px" }}>
@@ -14364,6 +14616,20 @@ export default function App() {
     window.addEventListener("moyo-open-admin-config", handler);
     return () => window.removeEventListener("moyo-open-admin-config", handler);
   }, [auth]);
+
+  // ── Empêche le navigateur/iOS d'essayer d'adapter automatiquement les couleurs quand le
+  //    système est en mode sombre — l'app n'a pas encore de vrai mode sombre construit (aucune
+  //    couleur n'a de variante adaptée), donc cette "aide" automatique du navigateur ne fait que
+  //    rendre certains textes en couleur fixe (comme "Dating") invisibles sur fond assombri. ──
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="color-scheme"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "color-scheme";
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", "light");
+  }, []);
 
   // ── Viewport mobile : adapter à la largeur de l'écran, empêcher le zoom intempestif ──
   useEffect(() => {

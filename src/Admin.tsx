@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
   APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -1334,6 +1334,66 @@ function PremiumPlansConfig({ auth }: { auth: Auth }) {
   );
 }
 
+// A/B testing de l'écran d'abonnement Premium : deux designs différents, un seul actif à la fois
+// pour tout le monde (pas un tirage aléatoire par personne — un vrai interrupteur manuel).
+function PremiumVariantConfig({ auth }: { auth: Auth }) {
+  const [variant, setVariant] = React.useState<"a" | "b">("a");
+  const [loading, setLoading] = React.useState(true);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_screen_variant&select=value`, { headers: H })
+      .then(r => r.json()).then((data: { value: string }[]) => {
+        const v = Array.isArray(data) && data[0]?.value;
+        if (v === "a" || v === "b") setVariant(v);
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const choose = async (next: "a" | "b") => {
+    if (next === variant) return;
+    const prev = variant;
+    setVariant(next);
+    setPREMIUM_SCREEN_VARIANT(next);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key: "premium_screen_variant", value: next }),
+      });
+      if (!r.ok) throw new Error();
+    } catch {
+      setVariant(prev);
+      setPREMIUM_SCREEN_VARIANT(prev);
+    }
+  };
+
+  const options: ["a" | "b", string, string][] = [
+    ["a", "Version A", "Écran actuel : fond clair, avantages en liste, formules en cartes côte à côte"],
+    ["b", "Version B", "Nouveau design : bandeau dégradé rouge/or, formules en pilules, avantages en grille"],
+  ];
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        Pour du A/B testing : bascule tous tes utilisateurs sur l'une ou l'autre version de l'écran d'abonnement Premium. Un seul design actif à la fois pour tout le monde.
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+      ) : (
+        options.map(([key, label, desc]) => (
+          <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
+            <div>
+              <div style={{ fontSize: "0.83rem", fontWeight: 600, color: variant === key ? G.brun : "#aaa" }}>{label}</div>
+              <div style={{ fontSize: "0.68rem", color: "#999" }}>{desc}</div>
+            </div>
+            <SwitchBtn on={variant === key} onToggle={() => choose(key)} />
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function DiscoverModeConfig({ auth }: { auth: Auth }) {
   const [mode, setMode] = React.useState<"card" | "list" | "full">("card");
   const [loading, setLoading] = React.useState(true);
@@ -1694,6 +1754,9 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
       </OffCanvasSection>
       <OffCanvasSection title="Formules Premium">
         <PremiumPlansConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Écran Premium — A/B testing">
+        <PremiumVariantConfig auth={auth} />
       </OffCanvasSection>
       <OffCanvasSection title="Mode Découvrir par défaut">
         <DiscoverModeConfig auth={auth} />
