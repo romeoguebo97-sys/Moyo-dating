@@ -404,7 +404,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
     if (!isAdminUrl && !isAdminUser) {
       const msg = map["maintenance_message"] || "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧";
       const el = document.getElementById("root");
-      if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px;line-height:0.82"><span style="display:block">Moyo</span><span style="display:block;color:#1a1a1a;font-size:0.48em;font-weight:800;margin-top:0.06em" class="moyo-logo-dating">Dating</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
+      if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px;line-height:0.82"><span style="display:block">Moyo</span><span style="display:block;color:var(--c-brun);font-size:0.48em;font-weight:800;margin-top:0.06em">Dating</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
     }
   }
   // ── Signal que les réglages (FEATURE_ASSISTANT etc.) sont enfin à jour — ce fetch tourne en
@@ -1409,12 +1409,6 @@ const GLOBAL_CSS = `
      nouveau message qui remonte une conversation, etc.) */
   .moyo-list-item{ transition:transform .3s var(--moyo-ease), opacity .2s ease; }
 
-  /* Le mot "Dating" du logo doit rester lisible en mode sombre système (blanc), tout en
-     restant noir en mode clair — geste volontaire et contrôlé, pas une adaptation automatique
-     du navigateur (qui produisait un gris terne peu lisible). */
-  @media (prefers-color-scheme: dark) {
-    .moyo-logo-dating { color: #FFFFFF !important; }
-  }
   @media(prefers-reduced-motion:reduce){
     .skeleton{animation:none}.page-anim{animation:none}.conv-enter,.conv-leave{animation:none}
     button:active,.tap:active,.card-hover:active{transform:none}
@@ -1887,7 +1881,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
             <svg width="27" height="27" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
           </div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#1a1a2e", marginBottom: 6 }}>Choisis ta formule</div>
+          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>Choisis ta formule</div>
           <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>Combien de temps veux-tu profiter de Premium ?</div>
         </div>
         <div style={{ flex: 1, padding: "0 20px" }}>
@@ -1897,7 +1891,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               <div key={pl.id} onClick={() => setPlanId(pl.id)} className="moyo-tactile" style={{ position: "relative", cursor: "pointer", background: sel ? "#FBF1D8" : G.blanc, border: `2px solid ${sel ? gold : "#ece9e2"}`, borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: sel ? "0 4px 14px rgba(212,168,67,0.28)" : "0 1px 4px rgba(0,0,0,0.04)", transition: "all 0.15s" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "#1a1a2e" }}>{pl.label}</span>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>{pl.label}</span>
                     {pl.popular && <span style={{ background: gold, color: "#fff", fontSize: "0.55rem", fontWeight: 800, padding: "2px 8px", borderRadius: 50 }}>POPULAIRE</span>}
                     {pl.badge && <span style={{ background: G.vert, color: "#fff", fontSize: "0.55rem", fontWeight: 800, padding: "2px 8px", borderRadius: 50 }}>{pl.badge}</span>}
                   </div>
@@ -1910,7 +1904,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             );
           })}
         </div>
-        <div style={{ padding: "16px 20px", flexShrink: 0 }}>
+        <div style={{ padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", flexShrink: 0 }}>
           <button onClick={() => setStep("b2")} style={{ width: "100%", background: gold, color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: "pointer" }}>Suivant →</button>
         </div>
       </div>
@@ -1931,14 +1925,14 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </div>
           </div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#1a1a2e", marginBottom: 6 }}>Comment veux-tu payer ?</div>
+          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>Comment veux-tu payer ?</div>
           <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>{selectedPlan.label} · {planAmount.toLocaleString("fr-FR")} FCFA</div>
         </div>
         <div style={{ flex: 1, padding: "0 20px" }}>
           <div onClick={() => { if (!PAY_MTN_ENABLED) return; setB2Operator("mtn"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_MTN_ENABLED ? 1 : 0.5, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             {mtnLogo(24)}
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#1a1a2e" }}>MTN MoMo</div>
+              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>MTN MoMo</div>
               <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_MTN_ENABLED ? "Congo" : "Indisponible"}</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
@@ -1946,7 +1940,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           <div onClick={() => { if (!PAY_AIRTEL_ENABLED) return; setB2Operator("airtel"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_AIRTEL_ENABLED ? 1 : 0.5, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             {airtelLogo(26)}
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#1a1a2e" }}>Airtel Money</div>
+              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Airtel Money</div>
               <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_AIRTEL_ENABLED ? "Congo" : "Indisponible"}</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
@@ -2037,7 +2031,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           <div style={{ width: 60, height: 60, borderRadius: "50%", background: txActivated ? "rgba(26,92,58,0.1)" : "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={txActivated ? "#1A5C3A" : gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
           </div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#1a1a2e", marginBottom: 8 }}>{txActivated ? "Premium activé !" : "Demande envoyée"}</div>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{txActivated ? "Premium activé !" : "Demande envoyée"}</div>
           <p style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 20 }}>{txActivated ? `Ton abonnement ${selectedPlan.label} est actif dès maintenant.` : "Notre équipe vérifie ton paiement, ça ne prend généralement pas longtemps."}</p>
           <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>Terminer</Btn>
         </div>
@@ -2057,7 +2051,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </div>
             </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", marginBottom: 16 }}>Effectue ton paiement</div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 16 }}>Effectue ton paiement</div>
           </div>
 
           <div style={{ padding: "0 20px 20px" }}>
@@ -2067,7 +2061,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             </a>
             <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "12px", textAlign: "center", marginBottom: 20 }}>
               <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>ou composez ce code depuis ton mobile</div>
-              <div style={{ fontSize: "1rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace" }}>{B3OP.ussd}</div>
+              <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
             </div>
 
             {/* Choix du mode de preuve : ID ou capture d'écran */}
@@ -2078,10 +2072,10 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
             {proofMode === "id" ? (
               <>
-                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Après ton paiement, tu reçois un SMS avec un numéro de transaction (ID). Entre-le ici :</div>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Après ton paiement, tu reçois un SMS <b>{B3OP.name}</b> avec un numéro de transaction (ID). Entre-le ici pour activer ton abonnement :</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? B3OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-                  <input value={txRef} onChange={e => { setTxRef(e.target.value); setTxErr(null); }} placeholder={B3OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: "#1a1a2e", background: "transparent" }} />
+                  <input value={txRef} onChange={e => { setTxRef(e.target.value); setTxErr(null); }} placeholder={B3OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: G.brun, background: "transparent" }} />
                 </div>
                 {txErr && <div style={{ color: "#C0392B", fontSize: "0.78rem", marginBottom: 12 }}>{txErr}</div>}
                 <button onClick={submitId} disabled={!txRef.trim() || txLoading} style={{ width: "100%", background: txRef.trim() ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: txRef.trim() ? "pointer" : "not-allowed" }}>{txLoading ? "Vérification…" : "Confirmer mon paiement"}</button>
@@ -2391,7 +2385,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
       <AuthLayout onBack={() => onNav("landing")}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
-            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span className="moyo-logo-dating" style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
+            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
           </div>
         </div>
         <div style={{ textAlign: "center", padding: "12px 8px 24px" }}>
@@ -2412,7 +2406,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
-          <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span className="moyo-logo-dating" style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
+          <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
         </div>
         <h2 style={{  fontSize: "1.5rem", fontWeight: 700, marginTop: 8 }}>Nouveau mot de passe</h2>
         <p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Choisis un nouveau mot de passe sécurisé</p>
@@ -2729,7 +2723,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: (isMobile && showMobileLanding) ? "none" : "block" }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
-            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span className="moyo-logo-dating" style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
+            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <span onClick={() => onNav("about")}
@@ -3900,7 +3894,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
         {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span className="moyo-logo-dating" style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
+          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2>
         </div>
 
@@ -3964,7 +3958,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     );
   }
 
-  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span className="moyo-logo-dating" style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
 function SignUp({ onNav }: { onNav: (p: string) => void }) {
@@ -4243,7 +4237,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span className="moyo-logo-dating" style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
+        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
         <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 16px" }}>
           <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "#fff" }}>{step}</div>
@@ -5030,7 +5024,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         <div ref={mobileHeaderRef} data-moyo-header style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700, lineHeight: 0.82 }}>
             <div style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</div>
-            <div className="moyo-logo-dating" style={{ color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
+            <div style={{ color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
             {tab === "messages" ? (

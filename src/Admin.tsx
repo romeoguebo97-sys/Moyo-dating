@@ -1971,6 +1971,11 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
   const [adminRef, setAdminRef] = useState("");
   const [verified, setVerified] = useState<null | "match" | "mismatch">(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showScreenshot, setShowScreenshot] = useState(false);
+  // Une preuve envoyée sous forme de capture d'écran (au lieu d'un numéro ID) est stockée
+  // sous la forme "[capture] https://...png" — on l'affiche joliment au lieu du lien brut.
+  const screenshotMatch = p.tx_ref.match(/^\[capture\]\s*(https?:\/\/\S+)/);
+  const screenshotUrl = screenshotMatch ? screenshotMatch[1] : null;
   const match = adminRef.trim().toLowerCase() === p.tx_ref.trim().toLowerCase();
   const countdown = getPremiumCountdown(p.approved_at, p.amount);
   const isExpired = isApproved && countdown.expired;
@@ -2008,7 +2013,14 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
       <div style={{ display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row", gap: 8, marginBottom: isPending ? 10 : 0 }}>
         <div style={{ flex: 1, background: G.creme, borderRadius: 8, padding: "8px 10px" }}>
           <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. client</div>
-          <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#888", letterSpacing: 0.5, wordBreak: "break-all" }}>{p.tx_ref}</div>
+          {screenshotUrl ? (
+            <div onClick={() => setShowScreenshot(true)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: G.rouge, fontWeight: 700, fontSize: "0.82rem" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              📷 Capture d'écran — voir
+            </div>
+          ) : (
+            <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#888", letterSpacing: 0.5, wordBreak: "break-all" }}>{p.tx_ref}</div>
+          )}
         </div>
         {!isApproved && !isRejected && (
           <div style={{ flex: 1, background: verified === "match" ? "rgba(39,174,96,0.07)" : verified === "mismatch" ? "rgba(231,76,60,0.07)" : G.creme, borderRadius: 8, padding: "10px 12px", border: `1.5px solid ${verified === "match" ? "rgba(39,174,96,0.3)" : verified === "mismatch" ? "rgba(231,76,60,0.3)" : "transparent"}` }}>
@@ -2047,7 +2059,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
                 </ul>
               </div>
               <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 14, textAlign: "center" }}>
-                Réf: <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{p.tx_ref}</span>
+                Réf: <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{screenshotUrl ? "capture d'écran" : p.tx_ref}</span>
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "11px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
@@ -2056,6 +2068,14 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {showScreenshot && screenshotUrl && (
+        <div onClick={() => setShowScreenshot(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, cursor: "pointer" }}>
+          <img src={screenshotUrl} style={{ maxWidth: "94%", maxHeight: "88vh", objectFit: "contain", borderRadius: 8 }} />
+          <div onClick={() => setShowScreenshot(false)} style={{ position: "absolute", top: 20, right: 20, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </div>
         </div>
       )}
