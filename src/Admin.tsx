@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
   APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -158,7 +158,7 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
                 <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, flexShrink: 0 }}>{si.label}</span>
               </div>
               <div style={{ fontSize: "0.82rem", color: "#555", marginBottom: 6 }}>{a.topic}</div>
-              {a.type === "physique" && a.price && <div style={{ fontSize: "0.74rem", color: "#b9770e", fontWeight: 700, marginBottom: 6 }}>💳 {Number(a.price).toLocaleString("fr-FR")} FCFA{a.tx_ref ? ` · réf ${a.tx_ref}` : ""} — à valider dans l'onglet Budget</div>}
+              {a.type === "physique" && a.price && <div style={{ fontSize: "0.74rem", color: "#b9770e", fontWeight: 700, marginBottom: 6 }}>💳 {Number(a.price).toLocaleString("fr-FR")} FCFA{a.tx_ref ? ` · réf ${a.tx_ref}` : ""}, à valider dans l'onglet Budget</div>}
               {a.message && <div style={{ fontSize: "0.74rem", color: "#777", fontStyle: "italic", marginBottom: 6 }}>« {a.message} »</div>}
               {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700, marginBottom: 6 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
               {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 6 }}>Créneaux souhaités : {a.preferred_slots.map(fmtApptDT).join(" · ")}</div>}
@@ -651,6 +651,9 @@ export function AdminDesktopPage() {
             {configTab === "general" && <OffCanvasSection title="Mise en avant Premium">
               <PremiumBoostConfig auth={auth!} />
             </OffCanvasSection>}
+            {configTab === "general" && <OffCanvasSection title="Likes/Vues sans Premium">
+              <ShowLikesViewsFreeConfig auth={auth!} />
+            </OffCanvasSection>}
             {configTab === "equipe" && <OffCanvasSection title="Notifications admin">
               <AdminNotifPrefs auth={auth!} />
             </OffCanvasSection>}
@@ -674,7 +677,7 @@ export function AdminDesktopPage() {
             {configTab === "tarifs" && <OffCanvasSection title="Formules Premium">
               <PremiumPlansConfig auth={auth!} />
             </OffCanvasSection>}
-            {configTab === "tarifs" && <OffCanvasSection title="Écran Premium — A/B testing">
+            {configTab === "tarifs" && <OffCanvasSection title="Écran Premium, A/B testing">
               <PremiumVariantConfig auth={auth!} />
             </OffCanvasSection>}
             {configTab === "securite" && <OffCanvasSection title="Mode maintenance">
@@ -718,7 +721,7 @@ export function AdminDesktopPage() {
                   setEditingConfig(null);
                 }} />
               <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
-                <b>Mots « contacts » — membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
+                <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
               </div>
               <EditableRow label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords || "(aucun)"} open={editingConfig === "contact_banned_words"}
                 onOpen={() => { setEditingConfig(editingConfig === "contact_banned_words" ? null : "contact_banned_words"); setEditingConfigValue(appConfig.contactBannedWords); }}
@@ -1011,7 +1014,7 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
         {/* Coordonnées des comptes de réception */}
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${G.gris}` }}>
           <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
-            Numéro qui reçoit l'argent et nom du responsable. Modifiable à tout moment — appliqué partout immédiatement.
+            Numéro qui reçoit l'argent et nom du responsable. Modifiable à tout moment, appliqué partout immédiatement.
           </div>
           {([
             ["pay_mtn_number", "le nouveau numéro MTN", "mtnNum", "tel"],
@@ -1161,15 +1164,15 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     ],
     landing: [
       ["landing_members_count", "Compteur de membres (ex: 12 000+ membres)"],
-      ["landing_title_start", "Titre — début (ex: Trouve ton)"],
-      ["landing_title_highlight", "Titre — mot coloré (ex: âme sœur)"],
-      ["landing_title_end", "Titre — fin (ex: Congolais.e)"],
+      ["landing_title_start", "Titre, début (ex: Trouve ton)"],
+      ["landing_title_highlight", "Titre, mot coloré (ex: âme sœur)"],
+      ["landing_title_end", "Titre, fin (ex: Congolais.e)"],
       ["landing_slogan", "Slogan sous le titre"],
-      ["landing_stat_members", "Bandeau accueil — Membres inscrits (ex: 12 000+)"],
-      ["landing_stat_couples", "Bandeau accueil — Couples formés (ex: 850+)"],
-      ["landing_stat_cities", "Bandeau accueil — Villes & diasporas (ex: 19)"],
-      ["premium_stat_couples", "Modale Premium — couples formés cette semaine (vide = calcul auto)"],
-      ["premium_stat_members", "Modale Premium — membres Premium actifs (vide = calcul auto)"],
+      ["landing_stat_members", "Bandeau accueil, Membres inscrits (ex: 12 000+)"],
+      ["landing_stat_couples", "Bandeau accueil, Couples formés (ex: 850+)"],
+      ["landing_stat_cities", "Bandeau accueil, Villes & diasporas (ex: 19)"],
+      ["premium_stat_couples", "Modale Premium, couples formés cette semaine (vide = calcul auto)"],
+      ["premium_stat_members", "Modale Premium, membres Premium actifs (vide = calcul auto)"],
     ],
   };
   const defaults: Record<string, string> = {
@@ -1521,6 +1524,55 @@ function PrivacyNoticeConfig({ auth }: { auth: Auth }) {
 // Activer/désactiver la mise en avant des profils Premium/Vérifiés dans le fil Découvrir.
 // Activé : Premium/Vérifié apparaissent statistiquement plus souvent en tête de fil (mais pas garanti à 100%).
 // Désactivé : mélange totalement équitable, aucun avantage pour personne.
+function ShowLikesViewsFreeConfig({ auth }: { auth: Auth }) {
+  const [on, setOn] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.feature_show_likes_views_free&select=value`, { headers: H })
+      .then(r => r.json()).then((data: { value: string }[]) => {
+        if (Array.isArray(data) && data[0]?.value !== undefined) setOn(data[0].value === "true");
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const toggle = async () => {
+    const next = !on;
+    setOn(next);
+    setFEATURE_SHOW_LIKES_VIEWS_FREE(next);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key: "feature_show_likes_views_free", value: String(next) }),
+      });
+      if (!r.ok) throw new Error();
+    } catch {
+      setOn(!next);
+      setFEATURE_SHOW_LIKES_VIEWS_FREE(!next);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
+        Par défaut, un compte gratuit voit qui l'a liké/visité en flouté (incitation à passer Premium). Si activé, tout le monde voit sans flou, même gratuitement, pour rendre le site totalement modulable.
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+          <div>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: on ? G.brun : "#aaa" }}>Voir sans Premium (likes/vues)</div>
+            <div style={{ fontSize: "0.68rem", color: "#999" }}>{on ? "Visible pour tout le monde, sans flou" : "Flouté pour les comptes gratuits (par défaut)"}</div>
+          </div>
+          <SwitchBtn on={on} onToggle={toggle} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PremiumBoostConfig({ auth }: { auth: Auth }) {
   const [on, setOn] = React.useState(true);
   const [loading, setLoading] = React.useState(true);
@@ -1734,7 +1786,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
             setEditingConfig(null);
           }} />
         <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
-          <b>Mots « contacts » — membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
+          <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
         </div>
         <EditableRow label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords || "(aucun)"} open={editingConfig === "contact_banned_words"}
           onOpen={() => { setEditingConfig(editingConfig === "contact_banned_words" ? null : "contact_banned_words"); setEditingConfigValue(appConfig.contactBannedWords); }}
@@ -1770,7 +1822,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
       <OffCanvasSection title="Formules Premium">
         <PremiumPlansConfig auth={auth} />
       </OffCanvasSection>
-      <OffCanvasSection title="Écran Premium — A/B testing">
+      <OffCanvasSection title="Écran Premium, A/B testing">
         <PremiumVariantConfig auth={auth} />
       </OffCanvasSection>
       <OffCanvasSection title="Mode Découvrir par défaut">
@@ -1781,6 +1833,9 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
       </OffCanvasSection>
       <OffCanvasSection title="Mise en avant Premium">
         <PremiumBoostConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Likes/Vues sans Premium">
+        <ShowLikesViewsFreeConfig auth={auth} />
       </OffCanvasSection>
       <OffCanvasSection title="Photo de l'Assistant Moyo Dating">
         <AssistantPhotoConfig auth={auth} />
@@ -1905,7 +1960,7 @@ function RelationalProfilesCard({ auth }: { auth: Auth }) {
         <div style={{ marginTop: 14, background: G.creme, borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: "0.9rem", color: G.brun, fontWeight: 800, marginBottom: 4 }}>{withoutCount.toLocaleString("fr-FR")} membre{withoutCount > 1 ? "s" : ""} sans carte relationnelle</div>
           <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.55, marginBottom: 12 }}>Activez l'invitation : à leur prochaine ouverture de l'app, ces membres verront un message les incitant à remplir leur carte, avec deux boutons « Remplir maintenant » et « Plus tard ».</div>
-          <button onClick={toggleNudge} disabled={nudgeBusy} style={{ width: "100%", background: nudgeOn ? G.vert : G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "12px", fontSize: "0.83rem", fontWeight: 800, cursor: nudgeBusy ? "not-allowed" : "pointer" }}>{nudgeBusy ? "…" : nudgeOn ? "✓ Invitation active — Appuyez pour désactiver" : "Activer l'invitation"}</button>
+          <button onClick={toggleNudge} disabled={nudgeBusy} style={{ width: "100%", background: nudgeOn ? G.vert : G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "12px", fontSize: "0.83rem", fontWeight: 800, cursor: nudgeBusy ? "not-allowed" : "pointer" }}>{nudgeBusy ? "…" : nudgeOn ? "✓ Invitation active, Appuyez pour désactiver" : "Activer l'invitation"}</button>
         </div>
       )}
 
@@ -2457,14 +2512,14 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Profils incomplets", "Cochez 'Afficher uniquement les profils incomplets' pour filtrer les comptes dont l'inscription n'a pas été terminée (nom affiché comme '...')."],
         ["Sélection multiple", "Cochez les cases à gauche de chaque profil pour les sélectionner. Utilisez 'Tout sélectionner' pour sélectionner d'un coup tous les profils affichés."],
         ["Suppression en masse", "Une fois des profils sélectionnés, le bouton 🗑 Supprimer (X) apparaît. Cette action supprime définitivement les comptes sélectionnés. Irréversible."],
-        ["+ Premium / - Premium", "Ouvre la fenêtre 'Gérer le Premium' à deux onglets. Onglet 💳 Paiement : renseignez opérateur (MTN/Airtel) + référence de transaction + formule (Semaine/Mois/2 mois) visibles sur la preuve WhatsApp du client, puis 'Envoyer la demande' — elle atterrit en attente dans Budget/Paiements où un Super Admin vérifie et active (le Premium n'est jamais activé directement depuis cette fenêtre). Onglet 🎁 Offrir gratuitement : pour un collaborateur ou un geste commercial, choisissez une date de fin libre (raccourcis 3j/7j/30j/1an ou date précise) — active immédiatement, sans trace dans Budget."],
-        ["Retirer le Premium (dans la même fenêtre)", "Si l'utilisateur est déjà Premium, un bouton 'Retirer le Premium maintenant' apparaît en haut de la fenêtre — mais UNIQUEMENT si ce Premium a été offert (gratuit). Un abonnement réellement payé par le client est protégé et ne peut pas être retiré avant sa date d'expiration, pour éviter de pénaliser un client payant par erreur."],
+        ["+ Premium / - Premium", "Ouvre la fenêtre 'Gérer le Premium' à deux onglets. Onglet 💳 Paiement : renseignez opérateur (MTN/Airtel) + référence de transaction + formule (Semaine/Mois/2 mois) visibles sur la preuve WhatsApp du client, puis 'Envoyer la demande', elle atterrit en attente dans Budget/Paiements où un Super Admin vérifie et active (le Premium n'est jamais activé directement depuis cette fenêtre). Onglet 🎁 Offrir gratuitement : pour un collaborateur ou un geste commercial, choisissez une date de fin libre (raccourcis 3j/7j/30j/1an ou date précise), active immédiatement, sans trace dans Budget."],
+        ["Retirer le Premium (dans la même fenêtre)", "Si l'utilisateur est déjà Premium, un bouton 'Retirer le Premium maintenant' apparaît en haut de la fenêtre, mais UNIQUEMENT si ce Premium a été offert (gratuit). Un abonnement réellement payé par le client est protégé et ne peut pas être retiré avant sa date d'expiration, pour éviter de pénaliser un client payant par erreur."],
         ["★ À vie", "Attribue le Premium permanent (date d'expiration fixée à 2099), classé automatiquement comme 'offert' donc retirable ensuite si besoin. Réservé aux employés et collaborateurs Moyo Dating. Un badge ♾️ À vie apparaît sur sa carte. Grisé si déjà à vie."],
         ["- À vie", "Ouvre la même fenêtre 'Gérer le Premium' pour retirer le Premium à vie d'un utilisateur (bouton actif car le Premium à vie est toujours classé 'offert'). Il repasse en compte gratuit."],
         ["Rendre Admin / Retirer Admin", "Accorde ou révoque les droits d'administration. À utiliser avec la plus grande prudence."],
         ["Vérifier / Retirer vérification", "Attribue ou retire le badge bleu de vérification du profil."],
         ["Avertir", "Envoie un avertissement officiel visible par l'utilisateur à sa prochaine connexion."],
-        ["Bannir (3 options)", "(1) Bannissement définitif — accès bloqué jusqu'à débannissement ; (2) Éjection immédiate — la session active est coupée sur-le-champ ; (3) Bannissement temporaire — durée au choix (1h à 7j ou libre), avec décompte et reconnexion automatique."],
+        ["Bannir (3 options)", "(1) Bannissement définitif, accès bloqué jusqu'à débannissement ; (2) Éjection immédiate, la session active est coupée sur-le-champ ; (3) Bannissement temporaire, durée au choix (1h à 7j ou libre), avec décompte et reconnexion automatique."],
         ["Supprimer", "Efface définitivement le compte et toutes ses données."],
       ] },
       { kind: "subhead", text: "✉ Envoyer un message individuel" },
@@ -2504,11 +2559,11 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Rejeté", "#999", "Signalement examiné mais non retenu (sans suite)."],
         ["Banni", G.rouge, "Sanction appliquée suite au signalement."],
       ] },
-      { kind: "subhead", text: "Carte de signalement — Profil" },
+      { kind: "subhead", text: "Carte de signalement, Profil" },
       { kind: "rows", color: G.rouge, items: [
         ["Signalé par (bleu)", "Bloc bleu en haut : photo + nom + âge + ville de la personne qui a signalé. Le bouton 'Répondre' lui envoie un message dans sa messagerie Assistance Moyo Dating."],
         ["Profil signalé (rouge)", "Bloc rouge : photo + nom + âge + ville du profil accusé. Badge ⚠️ x/3 si avertissements, badge 'Banni' s'il est déjà banni."],
-        ["Bouton Répondre", "Sur le bloc 'Signalé par' — écrire un message à la personne qui a signalé."],
+        ["Bouton Répondre", "Sur le bloc 'Signalé par', écrire un message à la personne qui a signalé."],
         ["Bouton Voir profil", "Ouvre la fiche complète du profil concerné."],
         ["Bouton Avertir", "Envoie un avertissement officiel au profil signalé."],
         ["Bouton Traité / Rejeter / Bannir", "Actions finales. Traité = pris en charge. Rejeter = sans suite. Bannir = interdit d'accès."],
@@ -2527,7 +2582,7 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Matchmaking intelligent", "Suggestions de couples générées automatiquement selon les critères et la compatibilité. Filtres pour exclure refus, matchs existants, comptes signalés/bannis. Depuis une suggestion, vous proposez le couple : il part en suivi."],
         ["Profils relationnels créés", "Carte en haut du Matchmaking : compteur et liste consultable. Bouton 'Voir' pour la fiche détaillée (Qui je suis / Ce que je recherche / Note)."],
         ["Inviter à remplir la carte", "Filtrez les membres SANS profil relationnel et activez l'invitation : ils verront un message les incitant à remplir leur carte à leur prochaine ouverture."],
-        ["💚 Suivi couples Matchmaking", "Suit chaque couple proposé via le Matchmaking : la réponse de chaque personne (accepté/refusé avec l'heure) et le statut global — En attente, Un seul a répondu, Les deux ont accepté (match créé), Refusée, ou Expirée. Indique qui a proposé et la date d'expiration."],
+        ["💚 Suivi couples Matchmaking", "Suit chaque couple proposé via le Matchmaking : la réponse de chaque personne (accepté/refusé avec l'heure) et le statut global, En attente, Un seul a répondu, Les deux ont accepté (match créé), Refusée, ou Expirée. Indique qui a proposé et la date d'expiration."],
         ["Actions du suivi", "Voir chaque profil. Si les deux acceptent → « Voir le match » + « 💌 Encourager le couple ». Prolonger (+1j/+3j/+7j) ou Réactiver une expirée. Annuler une proposition en attente. « Reproposer un autre profil » après refus/expiration. Archiver. Note interne par couple."],
         ["Propositions vs Suivi", "L'onglet « Propositions » regroupe les propositions spontanées et celles issues d'une demande. Les couples créés depuis le Matchmaking sont suivis séparément dans « Suivi couples Matchmaking »."],
         ["Créer / Proposer un match", "Créez un match direct entre deux membres, ou proposez-leur une mise en relation qu'ils peuvent accepter ou refuser."],
@@ -2565,7 +2620,7 @@ const HELP_SECTIONS: HelpSection[] = [
       { kind: "subhead", text: "📢 Diffusion - Date d'expiration" },
       { kind: "rows", color: "#e67e22", items: [
         ["Date d'expiration obligatoire", "Chaque message de diffusion doit avoir une date d'expiration. 'Envoyer' est désactivé tant qu'aucune date n'est choisie."],
-        ["Expiration automatique", "Passé la date, le message ne s'affiche plus pour personne — même pour ceux qui ne l'ont pas vu."],
+        ["Expiration automatique", "Passé la date, le message ne s'affiche plus pour personne, même pour ceux qui ne l'ont pas vu."],
         ["Nouveaux inscrits protégés", "Un utilisateur inscrit après l'envoi ne reçoit pas les messages antérieurs à son inscription."],
         ["Corriger un broadcast actif", "Pour stopper un message envoyé : Supabase → Table broadcasts → mettez expires_at à une date passée."],
       ] },
@@ -2598,7 +2653,7 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Note interne", "Ouvre un modal Moyo pour ajouter une note visible uniquement par l'équipe."],
         ["📦 Archiver", "Sur un RDV passé ou annulé : le range dans le filtre « Archivés ». Réversible via « Désarchiver »."],
         ["🗑 Supprimer", "Sur un RDV passé ou annulé : supprime définitivement le rendez-vous (irréversible)."],
-        ["💳 Paiement agence", "Un RDV à l'agence est payant (" + APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR") + " FCFA). Le paiement apparaît dans Budget avec le badge « 🗓 Rendez-vous agence » et se valide là-bas — paiement DISTINCT du Premium : le valider n'active aucun abonnement."],
+        ["💳 Paiement agence", "Un RDV à l'agence est payant (" + APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR") + " FCFA). Le paiement apparaît dans Budget avec le badge « 🗓 Rendez-vous agence » et se valide là-bas, paiement DISTINCT du Premium : le valider n'active aucun abonnement."],
         ["Côté utilisateur", "Dans « Mes rendez-vous », le membre suit l'état de sa demande et peut supprimer lui-même un RDV annulé ou déjà passé."],
       ] },
     ],
@@ -2623,13 +2678,13 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Réf. MTN reçue", "Numéro que vous entrez après vérification de votre SMS/app MTN. Doit correspondre à la réf. client."],
         ["Bouton Vérifier", "Compare les deux références. Si elles correspondent → bouton vert (« Activer Premium » ou « Valider le paiement RDV »). Sinon → bouton rouge 'Rejeter & notifier'."],
         ["Activer Premium", "Pour un paiement Premium : active l'abonnement pour la durée configurée ET envoie un message à l'utilisateur. Le compteur démarre immédiatement."],
-        ["🗓 Paiement Rendez-vous agence", "Un paiement de rendez-vous porte le badge « 🗓 Rendez-vous agence ». Le valider marque le RDV comme payé et prévient l'utilisateur — SANS activer aucun Premium. Le montant compte dans le CA. La confirmation du créneau se fait dans l'onglet Rendez-vous."],
+        ["🗓 Paiement Rendez-vous agence", "Un paiement de rendez-vous porte le badge « 🗓 Rendez-vous agence ». Le valider marque le RDV comme payé et prévient l'utilisateur, SANS activer aucun Premium. Le montant compte dans le CA. La confirmation du créneau se fait dans l'onglet Rendez-vous."],
         ["Compteur ⏱", "Affiché après activation : '28j 14h restants'. Orange sous 3 jours. '⏰ Expiré' en rouge à l'échéance."],
         ["Expiration automatique", "À l'échéance, le Premium repasse à gratuit dès la prochaine connexion. Le compteur affiche 'Expiré'."],
         ["Rejeter & notifier", "Marque la demande comme rejetée ET prévient l'utilisateur que sa preuve n'a pas pu être vérifiée."],
         ["Bouton ↩", "Réinitialise la vérification pour recommencer en cas d'erreur de frappe."],
-        ["Bouton archiver 🗑", "Range un paiement traité dans Archivage. Le Premium et le CA ne changent pas. Pour retirer un Premium payé accordé par erreur : ouvrez 'Gérer le Premium' sur la carte utilisateur (onglet Utilisateurs) — comme c'est classé 'payé' par défaut, utilisez d'abord le lien 'Ce n'est pas un vrai paiement → reclassifier comme offert' pour débloquer le bouton Retirer."],
-        ["Origine « 👤 Admin »", "Une demande peut aussi être créée par un admin depuis la carte utilisateur (onglet Utilisateurs → 'Gérer le Premium' → onglet 💳 Paiement), typiquement quand un client envoie sa preuve de paiement par WhatsApp au lieu de saisir son ID dans l'app. Elle arrive ici avec le même statut « En attente » qu'une demande client classique, avec un badge « 👤 Admin » pour la distinguer — seul un Super Admin peut la vérifier et l'activer, exactement comme les autres."],
+        ["Bouton archiver 🗑", "Range un paiement traité dans Archivage. Le Premium et le CA ne changent pas. Pour retirer un Premium payé accordé par erreur : ouvrez 'Gérer le Premium' sur la carte utilisateur (onglet Utilisateurs), comme c'est classé 'payé' par défaut, utilisez d'abord le lien 'Ce n'est pas un vrai paiement → reclassifier comme offert' pour débloquer le bouton Retirer."],
+        ["Origine « 👤 Admin »", "Une demande peut aussi être créée par un admin depuis la carte utilisateur (onglet Utilisateurs → 'Gérer le Premium' → onglet 💳 Paiement), typiquement quand un client envoie sa preuve de paiement par WhatsApp au lieu de saisir son ID dans l'app. Elle arrive ici avec le même statut « En attente » qu'une demande client classique, avec un badge « 👤 Admin » pour la distinguer, seul un Super Admin peut la vérifier et l'activer, exactement comme les autres."],
         ["Statuts des demandes", "En attente = à traiter. Approuvé ✓ / Rejeté ✕ = traité. Archivé = rangé. Expiré = durée écoulée."],
       ] },
     ],
@@ -3445,8 +3500,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       }
       const mapped = data.map((r: any) => ({ ...r, profile: profiles[r.user_id], compatibleProfiles: [], showCompatible: false }));
       setMatchRequests(mapped);
-      const lastSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
-      setMatchRequestsBadge(mapped.filter((r: any) => new Date(r.created_at) > new Date(lastSeen) && r.status === "pending").length);
+      setMatchRequestsBadge(mapped.filter((r: any) => r.status === "pending").length);
     } catch {}
     setMatchRequestsLoading(false);
   };
@@ -5585,9 +5639,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     const checkMatchBadges = async () => {
       try {
         const h = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" };
-        // Nouvelles demandes de mise en relation
-        const lastReqSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
-        const rReq = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&created_at=gt.${encodeURIComponent(lastReqSeen)}&select=id`, { headers: h });
+        // Demandes de mise en relation en attente
+        const rReq = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&select=id`, { headers: h });
         const reqCount = (() => { const c = rReq.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
         setMatchRequestsBadge(reqCount);
         // Propositions ayant reçu une réponse depuis la dernière visite
@@ -5686,7 +5739,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const errMsg = (data as any)?.message || (data as any)?.hint || (data as any)?.code || `HTTP ${r.status}`;
         throw new Error(errMsg);
       }
-      logAdminAction(auth.token, auth.userId, auth.name, `Demande de paiement manuelle envoyée pour ${user.name} — formule ${grantSelectedPlan.label} (${grantSelectedPlan.amount.toLocaleString()} FCFA, ${grantOperator}, réf. ${grantTxRef.trim()}), en attente de validation Super Admin.`, user.id);
+      logAdminAction(auth.token, auth.userId, auth.name, `Demande de paiement manuelle envoyée pour ${user.name}, formule ${grantSelectedPlan.label} (${grantSelectedPlan.amount.toLocaleString()} FCFA, ${grantOperator}, réf. ${grantTxRef.trim()}), en attente de validation Super Admin.`, user.id);
       showToast(`Demande envoyée pour ${user.name}. Un Super Admin doit la valider dans Budget/Paiements.`, "success");
       setPremiumGrantModal(null);
       setGrantOperator(null);
@@ -6423,7 +6476,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     const created = Array.isArray(data) ? data[0] : data;
                     if (!created || !created.id) {
                       setBroadcastLoading(false);
-                      setBroadcastResult({ ok: false, message: "Le serveur n'a renvoyé aucune ligne créée. Le message n'a probablement pas été enregistré — vérifie les permissions de la table « broadcasts »." });
+                      setBroadcastResult({ ok: false, message: "Le serveur n'a renvoyé aucune ligne créée. Le message n'a probablement pas été enregistré, vérifie les permissions de la table « broadcasts »." });
                       return;
                     }
                     // Succès confirmé
@@ -6781,7 +6834,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <input value={pwResetValue} onChange={e => setPwResetValue(e.target.value)} style={{ flex: 1, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 12px", fontSize: "0.95rem", outline: "none", fontFamily: "monospace", fontWeight: 700, color: "#6c3483" }} />
                       <button onClick={() => setPwResetValue(genTempPassword())} title="Régénérer" style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "0 14px", cursor: "pointer", fontSize: "1.1rem" }}>🔄</button>
                     </div>
-                    <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 16, lineHeight: 1.5 }}>Communiquez ce mot de passe à {u.name} (WhatsApp, Messenger...) — il pourra ensuite se connecter directement avec, sans passer par « mot de passe oublié ».</div>
+                    <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 16, lineHeight: 1.5 }}>Communiquez ce mot de passe à {u.name} (WhatsApp, Messenger...), il pourra ensuite se connecter directement avec, sans passer par « mot de passe oublié ».</div>
                     <button disabled={pwResetLoading || pwResetValue.length < 6} onClick={() => submitPasswordReset(u, pwResetValue)}
                       style={{ width: "100%", background: pwResetValue.length >= 6 ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ccc", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: pwResetValue.length >= 6 ? "pointer" : "not-allowed" }}>
                       {pwResetLoading ? "Réinitialisation..." : "Réinitialiser le mot de passe"}
@@ -6931,7 +6984,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {grantTab === "paid" && (
                 <div>
                   <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>💳 Le client a payé (capture WhatsApp)</div>
-                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Renseignez l'opérateur, la référence et la formule visibles sur la preuve de paiement — exactement comme si le client l'avait saisi lui-même — puis envoyez. Un <strong>Super Admin</strong> devra vérifier et activer depuis Budget/Paiements.</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Renseignez l'opérateur, la référence et la formule visibles sur la preuve de paiement, exactement comme si le client l'avait saisi lui-même, puis envoyez. Un <strong>Super Admin</strong> devra vérifier et activer depuis Budget/Paiements.</div>
 
                   <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                     <button onClick={() => setGrantOperator("MTN")} style={{ flex: 1, background: grantOperator === "MTN" ? "#FFCC00" : G.creme, border: `1.5px solid ${grantOperator === "MTN" ? "#FFCC00" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: "#1a1a1a", cursor: "pointer" }}>MTN MoMo</button>
@@ -7248,8 +7301,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["reviews", "Réputation", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["appointments", "Rendez-vous", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "appointments" ? G.vert : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>],
             ["payments", "Budget", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>],
-            ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
             ["groupe", "Groupe Premium", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "groupe" ? G.or : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>],
+            ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
           ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
             <div
               key={key}
@@ -8157,7 +8210,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {(activeTab === "reports" || (activeTab === "messagerie" && msgSubTab === "assistant")) && (
         <div style={{ padding: "16px", display: (activeTab === "messagerie" && msgSubTab === "assistant") ? "flex" : "block", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
           <div style={{ flex: (activeTab === "messagerie" && msgSubTab === "assistant") ? "1.3 1 430px" : undefined, minWidth: 0, width: (activeTab === "messagerie" && msgSubTab === "assistant") ? undefined : "100%" }}>
-          {/* Sous-onglets — affichés uniquement sur Signalements (pas sur l'onglet Messagerie) */}
+          {/* Sous-onglets, affichés uniquement sur Signalements (pas sur l'onglet Messagerie) */}
           {activeTab === "reports" && (
           <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
             {(["all", "user", "system", "archived"] as const).map(f => {
@@ -8550,7 +8603,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                       );
                     })()}
-                    {/* Ligne IDs masquée — remplacée par les profils ci-dessus */}
+                    {/* Ligne IDs masquée, remplacée par les profils ci-dessus */}
                     <div style={{ display: "none" }}>
                       <span>{r.reporter_id?.slice(0, 12)}…</span>
                       {isSupport
@@ -9585,7 +9638,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════ ONGLET GROUPE PREMIUM (demandes, membres, messages — tout centralisé ici) */}
+      {/* ═══════════════════════════════════════════ ONGLET GROUPE PREMIUM (demandes, membres, messages, tout centralisé ici) */}
       {activeTab === "groupe" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
@@ -10439,7 +10492,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <button key={key} onClick={() => {
                 setMatchSubTab(key as any);
                 if (key === "list") { loadMatchListData(); }
-                if (key === "requests") { loadMatchRequests(); localStorage.setItem("moyo_requests_seen", new Date().toISOString()); setMatchRequestsBadge(0); }
+                if (key === "requests") { loadMatchRequests(); }
                 if (key === "propose") loadProposals();
                 if (key === "mmfollow") loadMmFollow();
                 if (key === "matchmaking") loadMatchmaking();
@@ -11258,7 +11311,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         if (list.length === 0) return null;
                         return (
                           <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflowY: "auto", maxHeight: 260, marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
-                            <div style={{ fontSize: "0.62rem", color: "#999", padding: "6px 12px", background: G.creme, position: "sticky", top: 0 }}>{list.length} profil{list.length > 1 ? "s" : ""} — choisis la personne 1</div>
+                            <div style={{ fontSize: "0.62rem", color: "#999", padding: "6px 12px", background: G.creme, position: "sticky", top: 0 }}>{list.length} profil{list.length > 1 ? "s" : ""}, choisis la personne 1</div>
                             {list.map(p => (
                               <div key={p.id} onClick={async () => { setProposeSelected1(p); setProposeSearch1(""); setProposeSelected2(null); setProposeSearch2(""); const opp = await loadOppositeGenderProfiles(p.gender, p.id); setProposeResults2(opp); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}>
                                 <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
