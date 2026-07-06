@@ -1757,7 +1757,7 @@ function UploadRingOverlay({ active, size, ringColor, children }: { active: bool
 }
 
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
-  const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3">(PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer");
+  const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer");
   // ── Parcours guidé Version B (3 étapes) : opérateur choisi à l'étape 2, mode de preuve
   //    (numéro ID ou capture d'écran) choisi à l'étape 3. ──
   const [b2Operator, setB2Operator] = useState<"mtn" | "airtel" | "cb" | null>(null);
@@ -1865,7 +1865,11 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   };
 
   const mtnLogo = (h = 18) => <svg viewBox="0 0 120 60" width={h * 2} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="8" /><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="5" /><text x="60" y="39" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="24" fill="#1a1a1a">MTN</text></svg>;
-  const airtelLogo = (h = 22) => <svg viewBox="0 0 80 60" width={h * 1.4} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="80" height="60" fill="#E40000" rx="8" /><path d="M14 40 Q9 18 24 12 Q39 6 41 21 Q43 35 30 37 Q17 39 15 31" fill="white" stroke="none" /><text x="46" y="30" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="white">airtel</text><text x="46" y="46" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="12" fill="#fff">money</text></svg>;
+  const airtelLogo = (h = 22) => <svg viewBox="0 0 200 130" width={h * 2.3} height={h} xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="130" fill="#E40000" rx="14" />
+    <path d="M28 78 C18 52 34 28 62 22 C90 16 112 30 110 48 C108 64 88 70 78 60 C72 54 74 46 82 45 C86 44.5 89 47 88 51" fill="none" stroke="#fff" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" />
+    <text x="122" y="80" fontFamily="Verdana, 'Trebuchet MS', sans-serif" fontWeight="700" fontSize="52" fill="#fff" letterSpacing="-1">airtel</text>
+  </svg>;
 
   // ════════ VERSION B — ÉTAPE 1/3 : CHOIX DE LA FORMULE (épuré, aucun chiffre annexe) ════════
   if (step === "b1") return (
@@ -1873,7 +1877,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
       <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 1 SUR 3</div>
+            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 1 SUR 4</div>
             <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </div>
@@ -1920,7 +1924,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <div onClick={() => setStep("b1")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
             </div>
-            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 2 SUR 3</div>
+            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 2 SUR 4</div>
             <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </div>
@@ -1974,6 +1978,47 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
       ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", logo: mtnLogo(20) }
       : { name: "Airtel Money", main: "#E40000", onColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", logo: airtelLogo(22) };
     const b3Tel = `tel:${B3OP.ussd.replace(/#/g, "%23")}`;
+
+    return (
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div onClick={() => setStep("b2")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+              </div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 3 SUR 4</div>
+              <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </div>
+            </div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 16 }}>Effectue ton paiement</div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+            <a href={b3Tel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", background: B3OP.main, color: B3OP.onColor, borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, textDecoration: "none", boxSizing: "border-box" as any, marginBottom: 10 }}>
+              {B3OP.logo}
+              Appuyer pour payer - {planAmount.toLocaleString("fr-FR")} FCFA
+            </a>
+            <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+              <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>ou composez ce code depuis ton mobile</div>
+              <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
+            </div>
+          </div>
+
+          <div style={{ padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", flexShrink: 0 }}>
+            <button onClick={() => setStep("b4")} style={{ width: "100%", background: gold, color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: "pointer" }}>J'ai payé, suivant →</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ════════ VERSION B — ÉTAPE 4/4 : PREUVE (ID ou capture d'écran) ════════
+  if (step === "b4" && b2Operator) {
+    const B3OP = b2Operator === "mtn"
+      ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", logo: mtnLogo(20) }
+      : { name: "Airtel Money", main: "#E40000", onColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", logo: airtelLogo(22) };
 
     const submitId = async () => {
       setTxLoading(true); setTxErr(null);
@@ -2043,27 +2088,18 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
         <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
           <div style={{ padding: "18px 20px 0" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <div onClick={() => setStep("b2")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div onClick={() => setStep("b3")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
               </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 3 SUR 3</div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 4 SUR 4</div>
               <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </div>
             </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 16 }}>Effectue ton paiement</div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 16 }}>Comment veux-tu confirmer ?</div>
           </div>
 
           <div style={{ padding: "0 20px 20px" }}>
-            <a href={b3Tel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", background: B3OP.main, color: B3OP.onColor, borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, textDecoration: "none", boxSizing: "border-box" as any, marginBottom: 10 }}>
-              {B3OP.logo}
-              Appuyer pour payer - {planAmount.toLocaleString("fr-FR")} FCFA
-            </a>
-            <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "12px", textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>ou composez ce code depuis ton mobile</div>
-              <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
-            </div>
-
             {/* Choix du mode de preuve : ID ou capture d'écran */}
             <div style={{ display: "flex", background: "#F0EDE6", borderRadius: 50, padding: 4, marginBottom: 16 }}>
               <div onClick={() => setProofMode("id")} className="moyo-tactile" style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "id" ? gold : "transparent", color: proofMode === "id" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Envoyer l'ID</div>
@@ -2072,7 +2108,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
             {proofMode === "id" ? (
               <>
-                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Après ton paiement, tu reçois un SMS <b>{B3OP.name}</b> avec un numéro de transaction (ID). Entre-le ici pour activer ton abonnement :</div>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Après ton paiement, tu reçois un SMS de <b>{B3OP.name}</b> avec un numéro de transaction (ID). Entre-le dans la case ci-dessous pour activer ton abonnement :</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? B3OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
                   <input value={txRef} onChange={e => { setTxRef(e.target.value); setTxErr(null); }} placeholder={B3OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: G.brun, background: "transparent" }} />
@@ -2082,7 +2118,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               </>
             ) : (
               <>
-                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Envoie une capture d'écran de la confirmation de paiement reçue sur ton téléphone :</div>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Envoie la capture d'écran du message que <b>{B3OP.name}</b> t'a envoyé après ton paiement :</div>
                 <input type="file" accept="image/*" id="moyo-b3-screenshot" style={{ display: "none" }} onChange={e => {
                   const f = e.target.files?.[0]; if (!f) return;
                   setScreenshotFile(f); setScreenshotPreview(URL.createObjectURL(f));
