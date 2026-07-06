@@ -1985,6 +1985,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
   const [verified, setVerified] = useState<null | "match" | "mismatch">(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showScreenshot, setShowScreenshot] = useState(false);
+  const [screenshotZoomed, setScreenshotZoomed] = useState(false);
   // Une preuve envoyée sous forme de capture d'écran (au lieu d'un numéro ID) est stockée
   // sous la forme "[capture] https://...png" — on l'affiche joliment au lieu du lien brut.
   const screenshotMatch = p.tx_ref.match(/^\[capture\]\s*(https?:\/\/\S+)/);
@@ -2033,8 +2034,15 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
       </div>
       {screenshotUrl && showScreenshot && (
         <div style={{ marginBottom: 10, borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}`, position: "relative" }}>
-          <img src={screenshotUrl} style={{ width: "100%", maxHeight: 320, objectFit: "contain", background: "#111", display: "block" }} />
-          <div onClick={() => setShowScreenshot(false)} style={{ position: "absolute", top: 8, right: 8, cursor: "pointer", background: "rgba(0,0,0,0.55)", borderRadius: "50%", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <img onClick={() => setScreenshotZoomed(z => !z)} src={screenshotUrl} style={{ width: "100%", maxHeight: screenshotZoomed ? "85vh" : 320, objectFit: "contain", background: "#111", display: "block", cursor: "zoom-in" }} />
+          <div onClick={() => setScreenshotZoomed(z => !z)} title={screenshotZoomed ? "Réduire" : "Zoomer pour bien lire le code"} style={{ position: "absolute", top: 8, right: 42, cursor: "pointer", background: "rgba(0,0,0,0.55)", borderRadius: "50%", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {screenshotZoomed ? (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/></svg>
+            ) : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            )}
+          </div>
+          <div onClick={() => { setShowScreenshot(false); setScreenshotZoomed(false); }} style={{ position: "absolute", top: 8, right: 8, cursor: "pointer", background: "rgba(0,0,0,0.55)", borderRadius: "50%", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </div>
         </div>

@@ -251,7 +251,7 @@ function activePlansCount(): number { return [PLAN_WEEK_ENABLED, PLAN_MONTH_ENAB
 export let PREMIUM_PRICE_EUR = 10;
 export let EUR_TO_FCFA = 655.957; // taux de conversion EUR→FCFA (configurable dans Tarifs & Paiements)
 // Devises : Mobile Money = FCFA (XAF), Carte/Stripe = EUR. Helpers de classification et d'affichage.
-const isCardOperator = (op: string) => op === "Stripe" || op === "Carte";
+const isCardOperator = (op: string) => op === "Stripe" || op === "Carte" || op === "Wero" || op === "PayPal";
 export const paymentCurrency = (r: { currency?: string; operator: string }) => (r.currency || (isCardOperator(r.operator) ? "EUR" : "XAF"));
 export const formatMoney = (amount: number, currency: string) => currency === "EUR" ? `${(amount || 0).toLocaleString("fr-FR")} €` : `${(amount || 0).toLocaleString()} FCFA`;
 // Moyens de paiement activés (pilotés depuis Configuration admin). true = disponible.
@@ -1784,6 +1784,11 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
       } catch { setIsDiaspora(false); }
     })();
   }, [userId, token]);
+  // La diaspora n'a qu'un seul tarif (mensuel, en euros) — pas de formules FCFA au choix comme au
+  // Congo. On saute donc directement l'étape 1 dès qu'on sait que la personne est en diaspora.
+  useEffect(() => {
+    if (isDiaspora && step === "b1") setStep("b2");
+  }, [isDiaspora, step]);
   // ── Parcours guidé Version B (3 étapes) : opérateur choisi à l'étape 2, mode de preuve
   //    (numéro ID ou capture d'écran) choisi à l'étape 3. ──
   const [b2Operator, setB2Operator] = useState<"mtn" | "airtel" | "cb" | "wero" | "paypal" | null>(null);
@@ -1943,16 +1948,16 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
       <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-            <div onClick={() => setStep("b1")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div onClick={() => isDiaspora ? onClose() : setStep("b1")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
             </div>
-            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 2 SUR 4</div>
+            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>{isDiaspora ? "ÉTAPE 1 SUR 3" : "ÉTAPE 2 SUR 4"}</div>
             <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </div>
           </div>
           <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>Comment veux-tu payer ?</div>
-          <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>{selectedPlan.label} · {planAmount.toLocaleString("fr-FR")} FCFA</div>
+          <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>{isDiaspora ? `Abonnement mensuel · ${PREMIUM_PRICE_EUR}€ / mois` : `${selectedPlan.label} · ${planAmount.toLocaleString("fr-FR")} FCFA`}</div>
         </div>
         <div style={{ flex: 1, padding: "0 20px" }}>
           {!isDiaspora && (
@@ -1996,8 +2001,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
               </div>
               <div onClick={() => { if (!PAY_WERO_ENABLED) return; setB2Operator("wero"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_WERO_ENABLED ? 1 : 0.5, cursor: PAY_WERO_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#5C2D91", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ color: "#fff", fontWeight: 900, fontSize: "0.85rem" }}>W</span>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#FFDE00", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ color: "#1a1a1a", fontWeight: 900, fontSize: "0.62rem", letterSpacing: "-0.02em" }}>wero</span>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Wero</div>
@@ -2027,7 +2032,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
     const OPS: Record<string, any> = {
       mtn: { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", logo: mtnLogo(20) },
       airtel: { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", logo: airtelLogo(22) },
-      wero: { name: "Wero", main: "#5C2D91", onColor: "#fff", phoneNumber: PAY_WERO_NUMBER, placeholder: "Référence de l'envoi (si tu en as une)", operator: "Wero", isPhoneTransfer: true, logo: <div style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.85rem" }}>W</div> },
+      wero: { name: "Wero", main: "#5C2D91", onColor: "#fff", phoneNumber: PAY_WERO_NUMBER, placeholder: "Référence de l'envoi (si tu en as une)", operator: "Wero", isPhoneTransfer: true, logo: <div style={{ background: "#FFDE00", borderRadius: 6, padding: "4px 8px", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#1a1a1a", fontWeight: 900, fontSize: "0.85rem", letterSpacing: "-0.02em" }}>wero</span></div> },
       paypal: { name: "PayPal", main: "#003087", onColor: "#fff", phoneNumber: PAY_PAYPAL_NUMBER, placeholder: "Référence de la transaction PayPal", operator: "PayPal", isPhoneTransfer: true, logo: <div style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.62rem", fontStyle: "italic" }}>Pay</div> },
     };
     const B3OP = OPS[b2Operator];
@@ -2041,7 +2046,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               <div onClick={() => setStep("b2")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
               </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 3 SUR 4</div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>{isDiaspora ? "ÉTAPE 2 SUR 3" : "ÉTAPE 3 SUR 4"}</div>
               <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </div>
@@ -2056,7 +2061,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                   <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
-                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Envoie {planAmount > 999 ? Math.round(planAmount / (EUR_TO_FCFA || 656)) : planAmount} € via {B3OP.name} à ce numéro</div>
+                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Envoie {PREMIUM_PRICE_EUR} € via {B3OP.name} à ce numéro</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, background: B3OP.main, borderRadius: 12, padding: "14px 16px" }}>
                   {B3OP.logo}
@@ -2122,6 +2127,10 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
       paypal: { name: "PayPal", main: "#003087", onColor: "#fff", placeholder: "Référence de la transaction PayPal", operator: "PayPal" },
     };
     const B3OP = OPS[b2Operator];
+    // Wero/PayPal facturent en euros (même prix que Visa/Mastercard) — jamais le montant FCFA des
+    // formules Congo, qui ne les concernent pas.
+    const submitAmount = (b2Operator === "wero" || b2Operator === "paypal") ? PREMIUM_PRICE_EUR : planAmount;
+    const submitPlanLabel = isDiaspora ? "1 mois (diaspora)" : selectedPlan.label;
 
     const submitId = async () => {
       setTxLoading(true); setTxErr(null);
@@ -2141,8 +2150,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           setTxLoading(false); return;
         }
         const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: ref, amount: planAmount, status: "pending" }) });
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: ref, amount: submitAmount, status: "pending" }) });
         setTxActivated(false); setTxSent(true);
       } catch {
         setTxActivated(false); setTxSent(true);
@@ -2164,8 +2173,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
         if (!uploadRes.ok) throw new Error("upload_failed");
         const screenshotUrl = `${SUPABASE_URL}/storage/v1/object/public/payment-proofs/${path}`;
         const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: null, screenshot_url: screenshotUrl, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: `[capture] ${screenshotUrl}`, amount: planAmount, status: "pending" }) });
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: null, screenshot_url: screenshotUrl, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: `[capture] ${screenshotUrl}`, amount: submitAmount, status: "pending" }) });
         setScreenshotSent(true);
       } catch {
         setTxErr("Envoi impossible, réessaie dans un instant.");
@@ -2194,7 +2203,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               <div onClick={() => setStep("b3")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
               </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 4 SUR 4</div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>{isDiaspora ? "ÉTAPE 3 SUR 3" : "ÉTAPE 4 SUR 4"}</div>
               <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </div>
@@ -2211,7 +2220,12 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
             {proofMode === "id" ? (
               <>
-                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Après ton paiement, tu reçois un SMS de <b>{B3OP.name}</b> avec un numéro de transaction (ID). Entre-le dans la case ci-dessous pour activer ton abonnement :</div>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>
+                  {(b2Operator === "wero" || b2Operator === "paypal")
+                    ? <>Après ton paiement, <b>{B3OP.name}</b> ne t'envoie pas forcément de SMS — regarde plutôt dans l'application, tes e-mails, tes notifications, ou le relevé de ton compte bancaire pour trouver la référence de la transaction. Entre-la dans la case ci-dessous pour activer ton abonnement :</>
+                    : <>Après ton paiement, tu reçois un SMS de <b>{B3OP.name}</b> avec un numéro de transaction (ID). Entre-le dans la case ci-dessous pour activer ton abonnement :</>
+                  }
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? B3OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
                   <input value={txRef} onChange={e => { setTxRef(e.target.value); setTxErr(null); }} placeholder={B3OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: G.brun, background: "transparent" }} />
@@ -2221,7 +2235,12 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               </>
             ) : (
               <>
-                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Envoie la capture d'écran du message que <b>{B3OP.name}</b> t'a envoyé après ton paiement :</div>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>
+                  {(b2Operator === "wero" || b2Operator === "paypal")
+                    ? <>Envoie la capture d'écran qui prouve ton paiement <b>{B3OP.name}</b> (dans l'application, un e-mail, une notification, ou ton compte bancaire) :</>
+                    : <>Envoie la capture d'écran du message que <b>{B3OP.name}</b> t'a envoyé après ton paiement :</>
+                  }
+                </div>
                 <input type="file" accept="image/*" id="moyo-b3-screenshot" style={{ display: "none" }} onChange={e => {
                   const f = e.target.files?.[0]; if (!f) return;
                   setScreenshotFile(f); setScreenshotPreview(URL.createObjectURL(f));
@@ -13928,8 +13947,17 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 </div>
               </div>
               <div style={{ marginLeft: 12, flexShrink: 0, textAlign: "right" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>À partir de</div>
-                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or }}>{minEnabledPremiumPrice().toLocaleString()} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA</span></div>
+                {/diaspora/i.test(profile?.city || "") ? (
+                  <>
+                    <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>Seulement</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or }}>{PREMIUM_PRICE_EUR}€ <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>/ mois</span></div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>À partir de</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or }}>{minEnabledPremiumPrice().toLocaleString()} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA</span></div>
+                  </>
+                )}
               </div>
             </div>
           );
