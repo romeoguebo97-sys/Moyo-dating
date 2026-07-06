@@ -10254,13 +10254,18 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   const msgBannerRef = useRef<HTMLDivElement | null>(null);
 
   // ── Liste des conversations (commun mobile + desktop) ──
-  const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0, background: G.blanc }}>
+  // ── Grille CSS à 2 rangées : "auto" (bandeau, ne peut JAMAIS se réduire à zéro, par définition
+  //    du CSS Grid) + "1fr" (liste, prend tout le reste et défile seule). Contrairement au flexbox
+  //    (où un élément peut se retrouver écrasé à zéro dans certains calculs de hauteur imbriquée —
+  //    un piège bien connu de flexbox), une rangée "auto" en Grid garde toujours sa taille réelle,
+  //    quoi qu'il arrive autour. C'est la technique la plus robuste pour ce type d'écran. ──
+  const convList = <div style={{ display: "grid", gridTemplateRows: "auto 1fr", height: "100%", background: G.blanc }}>
     {/* ── Bandeau (statuts + onglets) : élément normal du flux flexbox (flexShrink:0), PAS de
         position:sticky ni fixed. Ces deux techniques ont chacune leurs pièges connus sur iOS
         Safari (sticky peut "disparaître" visuellement après certains changements de contenu,
         nécessitant un rafraîchissement). Un simple flex-column avec un frère qui défile à côté
         est beaucoup plus robuste : aucune astuce de positionnement fragile. ── */}
-    <div ref={msgBannerRef} style={{ background: G.blanc, flexShrink: 0 }}>
+    <div ref={msgBannerRef} style={{ background: G.blanc }}>
     <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     {FEATURE_GROUP_PREMIUM && (
     <div className="moyo-tactile" style={{ display: "flex", alignItems: "center", padding: "4px 12px 8px", background: G.blanc, gap: 8 }}>
@@ -10289,7 +10294,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
     )}
     </div>
-    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc }}>
+    <div style={{ minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
         : (() => {
@@ -15503,7 +15508,7 @@ export default function App() {
         const [rPending, rUnreadReviews, rPendingPayments] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/reports?select=id&status=eq.pending`, { headers: h }),
           fetch(`${SUPABASE_URL}/rest/v1/app_ratings?select=id&is_read=eq.false`, { headers: h }),
-          fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id&status=eq.pending`, { headers: h }),
+          fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id&status=eq.pending&archived=eq.false`, { headers: h }),
         ]);
         const parseCount = (r: Response) => { const h2 = r.headers.get("content-range"); return h2 ? parseInt(h2.split("/")[1]) || 0 : 0; };
         // Demandes de mise en relation en attente — compte réel, sans dépendre d'un repère stocké
