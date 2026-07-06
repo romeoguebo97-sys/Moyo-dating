@@ -5794,6 +5794,19 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   const [viewedProfile, setViewedProfile] = useState<Profile | null>(null);
   const [myGender, setMyGender] = useState("");
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "", religion: "" });
+  // Hauteur réelle de l'en-tête, mesurée en JS (comme dans Messages) : le plein écran doit occuper
+  // exactement ce qui reste après l'en-tête, jamais un chiffre deviné qui finit par ne plus
+  // correspondre et laisser un espace résiduel visible en bas.
+  const [discoverHeaderHeight, setDiscoverHeaderHeight] = useState(55);
+  useEffect(() => {
+    const el = document.querySelector("[data-moyo-header]") as HTMLElement | null;
+    if (!el) return;
+    const measure = () => setDiscoverHeaderHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list" | "full">(DISCOVER_DEFAULT_MODE);
   // ── Synchronise TOUJOURS l'état plein écran de l'AppShell avec viewMode, de façon déclarative.
@@ -6278,10 +6291,10 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     setProfiles(prev => shuffleArray([...prev]));
     el.scrollTop = 0;
   }
-}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 55px - env(safe-area-inset-bottom))", height: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 55px - env(safe-area-inset-bottom))", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "var(--c-shell-bg)", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : `calc(100dvh - ${discoverHeaderHeight}px - env(safe-area-inset-bottom))`, height: isWide ? "calc(100vh - 20px)" : `calc(100dvh - ${discoverHeaderHeight}px - env(safe-area-inset-bottom))`, overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "var(--c-shell-bg)", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
-    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "100%", minHeight: 560, borderRadius: 0, overflow: "hidden", marginBottom: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
+    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "100%", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
       {prof.photo_url ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
       {/* ✕ haut droite - sur chaque carte */}
