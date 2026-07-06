@@ -6105,7 +6105,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     </div>
   );
 
-  return <div style={{ padding: isWide ? 0 : (viewMode === "full" ? "0 16px 0" : "14px 16px 8px"), display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
+  return <div style={{ padding: isWide ? 0 : (viewMode === "full" ? "0 16px 0" : "14px 16px 8px"), display: isWide ? "flex" : "block", height: isWide ? "100%" : (viewMode === "full" ? "100%" : "auto") }}>
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
     {isWide && (
       <div style={{ width: 260, minWidth: 260, background: viewMode === "full" ? "rgba(15,10,5,0.55)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.08)" : G.gris}`, overflowY: viewMode === "full" ? "hidden" : "auto", height: "100%", display: "flex", flexDirection: "column", transition: "all 0.45s cubic-bezier(0.4,0,0.2,1)", zIndex: viewMode === "full" ? 10 : 1, pointerEvents: viewMode === "full" ? "none" : "auto", filter: viewMode === "full" ? "blur(2px)" : "none" }}>
@@ -6139,7 +6139,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       </div>
     )}
     {/* ── CONTENU PRINCIPAL DÉCOUVRIR ── */}
-    <div style={{ flex: 1, padding: isWide ? ((viewMode as string) === "full" ? 0 : "16px 20px") : 0, overflowY: isWide ? ((viewMode as string) === "full" ? "hidden" : "auto") : "visible", minWidth: 0, display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: isWide ? "100%" : "auto" }}>
+    <div style={{ flex: 1, padding: isWide ? ((viewMode as string) === "full" ? 0 : "16px 20px") : 0, overflowY: isWide ? ((viewMode as string) === "full" ? "hidden" : "auto") : "visible", minWidth: 0, display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: isWide ? "100%" : ((viewMode as string) === "full" ? "100%" : "auto") }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
     {/* ── CSS animations bottom sheet + fullscreen footer ── */}
     <style>{`
@@ -6291,7 +6291,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     setProfiles(prev => shuffleArray([...prev]));
     el.scrollTop = 0;
   }
-}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : `calc(100dvh - ${discoverHeaderHeight}px - env(safe-area-inset-bottom))`, height: isWide ? "calc(100vh - 20px)" : `calc(100dvh - ${discoverHeaderHeight}px - env(safe-area-inset-bottom))`, overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "var(--c-shell-bg)", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "100%", height: isWide ? "calc(100vh - 20px)" : "100%", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "var(--c-shell-bg)", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
     <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "100%", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 0, background: "var(--c-shell-bg)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
