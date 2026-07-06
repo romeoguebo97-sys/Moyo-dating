@@ -1865,11 +1865,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   };
 
   const mtnLogo = (h = 18) => <svg viewBox="0 0 120 60" width={h * 2} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="8" /><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="5" /><text x="60" y="39" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="24" fill="#1a1a1a">MTN</text></svg>;
-  const airtelLogo = (h = 22) => <svg viewBox="0 0 200 130" width={h * 2.3} height={h} xmlns="http://www.w3.org/2000/svg">
-    <rect width="200" height="130" fill="#E40000" rx="14" />
-    <path d="M28 78 C18 52 34 28 62 22 C90 16 112 30 110 48 C108 64 88 70 78 60 C72 54 74 46 82 45 C86 44.5 89 47 88 51" fill="none" stroke="#fff" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" />
-    <text x="122" y="80" fontFamily="Verdana, 'Trebuchet MS', sans-serif" fontWeight="700" fontSize="52" fill="#fff" letterSpacing="-1">airtel</text>
-  </svg>;
+  const airtelLogo = (h = 22) => <img src={`${SUPABASE_URL}/storage/v1/object/public/assets/airtel-logo.png`} alt="Airtel" style={{ height: h, width: "auto", display: "block", borderRadius: 6 }} />;
 
   // ════════ VERSION B — ÉTAPE 1/3 : CHOIX DE LA FORMULE (épuré, aucun chiffre annexe) ════════
   if (step === "b1") return (
@@ -1992,17 +1988,41 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </div>
             </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 16 }}>Effectue ton paiement</div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 3 }}>Effectue ton paiement</div>
+            <div style={{ fontSize: "0.8rem", color: "#999", marginBottom: 20 }}>Suis les instructions ci-dessous pour valider ton paiement.</div>
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-            <a href={b3Tel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", background: B3OP.main, color: B3OP.onColor, borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, textDecoration: "none", boxSizing: "border-box" as any, marginBottom: 10 }}>
-              {B3OP.logo}
-              Appuyer pour payer - {planAmount.toLocaleString("fr-FR")} FCFA
-            </a>
-            <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "12px", textAlign: "center" }}>
-              <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>ou composez ce code depuis ton mobile</div>
-              <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
+            {/* Carte 1 : appuyer pour payer */}
+            <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
+                <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Appuyer pour payer</div>
+              </div>
+              <a href={b3Tel} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", background: B3OP.main, color: B3OP.onColor, borderRadius: 12, padding: "12px 16px", textDecoration: "none", boxSizing: "border-box" as any }}>
+                {B3OP.logo}
+                <div style={{ width: 1, alignSelf: "stretch", background: "rgba(255,255,255,0.35)" }} />
+                <div>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>Appuyer pour payer</div>
+                  <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>{planAmount.toLocaleString("fr-FR")} FCFA</div>
+                </div>
+              </a>
+            </div>
+
+            {/* Séparateur "ou" en badge circulaire, à cheval entre les deux cartes */}
+            <div style={{ display: "flex", justifyContent: "center", margin: "-14px 0" }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#FCFBF8", border: `2px solid ${G.brun}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: G.brun, zIndex: 2, position: "relative" }}>ou</div>
+            </div>
+
+            {/* Carte 2 : composer le code */}
+            <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginTop: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8e4db", color: G.brun, fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</div>
+                <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Compose ce code depuis ton mobile</div>
+              </div>
+              <div style={{ background: "#F0EDE6", borderRadius: 10, padding: "13px", textAlign: "center" }}>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
+              </div>
             </div>
           </div>
 
