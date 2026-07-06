@@ -43,6 +43,10 @@ export function setPAY_CB_ENABLED(v: any) { PAY_CB_ENABLED = v; }
 export function setPAY_MTN_ENABLED(v: any) { PAY_MTN_ENABLED = v; }
 export function setPAY_MTN_NUMBER(v: any) { PAY_MTN_NUMBER = v; }
 export function setPAY_MTN_RESPONSABLE(v: any) { PAY_MTN_RESPONSABLE = v; }
+export function setPAY_WERO_ENABLED(v: any) { PAY_WERO_ENABLED = v; }
+export function setPAY_WERO_NUMBER(v: any) { PAY_WERO_NUMBER = v; }
+export function setPAY_PAYPAL_ENABLED(v: any) { PAY_PAYPAL_ENABLED = v; }
+export function setPAY_PAYPAL_NUMBER(v: any) { PAY_PAYPAL_NUMBER = v; }
 export function setPLAN_2MONTH_ENABLED(v: any) { PLAN_2MONTH_ENABLED = v; }
 export function setPLAN_MONTH_ENABLED(v: any) { PLAN_MONTH_ENABLED = v; }
 export function setPLAN_WEEK_ENABLED(v: any) { PLAN_WEEK_ENABLED = v; }
@@ -254,6 +258,8 @@ export const formatMoney = (amount: number, currency: string) => currency === "E
 export let PAY_MTN_ENABLED = true;
 export let PAY_AIRTEL_ENABLED = true;
 export let PAY_CB_ENABLED = true;
+export let PAY_WERO_ENABLED = true;
+export let PAY_PAYPAL_ENABLED = true;
 // Bloquer les likes entre profils de même genre (app hétéro). Piloté depuis Config admin.
 export let BLOCK_SAME_GENDER = true;
 
@@ -274,6 +280,9 @@ export let PAY_MTN_NUMBER = "065132012";
 export let PAY_MTN_RESPONSABLE = "Juste-Emmanuelle AKOUMOU ISSOMBO";
 export let PAY_AIRTEL_NUMBER = "056230067";
 export let PAY_AIRTEL_RESPONSABLE = "THEOPHILE BEAUGARD LIBALI";
+// Diaspora uniquement : Wero et PayPal, tous deux identifiés par un numéro de téléphone
+export let PAY_WERO_NUMBER = "+33753356471";
+export let PAY_PAYPAL_NUMBER = "+33753356471";
 // Contacts (modifiables depuis Config admin)
 export let CONTACT_EMAIL = "contact@moyo-congo.com";
 export let CONTACT_WHATSAPP = "242065132012";
@@ -323,7 +332,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_group_premium,feature_group_photos,premium_screen_variant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_group_premium,feature_group_photos,premium_screen_variant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -332,6 +341,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["pay_mtn_enabled"] !== undefined) PAY_MTN_ENABLED = map["pay_mtn_enabled"] !== "false";
   if (map["pay_airtel_enabled"] !== undefined) PAY_AIRTEL_ENABLED = map["pay_airtel_enabled"] !== "false";
   if (map["pay_cb_enabled"] !== undefined) PAY_CB_ENABLED = map["pay_cb_enabled"] !== "false";
+  if (map["pay_wero_enabled"] !== undefined) PAY_WERO_ENABLED = map["pay_wero_enabled"] !== "false";
+  if (map["pay_paypal_enabled"] !== undefined) PAY_PAYPAL_ENABLED = map["pay_paypal_enabled"] !== "false";
   if (map["rule_block_same_gender_like"] !== undefined) BLOCK_SAME_GENDER = map["rule_block_same_gender_like"] !== "false";
   if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
@@ -349,6 +360,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["pay_mtn_responsable"]) PAY_MTN_RESPONSABLE = map["pay_mtn_responsable"];
   if (map["pay_airtel_number"]) PAY_AIRTEL_NUMBER = map["pay_airtel_number"];
   if (map["pay_airtel_responsable"]) PAY_AIRTEL_RESPONSABLE = map["pay_airtel_responsable"];
+  if (map["pay_wero_number"]) PAY_WERO_NUMBER = map["pay_wero_number"];
+  if (map["pay_paypal_number"]) PAY_PAYPAL_NUMBER = map["pay_paypal_number"];
   if (map["contact_email"]) CONTACT_EMAIL = map["contact_email"];
   if (map["contact_whatsapp"]) CONTACT_WHATSAPP = map["contact_whatsapp"];
   if (map["contact_address"]) CONTACT_ADDRESS = map["contact_address"];
@@ -1758,9 +1771,22 @@ function UploadRingOverlay({ active, size, ringColor, children }: { active: bool
 
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer");
+  // ── Congo ou diaspora ? Déterminé depuis la ville du profil ("Diaspora Europe", "Diaspora
+  //    Amérique", etc. sont déjà des options existantes dans le formulaire de profil). Tant que
+  //    ce n'est pas encore chargé (null), on affiche par défaut les moyens Congo (public majoritaire). ──
+  const [isDiaspora, setIsDiaspora] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!userId || !token) return;
+    (async () => {
+      try {
+        const rows = await sb.query<{ city: string }>(token, "profiles", `?id=eq.${userId}&select=city`);
+        setIsDiaspora(/diaspora/i.test(rows[0]?.city || ""));
+      } catch { setIsDiaspora(false); }
+    })();
+  }, [userId, token]);
   // ── Parcours guidé Version B (3 étapes) : opérateur choisi à l'étape 2, mode de preuve
   //    (numéro ID ou capture d'écran) choisi à l'étape 3. ──
-  const [b2Operator, setB2Operator] = useState<"mtn" | "airtel" | "cb" | null>(null);
+  const [b2Operator, setB2Operator] = useState<"mtn" | "airtel" | "cb" | "wero" | "paypal" | null>(null);
   const [proofMode, setProofMode] = useState<"id" | "screenshot">("id");
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
@@ -1929,51 +1955,83 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>{selectedPlan.label} · {planAmount.toLocaleString("fr-FR")} FCFA</div>
         </div>
         <div style={{ flex: 1, padding: "0 20px" }}>
-          <div onClick={() => { if (!PAY_MTN_ENABLED) return; setB2Operator("mtn"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_MTN_ENABLED ? 1 : 0.5, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            {mtnLogo(24)}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>MTN MoMo</div>
-              <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_MTN_ENABLED ? "Congo" : "Indisponible"}</div>
-            </div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-          </div>
-          <div onClick={() => { if (!PAY_AIRTEL_ENABLED) return; setB2Operator("airtel"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_AIRTEL_ENABLED ? 1 : 0.5, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            {airtelLogo(26)}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Airtel Money</div>
-              <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_AIRTEL_ENABLED ? "Congo" : "Indisponible"}</div>
-            </div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-          </div>
-          <div onClick={async () => {
-            if (!PAY_CB_ENABLED) return;
-            try {
-              const win = window.open("", "_blank");
-              const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
-              const data = await r.json();
-              if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
-            } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
-          }} className="moyo-tactile" style={{ opacity: PAY_CB_ENABLED ? 1 : 0.5, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", background: "#1a1a2e", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 32, height: 24, background: "rgba(255,255,255,0.12)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#fff" }}>Visa / Mastercard</div>
-              <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.6)" }}>{PAY_CB_ENABLED ? "Diaspora" : "Indisponible"}</div>
-            </div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+          {!isDiaspora && (
+            <>
+              <div onClick={() => { if (!PAY_MTN_ENABLED) return; setB2Operator("mtn"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_MTN_ENABLED ? 1 : 0.5, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                {mtnLogo(24)}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>MTN MoMo</div>
+                  <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_MTN_ENABLED ? "Congo" : "Indisponible"}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+              </div>
+              <div onClick={() => { if (!PAY_AIRTEL_ENABLED) return; setB2Operator("airtel"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_AIRTEL_ENABLED ? 1 : 0.5, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                {airtelLogo(26)}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Airtel Money</div>
+                  <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_AIRTEL_ENABLED ? "Congo" : "Indisponible"}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+              </div>
+            </>
+          )}
+          {isDiaspora && (
+            <>
+              <div onClick={async () => {
+                if (!PAY_CB_ENABLED) return;
+                try {
+                  const win = window.open("", "_blank");
+                  const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
+                  const data = await r.json();
+                  if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
+                } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
+              }} className="moyo-tactile" style={{ opacity: PAY_CB_ENABLED ? 1 : 0.5, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", background: "#1a1a2e", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 32, height: 24, background: "rgba(255,255,255,0.12)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#fff" }}>Visa / Mastercard</div>
+                  <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.6)" }}>{PAY_CB_ENABLED ? "Diaspora" : "Indisponible"}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+              </div>
+              <div onClick={() => { if (!PAY_WERO_ENABLED) return; setB2Operator("wero"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_WERO_ENABLED ? 1 : 0.5, cursor: PAY_WERO_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#5C2D91", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ color: "#fff", fontWeight: 900, fontSize: "0.85rem" }}>W</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Wero</div>
+                  <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_WERO_ENABLED ? "Europe" : "Indisponible"}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+              </div>
+              <div onClick={() => { if (!PAY_PAYPAL_ENABLED) return; setB2Operator("paypal"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_PAYPAL_ENABLED ? 1 : 0.5, cursor: PAY_PAYPAL_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#003087", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ color: "#fff", fontWeight: 900, fontSize: "0.72rem", fontStyle: "italic" }}>Pay</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>PayPal</div>
+                  <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_PAYPAL_ENABLED ? "International" : "Indisponible"}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+              </div>
+            </>
+          )}
           </div>
         </div>
       </div>
-    </div>
   );
 
   // ════════ VERSION B — ÉTAPE 3/3 : PAIEMENT + PREUVE (ID ou capture d'écran) ════════
   if (step === "b3" && b2Operator) {
-    const B3OP = b2Operator === "mtn"
-      ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", logo: mtnLogo(20) }
-      : { name: "Airtel Money", main: "#E40000", onColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", logo: airtelLogo(22) };
-    const b3Tel = `tel:${B3OP.ussd.replace(/#/g, "%23")}`;
+    const OPS: Record<string, any> = {
+      mtn: { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", logo: mtnLogo(20) },
+      airtel: { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", logo: airtelLogo(22) },
+      wero: { name: "Wero", main: "#5C2D91", onColor: "#fff", phoneNumber: PAY_WERO_NUMBER, placeholder: "Référence de l'envoi (si tu en as une)", operator: "Wero", isPhoneTransfer: true, logo: <div style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.85rem" }}>W</div> },
+      paypal: { name: "PayPal", main: "#003087", onColor: "#fff", phoneNumber: PAY_PAYPAL_NUMBER, placeholder: "Référence de la transaction PayPal", operator: "PayPal", isPhoneTransfer: true, logo: <div style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.62rem", fontStyle: "italic" }}>Pay</div> },
+    };
+    const B3OP = OPS[b2Operator];
+    const b3Tel = B3OP.ussd ? `tel:${B3OP.ussd.replace(/#/g, "%23")}` : "";
 
     return (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
@@ -1993,37 +2051,58 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-            {/* Carte 1 : appuyer pour payer */}
-            <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
-                <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Appuyer pour payer</div>
-              </div>
-              <a href={b3Tel} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", background: B3OP.main, color: B3OP.onColor, borderRadius: 12, padding: "12px 16px", textDecoration: "none", boxSizing: "border-box" as any }}>
-                {B3OP.logo}
-                <div style={{ width: 1, alignSelf: "stretch", background: "rgba(255,255,255,0.35)" }} />
-                <div>
-                  <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>Appuyer pour payer</div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>{planAmount.toLocaleString("fr-FR")} FCFA</div>
+            {B3OP.isPhoneTransfer ? (
+              /* Wero / PayPal : pas de code USSD, juste un numéro à qui envoyer */
+              <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
+                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Envoie {planAmount > 999 ? Math.round(planAmount / (EUR_TO_FCFA || 656)) : planAmount} € via {B3OP.name} à ce numéro</div>
                 </div>
-              </a>
-            </div>
-
-            {/* Séparateur "ou" en badge circulaire, à cheval entre les deux cartes */}
-            <div style={{ display: "flex", justifyContent: "center", margin: "-14px 0" }}>
-              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#FCFBF8", border: `2px solid ${G.brun}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: G.brun, zIndex: 2, position: "relative" }}>ou</div>
-            </div>
-
-            {/* Carte 2 : composer le code */}
-            <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginTop: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8e4db", color: G.brun, fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</div>
-                <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Compose ce code depuis ton mobile</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, background: B3OP.main, borderRadius: 12, padding: "14px 16px" }}>
+                  {B3OP.logo}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.7)", fontWeight: 700, textTransform: "uppercase" }}>Numéro {B3OP.name}</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 800, color: B3OP.onColor, fontFamily: "monospace" }}>{B3OP.phoneNumber}</div>
+                  </div>
+                  <div onClick={() => { navigator.clipboard?.writeText(B3OP.phoneNumber); }} className="moyo-tactile" style={{ cursor: "pointer", background: "rgba(255,255,255,0.18)", borderRadius: 8, padding: "8px 12px", fontSize: "0.72rem", fontWeight: 700, color: B3OP.onColor }}>Copier</div>
+                </div>
+                <div style={{ fontSize: "0.76rem", color: "#999", marginTop: 12, lineHeight: 1.5 }}>Ouvre ton application {B3OP.name}, envoie le montant à ce numéro, puis passe à l'étape suivante.</div>
               </div>
-              <div style={{ background: "#F0EDE6", borderRadius: 10, padding: "13px", textAlign: "center" }}>
-                <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
-              </div>
-            </div>
+            ) : (
+              <>
+                {/* Carte 1 : appuyer pour payer */}
+                <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
+                    <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Appuyer pour payer</div>
+                  </div>
+                  <a href={b3Tel} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", background: B3OP.main, color: B3OP.onColor, borderRadius: 12, padding: "12px 16px", textDecoration: "none", boxSizing: "border-box" as any }}>
+                    {B3OP.logo}
+                    <div style={{ width: 1, alignSelf: "stretch", background: "rgba(255,255,255,0.35)" }} />
+                    <div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>Appuyer pour payer</div>
+                      <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>{planAmount.toLocaleString("fr-FR")} FCFA</div>
+                    </div>
+                  </a>
+                </div>
+
+                {/* Séparateur "ou" en badge circulaire, à cheval entre les deux cartes */}
+                <div style={{ display: "flex", justifyContent: "center", margin: "-14px 0" }}>
+                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#FCFBF8", border: `2px solid ${G.brun}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: G.brun, zIndex: 2, position: "relative" }}>ou</div>
+                </div>
+
+                {/* Carte 2 : composer le code */}
+                <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginTop: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8e4db", color: G.brun, fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</div>
+                    <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Compose ce code depuis ton mobile</div>
+                  </div>
+                  <div style={{ background: "#F0EDE6", borderRadius: 10, padding: "13px", textAlign: "center" }}>
+                    <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div style={{ padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", flexShrink: 0 }}>
@@ -2036,9 +2115,13 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
 
   // ════════ VERSION B — ÉTAPE 4/4 : PREUVE (ID ou capture d'écran) ════════
   if (step === "b4" && b2Operator) {
-    const B3OP = b2Operator === "mtn"
-      ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", logo: mtnLogo(20) }
-      : { name: "Airtel Money", main: "#E40000", onColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", logo: airtelLogo(22) };
+    const OPS: Record<string, any> = {
+      mtn: { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", placeholder: "Ex : 7753031542", operator: "MTN" },
+      airtel: { name: "Airtel Money", main: "#FF0100", onColor: "#fff", placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel" },
+      wero: { name: "Wero", main: "#5C2D91", onColor: "#fff", placeholder: "Référence de l'envoi (si tu en as une)", operator: "Wero" },
+      paypal: { name: "PayPal", main: "#003087", onColor: "#fff", placeholder: "Référence de la transaction PayPal", operator: "PayPal" },
+    };
+    const B3OP = OPS[b2Operator];
 
     const submitId = async () => {
       setTxLoading(true); setTxErr(null);
@@ -2223,26 +2306,40 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           })}
         </div>
         <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#7a6a3a", fontWeight: 600, marginBottom: 14 }}>Formule sélectionnée : <span style={{ fontWeight: 800, color: "#3a2e10" }}>{selectedPlan.label}</span> — <span style={{ fontWeight: 800, color: gold }}>{planAmount.toLocaleString("fr-FR")} FCFA</span></div>
-        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>CONGO — PAYEZ AVEC</div>
-        <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
-          {mtnLogo(18)} MTN MoMo{!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
-        </button>
-        <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: G.blanc, color: "#E40000", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#E40000" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
-          {airtelLogo(20)} Airtel Money{!PAY_AIRTEL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
-        </button>
-        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>DIASPORA — PAYER PAR CARTE</div>
-        <button onClick={async () => {
-          if (!PAY_CB_ENABLED) return;
-          try {
-            const win = window.open("", "_blank");
-            const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
-            const data = await r.json();
-            if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
-          } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
-        }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "#1a1a2e" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-          Visa / Mastercard{!PAY_CB_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
-        </button>
+        {!isDiaspora && (
+          <>
+            <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>CONGO — PAYEZ AVEC</div>
+            <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+              {mtnLogo(18)} MTN MoMo{!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+            </button>
+            <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: G.blanc, color: "#FF0100", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#FF0100" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
+              {airtelLogo(20)} Airtel Money{!PAY_AIRTEL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+            </button>
+          </>
+        )}
+        {isDiaspora && (
+          <>
+            <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>DIASPORA — PAYER PAR</div>
+            <button onClick={async () => {
+              if (!PAY_CB_ENABLED) return;
+              try {
+                const win = window.open("", "_blank");
+                const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
+                const data = await r.json();
+                if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
+              } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
+            }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "#1a1a2e" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+              Visa / Mastercard{!PAY_CB_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+            </button>
+            <button onClick={() => { if (!PAY_WERO_ENABLED) return; setB2Operator("wero"); setStep("b3"); }} disabled={!PAY_WERO_ENABLED} style={{ width: "100%", background: PAY_WERO_ENABLED ? "#5C2D91" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_WERO_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+              Wero{!PAY_WERO_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+            </button>
+            <button onClick={() => { if (!PAY_PAYPAL_ENABLED) return; setB2Operator("paypal"); setStep("b3"); }} disabled={!PAY_PAYPAL_ENABLED} style={{ width: "100%", background: PAY_PAYPAL_ENABLED ? "#003087" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_PAYPAL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
+              PayPal{!PAY_PAYPAL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+            </button>
+          </>
+        )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#a8a8a8", fontSize: "0.78rem" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
           Paiement 100% sécurisé
@@ -2254,7 +2351,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   // ════════ ÉCRANS 2 & 3 : PAIEMENT (MTN / AIRTEL) ════════
   const OP = step === "mtn"
     ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", tint: "#fff8e6", tintBorder: "rgba(245,166,35,0.4)", tintText: "#9a6a00", logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)" }
-    : { name: "Airtel Money", main: "#E40000", onColor: "#fff", numBg: "#E40000", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", tint: "#fff0f0", tintBorder: "rgba(228,0,0,0.3)", tintText: "#c0392b", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
+    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", numBg: "#FF0100", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", tint: "#fff0f0", tintBorder: "rgba(228,0,0,0.3)", tintText: "#c0392b", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
   const tel = `tel:${OP.ussd.replace(/#/g, "%23")}`;
   const submit = async () => {
     setTxLoading(true);

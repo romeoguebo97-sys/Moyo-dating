@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
-  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -908,16 +908,16 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
 }
 
 function PaymentMethodsConfig({ auth }: { auth: Auth }) {
-  const [vals, setVals] = React.useState({ mtn: true, airtel: true, cb: true });
+  const [vals, setVals] = React.useState({ mtn: true, airtel: true, cb: true, wero: true, paypal: true });
   const [loading, setLoading] = React.useState(true);
-  const [coords, setCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "" });
-  const [savedCoords, setSavedCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "" });
+  const [coords, setCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "", weroNum: "", paypalNum: "" });
+  const [savedCoords, setSavedCoords] = React.useState({ mtnNum: "", mtnResp: "", airtelNum: "", airtelResp: "", weroNum: "", paypalNum: "" });
   const [editingField, setEditingField] = React.useState<string | null>(null);
   const [savingCoord, setSavingCoord] = React.useState<string | null>(null);
   const [confirmData, setConfirmData] = React.useState<{ key: string; field: keyof typeof coords; value: string; label: string } | null>(null);
   const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
   React.useEffect(() => {
-    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable)&select=key,value`, { headers: H })
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number)&select=key,value`, { headers: H })
       .then(r => r.json()).then((data: { key: string; value: string }[]) => {
         if (!Array.isArray(data)) return;
         const m: Record<string, string> = {};
@@ -926,29 +926,37 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
           mtn: m["pay_mtn_enabled"] !== "false",
           airtel: m["pay_airtel_enabled"] !== "false",
           cb: m["pay_cb_enabled"] !== "false",
+          wero: m["pay_wero_enabled"] !== "false",
+          paypal: m["pay_paypal_enabled"] !== "false",
         });
         setCoords({
           mtnNum: m["pay_mtn_number"] || PAY_MTN_NUMBER,
           mtnResp: m["pay_mtn_responsable"] || PAY_MTN_RESPONSABLE,
           airtelNum: m["pay_airtel_number"] || PAY_AIRTEL_NUMBER,
           airtelResp: m["pay_airtel_responsable"] || PAY_AIRTEL_RESPONSABLE,
+          weroNum: m["pay_wero_number"] || PAY_WERO_NUMBER,
+          paypalNum: m["pay_paypal_number"] || PAY_PAYPAL_NUMBER,
         });
         setSavedCoords({
           mtnNum: m["pay_mtn_number"] || PAY_MTN_NUMBER,
           mtnResp: m["pay_mtn_responsable"] || PAY_MTN_RESPONSABLE,
           airtelNum: m["pay_airtel_number"] || PAY_AIRTEL_NUMBER,
           airtelResp: m["pay_airtel_responsable"] || PAY_AIRTEL_RESPONSABLE,
+          weroNum: m["pay_wero_number"] || PAY_WERO_NUMBER,
+          paypalNum: m["pay_paypal_number"] || PAY_PAYPAL_NUMBER,
         });
       }).catch(() => {}).finally(() => setLoading(false));
   }, [auth.token]);
 
-  const toggle = async (which: "mtn" | "airtel" | "cb") => {
+  const toggle = async (which: "mtn" | "airtel" | "cb" | "wero" | "paypal") => {
     const v = !vals[which];
     setVals(s => ({ ...s, [which]: v }));
     if (which === "mtn") setPAY_MTN_ENABLED(v);
     if (which === "airtel") setPAY_AIRTEL_ENABLED(v);
     if (which === "cb") setPAY_CB_ENABLED(v);
-    const key = which === "mtn" ? "pay_mtn_enabled" : which === "airtel" ? "pay_airtel_enabled" : "pay_cb_enabled";
+    if (which === "wero") setPAY_WERO_ENABLED(v);
+    if (which === "paypal") setPAY_PAYPAL_ENABLED(v);
+    const key = which === "mtn" ? "pay_mtn_enabled" : which === "airtel" ? "pay_airtel_enabled" : which === "cb" ? "pay_cb_enabled" : which === "wero" ? "pay_wero_enabled" : "pay_paypal_enabled";
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
     } catch {}
@@ -965,6 +973,8 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
     if (key === "pay_mtn_responsable") setPAY_MTN_RESPONSABLE(value);
     if (key === "pay_airtel_number") setPAY_AIRTEL_NUMBER(value);
     if (key === "pay_airtel_responsable") setPAY_AIRTEL_RESPONSABLE(value);
+    if (key === "pay_wero_number") setPAY_WERO_NUMBER(value);
+    if (key === "pay_paypal_number") setPAY_PAYPAL_NUMBER(value);
     try {
       // Méthode robuste : on met à jour la ligne existante (PATCH), et on l'insère seulement si elle n'existe pas.
       // Ne dépend d'AUCUNE contrainte d'unicité sur app_settings.key.
@@ -991,7 +1001,7 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
       {loading ? (
         <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
       ) : (<>
-        {([["mtn", "MTN MoMo"], ["airtel", "Airtel Money"], ["cb", "Visa / Mastercard (CB)"]] as ["mtn" | "airtel" | "cb", string][]).map(([k, label]) => (
+        {([["mtn", "MTN MoMo"], ["airtel", "Airtel Money"], ["cb", "Visa / Mastercard (CB)"], ["wero", "Wero (diaspora)"], ["paypal", "PayPal (diaspora)"]] as ["mtn" | "airtel" | "cb" | "wero" | "paypal", string][]).map(([k, label]) => (
           <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
             <div style={{ fontSize: "0.83rem", fontWeight: 600, color: vals[k] ? G.brun : G.rouge }}>{label}{!vals[k] && <span style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginLeft: 6 }}>(coupé)</span>}</div>
             <SwitchBtn on={vals[k]} onToggle={() => toggle(k)} />
@@ -1008,9 +1018,11 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
             ["pay_mtn_responsable", "le nouveau responsable MTN", "mtnResp", "text"],
             ["pay_airtel_number", "le nouveau numéro Airtel", "airtelNum", "tel"],
             ["pay_airtel_responsable", "le nouveau responsable Airtel", "airtelResp", "text"],
+            ["pay_wero_number", "le nouveau numéro Wero", "weroNum", "tel"],
+            ["pay_paypal_number", "le nouveau numéro PayPal", "paypalNum", "tel"],
           ] as [string, string, keyof typeof coords, string][]).map(([key, label, field, type]) => {
             const isEditing = editingField === key;
-            const displayLabel = field === "mtnNum" ? "Numéro MTN (reçoit l'argent)" : field === "mtnResp" ? "Responsable MTN" : field === "airtelNum" ? "Numéro Airtel (reçoit l'argent)" : "Responsable Airtel";
+            const displayLabel = field === "mtnNum" ? "Numéro MTN (reçoit l'argent)" : field === "mtnResp" ? "Responsable MTN" : field === "airtelNum" ? "Numéro Airtel (reçoit l'argent)" : field === "airtelResp" ? "Responsable Airtel" : field === "weroNum" ? "Numéro Wero (diaspora)" : "Numéro PayPal (diaspora)";
             return (
               <div key={key} style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{displayLabel}</div>
@@ -1991,7 +2003,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
           {screenshotUrl && (
-            <div onClick={() => setShowScreenshot(true)} title="Voir la capture d'écran envoyée" style={{ width: 36, height: 36, borderRadius: 8, overflow: "hidden", flexShrink: 0, cursor: "pointer", border: `1.5px solid ${G.rouge}` }}>
+            <div onClick={() => setShowScreenshot(v => !v)} title="Voir/masquer la capture d'écran" style={{ width: 36, height: 36, borderRadius: 8, overflow: "hidden", flexShrink: 0, cursor: "pointer", border: `1.5px solid ${G.rouge}` }}>
               <img src={screenshotUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           )}
@@ -2019,6 +2031,14 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
           <button onClick={() => setConfirmDelete(true)} title="Archiver" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(231,76,60,0.08)", color: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
+      {screenshotUrl && showScreenshot && (
+        <div style={{ marginBottom: 10, borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}`, position: "relative" }}>
+          <img src={screenshotUrl} style={{ width: "100%", maxHeight: 320, objectFit: "contain", background: "#111", display: "block" }} />
+          <div onClick={() => setShowScreenshot(false)} style={{ position: "absolute", top: 8, right: 8, cursor: "pointer", background: "rgba(0,0,0,0.55)", borderRadius: "50%", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row", gap: 8, marginBottom: isPending ? 10 : 0 }}>
         <div style={{ flex: 1, background: G.creme, borderRadius: 8, padding: "8px 10px" }}>
           <div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>Réf. client{screenshotUrl ? " (lue sur la capture)" : ""}</div>
@@ -2074,19 +2094,6 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-      {showScreenshot && screenshotUrl && (
-        <div onClick={() => setShowScreenshot(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 16, padding: 12, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", position: "relative" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun }}>Capture d'écran envoyée</div>
-              <div onClick={() => setShowScreenshot(false)} style={{ cursor: "pointer", width: 26, height: 26, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </div>
-            </div>
-            <img src={screenshotUrl} style={{ width: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: 8, display: "block" }} />
           </div>
         </div>
       )}
