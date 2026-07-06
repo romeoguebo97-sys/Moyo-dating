@@ -11558,7 +11558,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
   );
 
-  return <div style={{ padding: 0, display: "flex", flexDirection: isWideMsg ? "row" : "column", height: isWideMsg ? "100%" : (msgViewportHeight ? `${msgViewportHeight - 116}px` : "calc(100dvh - 116px)"), overflow: isWideMsg ? undefined : "hidden" }}>
+  return <div style={{ padding: 0, display: "flex", flexDirection: isWideMsg ? "row" : "column", height: "100%", overflow: isWideMsg ? undefined : "hidden" }}>
     {isWideMsg ? (
       <>
         {/* ── COLONNE GAUCHE : liste conversations ── */}
