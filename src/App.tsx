@@ -1931,8 +1931,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
           <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
             <svg width="27" height="27" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
           </div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>Choisis ta formule</div>
-          <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>Combien de temps veux-tu profiter de Premium ?</div>
+          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>{title}</div>
+          <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>Choisis ta formule</div>
         </div>
         <div style={{ flex: 1, padding: "0 20px" }}>
           {PREMIUM_PLANS.map(pl => {
@@ -5255,7 +5255,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             )}
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: mobileHeaderHeight, background: tab === "messages" ? G.blanc : undefined, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
+        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: mobileHeaderHeight, background: isFullscreen ? "#0f0a05" : G.blanc, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
         {/* Footer mobile */}
         <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "5px 4px 13px", zIndex: 50, visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           {tabs.map(t => {
