@@ -10338,7 +10338,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
     )}
     </div>
-    <div style={{ minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc }}>
+    <div style={{ minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc, display: (!loading && convs.length === 0) ? "flex" : undefined, flexDirection: (!loading && convs.length === 0) ? "column" : undefined, justifyContent: (!loading && convs.length === 0) ? "center" : undefined }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <EmptyState
             icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
@@ -11850,7 +11850,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       </div>
     )}
     {/* Mobile : liste des convs (seulement si pas de conv ouverte) */}
-    {!isWideMsg && !open && convList}
+    {!isWideMsg && !open && (
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", background: G.blanc }}>
+        {convList}
+      </div>
+    )}
     {/* Groupe Premium : overlay plein écran indépendant, pour ne pas toucher à la logique 1-à-1.
         Coupe-circuit admin : si FEATURE_GROUP_PREMIUM est désactivé, ne s'affiche jamais, quel que
         soit l'état de showGroup — comme si le groupe n'avait jamais existé. */}
