@@ -5053,7 +5053,13 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
   useEffect(() => {
     if (tab === "messages") {
       document.body.style.backgroundColor = "var(--c-blanc)";
-      return () => { document.body.style.backgroundColor = ""; };
+      (document.body.style as any).overscrollBehaviorY = "none";
+      (document.documentElement.style as any).overscrollBehaviorY = "none";
+      return () => {
+        document.body.style.backgroundColor = "";
+        (document.body.style as any).overscrollBehaviorY = "";
+        (document.documentElement.style as any).overscrollBehaviorY = "";
+      };
     }
   }, [tab]);
   // ── Hauteur réelle de l'en-tête mobile, mesurée en JS : évite de dépendre d'une valeur
@@ -10331,13 +10337,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   //    (où un élément peut se retrouver écrasé à zéro dans certains calculs de hauteur imbriquée —
   //    un piège bien connu de flexbox), une rangée "auto" en Grid garde toujours sa taille réelle,
   //    quoi qu'il arrive autour. C'est la technique la plus robuste pour ce type d'écran. ──
-  const convList = <div style={{ display: "grid", gridTemplateRows: "auto 1fr", height: "100%", flex: "1 1 auto", minHeight: 0, background: G.blanc }}>
-    {/* ── Bandeau (statuts + onglets) : élément normal du flux flexbox (flexShrink:0), PAS de
-        position:sticky ni fixed. Ces deux techniques ont chacune leurs pièges connus sur iOS
-        Safari (sticky peut "disparaître" visuellement après certains changements de contenu,
-        nécessitant un rafraîchissement). Un simple flex-column avec un frère qui défile à côté
-        est beaucoup plus robuste : aucune astuce de positionnement fragile. ── */}
-    <div ref={msgBannerRef} style={{ background: G.blanc }}>
+  const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0, background: G.blanc, overflow: "hidden" }}>
+    {/* ── Bandeau (statuts + onglets) : hauteur naturelle, ne rétrécit jamais (flexShrink:0). ── */}
+    <div ref={msgBannerRef} style={{ flexShrink: 0, background: G.blanc }}>
     <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     {FEATURE_GROUP_PREMIUM && (
     <div className="moyo-tactile" style={{ display: "flex", alignItems: "center", padding: "4px 12px 8px", background: G.blanc, gap: 8 }}>
@@ -10366,7 +10368,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
     )}
     </div>
-    <div style={{ minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc }}>
+    {/* ── Zone de contenu : seule zone qui défile, prend tout l'espace restant (flex:1). ── */}
+    <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
         ? <div style={{ textAlign: "center", padding: "44px 24px", display: "flex", flexDirection: "column", alignItems: "center" }}>
             <div style={{ position: "relative", width: 110, height: 80, marginBottom: 22 }}>
@@ -11645,7 +11648,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
   );
 
-  return <div style={{ padding: 0, display: "flex", flexDirection: isWideMsg ? "row" : "column", height: "100%", overflow: isWideMsg ? undefined : "hidden", background: G.blanc }}>
+  return <div style={{ padding: 0, display: "flex", flexDirection: isWideMsg ? "row" : "column", height: "100%", overflow: "hidden", background: G.blanc }}>
     {isWideMsg ? (
       <>
         {/* ── COLONNE GAUCHE : liste conversations ── */}
