@@ -5053,13 +5053,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
   useEffect(() => {
     if (tab === "messages") {
       document.body.style.backgroundColor = "var(--c-blanc)";
-      (document.body.style as any).overscrollBehaviorY = "none";
-      (document.documentElement.style as any).overscrollBehaviorY = "none";
-      return () => {
-        document.body.style.backgroundColor = "";
-        (document.body.style as any).overscrollBehaviorY = "";
-        (document.documentElement.style as any).overscrollBehaviorY = "";
-      };
+      return () => { document.body.style.backgroundColor = ""; };
     }
   }, [tab]);
   // ── Hauteur réelle de l'en-tête mobile, mesurée en JS : évite de dépendre d'une valeur
@@ -5285,7 +5279,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             )}
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: mobileHeaderHeight, background: "var(--c-shell-bg)", transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
+        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: mobileHeaderHeight, background: tab === "messages" ? G.blanc : "var(--c-shell-bg)", transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
         {/* Footer mobile */}
         <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "5px 4px 13px", zIndex: 50, visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           {tabs.map(t => {
