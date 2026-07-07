@@ -575,7 +575,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -3917,7 +3917,7 @@ function AuthLayout({ children, onBack }: { children: React.ReactNode; onBack: (
 }
 
 // Écran de bannissement : message permanent OU décompte pour un bannissement temporaire.
-function BanScreen({ until, onExpire, onBack, name, email }: { until?: string | null; onExpire?: () => void; onBack?: () => void; name?: string; email?: string }) {
+function BanScreen({ until, onExpire, onBack, name, email, reason }: { until?: string | null; onExpire?: () => void; onBack?: () => void; name?: string; email?: string; reason?: string | null }) {
   const target = until ? new Date(until).getTime() : 0;
   const [remaining, setRemaining] = React.useState(() => Math.max(0, target - Date.now()));
   React.useEffect(() => {
@@ -3951,7 +3951,7 @@ function BanScreen({ until, onExpire, onBack, name, email }: { until?: string | 
   const ContactSupportBtn = () => (
     <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 10 }}>
       <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
-      Contacter le service support
+      Nous contacter sur WhatsApp
     </a>
   );
 
@@ -3962,6 +3962,12 @@ function BanScreen({ until, onExpire, onBack, name, email }: { until?: string | 
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         </div>
         <h2 style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, margin: "0 0 10px" }}>Accès suspendu</h2>
+        {reason && !(isTemp && expired) && (
+          <div style={{ background: "#FFF5F4", border: "1px solid #F5C4B3", borderRadius: 12, padding: "12px 14px", textAlign: "center", marginBottom: 16 }}>
+            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#993C1D", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>Motif</div>
+            <div style={{ fontSize: "0.85rem", color: "#712B13", fontWeight: 600 }}>{reason}</div>
+          </div>
+        )}
         {isTemp ? (
           expired ? (
             <>
@@ -4000,7 +4006,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [banInfo, setBanInfo] = useState<{ until: string | null; name: string; email: string } | null>(null);
+  const [banInfo, setBanInfo] = useState<{ until: string | null; name: string; email: string; reason?: string | null } | null>(null);
   const [showForgot, setShowForgot] = useState(() => {
     try {
       if (sessionStorage.getItem("moyo_auto_forgot") === "1") {
@@ -4044,13 +4050,13 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
       }
       if ((profiles[0] as any).is_banned) {
         await sb.signOut(res.access_token);
-        setBanInfo({ until: null, name: profiles[0].name || "", email: res.user.email || form.email.trim() });
+        setBanInfo({ until: null, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null });
         setLoading(false); return;
       }
       const banUntil = (profiles[0] as any).ban_until as string | null | undefined;
       if (banUntil && new Date(banUntil).getTime() > Date.now()) {
         await sb.signOut(res.access_token);
-        setBanInfo({ until: banUntil, name: profiles[0].name || "", email: res.user.email || form.email.trim() });
+        setBanInfo({ until: banUntil, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null });
         setLoading(false); return;
       }
       if (banUntil && new Date(banUntil).getTime() <= Date.now()) {
@@ -4095,7 +4101,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     setForgotSent(true);
   };
 
-  if (banInfo) return <BanScreen until={banInfo.until} name={banInfo.name} email={banInfo.email} onExpire={() => setBanInfo(null)} onBack={() => setBanInfo(null)} />;
+  if (banInfo) return <BanScreen until={banInfo.until} name={banInfo.name} email={banInfo.email} reason={banInfo.reason} onExpire={() => setBanInfo(null)} onBack={() => setBanInfo(null)} />;
   if (showForgot) {
     const closeForgot = () => { setShowForgot(false); setForgotMethod("choice"); setForgotSent(false); setForgotEmail(""); setForgotName(""); };
     const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}\n\nPouvez-vous m'aider à le changer ?`)}`;
@@ -6724,7 +6730,7 @@ const EmptyState = memo(function EmptyState({ icon, title, subtitle }: { icon: R
   );
 });
 
-function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMessages }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void; onGoMessages?: (partnerId?: string) => void }) {
+function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMessages, onGoDiscover }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void; onGoMessages?: (partnerId?: string) => void; onGoDiscover?: () => void }) {
   // ── Sub-tab state ──
   const [likesSubTab, setLikesSubTab] = useState<"received" | "sent">("received");
   const [visitorsSubTab, setVisitorsSubTab] = useState<"visitors" | "visited">("visitors");
@@ -7143,11 +7149,16 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
               {isPremiumReal ? (
                 loading ? <Spinner /> :
                 receivedLikers.length === 0 ? (
+                  <>
                   <EmptyState
                     icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
                     title="Les personnes qui vous ont liké apparaîtront ici."
                     subtitle="Like les profils qui t'intéressent depuis la page Découvrir ✨"
                   />
+                  <div style={{ textAlign: "center", marginTop: -6 }}>
+                    <button onClick={onGoDiscover} className="moyo-tactile" style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "13px 28px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 12px rgba(192,57,43,0.3)" }}>Envoyer des likes</button>
+                  </div>
+                  </>
                 ) : viewMode === "card" ? (
                   <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
                     {receivedLikers.map(p => (
@@ -7201,11 +7212,16 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
               {(
                 loading ? <Spinner /> :
                 visibleSentLikes.length === 0 ? (
+                  <>
                   <EmptyState
                     icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>}
                     title="Tu n'as encore liké personne"
                     subtitle="Explore les profils et envoie des likes !"
                   />
+                  <div style={{ textAlign: "center", marginTop: -6 }}>
+                    <button onClick={onGoDiscover} className="moyo-tactile" style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "13px 28px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 12px rgba(192,57,43,0.3)" }}>Envoyer des likes</button>
+                  </div>
+                  </>
                 ) : viewMode === "card" ? (
                   <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
                     {visibleSentLikes.map(p => {
@@ -10303,7 +10319,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   //    (où un élément peut se retrouver écrasé à zéro dans certains calculs de hauteur imbriquée —
   //    un piège bien connu de flexbox), une rangée "auto" en Grid garde toujours sa taille réelle,
   //    quoi qu'il arrive autour. C'est la technique la plus robuste pour ce type d'écran. ──
-  const convList = <div style={{ display: "grid", gridTemplateRows: "auto 1fr", height: "100%", background: G.blanc }}>
+  const convList = <div style={{ display: "grid", gridTemplateRows: "auto 1fr", height: "100%", flex: "1 1 auto", minHeight: 0, background: G.blanc }}>
     {/* ── Bandeau (statuts + onglets) : élément normal du flux flexbox (flexShrink:0), PAS de
         position:sticky ni fixed. Ces deux techniques ont chacune leurs pièges connus sur iOS
         Safari (sticky peut "disparaître" visuellement après certains changements de contenu,
@@ -14849,7 +14865,7 @@ export default function App() {
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [userGender, setUserGender] = useState<string>("");
-  const [selfBan, setSelfBan] = useState<{ until: string | null; name?: string; email?: string } | null>(null);
+  const [selfBan, setSelfBan] = useState<{ until: string | null; name?: string; email?: string; reason?: string | null } | null>(null);
   const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string; pairKey?: string } | null>(null);
   // ── Sondages (côté membre) ──
   const [activeSurvey, setActiveSurvey] = useState<any | null>(null);
@@ -15303,14 +15319,14 @@ export default function App() {
     if (!auth?.userId) return;
     const checkBan = async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=is_banned,ban_until`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=is_banned,ban_until,ban_reason`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         if (!r.ok) return;
         const d = await r.json().catch(() => []);
         const p = Array.isArray(d) ? d[0] : null;
         if (!p) return;
         const tempActive = p.ban_until && new Date(p.ban_until).getTime() > Date.now();
         if (p.is_banned || tempActive) {
-          setSelfBan({ until: p.is_banned ? null : p.ban_until, name: auth.name, email: auth.email });
+          setSelfBan({ until: p.is_banned ? null : p.ban_until, name: auth.name, email: auth.email, reason: p.ban_reason || null });
           setAuth(null);
           try { localStorage.removeItem("moyo_session"); } catch {}
         }
@@ -15781,7 +15797,7 @@ export default function App() {
   if (!sessionLoaded) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: G.blanc }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>;
 
   // ── Écran de bannissement (éjection en direct) : prioritaire sur tout le reste ──
-  if (selfBan) return <BanScreen until={selfBan.until} name={selfBan.name} email={selfBan.email} onExpire={() => { setSelfBan(null); setPage("login"); }} onBack={() => { setSelfBan(null); setPage("landing"); }} />;
+  if (selfBan) return <BanScreen until={selfBan.until} name={selfBan.name} email={selfBan.email} reason={selfBan.reason} onExpire={() => { setSelfBan(null); setPage("login"); }} onBack={() => { setSelfBan(null); setPage("landing"); }} />;
 
   // ── Mode Admin Desktop : ?admin=1 dans l'URL ──
   if (new URLSearchParams(window.location.search).get("admin") === "1") {
@@ -15807,7 +15823,7 @@ export default function App() {
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv} assistantEnabled={assistantEnabled} statusStackData={statusStackData}>
       <div key={tab} className="page-anim" style={{ width: "100%", height: "100%" }}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
-      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
+      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onGoDiscover={() => setTab("discover")} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} onGoDiscover={() => setTab("discover")} />}

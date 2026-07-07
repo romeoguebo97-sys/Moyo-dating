@@ -2955,6 +2955,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     is_verified?: boolean;
     is_banned?: boolean;
     ban_until?: string | null;
+    ban_reason?: string | null;
     is_visible?: boolean;
     created_at?: string;
     last_seen?: string;
@@ -5399,6 +5400,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [grantSelectedPlan, setGrantSelectedPlan] = useState<{ label: string; days: number; amount: number } | null>(null);
   const [grantTxRef, setGrantTxRef] = useState("");
   const [banHours, setBanHours] = useState("24");
+  const [banReason, setBanReason] = useState("");
   const [showHelp, setShowHelp] = useState(false);
 
   // ── Utilitaires ──
@@ -7055,13 +7057,28 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <button onClick={close} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
               </div>
               <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Motif du bannissement */}
+                <div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Motif du bannissement</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 170, overflowY: "auto", paddingRight: 2 }}>
+                    {WARN_REASONS.map(r => (
+                      <div key={r} onClick={() => setBanReason(r)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: banReason === r ? "rgba(192,57,43,0.08)" : G.creme, border: `1.5px solid ${banReason === r ? G.rouge : "transparent"}`, transition: "all 0.15s" }}>
+                        <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${banReason === r ? G.rouge : "#ccc"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {banReason === r && <div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />}
+                        </div>
+                        <span style={{ fontSize: "0.83rem", fontWeight: banReason === r ? 600 : 400, color: banReason === r ? "#922B21" : "#333" }}>{r}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ height: 1, background: G.gris, margin: "2px 0" }} />
                 {/* Option 1 : définitif */}
-                <button onClick={() => doBan({ is_banned: true, is_visible: false }, `${u.name} a été banni(e) définitivement.`)} style={{ textAlign: "left", border: `1.5px solid ${G.gris}`, background: G.blanc, borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <button onClick={() => doBan({ is_banned: true, is_visible: false, ban_reason: banReason || null }, `${u.name} a été banni(e) définitivement.`)} style={{ textAlign: "left", border: `1.5px solid ${G.gris}`, background: G.blanc, borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <span style={{ fontSize: "1.3rem" }}>🚫</span>
                   <span><span style={{ fontWeight: 800, color: G.brun, fontSize: "0.92rem" }}>Bannissement définitif</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>Accès bloqué jusqu'à ce qu'un admin le débannisse. Le compte est conservé.</span></span>
                 </button>
                 {/* Option 2 : éjection immédiate */}
-                <button onClick={() => doBan({ is_banned: true, is_visible: false }, `${u.name} a été éjecté(e) immédiatement.`)} style={{ textAlign: "left", border: `1.5px solid rgba(231,76,60,0.4)`, background: "rgba(231,76,60,0.04)", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <button onClick={() => doBan({ is_banned: true, is_visible: false, ban_reason: banReason || null }, `${u.name} a été éjecté(e) immédiatement.`)} style={{ textAlign: "left", border: `1.5px solid rgba(231,76,60,0.4)`, background: "rgba(231,76,60,0.04)", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <span style={{ fontSize: "1.3rem" }}>⚡</span>
                   <span><span style={{ fontWeight: 800, color: "#c0392b", fontSize: "0.92rem" }}>Éjection immédiate</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>La session active est coupée sur-le-champ : la personne est renvoyée à l'accueil et ne peut plus se reconnecter.</span></span>
                 </button>
@@ -7080,7 +7097,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       ))}
                     </div>
                   </div>
-                  <button onClick={() => doBan({ is_banned: false, is_visible: false, ban_until: new Date(Date.now() + hours * 3600000).toISOString() }, `${u.name} a été banni(e) pour ${hours}h.`)} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.86rem", fontWeight: 800, cursor: "pointer" }}>Bannir pour {hours}h</button>
+                  <button onClick={() => doBan({ is_banned: false, is_visible: false, ban_until: new Date(Date.now() + hours * 3600000).toISOString(), ban_reason: banReason || null }, `${u.name} a été banni(e) pour ${hours}h.`)} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.86rem", fontWeight: 800, cursor: "pointer" }}>Bannir pour {hours}h</button>
                 </div>
               </div>
             </div>
@@ -7836,7 +7853,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
                           <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
                           {!u.is_banned
-                            ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setBanModal(u); setBanHours("24"); }} />
+                            ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setBanModal(u); setBanHours("24"); setBanReason(""); }} />
                             : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
                           }
                           <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
@@ -7989,7 +8006,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             onClick={() => {
                               if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }
                               if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
-                              setBanModal(u); setBanHours("24");
+                              setBanModal(u); setBanHours("24"); setBanReason("");
                             }} />
                         ) : (
                           <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate}
