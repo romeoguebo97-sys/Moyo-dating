@@ -8454,7 +8454,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
 
 type ReportRowLike = { id?: string; reason: string; reporter_id: string; reported_id: string | null; status?: string; created_at?: string };
 
-export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null) => void }) {
+export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange, onGoDiscover }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null) => void; onGoDiscover?: () => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   const [showGroup, setShowGroup] = useState(false); // Groupe Premium : écran séparé, indépendant de la logique 1-à-1
@@ -10340,7 +10340,22 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
     <div style={{ minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
-        ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
+        ? <div style={{ textAlign: "center", padding: "44px 24px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ position: "relative", width: 110, height: 80, marginBottom: 22 }}>
+              <svg width="34" height="34" viewBox="0 0 24 24" style={{ position: "absolute", left: 24, top: 34 }}><circle cx="4" cy="3" r="1.4" fill={G.or}/><circle cx="20" cy="18" r="1" fill={G.or}/><path d="M10 0l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill={G.or}/></svg>
+              <svg width="52" height="42" viewBox="0 0 52 42" fill="none" style={{ position: "absolute", left: 0, top: 26 }}>
+                <path d="M4 4h34a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H18l-9 9v-9H4a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" fill="#F5F0EB" stroke={G.rouge} strokeWidth="2"/>
+                <circle cx="14" cy="15" r="2" fill={G.rouge}/><circle cx="21" cy="15" r="2" fill={G.rouge}/><circle cx="28" cy="15" r="2" fill={G.rouge}/>
+              </svg>
+              <svg width="46" height="38" viewBox="0 0 46 38" fill="none" style={{ position: "absolute", right: 0, top: 0 }}>
+                <path d="M42 2H8a4 4 0 0 0-4 4v14a4 4 0 0 0 4 4h5v9l9-9h20a4 4 0 0 0 4-4V6a4 4 0 0 0-4-4z" fill={G.rouge}/>
+                <path d="M23 20c-4-2.6-6.5-5-6.5-8a3.6 3.6 0 0 1 6.5-2 3.6 3.6 0 0 1 6.5 2c0 3-2.5 5.4-6.5 8z" fill="#fff"/>
+              </svg>
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#2a2a2a", marginBottom: 8, lineHeight: 1.35 }}>Ton prochain match n'est<br/>qu'à un like.</div>
+            <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.6, maxWidth: 260, margin: "0 0 22px" }}>Envoie quelques likes aux profils qui te plaisent. Dès qu'un like est réciproque, la conversation s'ouvre ici.</p>
+            <button onClick={onGoDiscover} className="moyo-tactile" style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "13px 28px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 12px rgba(192,57,43,0.3)" }}>Envoyer des likes</button>
+          </div>
         : (() => {
             // ── Tri par date du dernier message (plus récent en haut) ──
             const formatConvTime = (dateStr?: string): string => {
@@ -15795,7 +15810,7 @@ export default function App() {
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
-      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} />}
+      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} onGoDiscover={() => setTab("discover")} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} assistantEnabled={assistantEnabled} onToggleAssistant={toggleAssistant} />}
       {tab === "admin" && <Suspense fallback={<AdminLoadingFallback />}><AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} /></Suspense>}
       </div>
