@@ -1331,7 +1331,7 @@ export const sb = {
 };
 
 const GLOBAL_CSS = `
-  :root{ --c-creme:#F0F1F5; --c-cremeDark:#E4E6ED; --c-blanc:#FFFFFF; --c-gris:#E8DDD0; --c-brun:#2C1A0E; --c-brunLight:#5C3D2A; --c-card-bd:#E8E8E8; --c-ghost-bg:rgba(44,26,14,0.06); --c-shell-bg:#e7e7e9; }
+  :root{ --c-creme:#F0F1F5; --c-cremeDark:#E4E6ED; --c-blanc:#FFFFFF; --c-gris:#E8DDD0; --c-brun:#2C1A0E; --c-brunLight:#5C3D2A; --c-card-bd:#E8E8E8; --c-ghost-bg:rgba(44,26,14,0.06); --c-shell-bg:#FFFFFFFFF; }
   :root[data-theme="dark"], [data-theme="dark"]{ --c-creme:#0D0E12; --c-cremeDark:#171920; --c-blanc:#000000; --c-gris:#2A1F12; --c-brun:#F1DFD3; --c-brunLight:#D7B8A5; --c-card-bd:rgba(255,255,255,0.12); --c-ghost-bg:rgba(255,255,255,0.1); --c-shell-bg:#000000; }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
   html{overflow-x:hidden;width:100%;max-width:100vw;background-color:var(--c-creme);-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -14823,7 +14823,7 @@ export default function App() {
     if (!document.getElementById("moyo-theme-vars")) {
       const s = document.createElement("style");
       s.id = "moyo-theme-vars";
-      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A;--c-profile-bg:#E4E6ED;--c-pill-fg:#333333;--c-pill-bd:#dddddd;--c-card-bd:#E8E8E8;--c-ghost-bg:rgba(44,26,14,0.06);--c-shell-bg:#e7e7e9}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5;--c-profile-bg:radial-gradient(circle at top,#1A1A24 0%,#111118 45%,#0D0D13 100%);--c-pill-fg:#FFFFFF;--c-pill-bd:rgba(255,255,255,0.4);--c-card-bd:rgba(255,255,255,0.12);--c-ghost-bg:rgba(255,255,255,0.1);--c-shell-bg:#000000}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
+      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A;--c-profile-bg:#E4E6ED;--c-pill-fg:#333333;--c-pill-bd:#dddddd;--c-card-bd:#E8E8E8;--c-ghost-bg:rgba(44,26,14,0.06);--c-shell-bg:#FFFFFFFFF}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5;--c-profile-bg:radial-gradient(circle at top,#1A1A24 0%,#111118 45%,#0D0D13 100%);--c-pill-fg:#FFFFFF;--c-pill-bd:rgba(255,255,255,0.4);--c-card-bd:rgba(255,255,255,0.12);--c-ghost-bg:rgba(255,255,255,0.1);--c-shell-bg:#000000}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
       document.head.appendChild(s);
     }
   }, [darkMode]);
