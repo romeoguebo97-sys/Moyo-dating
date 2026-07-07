@@ -796,7 +796,7 @@ export function AdminDesktopPage() {
       {/* ── MODAL GESTION ADMINS ── */}
       {adminActionModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 380, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 380, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
             <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 6 }}>{adminActionModal.label}</div>
             <div style={{ fontSize: "0.83rem", color: "#888", marginBottom: 18, lineHeight: 1.5 }}>Entrez l'adresse email de l'utilisateur à qui vous souhaitez attribuer ce rôle.</div>
             <input
@@ -2130,7 +2130,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
       )}
       {confirmDelete && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             <div style={{ background: "linear-gradient(135deg,#fdecea,#fbd0cc)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(231,76,60,0.15)" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(231,76,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -2296,7 +2296,7 @@ export function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBac
   if (pinVerified) return <Admin auth={auth} onBack={() => { setPinVerified(false); onBack(); }} onBadgeCount={onBadgeCount} />;
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+      <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
           <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -6225,7 +6225,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* Modal confirmation */}
       {confirmModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10010, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, maxHeight: "85vh", overflowY: "auto", textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
@@ -6320,7 +6320,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* Modal réponse assistance (support) */}
       {supportReply && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 12000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto", padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Répondre via {SUPPORT_TEAM_NAME}</h3>
             <p style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>La réponse apparaîtra directement dans la messagerie de l’utilisateur comme une conversation avec l’assistance Moyo Dating.</p>
             <div style={{ background: "rgba(26,92,58,0.06)", border: "1px solid rgba(26,92,58,0.15)", borderRadius: 12, padding: 10, fontSize: "0.78rem", color: "#444", lineHeight: 1.5, marginBottom: 12 }}>{cleanSupportReason(supportReply.report.reason)}</div>
@@ -6366,7 +6366,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {premiumEventConfirm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             {/* Header */}
             <div style={{ background: premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, padding: "22px 20px 18px", textAlign: "center" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
@@ -6407,7 +6407,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {broadcastModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, maxHeight: "85vh", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflowY: "auto" }}>
             <div style={{ background: "linear-gradient(135deg,#fef3e2,#fde8c0)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(230,126,34,0.15)" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -6866,7 +6866,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {pinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
               <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -7089,7 +7089,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       })()}
       {warnModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden" }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, maxHeight: "85vh", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflowY: "auto", display: "flex", flexDirection: "column" }}>
             {/* Header */}
             <div style={{ background: "linear-gradient(135deg, #fff9ec, #fff3cc)", padding: "22px 20px 16px", textAlign: "center", borderBottom: `1px solid rgba(243,156,18,0.2)` }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(243,156,18,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
