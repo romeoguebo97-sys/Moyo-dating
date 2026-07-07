@@ -2956,6 +2956,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     is_banned?: boolean;
     ban_until?: string | null;
     ban_reason?: string | null;
+    last_notice_acknowledged?: boolean;
+    last_notice_at?: string | null;
     is_visible?: boolean;
     created_at?: string;
     last_seen?: string;
@@ -5350,6 +5352,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [users, setUsers] = useState<AdminProfile[]>([]);
   // Helper : premium à vie
   const isLifetimePremium = (u: AdminProfile) => !!u.premium_until && new Date(u.premium_until).getFullYear() >= 2090;
+  // ── Un compte est "actuellement banni" soit définitivement (is_banned), soit temporairement
+  //    (ban_until dans le futur) — même si is_banned reste à false pour ce 2e cas. ──
+  const isCurrentlyBanned = (u: AdminProfile) => !!u.is_banned || (!!u.ban_until && new Date(u.ban_until).getTime() > Date.now());
   // Tri côté client pour les critères booléens
   const sortedUsers = React.useMemo(() => {
     const list = [...users];
@@ -5863,10 +5868,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         setWarnLoading(false);
         return;
       }
-      // 2. Incrémenter warning_count sur le profil
-      await sb.update(auth.token, "profiles", user.id, { warning_count: newCount });
+      // 2. Incrémenter warning_count sur le profil, et marquer le dernier avis comme non lu
+      const nowIso = new Date().toISOString();
+      await sb.update(auth.token, "profiles", user.id, { warning_count: newCount, last_notice_acknowledged: false, last_notice_at: nowIso });
       // 3. Mise à jour locale
-      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, warning_count: newCount } : u));
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, warning_count: newCount, last_notice_acknowledged: false, last_notice_at: nowIso } : u));
       showToast(`Avertissement ${newCount}/3 envoyé à ${user.name}.`, "success");
       logAdminAction(auth.token, auth.userId, auth.name, `Avertissement ${newCount}/3 envoyé à ${user.name} - Motif : ${finalReason}`, user.id);
       setWarnModal(null);
@@ -6569,6 +6575,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 body: JSON.stringify({ user_id: msgModal.user.id, admin_id: auth.userId, reason: msgText.trim(), warning_number: 0, acknowledged: false }),
               });
               if (!r.ok) { const err = await r.json().catch(() => null); showToast(`Erreur envoi : ${err?.message || r.status}`, "error"); return; }
+              const nowIso = new Date().toISOString();
+              try { await sb.update(auth.token, "profiles", msgModal.user.id, { last_notice_acknowledged: false, last_notice_at: nowIso }); } catch {}
+              setUsers(prev => prev.map(u => u.id === msgModal.user.id ? { ...u, last_notice_acknowledged: false, last_notice_at: nowIso } : u));
               showToast(`Message envoyé à ${msgModal.user.name} ✓`, "success");
               logAdminAction(auth.token, auth.userId, auth.name, `Message envoyé à ${msgModal.user.name}`, msgModal.user.id);
               setMsgText("");
@@ -7047,7 +7056,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {banModal && (() => {
         const u = banModal;
         const close = () => setBanModal(null);
-        const doBan = (updates: Partial<AdminProfile>, msg: string) => { close(); adminAction(u.id, updates, msg); };
+        const doBan = (updates: Partial<AdminProfile>, msg: string) => { close(); adminAction(u.id, { ...updates, last_notice_acknowledged: false, last_notice_at: new Date().toISOString() }, msg); };
         const hours = Math.max(1, parseInt(banHours) || 0);
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
@@ -7817,6 +7826,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             {u.name === "..." && <span style={{ fontSize: "0.60rem", color: "#e74c3c", fontWeight: 700, marginLeft: 3 }}>Incomplet</span>}
                           </div>
                           <div style={{ fontSize: "0.67rem", color: "#888" }}>{u.age} ans · {u.city} · {u.gender}</div>
+                          {u.last_notice_at && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                              <div style={{ width: 6, height: 6, borderRadius: "50%", background: u.last_notice_acknowledged ? G.vert : "#f39c12", flexShrink: 0 }} />
+                              <span style={{ fontSize: "0.6rem", color: u.last_notice_acknowledged ? G.vert : "#f39c12", fontWeight: 600 }}>{u.last_notice_acknowledged ? "Lu" : "Pas encore vu"}</span>
+                            </div>
+                          )}
                         </div>
                         {/* Badges statuts */}
                         <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
@@ -7824,7 +7839,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {u.is_premium && !isLifetimePremium(u) && <span style={{ background: "rgba(212,168,67,0.15)", color: "#D4A843", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>★ Prem</span>}
                           {u.is_verified && <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>✓ Vérifié</span>}
                           {u.is_admin && <span style={{ background: "rgba(231,76,60,0.1)", color: G.rouge, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⚙ Admin</span>}
-                          {u.is_banned && <span style={{ background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⛔ Banni</span>}
+                          {isCurrentlyBanned(u) && <span style={{ background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⛔ Banni</span>}
                         </div>
                         {/* Tous les boutons d'action */}
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginLeft: "auto", flexShrink: 0 }}>
@@ -7852,7 +7867,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {/* Modération */}
                           <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
                           <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
-                          {!u.is_banned
+                          {!isCurrentlyBanned(u)
                             ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setBanModal(u); setBanHours("24"); setBanReason(""); }} />
                             : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
                           }
@@ -7911,6 +7926,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {u.age} ans · {u.city} · {u.gender}
                           {u.created_at && <span> · inscrit le {formatDate(u.created_at)}</span>}
                         </div>
+                        {u.last_notice_at && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
+                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: u.last_notice_acknowledged ? G.vert : "#f39c12", flexShrink: 0 }} />
+                            <span style={{ fontSize: "0.68rem", color: u.last_notice_acknowledged ? G.vert : "#f39c12", fontWeight: 600 }}>{u.last_notice_acknowledged ? "Dernier message lu" : "Dernier message pas encore vu"}</span>
+                          </div>
+                        )}
                         {/* Badges statuts */}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
                           <StatusBadge label="Premium" active={u.is_premium} color="#D4A843" Icon={IcoStar} />
@@ -7920,7 +7941,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               : <StatusBadge label="Admin" active={true} color={G.rouge} Icon={IcoGear} />
                           )}
                           <StatusBadge label="Vérifié" active={!!u.is_verified} color={G.vert} Icon={IcoCheck} />
-                          <StatusBadge label="Banni" active={!!u.is_banned} color="#e74c3c" Icon={IcoBan} />
+                          <StatusBadge label="Banni" active={isCurrentlyBanned(u)} color="#e74c3c" Icon={IcoBan} />
                           {(u.warning_count || 0) > 0 && (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: (u.warning_count || 0) >= 3 ? "rgba(231,76,60,0.12)" : "rgba(243,156,18,0.12)", color: (u.warning_count || 0) >= 3 ? "#e74c3c" : "#e67e22", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>
                               <IcoWarn />
@@ -8001,7 +8022,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
                         <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate}
                           onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
-                        {!u.is_banned ? (
+                        {!isCurrentlyBanned(u) ? (
                           <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate}
                             onClick={() => {
                               if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }

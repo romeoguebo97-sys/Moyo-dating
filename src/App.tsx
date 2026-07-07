@@ -575,7 +575,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -4049,12 +4049,14 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         setLoading(false); return;
       }
       if ((profiles[0] as any).is_banned) {
+        try { await sb.update(res.access_token, "profiles", res.user.id, { last_notice_acknowledged: true }); } catch {}
         await sb.signOut(res.access_token);
         setBanInfo({ until: null, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null });
         setLoading(false); return;
       }
       const banUntil = (profiles[0] as any).ban_until as string | null | undefined;
       if (banUntil && new Date(banUntil).getTime() > Date.now()) {
+        try { await sb.update(res.access_token, "profiles", res.user.id, { last_notice_acknowledged: true }); } catch {}
         await sb.signOut(res.access_token);
         setBanInfo({ until: banUntil, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null });
         setLoading(false); return;
@@ -15326,6 +15328,7 @@ export default function App() {
         if (!p) return;
         const tempActive = p.ban_until && new Date(p.ban_until).getTime() > Date.now();
         if (p.is_banned || tempActive) {
+          try { await sb.update(auth.token, "profiles", auth.userId, { last_notice_acknowledged: true }); } catch {}
           setSelfBan({ until: p.is_banned ? null : p.ban_until, name: auth.name, email: auth.email, reason: p.ban_reason || null });
           setAuth(null);
           try { localStorage.removeItem("moyo_session"); } catch {}
@@ -15372,6 +15375,7 @@ export default function App() {
         },
         body: JSON.stringify({ acknowledged: true, acknowledged_at: new Date().toISOString() }),
       });
+      await sb.update(auth.token, "profiles", auth.userId, { last_notice_acknowledged: true });
     } catch {}
     setPendingWarning(null);
   };
