@@ -10340,7 +10340,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
     <div style={{ minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
-        ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
+        ? <EmptyState
+            icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
+            title="Aucune conversation pour l'instant"
+            subtitle="Fais des matchs pour commencer à discuter !"
+          />
         : (() => {
             // ── Tri par date du dernier message (plus récent en haut) ──
             const formatConvTime = (dateStr?: string): string => {
