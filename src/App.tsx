@@ -9420,7 +9420,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     const enriched = res.map(m => {
       const pid = m.user1 === auth.userId ? m.user2 : m.user1;
       const s = summaryByMatch[m.id];
-      const lastMsg: Message | undefined = s ? { match_id: m.id, sender_id: s.last_sender_id, content: s.last_content, is_read: s.last_is_read, created_at: s.last_created_at } as Message : undefined;
+      const lastMsg: Message | undefined = (s && s.last_created_at) ? { match_id: m.id, sender_id: s.last_sender_id, content: s.last_content, is_read: s.last_is_read, created_at: s.last_created_at } as Message : undefined;
       return { ...m, partner: profilesById[pid], lastMsg, unreadCount: s ? Number(s.unread_count) || 0 : 0 };
     });
     const filtered = enriched.filter(c => c.partner);
