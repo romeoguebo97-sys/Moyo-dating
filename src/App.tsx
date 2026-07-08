@@ -43,10 +43,6 @@ export function setPAY_CB_ENABLED(v: any) { PAY_CB_ENABLED = v; }
 export function setPAY_MTN_ENABLED(v: any) { PAY_MTN_ENABLED = v; }
 export function setPAY_MTN_NUMBER(v: any) { PAY_MTN_NUMBER = v; }
 export function setPAY_MTN_RESPONSABLE(v: any) { PAY_MTN_RESPONSABLE = v; }
-export function setPAY_WERO_ENABLED(v: any) { PAY_WERO_ENABLED = v; }
-export function setPAY_WERO_NUMBER(v: any) { PAY_WERO_NUMBER = v; }
-export function setPAY_PAYPAL_ENABLED(v: any) { PAY_PAYPAL_ENABLED = v; }
-export function setPAY_PAYPAL_NUMBER(v: any) { PAY_PAYPAL_NUMBER = v; }
 export function setPLAN_2MONTH_ENABLED(v: any) { PLAN_2MONTH_ENABLED = v; }
 export function setPLAN_MONTH_ENABLED(v: any) { PLAN_MONTH_ENABLED = v; }
 export function setPLAN_WEEK_ENABLED(v: any) { PLAN_WEEK_ENABLED = v; }
@@ -121,13 +117,6 @@ const CONTACT_PATTERNS = [
   /fais.?moi.?un.?appel/i,
   // ── Anciens motifs conservés ──
   /(mon num|mon numero|mon numéro|appelle.?moi|contacte.?moi|écris.?moi.?sur|ecris.?moi.?sur|rejoins.?moi.?sur|mon contact\b|mon tel\b)/i,
-  // ── Équivalents en anglais (contournement repéré : demander en anglais pour échapper aux
-  //    motifs français ci-dessus) ──
-  /(give|send|text|share).{0,10}(me).{0,8}(your).{0,8}(number|whatsapp|contact|phone|insta|snap)/i,
-  /(what.?s|whats).{0,4}your.{0,8}(number|whatsapp|contact|phone|insta|instagram|snap|snapchat)/i,
-  /(text|call|message|whatsapp).{0,4}me\b/i,
-  /(my|your)\s(number|whatsapp|phone number|contact|insta|instagram|snap|snapchat)\b/i,
-  /do you have\s(whatsapp|instagram|telegram|snapchat|a phone)/i,
 ];
 // Mots interdits "contacts" (gratuit uniquement) — ajoutés par l'admin depuis Configuration → Sécurité
 let CONTACT_BANNED_REGEX: RegExp | null = null;
@@ -140,12 +129,10 @@ export const buildContactBannedRegex = (raw: string) => {
 // Compte les chiffres réels du texte (peu importe espaces/lettres/ponctuation entre eux) + chiffres écrits en toutes lettres.
 const countObfuscatedDigits = (text: string): number => {
   const realDigits = (text.match(/\d/g) || []).length;
-  // Chiffres écrits en toutes lettres, en français ET en anglais (certains contournent la
-  // détection en épelant leur numéro en anglais) : on compte une SUITE d'au moins 4 mots-chiffres
-  // consécutifs (évite "un homme", "two dogs").
+  // chiffres écrits en toutes lettres : on compte une SUITE d'au moins 4 mots-chiffres consécutifs (évite "un homme", "deux enfants")
   let spelled = 0;
-  const seq = text.toLowerCase().match(/(?:\b(?:z[ée]ro|zero|un|une|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|one|two|three|four|five|six|seven|eight|nine|ten)\b[\s.,'\-]*){4,}/g);
-  if (seq) for (const s of seq) spelled += (s.match(/z[ée]ro|zero|une|un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|one|two|three|four|five|six|seven|eight|nine|ten/g) || []).length;
+  const seq = text.toLowerCase().match(/(?:\b(?:z[ée]ro|zero|un|une|deux|trois|quatre|cinq|six|sept|huit|neuf|dix)\b[\s.,'\-]*){4,}/g);
+  if (seq) for (const s of seq) spelled += (s.match(/z[ée]ro|zero|une|un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix/g) || []).length;
   return realDigits + spelled;
 };
 const hasContactInfo = (text: string): boolean =>
@@ -260,15 +247,13 @@ function activePlansCount(): number { return [PLAN_WEEK_ENABLED, PLAN_MONTH_ENAB
 export let PREMIUM_PRICE_EUR = 10;
 export let EUR_TO_FCFA = 655.957; // taux de conversion EUR→FCFA (configurable dans Tarifs & Paiements)
 // Devises : Mobile Money = FCFA (XAF), Carte/Stripe = EUR. Helpers de classification et d'affichage.
-const isCardOperator = (op: string) => op === "Stripe" || op === "Carte" || op === "Wero" || op === "PayPal";
+const isCardOperator = (op: string) => op === "Stripe" || op === "Carte";
 export const paymentCurrency = (r: { currency?: string; operator: string }) => (r.currency || (isCardOperator(r.operator) ? "EUR" : "XAF"));
 export const formatMoney = (amount: number, currency: string) => currency === "EUR" ? `${(amount || 0).toLocaleString("fr-FR")} €` : `${(amount || 0).toLocaleString()} FCFA`;
 // Moyens de paiement activés (pilotés depuis Configuration admin). true = disponible.
 export let PAY_MTN_ENABLED = true;
 export let PAY_AIRTEL_ENABLED = true;
 export let PAY_CB_ENABLED = true;
-export let PAY_WERO_ENABLED = true;
-export let PAY_PAYPAL_ENABLED = true;
 // Bloquer les likes entre profils de même genre (app hétéro). Piloté depuis Config admin.
 export let BLOCK_SAME_GENDER = true;
 
@@ -276,10 +261,6 @@ export let BLOCK_SAME_GENDER = true;
 let FEATURE_STATUSES = true;
 let FEATURE_GIFT_PREMIUM = true;
 let FEATURE_ASSISTANT = true;
-let FEATURE_SHOW_LIKES_VIEWS_FREE = false;
-export function setFEATURE_SHOW_LIKES_VIEWS_FREE(v: any) { FEATURE_SHOW_LIKES_VIEWS_FREE = v === true || v === "true"; }
-let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
-export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
 let FEATURE_GROUP_PHOTOS = true;
 let APPOINTMENTS_ENABLED = true;
@@ -291,9 +272,6 @@ export let PAY_MTN_NUMBER = "065132012";
 export let PAY_MTN_RESPONSABLE = "Juste-Emmanuelle AKOUMOU ISSOMBO";
 export let PAY_AIRTEL_NUMBER = "056230067";
 export let PAY_AIRTEL_RESPONSABLE = "THEOPHILE BEAUGARD LIBALI";
-// Diaspora uniquement : Wero et PayPal, tous deux identifiés par un numéro de téléphone
-export let PAY_WERO_NUMBER = "+33753356471";
-export let PAY_PAYPAL_NUMBER = "+33753356471";
 // Contacts (modifiables depuis Config admin)
 export let CONTACT_EMAIL = "contact@moyo-congo.com";
 export let CONTACT_WHATSAPP = "242065132012";
@@ -343,7 +321,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,premium_screen_variant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_group_premium,feature_group_photos,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -352,8 +330,6 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["pay_mtn_enabled"] !== undefined) PAY_MTN_ENABLED = map["pay_mtn_enabled"] !== "false";
   if (map["pay_airtel_enabled"] !== undefined) PAY_AIRTEL_ENABLED = map["pay_airtel_enabled"] !== "false";
   if (map["pay_cb_enabled"] !== undefined) PAY_CB_ENABLED = map["pay_cb_enabled"] !== "false";
-  if (map["pay_wero_enabled"] !== undefined) PAY_WERO_ENABLED = map["pay_wero_enabled"] !== "false";
-  if (map["pay_paypal_enabled"] !== undefined) PAY_PAYPAL_ENABLED = map["pay_paypal_enabled"] !== "false";
   if (map["rule_block_same_gender_like"] !== undefined) BLOCK_SAME_GENDER = map["rule_block_same_gender_like"] !== "false";
   if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
@@ -364,16 +340,12 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
   if (map["appointment_physical_price"]) APPOINTMENT_PHYSICAL_PRICE = parseInt(map["appointment_physical_price"]) || 10000;
   if (map["feature_assistant"] !== undefined) FEATURE_ASSISTANT = map["feature_assistant"] !== "false";
-  if (map["feature_show_likes_views_free"] !== undefined) FEATURE_SHOW_LIKES_VIEWS_FREE = map["feature_show_likes_views_free"] === "true";
-  if (map["premium_screen_variant"] === "b" || map["premium_screen_variant"] === "a") PREMIUM_SCREEN_VARIANT = map["premium_screen_variant"];
   if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
   if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
   if (map["pay_mtn_number"]) PAY_MTN_NUMBER = map["pay_mtn_number"];
   if (map["pay_mtn_responsable"]) PAY_MTN_RESPONSABLE = map["pay_mtn_responsable"];
   if (map["pay_airtel_number"]) PAY_AIRTEL_NUMBER = map["pay_airtel_number"];
   if (map["pay_airtel_responsable"]) PAY_AIRTEL_RESPONSABLE = map["pay_airtel_responsable"];
-  if (map["pay_wero_number"]) PAY_WERO_NUMBER = map["pay_wero_number"];
-  if (map["pay_paypal_number"]) PAY_PAYPAL_NUMBER = map["pay_paypal_number"];
   if (map["contact_email"]) CONTACT_EMAIL = map["contact_email"];
   if (map["contact_whatsapp"]) CONTACT_WHATSAPP = map["contact_whatsapp"];
   if (map["contact_address"]) CONTACT_ADDRESS = map["contact_address"];
@@ -429,15 +401,9 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
     if (!isAdminUrl && !isAdminUser) {
       const msg = map["maintenance_message"] || "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧";
       const el = document.getElementById("root");
-      if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px;line-height:0.82"><span style="display:block">Moyo</span><span style="display:block;color:var(--c-brun);font-size:0.48em;font-weight:800;margin-top:0.06em">Dating</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
+      if (el) el.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F1F5;flex-direction:column;gap:20px;padding:24px;text-align:center"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:2rem;font-weight:900;color:#C0392B;letter-spacing:-0.5px;line-height:0.82"><span style="display:block">Moyo</span><span style="display:block;color:#1a1a1a;font-size:0.48em;font-weight:800;margin-top:0.06em">Dating</span></div><div style="font-size:1.1rem;font-weight:700;color:#1a1a1a">Maintenance en cours</div><div style="font-size:0.88rem;color:#666;max-width:300px;line-height:1.7;background:white;padding:14px 18px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">${msg}</div></div>`;
     }
   }
-  // ── Signal que les réglages (FEATURE_ASSISTANT etc.) sont enfin à jour — ce fetch tourne en
-  //    dehors de React, donc les composants ne peuvent pas savoir "automatiquement" quand c'est
-  //    fini. Sans ce signal, un calcul fait AVANT que ce chargement se termine (typiquement pour
-  //    un compte tout juste créé, où tout démarre en même temps) reste bloqué sur les valeurs par
-  //    défaut pour toujours. ──
-  window.dispatchEvent(new CustomEvent("moyo-settings-loaded"));
 }).catch(() => {});
 
 export const SUPPORT_TEAM_ID = "moyo-support-team";
@@ -575,7 +541,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -855,7 +821,7 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
             ) : payView ? (
               <div>
                 <div style={{ background: "rgba(26,92,58,0.06)", border: "1px solid rgba(26,92,58,0.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-                  <div style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.5 }}>Rendez-vous à l'agence, service payant</div>
+                  <div style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.5 }}>Rendez-vous à l'agence — service payant</div>
                   <div style={{ fontSize: "1.35rem", fontWeight: 800, color: G.vert, marginTop: 4 }}>{APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA</div>
                 </div>
                 <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Opérateur Mobile Money</div>
@@ -873,7 +839,7 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
                   <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex : 7753031542" style={APPT_INPUT} />
                 </div>
                 {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
-                <button onClick={payAndCreate} disabled={sending} style={{ width: "100%", background: sending ? "#9bb8a8" : `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : "J'ai payé, envoyer la demande"}</button>
+                <button onClick={payAndCreate} disabled={sending} style={{ width: "100%", background: sending ? "#9bb8a8" : `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : "J'ai payé — envoyer la demande"}</button>
                 <button onClick={() => { setPayView(false); setErr(""); }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", color: "#888", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>← Retour</button>
               </div>
             ) : (<>
@@ -885,7 +851,7 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
                 </div>
               </div>}
               {type === "telephonique" && !auth.isPremium && <div style={{ background: "rgba(212,168,67,0.12)", border: "1px solid rgba(212,168,67,0.4)", borderRadius: 10, padding: "9px 12px", marginBottom: 12, fontSize: "0.76rem", color: "#8a6d2a", lineHeight: 1.45, fontWeight: 600 }}>⭐ Réservé aux membres Premium. En validant, vous pourrez passer Premium.</div>}
-              {type === "physique" && <div style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.25)", borderRadius: 10, padding: "9px 12px", marginBottom: 12, fontSize: "0.76rem", color: "#15803d", lineHeight: 1.45, fontWeight: 600 }}>💳 Service à l'agence : {APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA, payable par Mobile Money à l'étape suivante.</div>}
+              {type === "physique" && <div style={{ background: "rgba(26,92,58,0.07)", border: "1px solid rgba(26,92,58,0.25)", borderRadius: 10, padding: "9px 12px", marginBottom: 12, fontSize: "0.76rem", color: "#15803d", lineHeight: 1.45, fontWeight: 600 }}>💳 Service à l'agence — {APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA, payable par Mobile Money à l'étape suivante.</div>}
               <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Motif</div><textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ex. étudier mon cas, améliorer mon profil, préparer une mise en relation…" style={{ ...APPT_INPUT, minHeight: 60, resize: "vertical" }} /></div>
               {type === "telephonique" && <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Téléphone</div><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Votre numéro" style={APPT_INPUT} /></div>}
               <div style={{ marginBottom: 12 }}>
@@ -913,7 +879,7 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
                     <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{si.label}</span>
                   </div>
                   <div style={{ fontSize: "0.82rem", color: "#555", marginBottom: 4 }}>{a.topic}</div>
-                  {a.type === "physique" && a.price && <div style={{ fontSize: "0.74rem", color: a.payment_status === "valide" ? "#27ae60" : "#b9770e", fontWeight: 700, marginBottom: 2 }}>💳 {Number(a.price).toLocaleString("fr-FR")} FCFA, {a.payment_status === "valide" ? "paiement validé" : "paiement en cours de validation"}</div>}
+                  {a.type === "physique" && a.price && <div style={{ fontSize: "0.74rem", color: a.payment_status === "valide" ? "#27ae60" : "#b9770e", fontWeight: 700, marginBottom: 2 }}>💳 {Number(a.price).toLocaleString("fr-FR")} FCFA — {a.payment_status === "valide" ? "paiement validé" : "paiement en cours de validation"}</div>}
                   {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
                   {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999" }}>Créneaux souhaités : {a.preferred_slots.map(fmtApptDT).join(" · ")}</div>}
                   {a.status === "annule" && a.admin_note && <div style={{ fontSize: "0.72rem", color: "#c0392b", marginTop: 4 }}>{a.admin_note}</div>}
@@ -1331,8 +1297,8 @@ export const sb = {
 };
 
 const GLOBAL_CSS = `
-  :root{ --c-creme:#F0F1F5; --c-cremeDark:#E4E6ED; --c-blanc:#FFFFFF; --c-gris:#E8DDD0; --c-brun:#2C1A0E; --c-brunLight:#5C3D2A; --c-card-bd:#E8E8E8; --c-ghost-bg:rgba(44,26,14,0.06); --c-shell-bg:#e7e7e9; }
-  :root[data-theme="dark"], [data-theme="dark"]{ --c-creme:#0D0E12; --c-cremeDark:#171920; --c-blanc:#000000; --c-gris:#2A1F12; --c-brun:#F1DFD3; --c-brunLight:#D7B8A5; --c-card-bd:rgba(255,255,255,0.12); --c-ghost-bg:rgba(255,255,255,0.1); --c-shell-bg:#000000; }
+  :root{ --c-creme:#F0F1F5; --c-cremeDark:#E4E6ED; --c-blanc:#FFFFFF; --c-gris:#E8DDD0; --c-brun:#2C1A0E; --c-brunLight:#5C3D2A; --c-card-bd:#E8E8E8; --c-ghost-bg:rgba(44,26,14,0.06); }
+  :root[data-theme="dark"], [data-theme="dark"]{ --c-creme:#0D0E12; --c-cremeDark:#171920; --c-blanc:#000000; --c-gris:#2A1F12; --c-brun:#F1DFD3; --c-brunLight:#D7B8A5; --c-card-bd:rgba(255,255,255,0.12); --c-ghost-bg:rgba(255,255,255,0.1); }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
   html{overflow-x:hidden;width:100%;max-width:100vw;background-color:var(--c-creme);-webkit-text-size-adjust:100%;text-size-adjust:100%}
   body{overflow-x:hidden;width:100%;max-width:100vw;min-height:100vh;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:var(--c-creme)}
@@ -1648,7 +1614,7 @@ function ErrorModal({ msg, onClose }: { msg: string; onClose: () => void }) {
   if (!msg) return null;
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
         <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
         <p style={{ fontSize: "0.88rem", color: "#111", lineHeight: 1.6, marginBottom: 22, fontWeight: 500 }}>{msg}</p>
         <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>OK</Btn>
@@ -1675,7 +1641,7 @@ function ModerationModal({ type, onClose }: { type: "insult" | "scam" | "sexual"
   const { icon, text } = config[type];
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "fadeIn 0.2s ease" }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 24px 64px rgba(44,26,14,0.18)", overflow: "hidden", animation: "fadeUp 0.25s ease" }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 24px 64px rgba(44,26,14,0.18)", overflow: "hidden", animation: "fadeUp 0.25s ease" }}>
         <div style={{ background: "linear-gradient(135deg, #fff5f5, #ffe8e8)", padding: "24px 20px 16px" }}>
           <div style={{ fontSize: "2rem", marginBottom: 10 }}>{icon}</div>
           <div style={{ fontSize: "1rem", fontWeight: 800, color: G.rouge, letterSpacing: "0.08em", textTransform: "uppercase" }}>
@@ -1782,34 +1748,7 @@ function UploadRingOverlay({ active, size, ringColor, children }: { active: bool
 }
 
 function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
-  const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer");
-  // ── Congo ou diaspora ? Déterminé depuis la ville du profil ("Diaspora Europe", "Diaspora
-  //    Amérique", etc. sont déjà des options existantes dans le formulaire de profil). Tant que
-  //    ce n'est pas encore chargé (null), on affiche par défaut les moyens Congo (public majoritaire). ──
-  const [isDiaspora, setIsDiaspora] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (!userId || !token) return;
-    (async () => {
-      let diaspora = false;
-      try {
-        const rows = await sb.query<{ city: string }>(token, "profiles", `?id=eq.${userId}&select=city`);
-        diaspora = /diaspora/i.test(rows[0]?.city || "");
-      } catch { diaspora = false; }
-      // La diaspora n'a qu'un seul tarif (mensuel, en euros) — pas de formules FCFA au choix comme
-      // au Congo. Les deux mises à jour sont faites ensemble (même rendu), pour qu'il n'y ait
-      // jamais la moindre image où le mauvais contenu apparaîtrait, même une fraction de seconde.
-      setIsDiaspora(diaspora);
-      if (diaspora) setStep(s => (s === "b1" ? "b2" : s));
-    })();
-  }, [userId, token]);
-  // ── Parcours guidé Version B (3 étapes) : opérateur choisi à l'étape 2, mode de preuve
-  //    (numéro ID ou capture d'écran) choisi à l'étape 3. ──
-  const [b2Operator, setB2Operator] = useState<"mtn" | "airtel" | "cb" | "wero" | "paypal" | null>(null);
-  const [proofMode, setProofMode] = useState<"id" | "screenshot">("id");
-  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
-  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
-  const [screenshotUploading, setScreenshotUploading] = useState(false);
-  const [screenshotSent, setScreenshotSent] = useState(false);
+  const [step, setStep] = useState<"offer" | "mtn" | "airtel">("offer");
   const PREMIUM_PLANS = [
     PLAN_WEEK_ENABLED && { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA, days: PREMIUM_DAYS_WEEK },
     PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: true },
@@ -1878,8 +1817,6 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
     { icon: "visitors", titre: "Voir qui a visité ton profil", desc: "Accède à la liste complète de tes Vues" },
     { icon: "photo", titre: "Envoi de photos", desc: "Partage des photos dans tes conversations" },
     { icon: "status", titre: "Publier des statuts", desc: "Partage jusqu'à 2 photos visibles 24h" },
-    { icon: "group", titre: "Accès au Groupe Premium", desc: "Rejoins la discussion commune réservée aux membres Premium" },
-    { icon: "voice", titre: "Messages vocaux", desc: "Envoie et reçois des messages vocaux dans tes conversations" },
     { icon: "star2", titre: "Profil mis en avant", desc: "Apparais en premier dans Découvrir" },
     { icon: "check2", titre: "Messages lus", desc: "Vois quand tes messages ont été lus" },
     { icon: "filter", titre: "Filtres avancés", desc: "Filtre par ville, âge, religion" },
@@ -1906,395 +1843,14 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
       verified: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
       support: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
       match: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
-      group: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
-      voice: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /></svg>,
     };
     return svgs[id] || <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>;
   };
 
   const mtnLogo = (h = 18) => <svg viewBox="0 0 120 60" width={h * 2} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="8" /><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="5" /><text x="60" y="39" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="24" fill="#1a1a1a">MTN</text></svg>;
-  const airtelLogo = (h = 22) => <img src={`${SUPABASE_URL}/storage/v1/object/public/assets/airtel-logo.png`} alt="Airtel" style={{ height: h, width: "auto", display: "block", borderRadius: 6 }} />;
+  const airtelLogo = (h = 22) => <svg viewBox="0 0 80 60" width={h * 1.4} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="80" height="60" fill="#E40000" rx="8" /><path d="M14 40 Q9 18 24 12 Q39 6 41 21 Q43 35 30 37 Q17 39 15 31" fill="white" stroke="none" /><text x="46" y="30" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="white">airtel</text><text x="46" y="46" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="12" fill="#fff">money</text></svg>;
 
-  // ════════ VERSION B — ÉTAPE 1/3 : CHOIX DE LA FORMULE (épuré, aucun chiffre annexe) ════════
-  // ── Tant qu'on ne sait pas encore si la personne est au Congo ou en diaspora, on n'affiche RIEN
-  //    du contenu Congo/diaspora (juste un chargement) — sinon un bref éclair du mauvais contenu
-  //    est inévitable, même si tout se corrige une fraction de seconde après. ──
-  if (isDiaspora === null) return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-      <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg>
-      </div>
-    </div>
-  );
-
-  if (step === "b1") return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-      <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 1 SUR 4</div>
-            <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </div>
-          </div>
-          <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-            <svg width="27" height="27" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
-          </div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>{title}</div>
-          <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>Choisis ta formule</div>
-        </div>
-        <div style={{ flex: 1, padding: "0 20px" }}>
-          {PREMIUM_PLANS.map(pl => {
-            const sel = pl.id === planId;
-            return (
-              <div key={pl.id} onClick={() => setPlanId(pl.id)} className="moyo-tactile" style={{ position: "relative", cursor: "pointer", background: sel ? "#FBF1D8" : G.blanc, border: `2px solid ${sel ? gold : "#ece9e2"}`, borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: sel ? "0 4px 14px rgba(212,168,67,0.28)" : "0 1px 4px rgba(0,0,0,0.04)", transition: "all 0.15s" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>{pl.label}</span>
-                    {pl.popular && <span style={{ background: gold, color: "#fff", fontSize: "0.55rem", fontWeight: 800, padding: "2px 8px", borderRadius: 50 }}>POPULAIRE</span>}
-                    {pl.badge && <span style={{ background: G.vert, color: "#fff", fontSize: "0.55rem", fontWeight: 800, padding: "2px 8px", borderRadius: 50 }}>{pl.badge}</span>}
-                  </div>
-                  <div style={{ fontSize: "0.78rem", color: "#9a9a9a", marginTop: 3 }}>{pl.amount.toLocaleString("fr-FR")} FCFA</div>
-                </div>
-                <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid ${sel ? gold : "#ddd"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {sel && <div style={{ width: 13, height: 13, borderRadius: "50%", background: gold }} />}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", flexShrink: 0 }}>
-          <button onClick={() => setStep("b2")} style={{ width: "100%", background: gold, color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: "pointer" }}>Suivant →</button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ════════ VERSION B — ÉTAPE 2/3 : CHOIX DE L'OPÉRATEUR (simple, direct) ════════
-  if (step === "b2") return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-      <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-            <div onClick={() => isDiaspora ? onClose() : setStep("b1")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
-            </div>
-            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>{isDiaspora ? "ÉTAPE 1 SUR 3" : "ÉTAPE 2 SUR 4"}</div>
-            <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </div>
-          </div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>Comment veux-tu payer ?</div>
-          <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>{isDiaspora ? `Abonnement mensuel · ${PREMIUM_PRICE_EUR}€ / mois` : `${selectedPlan.label} · ${planAmount.toLocaleString("fr-FR")} FCFA`}</div>
-        </div>
-        <div style={{ flex: 1, padding: "0 20px" }}>
-          {!isDiaspora && (
-            <>
-              <div onClick={() => { if (!PAY_MTN_ENABLED) return; setB2Operator("mtn"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_MTN_ENABLED ? 1 : 0.5, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                {mtnLogo(24)}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>MTN MoMo</div>
-                  <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_MTN_ENABLED ? "Congo" : "Indisponible"}</div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-              </div>
-              <div onClick={() => { if (!PAY_AIRTEL_ENABLED) return; setB2Operator("airtel"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_AIRTEL_ENABLED ? 1 : 0.5, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                {airtelLogo(26)}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Airtel Money</div>
-                  <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_AIRTEL_ENABLED ? "Congo" : "Indisponible"}</div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-              </div>
-            </>
-          )}
-          {isDiaspora && (
-            <>
-              <div onClick={async () => {
-                if (!PAY_CB_ENABLED) return;
-                try {
-                  const win = window.open("", "_blank");
-                  const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
-                  const data = await r.json();
-                  if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
-                } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
-              }} className="moyo-tactile" style={{ opacity: PAY_CB_ENABLED ? 1 : 0.5, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", background: "#1a1a2e", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ width: 32, height: 24, background: "rgba(255,255,255,0.12)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#fff" }}>Visa / Mastercard</div>
-                  <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.6)" }}>{PAY_CB_ENABLED ? "Diaspora" : "Indisponible"}</div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-              </div>
-              <div onClick={() => { if (!PAY_WERO_ENABLED) return; setB2Operator("wero"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_WERO_ENABLED ? 1 : 0.5, cursor: PAY_WERO_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#FFDE00", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ color: "#1a1a1a", fontWeight: 900, fontSize: "0.62rem", letterSpacing: "-0.02em" }}>wero</span>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Wero</div>
-                  <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_WERO_ENABLED ? "Europe" : "Indisponible"}</div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-              </div>
-              <div onClick={() => { if (!PAY_PAYPAL_ENABLED) return; setB2Operator("paypal"); setStep("b3"); }} className="moyo-tactile" style={{ opacity: PAY_PAYPAL_ENABLED ? 1 : 0.5, cursor: PAY_PAYPAL_ENABLED ? "pointer" : "not-allowed", background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#003087", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ color: "#fff", fontWeight: 900, fontSize: "0.72rem", fontStyle: "italic" }}>Pay</span>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>PayPal</div>
-                  <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>{PAY_PAYPAL_ENABLED ? "International" : "Indisponible"}</div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-              </div>
-            </>
-          )}
-          </div>
-        </div>
-      </div>
-  );
-
-  // ════════ VERSION B — ÉTAPE 3/3 : PAIEMENT + PREUVE (ID ou capture d'écran) ════════
-  if (step === "b3" && b2Operator) {
-    const OPS: Record<string, any> = {
-      mtn: { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", logo: mtnLogo(20) },
-      airtel: { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", logo: airtelLogo(22) },
-      wero: { name: "Wero", main: "#5C2D91", onColor: "#fff", phoneNumber: PAY_WERO_NUMBER, placeholder: "Référence de l'envoi (si tu en as une)", operator: "Wero", isPhoneTransfer: true, logo: <div style={{ background: "#FFDE00", borderRadius: 6, padding: "4px 8px", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#1a1a1a", fontWeight: 900, fontSize: "0.85rem", letterSpacing: "-0.02em" }}>wero</span></div> },
-      paypal: { name: "PayPal", main: "#003087", onColor: "#fff", phoneNumber: PAY_PAYPAL_NUMBER, placeholder: "Référence de la transaction PayPal", operator: "PayPal", isPhoneTransfer: true, logo: <div style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.62rem", fontStyle: "italic" }}>Pay</div> },
-    };
-    const B3OP = OPS[b2Operator];
-    const b3Tel = B3OP.ussd ? `tel:${B3OP.ussd.replace(/#/g, "%23")}` : "";
-
-    return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <div onClick={() => setStep("b2")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
-              </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>{isDiaspora ? "ÉTAPE 2 SUR 3" : "ÉTAPE 3 SUR 4"}</div>
-              <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              </div>
-            </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 3 }}>Effectue ton paiement</div>
-            <div style={{ fontSize: "0.8rem", color: "#999", marginBottom: 20 }}>Suis les instructions ci-dessous pour valider ton paiement.</div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-            {B3OP.isPhoneTransfer ? (
-              /* Wero / PayPal : pas de code USSD, juste un numéro à qui envoyer */
-              <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
-                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Envoie {PREMIUM_PRICE_EUR} € via {B3OP.name} à ce numéro</div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, background: B3OP.main, borderRadius: 12, padding: "14px 16px" }}>
-                  {B3OP.logo}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.7)", fontWeight: 700, textTransform: "uppercase" }}>Numéro {B3OP.name}</div>
-                    <div style={{ fontSize: "1.1rem", fontWeight: 800, color: B3OP.onColor, fontFamily: "monospace" }}>{B3OP.phoneNumber}</div>
-                  </div>
-                  <div onClick={() => { navigator.clipboard?.writeText(B3OP.phoneNumber); }} className="moyo-tactile" style={{ cursor: "pointer", background: "rgba(255,255,255,0.18)", borderRadius: 8, padding: "8px 12px", fontSize: "0.72rem", fontWeight: 700, color: B3OP.onColor }}>Copier</div>
-                </div>
-                <div style={{ fontSize: "0.76rem", color: "#999", marginTop: 12, lineHeight: 1.5 }}>Ouvre ton application {B3OP.name}, envoie le montant à ce numéro, puis passe à l'étape suivante.</div>
-              </div>
-            ) : (
-              <>
-                {/* Carte 1 : appuyer pour payer */}
-                <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
-                    <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Appuyer pour payer</div>
-                  </div>
-                  <a href={b3Tel} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", background: B3OP.main, color: B3OP.onColor, borderRadius: 12, padding: "12px 16px", textDecoration: "none", boxSizing: "border-box" as any }}>
-                    {B3OP.logo}
-                    <div style={{ width: 1, alignSelf: "stretch", background: "rgba(255,255,255,0.35)" }} />
-                    <div>
-                      <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>Appuyer pour payer</div>
-                      <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>{planAmount.toLocaleString("fr-FR")} FCFA</div>
-                    </div>
-                  </a>
-                </div>
-
-                {/* Séparateur "ou" en badge circulaire, à cheval entre les deux cartes */}
-                <div style={{ display: "flex", justifyContent: "center", margin: "-14px 0" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#FCFBF8", border: `2px solid ${G.brun}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: G.brun, zIndex: 2, position: "relative" }}>ou</div>
-                </div>
-
-                {/* Carte 2 : composer le code */}
-                <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginTop: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8e4db", color: G.brun, fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</div>
-                    <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Compose ce code depuis ton mobile</div>
-                  </div>
-                  <div style={{ background: "#F0EDE6", borderRadius: 10, padding: "13px", textAlign: "center" }}>
-                    <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div style={{ padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", flexShrink: 0 }}>
-            <button onClick={() => setStep("b4")} style={{ width: "100%", background: gold, color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: "pointer" }}>J'ai payé, suivant →</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ════════ VERSION B — ÉTAPE 4/4 : PREUVE (ID ou capture d'écran) ════════
-  if (step === "b4" && b2Operator) {
-    const OPS: Record<string, any> = {
-      mtn: { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", placeholder: "Ex : 7753031542", operator: "MTN" },
-      airtel: { name: "Airtel Money", main: "#FF0100", onColor: "#fff", placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel" },
-      wero: { name: "Wero", main: "#5C2D91", onColor: "#fff", placeholder: "Référence de l'envoi (si tu en as une)", operator: "Wero" },
-      paypal: { name: "PayPal", main: "#003087", onColor: "#fff", placeholder: "Référence de la transaction PayPal", operator: "PayPal" },
-    };
-    const B3OP = OPS[b2Operator];
-    // Wero/PayPal facturent en euros (même prix que Visa/Mastercard) — jamais le montant FCFA des
-    // formules Congo, qui ne les concernent pas.
-    const submitAmount = (b2Operator === "wero" || b2Operator === "paypal") ? PREMIUM_PRICE_EUR : planAmount;
-    const submitPlanLabel = isDiaspora ? "1 mois (diaspora)" : selectedPlan.label;
-
-    const submitId = async () => {
-      setTxLoading(true); setTxErr(null);
-      const ref = txRef.trim();
-      try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
-          method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({ p_transaction_id: ref, p_user_id: userId }),
-        });
-        const data = await r.json().catch(() => null);
-        if (r.ok && data && data.success) {
-          setTxGrantDays(typeof data.days === "number" ? data.days : null);
-          setTxActivated(true); setTxSent(true); setTxLoading(false); return;
-        }
-        if (data && data.error === "already_used") {
-          setTxErr("Paiement déjà utilisé. Ce numéro de transaction a déjà servi à activer un abonnement.");
-          setTxLoading(false); return;
-        }
-        const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: ref, amount: submitAmount, status: "pending" }) });
-        setTxActivated(false); setTxSent(true);
-      } catch {
-        setTxActivated(false); setTxSent(true);
-      }
-      setTxLoading(false);
-    };
-
-    const submitScreenshot = async () => {
-      if (!screenshotFile) return;
-      setScreenshotUploading(true);
-      try {
-        const ext = (screenshotFile.name.split(".").pop() || "jpg").toLowerCase();
-        const path = `${userId}/${Date.now()}.${ext}`;
-        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/payment-proofs/${path}`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY, "Content-Type": screenshotFile.type || "image/jpeg", "x-upsert": "true" },
-          body: screenshotFile,
-        });
-        if (!uploadRes.ok) throw new Error("upload_failed");
-        const screenshotUrl = `${SUPABASE_URL}/storage/v1/object/public/payment-proofs/${path}`;
-        const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: null, screenshot_url: screenshotUrl, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: `[capture] ${screenshotUrl}`, amount: submitAmount, status: "pending" }) });
-        setScreenshotSent(true);
-      } catch {
-        setTxErr("Envoi impossible, réessaie dans un instant.");
-      }
-      setScreenshotUploading(false);
-    };
-
-    if (txSent || screenshotSent) return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "32px 26px", width: "100%", maxWidth: 340, textAlign: "center" }}>
-          <div style={{ width: 60, height: 60, borderRadius: "50%", background: txActivated ? "rgba(26,92,58,0.1)" : "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={txActivated ? "#1A5C3A" : gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-          </div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{txActivated ? "Premium activé !" : "Demande envoyée"}</div>
-          <p style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 20 }}>{txActivated ? `Ton abonnement ${selectedPlan.label} est actif dès maintenant.` : "Notre équipe vérifie ton paiement, ça ne prend généralement pas longtemps."}</p>
-          <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>Terminer</Btn>
-        </div>
-      </div>
-    );
-
-    return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
-          <div style={{ padding: "18px 20px 0" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <div onClick={() => setStep("b3")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
-              </div>
-              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>{isDiaspora ? "ÉTAPE 3 SUR 3" : "ÉTAPE 4 SUR 4"}</div>
-              <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              </div>
-            </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 16 }}>Comment veux-tu confirmer ?</div>
-          </div>
-
-          <div style={{ padding: "0 20px 20px" }}>
-            {/* Choix du mode de preuve : ID ou capture d'écran */}
-            <div style={{ display: "flex", background: "#F0EDE6", borderRadius: 50, padding: 4, marginBottom: 16 }}>
-              <div onClick={() => setProofMode("id")} className="moyo-tactile" style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "id" ? gold : "transparent", color: proofMode === "id" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Envoyer l'ID</div>
-              <div onClick={() => setProofMode("screenshot")} className="moyo-tactile" style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "screenshot" ? gold : "transparent", color: proofMode === "screenshot" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Capture d'écran</div>
-            </div>
-
-            {proofMode === "id" ? (
-              <>
-                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>
-                  {(b2Operator === "wero" || b2Operator === "paypal")
-                    ? <>Après ton paiement, <b>{B3OP.name}</b> ne t'envoie pas forcément de SMS, regarde plutôt dans l'application, tes e-mails, tes notifications, ou le relevé de ton compte bancaire pour trouver la référence de la transaction. Entre-la dans la case ci-dessous pour activer ton abonnement :</>
-                    : <>Après ton paiement, tu reçois un SMS de <b>{B3OP.name}</b> avec un numéro de transaction (ID). Entre-le dans la case ci-dessous pour activer ton abonnement :</>
-                  }
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? B3OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-                  <input value={txRef} onChange={e => { setTxRef(e.target.value); setTxErr(null); }} placeholder={B3OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: G.brun, background: "transparent" }} />
-                </div>
-                {txErr && <div style={{ color: "#C0392B", fontSize: "0.78rem", marginBottom: 12 }}>{txErr}</div>}
-                <button onClick={submitId} disabled={!txRef.trim() || txLoading} style={{ width: "100%", background: txRef.trim() ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: txRef.trim() ? "pointer" : "not-allowed" }}>{txLoading ? "Vérification…" : "Confirmer mon paiement"}</button>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>
-                  {(b2Operator === "wero" || b2Operator === "paypal")
-                    ? <>Envoie la capture d'écran qui prouve ton paiement <b>{B3OP.name}</b> (dans l'application, un e-mail, une notification, ou ton compte bancaire) :</>
-                    : <>Envoie la capture d'écran du message que <b>{B3OP.name}</b> t'a envoyé après ton paiement :</>
-                  }
-                </div>
-                <input type="file" accept="image/*" id="moyo-b3-screenshot" style={{ display: "none" }} onChange={e => {
-                  const f = e.target.files?.[0]; if (!f) return;
-                  setScreenshotFile(f); setScreenshotPreview(URL.createObjectURL(f));
-                }} />
-                {screenshotPreview ? (
-                  <div onClick={() => document.getElementById("moyo-b3-screenshot")?.click()} style={{ borderRadius: 14, overflow: "hidden", marginBottom: 16, cursor: "pointer", position: "relative" }}>
-                    <img src={screenshotPreview} style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }} />
-                    <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: "0.7rem", fontWeight: 700, padding: "4px 10px", borderRadius: 50 }}>Changer</div>
-                  </div>
-                ) : (
-                  <div onClick={() => document.getElementById("moyo-b3-screenshot")?.click()} style={{ border: "2px dashed #ddd", borderRadius: 14, padding: "28px 16px", textAlign: "center", cursor: "pointer", marginBottom: 16 }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 8px" }}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
-                    <div style={{ fontSize: "0.82rem", color: "#999", fontWeight: 600 }}>Touche pour choisir une image</div>
-                  </div>
-                )}
-                {txErr && <div style={{ color: "#C0392B", fontSize: "0.78rem", marginBottom: 12 }}>{txErr}</div>}
-                <button onClick={submitScreenshot} disabled={!screenshotFile || screenshotUploading} style={{ width: "100%", background: screenshotFile ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: screenshotFile ? "pointer" : "not-allowed" }}>{screenshotUploading ? "Envoi…" : "Envoyer la capture"}</button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ════════ ÉCRAN 1 : OFFRE — VERSION A (par défaut) ════════
+  // ════════ ÉCRAN 1 : OFFRE ════════
   if (step === "offer") return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "18px 20px 16px" }}>
@@ -2337,66 +1893,42 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAllAdv ? "rotate(-90deg)" : "rotate(0)" }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
         </div>
-        {!isDiaspora && (
-          <>
-            <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 9 }}>{PREMIUM_PLANS.length > 1 ? "CHOISISSEZ VOTRE FORMULE" : "VOTRE FORMULE PREMIUM"}</div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              {PREMIUM_PLANS.map(pl => {
-                const sel = pl.id === planId;
-                return (
-                  <div key={pl.id} onClick={() => setPlanId(pl.id)} style={{ flex: 1, position: "relative", cursor: "pointer", background: sel ? "#FBF1D8" : G.blanc, border: `2px solid ${sel ? gold : "#ece9e2"}`, borderRadius: 14, padding: "14px 6px 11px", textAlign: "center", boxShadow: sel ? "0 4px 14px rgba(212,168,67,0.28)" : "0 1px 4px rgba(0,0,0,0.04)", transition: "all 0.15s" }}>
-                    {pl.popular && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: gold, color: "#fff", fontSize: "0.55rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 9px", borderRadius: 50, whiteSpace: "nowrap", boxShadow: "0 2px 6px rgba(212,168,67,0.4)" }}>POPULAIRE</div>}
-                    {pl.badge && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: G.vert, color: "#fff", fontSize: "0.55rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 9px", borderRadius: 50, whiteSpace: "nowrap", boxShadow: "0 2px 6px rgba(26,92,58,0.4)" }}>{pl.badge}</div>}
-                    <div style={{ fontSize: "0.73rem", fontWeight: 700, color: sel ? "#7a5a10" : "#8a8a8a", marginBottom: 6 }}>{pl.label}</div>
-                    <div style={{ fontSize: "1rem", fontWeight: 800, color: sel ? "#3a2e10" : "#1a1a2e", lineHeight: 1.05 }}>{pl.amount.toLocaleString("fr-FR")}</div>
-                    <div style={{ fontSize: "0.6rem", fontWeight: 700, color: sel ? "#7a5a10" : "#9a9a9a", marginTop: 1 }}>FCFA</div>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#7a6a3a", fontWeight: 600, marginBottom: 14 }}>Formule sélectionnée : <span style={{ fontWeight: 800, color: "#3a2e10" }}>{selectedPlan.label}</span>, <span style={{ fontWeight: 800, color: gold }}>{planAmount.toLocaleString("fr-FR")} FCFA</span></div>
-          </>
-        )}
-        {isDiaspora && (
-          <div style={{ textAlign: "center", marginBottom: 14 }}>
-            <span style={{ fontSize: "1.8rem", fontWeight: 900, color: "#1a1a2e" }}>{PREMIUM_PRICE_EUR}€</span>
-            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#8a8a8a" }}> / mois</span>
-          </div>
-        )}
-        {!isDiaspora && (
-          <>
-            <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>CONGO, PAYEZ AVEC</div>
-            <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
-              {mtnLogo(18)} MTN MoMo{!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
-            </button>
-            <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: G.blanc, color: "#FF0100", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#FF0100" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
-              {airtelLogo(20)} Airtel Money{!PAY_AIRTEL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
-            </button>
-          </>
-        )}
-        {isDiaspora && (
-          <>
-            <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>DIASPORA, PAYER PAR</div>
-            <button onClick={async () => {
-              if (!PAY_CB_ENABLED) return;
-              try {
-                const win = window.open("", "_blank");
-                const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
-                const data = await r.json();
-                if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
-              } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
-            }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "#1a1a2e" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-              Visa / Mastercard{!PAY_CB_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
-            </button>
-            <button onClick={() => { if (!PAY_WERO_ENABLED) return; setB2Operator("wero"); setStep("b3"); }} disabled={!PAY_WERO_ENABLED} style={{ width: "100%", background: PAY_WERO_ENABLED ? "#5C2D91" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_WERO_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
-              Wero{!PAY_WERO_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
-            </button>
-            <button onClick={() => { if (!PAY_PAYPAL_ENABLED) return; setB2Operator("paypal"); setStep("b3"); }} disabled={!PAY_PAYPAL_ENABLED} style={{ width: "100%", background: PAY_PAYPAL_ENABLED ? "#003087" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_PAYPAL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
-              PayPal{!PAY_PAYPAL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
-            </button>
-          </>
-        )}
+        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 9 }}>{PREMIUM_PLANS.length > 1 ? "CHOISISSEZ VOTRE FORMULE" : "VOTRE FORMULE PREMIUM"}</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          {PREMIUM_PLANS.map(pl => {
+            const sel = pl.id === planId;
+            return (
+              <div key={pl.id} onClick={() => setPlanId(pl.id)} style={{ flex: 1, position: "relative", cursor: "pointer", background: sel ? "#FBF1D8" : G.blanc, border: `2px solid ${sel ? gold : "#ece9e2"}`, borderRadius: 14, padding: "14px 6px 11px", textAlign: "center", boxShadow: sel ? "0 4px 14px rgba(212,168,67,0.28)" : "0 1px 4px rgba(0,0,0,0.04)", transition: "all 0.15s" }}>
+                {pl.popular && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: gold, color: "#fff", fontSize: "0.55rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 9px", borderRadius: 50, whiteSpace: "nowrap", boxShadow: "0 2px 6px rgba(212,168,67,0.4)" }}>POPULAIRE</div>}
+                {pl.badge && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: G.vert, color: "#fff", fontSize: "0.55rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 9px", borderRadius: 50, whiteSpace: "nowrap", boxShadow: "0 2px 6px rgba(26,92,58,0.4)" }}>{pl.badge}</div>}
+                <div style={{ fontSize: "0.73rem", fontWeight: 700, color: sel ? "#7a5a10" : "#8a8a8a", marginBottom: 6 }}>{pl.label}</div>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: sel ? "#3a2e10" : "#1a1a2e", lineHeight: 1.05 }}>{pl.amount.toLocaleString("fr-FR")}</div>
+                <div style={{ fontSize: "0.6rem", fontWeight: 700, color: sel ? "#7a5a10" : "#9a9a9a", marginTop: 1 }}>FCFA</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#7a6a3a", fontWeight: 600, marginBottom: 14 }}>Formule sélectionnée : <span style={{ fontWeight: 800, color: "#3a2e10" }}>{selectedPlan.label}</span> — <span style={{ fontWeight: 800, color: gold }}>{planAmount.toLocaleString("fr-FR")} FCFA</span></div>
+        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>CONGO — PAYEZ AVEC</div>
+        <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+          {mtnLogo(18)} MTN MoMo{!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+        </button>
+        <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: G.blanc, color: "#E40000", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#E40000" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
+          {airtelLogo(20)} Airtel Money{!PAY_AIRTEL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+        </button>
+        <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>DIASPORA — PAYER PAR CARTE</div>
+        <button onClick={async () => {
+          if (!PAY_CB_ENABLED) return;
+          try {
+            const win = window.open("", "_blank");
+            const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
+            const data = await r.json();
+            if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
+          } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
+        }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "#1a1a2e" : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+          Visa / Mastercard{!PAY_CB_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
+        </button>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#a8a8a8", fontSize: "0.78rem" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
           Paiement 100% sécurisé
@@ -2408,7 +1940,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   // ════════ ÉCRANS 2 & 3 : PAIEMENT (MTN / AIRTEL) ════════
   const OP = step === "mtn"
     ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", tint: "#fff8e6", tintBorder: "rgba(245,166,35,0.4)", tintText: "#9a6a00", logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)" }
-    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", numBg: "#FF0100", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", tint: "#fff0f0", tintBorder: "rgba(228,0,0,0.3)", tintText: "#c0392b", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
+    : { name: "Airtel Money", main: "#E40000", onColor: "#fff", numBg: "#E40000", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", tint: "#fff0f0", tintBorder: "rgba(228,0,0,0.3)", tintText: "#c0392b", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
   const tel = `tel:${OP.ussd.replace(/#/g, "%23")}`;
   const submit = async () => {
     setTxLoading(true);
@@ -2595,7 +2127,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
       <AuthLayout onBack={() => onNav("landing")}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
-            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
+            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
           </div>
         </div>
         <div style={{ textAlign: "center", padding: "12px 8px 24px" }}>
@@ -2616,7 +2148,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
-          <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
+          <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
         </div>
         <h2 style={{  fontSize: "1.5rem", fontWeight: 700, marginTop: 8 }}>Nouveau mot de passe</h2>
         <p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Choisis un nouveau mot de passe sécurisé</p>
@@ -2933,7 +2465,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: (isMobile && showMobileLanding) ? "none" : "block" }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
-            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
+            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <span onClick={() => onNav("about")}
@@ -3685,7 +3217,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               </div>
               <div style={{ padding: "22px", textAlign: "center" }}>
                 <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo Dating !</div>
-                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo Dating depuis ton écran d'accueil, rapide et pratique, sans passer par le navigateur !</p>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo Dating depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
                 <button onClick={launchAndroidPrompt} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>Installer l'app</button>
                 <button onClick={() => setInstallModal(null)} style={{ width: "100%", background: G.blanc, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
               </div>
@@ -3708,7 +3240,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   </div>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>3</div>
-                    <div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>« Ajouter »</b>, c'est fait ! 🎉</div>
+                    <div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>« Ajouter »</b> — c'est fait ! 🎉</div>
                   </div>
                 </div>
               </>
@@ -3878,7 +3410,7 @@ function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () 
   const eOther = isFemme ? "" : "e";
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 22, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -3917,7 +3449,7 @@ function AuthLayout({ children, onBack }: { children: React.ReactNode; onBack: (
 }
 
 // Écran de bannissement : message permanent OU décompte pour un bannissement temporaire.
-function BanScreen({ until, onExpire, onBack, name, email, reason }: { until?: string | null; onExpire?: () => void; onBack?: () => void; name?: string; email?: string; reason?: string | null }) {
+function BanScreen({ until, onExpire, onBack, name, email }: { until?: string | null; onExpire?: () => void; onBack?: () => void; name?: string; email?: string }) {
   const target = until ? new Date(until).getTime() : 0;
   const [remaining, setRemaining] = React.useState(() => Math.max(0, target - Date.now()));
   React.useEffect(() => {
@@ -3951,7 +3483,7 @@ function BanScreen({ until, onExpire, onBack, name, email, reason }: { until?: s
   const ContactSupportBtn = () => (
     <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 10 }}>
       <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
-      Nous contacter sur WhatsApp
+      Contacter le service support
     </a>
   );
 
@@ -3962,12 +3494,6 @@ function BanScreen({ until, onExpire, onBack, name, email, reason }: { until?: s
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         </div>
         <h2 style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, margin: "0 0 10px" }}>Accès suspendu</h2>
-        {reason && !(isTemp && expired) && (
-          <div style={{ background: "#FFF5F4", border: "1px solid #F5C4B3", borderRadius: 12, padding: "12px 14px", textAlign: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#993C1D", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>Motif</div>
-            <div style={{ fontSize: "0.85rem", color: "#712B13", fontWeight: 600 }}>{reason}</div>
-          </div>
-        )}
         {isTemp ? (
           expired ? (
             <>
@@ -4006,7 +3532,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [banInfo, setBanInfo] = useState<{ until: string | null; name: string; email: string; reason?: string | null } | null>(null);
+  const [banInfo, setBanInfo] = useState<{ until: string | null; name: string; email: string } | null>(null);
   const [showForgot, setShowForgot] = useState(() => {
     try {
       if (sessionStorage.getItem("moyo_auto_forgot") === "1") {
@@ -4049,16 +3575,14 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         setLoading(false); return;
       }
       if ((profiles[0] as any).is_banned) {
-        try { await sb.update(res.access_token, "profiles", res.user.id, { last_notice_acknowledged: true }); } catch {}
         await sb.signOut(res.access_token);
-        setBanInfo({ until: null, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null });
+        setBanInfo({ until: null, name: profiles[0].name || "", email: res.user.email || form.email.trim() });
         setLoading(false); return;
       }
       const banUntil = (profiles[0] as any).ban_until as string | null | undefined;
       if (banUntil && new Date(banUntil).getTime() > Date.now()) {
-        try { await sb.update(res.access_token, "profiles", res.user.id, { last_notice_acknowledged: true }); } catch {}
         await sb.signOut(res.access_token);
-        setBanInfo({ until: banUntil, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null });
+        setBanInfo({ until: banUntil, name: profiles[0].name || "", email: res.user.email || form.email.trim() });
         setLoading(false); return;
       }
       if (banUntil && new Date(banUntil).getTime() <= Date.now()) {
@@ -4103,7 +3627,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     setForgotSent(true);
   };
 
-  if (banInfo) return <BanScreen until={banInfo.until} name={banInfo.name} email={banInfo.email} reason={banInfo.reason} onExpire={() => setBanInfo(null)} onBack={() => setBanInfo(null)} />;
+  if (banInfo) return <BanScreen until={banInfo.until} name={banInfo.name} email={banInfo.email} onExpire={() => setBanInfo(null)} onBack={() => setBanInfo(null)} />;
   if (showForgot) {
     const closeForgot = () => { setShowForgot(false); setForgotMethod("choice"); setForgotSent(false); setForgotEmail(""); setForgotName(""); };
     const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}\n\nPouvez-vous m'aider à le changer ?`)}`;
@@ -4112,7 +3636,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
         {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
+          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2>
         </div>
 
@@ -4160,7 +3684,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
 
         {forgotMethod === "whatsapp" && (
           <>
-            <p style={{ color: "#666", fontSize: "0.82rem", lineHeight: 1.5, marginBottom: 18 }}>Renseigne ton email pour qu'on retrouve ton compte, puis envoie ta demande sur WhatsApp, on te répond avec un nouveau mot de passe.</p>
+            <p style={{ color: "#666", fontSize: "0.82rem", lineHeight: 1.5, marginBottom: 18 }}>Renseigne ton email pour qu'on retrouve ton compte, puis envoie ta demande sur WhatsApp — on te répond avec un nouveau mot de passe.</p>
             <Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" />
             <Input label={<>Ton prénom <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 500 }}>(optionnel, aide à te retrouver plus vite)</span></>} value={forgotName} onChange={e => setForgotName(e.target.value)} placeholder="Ex: Faïda" icon="user" />
             <a href={forgotEmail.trim() ? waSupportLink : undefined} target="_blank" rel="noopener noreferrer"
@@ -4176,7 +3700,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     );
   }
 
-  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
 function SignUp({ onNav }: { onNav: (p: string) => void }) {
@@ -4450,12 +3974,12 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   return (
     <AuthLayout onBack={() => step === 1 ? onNav("landing") : setStep(s => s - 1)}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
-      {successMsg && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111", marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{signupSuccessMsg}</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
+      {successMsg && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111", marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{signupSuccessMsg}</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
+        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
         <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 16px" }}>
           <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "#fff" }}>{step}</div>
@@ -4551,7 +4075,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         )}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <p style={{ fontSize: "0.9rem", color: "#555", marginBottom: 24, lineHeight: 1.6 }}>
-            Ajoute une photo de toi (visage visible). Toute autre photo sera refusée.
+            Ajoute une photo pour que les autres puissent te reconnaître 😊
           </p>
           <input ref={fileRef} type="file" accept="image/*" onChange={e => {
             const file = e.target.files?.[0];
@@ -4592,7 +4116,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
       {/* ÉTAPE 4 - Tes informations (obligatoire) */}
       {step === 4 && <>
-        <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>Parle-nous un peu de toi : ces informations nous aident à te proposer les bonnes personnes.</p>
+        <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>Parle-nous un peu de toi — ces informations nous aident à te proposer les bonnes personnes.</p>
         <Input label={<>Prénom <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="user" />
         <Input label={<>Âge <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} type="number" value={form.age} onChange={e => { const v = e.target.value.slice(0,2); upd("age", v); }} placeholder="Ex: 25" icon="cake" hint="Entre 18 et 99 ans" error={form.age && parseInt(form.age) < 18 ? "Vous devez avoir au moins 18 ans." : undefined} />
         <div style={{ marginBottom: 18 }}>
@@ -4601,14 +4125,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             <option value="">Sélectionne ta ville</option>
             {VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}
           </select>
-        </div>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Numéro WhatsApp <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
-          <div style={{ position: "relative" }}>
-            <span style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg></span>
-            <input value={form.phone} onChange={e => upd("phone", e.target.value.slice(0, 25))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px 13px 40px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }} />
-          </div>
-          <div style={{ fontSize: "0.76rem", color: "#7a7a7a", marginTop: 6 }}>Reste privé, jamais visible par les autres membres.</div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(3)} style={{ flex: 1 }}>← Retour</Btn>
@@ -4634,6 +4150,17 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Bio <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
           <textarea value={form.bio} onChange={e => upd("bio", e.target.value.slice(0, 160))} placeholder="Parle un peu de toi..." rows={3} maxLength={160} style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none", resize: "none" }} />
           <div style={{ textAlign: "right", fontSize: "0.75rem", color: form.bio.length >= 150 ? G.rouge : "#aaa", marginTop: 4 }}>{form.bio.length}/160</div>
+        </div>
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Numéro WhatsApp <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
+          <div style={{ position: "relative" }}>
+            <span style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg></span>
+            <input value={form.phone} onChange={e => upd("phone", e.target.value.slice(0, 25))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px 13px 40px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }} />
+          </div>
+          <div style={{ fontSize: "0.76rem", color: "#7a7a7a", lineHeight: 1.5, marginTop: 6, display: "flex", gap: 6, alignItems: "flex-start" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a7a7a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Ton numéro reste strictement privé, non visible par les autres membres. Il sert uniquement à la récupération de ton compte et aux notifications WhatsApp importantes.</span>
+          </div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(4)} style={{ flex: 1 }}>← Retour</Btn>
@@ -4661,7 +4188,7 @@ const BOT_FAQ = [
   { q: ["message", "envoyer", "écrire", "conversation"], r: `Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Vous devez avoir un match pour envoyer un message.` },
   { q: ["réaction", "réagir", "emoji", "like message"], r: "Appuyez longuement sur un message pour ouvrir le menu de réactions. Une seule réaction par message est autorisée : choisir une nouvelle réaction remplace automatiquement l'ancienne." },
   { q: ["insulte", "bloqué", "interdit", "avertissement", "modération"], r: "Moyo Dating bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés. Un avertissement s'affiche et un signalement est transmis à notre équipe. Les comportements répétés entraînent la suppression du compte." },
-  { q: ["numéro", "numero", "whatsapp", "contact", "téléphone", "partager numéro", "reseau", "réseau", "snap", "insta", "lien"], r: "Pour ta sécurité et contre les arnaques, le partage d'un numéro, d'un réseau social ou d'un lien est bloqué dans les messages et dans le profil (bio, nom…) pour les comptes gratuits, même en espaçant les chiffres ou en les écrivant en lettres. L'abonnement Premium débloque le partage de coordonnées en conversation privée." },
+  { q: ["numéro", "numero", "whatsapp", "contact", "téléphone", "partager numéro", "reseau", "réseau", "snap", "insta", "lien"], r: "Pour ta sécurité et contre les arnaques, le partage d'un numéro, d'un réseau social ou d'un lien est bloqué dans les messages et dans le profil (bio, nom…) pour les comptes gratuits — même en espaçant les chiffres ou en les écrivant en lettres. L'abonnement Premium débloque le partage de coordonnées en conversation privée." },
   { q: ["suspendu", "suspension", "banni temporaire", "décompte", "temporaire", "réactiver"], r: "Une suspension temporaire affiche un décompte : à la fin, tu peux te reconnecter automatiquement, rien à faire. Une suspension définitive nécessite de contacter l'assistance pour toute réclamation." },
   { q: ["photo", "image", "profil", "modifier"], r: "Allez dans l'onglet Profil → Modifier ma photo. Un outil de recadrage s'ouvre pour cadrer votre photo parfaitement." },
   { q: ["visible", "invisible", "disparaître", "cacher"], r: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
@@ -4680,8 +4207,6 @@ const BOT_FAQ = [
   { q: ["avertissement", "sanction", "notification officielle", "banni", "suspension"], r: "Un avertissement est une notification officielle MOYO qui apparaît à votre connexion. Vous devez cliquer \"OK, j\'ai compris\" pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
   { q: ["confirmer", "confirmation", "email confirmation", "activer compte", "lien email"], r: "L'inscription est gratuite. Votre compte est actif immédiatement après les 3 étapes d'inscription. Pas besoin de confirmer votre email." },
   { q: ["pas reçu", "email introuvable", "spam", "confirmation pas reçue"], r: "Vérifiez vos spams ou courriers indésirables. Si vous ne trouvez toujours pas l'email, contactez notre équipe via l'Assistant Moyo Dating avec votre adresse email." },
-  { q: ["groupe", "groupe premium", "discussion commune", "groupe discussion"], r: "Le Groupe Premium est une discussion commune réservée aux membres Premium. Depuis l'onglet Messages, appuyez sur l'onglet 'Groupe' pour demander à y accéder : votre demande est examinée par notre équipe avant validation. Une fois membre, vous pouvez écrire, réagir, répondre et envoyer des photos librement avec tous les autres membres." },
-  { q: ["wero", "paypal", "diaspora", "payer depuis l'étranger", "carte bancaire"], r: "Pour les membres de la diaspora, le Premium se paie par carte Visa/Mastercard, Wero ou PayPal, à un tarif mensuel fixe en euros. Au Congo, le paiement se fait via MTN Mobile Money ou Airtel Money. Le bon moyen de paiement s'affiche automatiquement selon la ville renseignée dans votre profil." },
 ];
 
 function getBotResponse(input: string): string {
@@ -4988,7 +4513,7 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
               </div>
               <div style={{ padding: "22px", textAlign: "center" }}>
                 <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "#111", marginBottom: 10 }}>Installe l'app Moyo Dating !</div>
-                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo Dating depuis ton écran d'accueil, rapide et pratique, sans passer par le navigateur !</p>
+                <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Accède rapidement à Moyo Dating depuis ton écran d'accueil — rapide, pratique et sans passer par le navigateur !</p>
                 <button onClick={launchAndroidPrompt} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginBottom: 10, boxShadow: "0 4px 14px rgba(192,57,43,0.35)" }}>Installer l'app</button>
                 <button onClick={() => setModal(null)} style={{ width: "100%", background: G.blanc, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>OK</button>
               </div>
@@ -5002,7 +4527,7 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
                   <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 12, margin: "14px 0 20px" }}>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>1</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>Partager</b> en bas de Safari</div></div>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>2</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Choisis <b>« Sur l'écran d'accueil »</b></div></div>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>3</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>« Ajouter »</b>, c'est fait ! 🎉</div></div>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: G.vert, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>3</div><div style={{ fontSize: "0.84rem", color: "#333" }}>Appuie sur <b>« Ajouter »</b> — c'est fait ! 🎉</div></div>
                   </div>
                 </>
               ) : modal === "done" ? (
@@ -5041,36 +4566,11 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
 // Un seul mode actif à la fois (comportement type radio, via 3 switches).
 
 
-function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true, statusStackData }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; statusStackData?: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null; }) {
+function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true, statusStackData }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; statusStackData?: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; hasNew: boolean } | null; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
   const [showBot, setShowBot] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // ── Sur l'onglet Messages, le rebond élastique du scroll iOS peut révéler le fond gris de la
-  //    page (body, --c-creme) au-dessus ou en dessous du contenu. On aligne temporairement le
-  //    fond du body sur le blanc/noir du thème le temps d'être sur cet onglet, sans toucher au
-  //    fond des autres onglets. ──
-  useEffect(() => {
-    if (tab === "messages") {
-      document.body.style.backgroundColor = "var(--c-blanc)";
-      return () => { document.body.style.backgroundColor = ""; };
-    }
-  }, [tab]);
-  // ── Hauteur réelle de l'en-tête mobile, mesurée en JS : évite de dépendre d'une valeur
-  //    fixe (45px) qui casse dès que le contenu de l'en-tête change de taille (ex: pile de
-  //    statuts agrandie). Utilisée ici pour l'espacement du contenu, et lue depuis Messages
-  //    (via l'attribut data-moyo-header) pour positionner son propre bandeau juste en dessous. ──
-  const mobileHeaderRef = useRef<HTMLDivElement | null>(null);
-  const [mobileHeaderHeight, setMobileHeaderHeight] = useState(45);
-  useEffect(() => {
-    const el = mobileHeaderRef.current;
-    if (!el) return;
-    const measure = () => setMobileHeaderHeight(el.offsetHeight);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [tab]);
 
   // Écoute les événements fullscreen émis par Discover
   useEffect(() => {
@@ -5248,30 +4748,30 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     ) : (
       <>
         {/* Header mobile */}
-        <div ref={mobileHeaderRef} data-moyo-header style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
+        <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700, lineHeight: 0.82 }}>
             <div style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</div>
-            <div style={{ color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
+            <div style={{ color: "#111", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
             {tab === "messages" ? (
               statusStackData && FEATURE_STATUSES ? (
-                <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-status-sheet"))} style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 3, position: "relative" }}>
-                  {statusStackData.newCount > 0 && (
-                    <span style={{ position: "absolute", top: -5, right: -5, minWidth: 17, height: 17, padding: "0 4px", borderRadius: 50, background: G.rouge, color: "#fff", fontSize: "0.6rem", fontWeight: 800, border: `2px solid ${G.blanc}`, zIndex: 5, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>{statusStackData.newCount > 9 ? "9+" : statusStackData.newCount}</span>
+                <div onClick={() => window.dispatchEvent(new CustomEvent("moyo-open-status-sheet"))} style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 2, position: "relative" }}>
+                  {statusStackData.hasNew && (
+                    <div style={{ position: "absolute", top: -3, right: -3, width: 12, height: 12, borderRadius: "50%", background: G.rouge, border: `2px solid ${G.blanc}`, zIndex: 5 }} />
                   )}
                   <div style={{ display: "flex", alignItems: "center" }}>
-                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "1.05rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}`, zIndex: 4, position: "relative", boxShadow: "0 2px 8px rgba(192,57,43,0.35)" }}>+</div>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.85rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}`, zIndex: 4, position: "relative", boxShadow: "0 2px 6px rgba(192,57,43,0.35)" }}>+</div>
                     {statusStackData.groups.slice(0, 3).map((g, idx) => (
-                      <div key={g.userId} style={{ marginLeft: -13, zIndex: 3 - idx, position: "relative" }}>
-                        <Avatar url={g.photo_url} gender={g.gender} size={38} premium={false} />
+                      <div key={g.userId} style={{ marginLeft: -11, zIndex: 3 - idx, position: "relative" }}>
+                        <Avatar url={g.photo_url} gender={g.gender} size={30} premium={false} />
                       </div>
                     ))}
                     {statusStackData.count > 3 && (
-                      <div style={{ marginLeft: -13, width: 38, height: 38, borderRadius: "50%", background: G.brun, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}` }}>+{statusStackData.count - 3}</div>
+                      <div style={{ marginLeft: -11, width: 30, height: 30, borderRadius: "50%", background: G.brun, color: "#fff", fontSize: "0.62rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: `2.5px solid ${G.blanc}` }}>+{statusStackData.count - 3}</div>
                     )}
                   </div>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 800, color: G.rouge, letterSpacing: "0.02em" }}>Statuts</span>
+                  <span style={{ fontSize: "0.62rem", fontWeight: 800, color: G.rouge, letterSpacing: "0.02em" }}>Statuts</span>
                 </div>
               ) : <div />
             ) : (
@@ -5279,7 +4779,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             )}
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: mobileHeaderHeight, background: tab === "messages" ? G.blanc : "var(--c-shell-bg)", transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
+        <div style={{ flex: 1, overflowY: tab === "messages" ? "hidden" : "auto", paddingBottom: isFullscreen ? 0 : 71, paddingTop: 45, background: tab === "messages" ? G.blanc : undefined, transition: "padding-bottom 0.35s cubic-bezier(0.4,0,0.2,1)" }}>{children}</div>
         {/* Footer mobile */}
         <div className={isFullscreen ? "moyo-footer-hidden" : "moyo-footer-visible"} style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, background: G.blanc, borderTop: `1px solid #eee`, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "5px 4px 13px", zIndex: 50, visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           {tabs.map(t => {
@@ -5312,7 +4812,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         depuis le bouton dédié dans le header/menu Découvrir. */}
     {assistantEnabled && !isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
     {showGuide && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
-      <div className="moyo-sheet-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
+      <div className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
         {/* Header */}
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px", position: "relative" }}>
           <div onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 14, right: 16, cursor: "pointer", opacity: 0.8 }}>
@@ -5343,20 +4843,19 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             ]},
             { title: "Matchs", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Un match se crée automatiquement quand deux personnes se likent mutuellement.", "Sur chaque match, appuyez sur les 3 traits pour accéder aux options : Voir le profil, Envoyer un message, Bloquer ou Annuler le match.", "Annuler un match supprime la conversation, les likes mutuels et les vues. Comme si vous ne vous étiez jamais matchés.", "Avec Premium, vous pouvez voir exactement qui vous a liké et qui a visité votre profil."] },
             { title: "Rendez-vous avec l'équipe Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, items: ["Depuis votre page Profil, la carte 'Rendez-vous avec l'équipe Moyo' permet de demander un accompagnement : étudier votre cas, améliorer votre profil, préparer une mise en relation.", "Deux formules : Téléphonique (réservé aux membres Premium) et À l'agence (service payant de " + APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR") + " FCFA, réglé par Mobile Money MTN ou Airtel à l'étape de paiement).", "Indiquez le motif, puis choisissez vos créneaux dans le calendrier. Les dates déjà passées et les dimanches sont indisponibles (l'agence est fermée le dimanche), et les horaires proposés vont de 9h à 19h.", "Le rendez-vous à l'agence est totalement distinct du Premium : votre paiement sert uniquement au rendez-vous et n'active aucun abonnement. Notre équipe vérifie votre référence de paiement puis confirme votre créneau.", "Dans l'onglet 'Mes rendez-vous', suivez l'état de chaque demande : en attente, confirmé, reporté, effectué ou annulé. Vous pouvez supprimer de votre liste un rendez-vous annulé ou déjà passé pour la garder bien rangée."] },
-            { title: "Groupe Premium", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: ["Le Groupe Premium est une discussion commune réservée aux membres Premium : depuis l'onglet Messages, appuyez sur l'onglet 'Groupe' pour demander à y accéder.", "Votre demande est examinée par notre équipe avant validation. Vous recevez un message de bienvenue dès que c'est fait.", "Une fois membre, vous pouvez écrire, réagir, répondre et envoyer des photos librement avec tous les autres membres du groupe.", "Vous pouvez retirer un message que vous avez envoyé pour tout le monde, ou le masquer uniquement pour vous.", "'Voir les membres' affiche la liste des membres validés (les comptes administrateurs n'y apparaissent pas)."] },
             { title: "Mise en relation Moyo Dating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Tout le monde peut créer et enregistrer sa carte relationnelle (qui vous êtes, ce que vous recherchez). Notre équipe recherche ensuite personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → remplissez votre carte relationnelle et enregistrez → appuyez sur 'Envoyer ma demande'. L'envoi est réservé aux membres Premium : si vous ne l'êtes pas encore, l'option de passer Premium s'affiche à ce moment-là.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche complète.", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Moyo Dating encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
             { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo Dating dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe.", "Partage de contacts : pour ta sécurité, le partage d'un numéro, d'un réseau social ou d'un lien n'est pas autorisé dans les messages ni dans ton profil (bio, nom…) en compte gratuit. Passe les premiers échanges sur Moyo Dating ; l'abonnement Premium débloque le partage de coordonnées en conversation privée.", "Sanctions : en cas de non-respect des règles, un compte peut être averti, suspendu temporairement (avec un décompte avant reconnexion automatique) ou banni définitivement."] },
             { title: `Premium${activePlansCount() > 1 ? " - " + activePlansCount() + " formules" : ""} dès ` + minEnabledPremiumPrice().toLocaleString() + " FCFA", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
-              "Avantages : messages illimités, likes illimités, envoi de photos et de messages vocaux, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match, accès au Groupe Premium (discussion commune réservée aux membres Premium).",
+              "Avantages : messages illimités, likes illimités, envoi de photos, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match.",
               `${activePlansCount() > 1 ? "Formules au choix" : "Formule disponible"} : ${activePlansText()}. Vous sélectionnez votre formule au moment du paiement, juste après avoir appuyé sur 'Passer Premium'.`,
-              "Congo : paiement via MTN Mobile Money ou Airtel Money. Diaspora : paiement par carte Visa/Mastercard, Wero ou PayPal, à un tarif mensuel fixe en euros.",
-              "Comment payer (Congo) : appuyez sur 'Passer Premium' → choisissez MTN Mobile Money → appuyez sur le bouton jaune pour composer automatiquement le code de paiement sur votre téléphone → validez le paiement → entrez le numéro de transaction reçu par SMS (ou envoyez une capture d'écran) → appuyez sur 'J'ai payé'.",
-              "Le numéro de transaction (ID) est reçu par SMS de votre opérateur après validation du paiement (ex: PP260523.2232.A52074 pour Airtel, 7753031542 pour MTN). Entrez-le exactement tel quel, ou envoyez directement une capture d'écran de la confirmation si c'est plus simple pour vous.",
+              "Paiement via MTN Mobile Money ou Airtel Money - les deux opérateurs sont disponibles.",
+              "Comment payer : appuyez sur 'Passer Premium' → choisissez MTN Mobile Money → appuyez sur le bouton jaune pour composer automatiquement le code de paiement sur votre téléphone → validez le paiement → entrez le numéro de transaction reçu par SMS → appuyez sur 'J'ai payé'.",
+              "Le numéro de transaction (ID) est reçu par SMS de votre opérateur après validation du paiement (ex: PP260523.2232.A52074 pour Airtel, 7753031542 pour MTN). Entrez-le exactement tel quel dans le champ prévu.",
               "L'activation Premium se fait sous 15 minutes. Vous recevrez une notification dans l'application dès l'activation.",
               "Après activation, l'utilisateur doit actualiser l'application pour que les changements prennent effet. Le bouton Premium sur sa page Profil devient doré et affiche le compteur de jours restants.",
-              "🎁 OFFRIR Premium à quelqu'un : si vous êtes Premium et que la personne avec qui vous discutez ne l'est pas, un bouton cadeau doré 🎁 apparaît en haut de la conversation. Appuyez dessus pour lui offrir l'abonnement Premium : vous choisissez la formule à offrir (1 semaine, 1 mois ou 2 mois), paiement via Mobile Money. C'est un beau geste pour quelqu'un qui vous plaît.",
+              "🎁 OFFRIR Premium à quelqu'un : si vous êtes Premium et que la personne avec qui vous discutez ne l'est pas, un bouton cadeau doré 🎁 apparaît en haut de la conversation. Appuyez dessus pour lui offrir l'abonnement Premium — vous choisissez la formule à offrir (1 semaine, 1 mois ou 2 mois), paiement via Mobile Money. C'est un beau geste pour quelqu'un qui vous plaît.",
               "💝 DEMANDER Premium : si vous n'êtes pas Premium et que votre interlocuteur l'est, un bouton 💝 (rouge) apparaît en haut de la conversation. Il permet de lui demander gentiment de vous offrir l'abonnement. Une fenêtre de confirmation s'ouvre avant l'envoi.",
               "La demande de Premium est limitée à 2 fois par mois et par conversation, pour rester courtoise. La personne reçoit alors un message avec un bouton lui permettant de vous offrir Premium en un seul clic, si elle le souhaite. Elle reste entièrement libre d'accepter ou non.",
             ]},
@@ -5495,7 +4994,7 @@ const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onB
       {/* Modal signaler */}
       {showSignalerMenu && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div className="moyo-sheet-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom)" }}>
             <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
               <h3 style={{ fontSize: "1rem", fontWeight: 700, color: G.brun }}>Signaler ce profil</h3>
               <div onClick={() => setShowSignalerMenu(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
@@ -5818,19 +5317,6 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   const [viewedProfile, setViewedProfile] = useState<Profile | null>(null);
   const [myGender, setMyGender] = useState("");
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "", religion: "" });
-  // Hauteur réelle de l'en-tête, mesurée en JS (comme dans Messages) : le plein écran doit occuper
-  // exactement ce qui reste après l'en-tête, jamais un chiffre deviné qui finit par ne plus
-  // correspondre et laisser un espace résiduel visible en bas.
-  const [discoverHeaderHeight, setDiscoverHeaderHeight] = useState(55);
-  useEffect(() => {
-    const el = document.querySelector("[data-moyo-header]") as HTMLElement | null;
-    if (!el) return;
-    const measure = () => setDiscoverHeaderHeight(el.offsetHeight);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list" | "full">(DISCOVER_DEFAULT_MODE);
   // ── Synchronise TOUJOURS l'état plein écran de l'AppShell avec viewMode, de façon déclarative.
@@ -6129,7 +5615,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     </div>
   );
 
-  return <div style={{ padding: isWide ? 0 : (viewMode === "full" ? "0 16px 0" : "14px 16px 8px"), display: isWide ? "flex" : "block", height: isWide ? "100%" : (viewMode === "full" ? "100%" : "auto") }}>
+  return <div style={{ padding: isWide ? 0 : "14px 16px 8px", display: isWide ? "flex" : "block", height: isWide ? "100%" : "auto" }}>
     {/* ── LISTE PROFILS GAUCHE (desktop uniquement) ── */}
     {isWide && (
       <div style={{ width: 260, minWidth: 260, background: viewMode === "full" ? "rgba(15,10,5,0.55)" : G.blanc, backdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", WebkitBackdropFilter: viewMode === "full" ? "blur(28px) saturate(0.4) brightness(0.7)" : "none", borderRight: `1px solid ${viewMode === "full" ? "rgba(255,255,255,0.08)" : G.gris}`, overflowY: viewMode === "full" ? "hidden" : "auto", height: "100%", display: "flex", flexDirection: "column", transition: "all 0.45s cubic-bezier(0.4,0,0.2,1)", zIndex: viewMode === "full" ? 10 : 1, pointerEvents: viewMode === "full" ? "none" : "auto", filter: viewMode === "full" ? "blur(2px)" : "none" }}>
@@ -6163,7 +5649,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       </div>
     )}
     {/* ── CONTENU PRINCIPAL DÉCOUVRIR ── */}
-    <div style={{ flex: 1, padding: isWide ? ((viewMode as string) === "full" ? 0 : "16px 20px") : 0, overflowY: isWide ? ((viewMode as string) === "full" ? "hidden" : "auto") : "visible", minWidth: 0, display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: isWide ? "100%" : ((viewMode as string) === "full" ? "100%" : "auto") }}>
+    <div style={{ flex: 1, padding: isWide ? ((viewMode as string) === "full" ? 0 : "16px 20px") : 0, overflowY: isWide ? ((viewMode as string) === "full" ? "hidden" : "auto") : "visible", minWidth: 0, display: isWide ? "flex" : "block", flexDirection: isWide ? "column" : undefined, height: isWide ? "100%" : "auto" }}>
     {discoverToast && <Toast msg={discoverToast.msg} type={discoverToast.type} onClose={() => setDiscoverToast(null)} />}
     {/* ── CSS animations bottom sheet + fullscreen footer ── */}
     <style>{`
@@ -6315,11 +5801,11 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     setProfiles(prev => shuffleArray([...prev]));
     el.scrollTop = 0;
   }
-}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "100%", height: isWide ? "calc(100vh - 20px)" : "100%", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "var(--c-shell-bg)", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 55px - env(safe-area-inset-bottom))", height: isWide ? "calc(100vh - 20px)" : undefined, overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "#F0F1F5", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
-    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(103% - 12px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 12, background: "var(--c-shell-bg)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
-      {prof.photo_url ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 110px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: isWide ? 0 : 12, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
+      {prof.photo_url ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
       {/* ✕ haut droite - sur chaque carte */}
       <button onClick={() => { setViewMode("card"); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
@@ -6445,7 +5931,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   )}
   {showSameGender && (
   <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-    <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "32px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+    <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "32px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
       <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGender === "Homme" ? "🕺" : "💃"}</div>
       <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>
         {myGender === "Homme" ? modalTexts.sameGenderHomme : modalTexts.sameGenderFemme}
@@ -6458,7 +5944,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   </div>
 )}
 {showBlockConfirm && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-  <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+  <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
     <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
     <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Bloquer {p?.name} ?</h3>
     <p style={{ fontSize: "0.88rem", color: "#666", marginBottom: 24, lineHeight: 1.6 }}>Ce profil disparaîtra de Découvrir. Vous pourrez débloquer depuis votre profil.</p>
@@ -6469,7 +5955,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   </div>
 </div>}
 {showSignaler && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-  <div className="moyo-sheet-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom)" }}>
+  <div className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom)" }}>
     <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
       <h3 style={{ fontSize: "1rem", fontWeight: 700, color: G.brun }}>Signaler ce profil</h3>
       <div onClick={() => !isReporting && setShowSignaler(false)} style={{ cursor: "pointer", color: "#aaa", fontSize: "1.3rem", lineHeight: 1 }}>✕</div>
@@ -6490,7 +5976,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     {/* ── Modal confirmation delike (vue Découvrir) ── */}
     {confirmUnlike && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
           </div>
@@ -6742,7 +6228,7 @@ const EmptyState = memo(function EmptyState({ icon, title, subtitle }: { icon: R
   );
 });
 
-function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMessages, onGoDiscover }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void; onGoMessages?: (partnerId?: string) => void; onGoDiscover?: () => void }) {
+function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMessages }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void; onGoMessages?: (partnerId?: string) => void }) {
   // ── Sub-tab state ──
   const [likesSubTab, setLikesSubTab] = useState<"received" | "sent">("received");
   const [visitorsSubTab, setVisitorsSubTab] = useState<"visitors" | "visited">("visitors");
@@ -6773,7 +6259,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
   const [loading, setLoading] = useState(true);
   const [liking, setLiking] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
-  const [isPremiumReal, setIsPremiumReal] = useState(auth.isPremium || FEATURE_SHOW_LIKES_VIEWS_FREE);
+  const [isPremiumReal, setIsPremiumReal] = useState(auth.isPremium);
   const loadData = async (premiumOverride?: boolean) => {
     const isPrem = premiumOverride !== undefined ? premiumOverride : isPremiumReal;
     setLoading(true);
@@ -6900,7 +6386,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
     sb.query<{ is_premium: boolean }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=is_premium`)
       .then(res => {
         if (Array.isArray(res) && res.length > 0) {
-          const prem = res[0].is_premium === true || FEATURE_SHOW_LIKES_VIEWS_FREE;
+          const prem = res[0].is_premium === true;
           setIsPremiumReal(prem);
           // Recharger uniquement si la valeur diffère de celle déjà utilisée
           if (prem !== auth.isPremium) loadData(prem);
@@ -7126,8 +6612,8 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
                 {myGender === "Femme"
-                  ? receivedCount === 0 ? "Aucun homme n'a encore liké votre profil." : receivedCount === 1 ? "1 homme a liké votre profil." : `${receivedCount} hommes ont liké votre profil.`
-                  : receivedCount === 0 ? "Aucune femme n'a encore liké votre profil." : receivedCount === 1 ? "1 femme a liké votre profil." : `${receivedCount} femmes ont liké votre profil.`}
+                  ? receivedCount > 1 ? `${receivedCount} hommes ont liké ton profil` : `${receivedCount} homme a liké ton profil`
+                  : receivedCount > 1 ? `${receivedCount} femmes ont liké ton profil` : `${receivedCount} femme a liké ton profil`}
               </div>
               <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>
                 {isPremiumReal ? "Historique complet activé" : "Passe Premium pour découvrir leur identité"}
@@ -7161,16 +6647,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
               {isPremiumReal ? (
                 loading ? <Spinner /> :
                 receivedLikers.length === 0 ? (
-                  <>
                   <EmptyState
                     icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
-                    title="Les personnes qui vous ont liké apparaîtront ici."
-                    subtitle="Like les profils qui t'intéressent depuis la page Découvrir ✨"
+                    title="Aucun like reçu pour l'instant"
+                    subtitle="Complète ton profil pour attirer plus d'attention ✨"
                   />
-                  <div style={{ textAlign: "center", marginTop: -6 }}>
-                    <button onClick={onGoDiscover} className="moyo-tactile" style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "13px 28px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 12px rgba(192,57,43,0.3)" }}>Envoyer des likes</button>
-                  </div>
-                  </>
                 ) : viewMode === "card" ? (
                   <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
                     {receivedLikers.map(p => (
@@ -7224,16 +6705,11 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
               {(
                 loading ? <Spinner /> :
                 visibleSentLikes.length === 0 ? (
-                  <>
                   <EmptyState
                     icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>}
                     title="Tu n'as encore liké personne"
                     subtitle="Explore les profils et envoie des likes !"
                   />
-                  <div style={{ textAlign: "center", marginTop: -6 }}>
-                    <button onClick={onGoDiscover} className="moyo-tactile" style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "13px 28px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 12px rgba(192,57,43,0.3)" }}>Envoyer des likes</button>
-                  </div>
-                  </>
                 ) : viewMode === "card" ? (
                   <div style={{ display: "grid", gridTemplateColumns: window.innerWidth >= 768 ? "repeat(4,1fr)" : "1fr 1fr", gap: "0 12px" }}>
                     {visibleSentLikes.map(p => {
@@ -7504,7 +6980,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       {confirmDismiss && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600,
           display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%",
+          <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%",
             maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#F5F5F5",
               display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
@@ -7526,7 +7002,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       {confirmUnlike && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600,
           display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%",
+          <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%",
             maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
             <div style={{ width: 52, height: 52, borderRadius: "50%",
               background: "rgba(192,57,43,0.08)",
@@ -7826,7 +7302,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
                   <span style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun, display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
-                    Mise en avant : Statut Moyo Dating
+                    Mise en avant — Statut Moyo Dating
                   </span>
                   <Badge label={bCfg.label} color={bCfg.color} bg={bCfg.bg} />
                 </div>
@@ -8069,7 +7545,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
           </div>
           <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 6 }}>Donnez d'abord une réponse</div>
-          <div style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.55, marginBottom: 20 }}>Cette proposition attend votre réponse. Plutôt que de la supprimer, dites à notre équipe si {o?.name?.split(" ")[0] || "cette personne"} vous intéresse : c'est ce qui permet de créer le match.</div>
+          <div style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.55, marginBottom: 20 }}>Cette proposition attend votre réponse. Plutôt que de la supprimer, dites à notre équipe si {o?.name?.split(" ")[0] || "cette personne"} vous intéresse — c'est ce qui permet de créer le match.</div>
           <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
             <button onClick={() => { acceptProposal(confirmDelProp); setConfirmDelProp(null); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>✓ Accepter</button>
             <button onClick={() => { refuseProposal(confirmDelProp); setConfirmDelProp(null); }} style={{ flex: 1, background: G.blanc, color: "#888", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Refuser</button>
@@ -8136,7 +7612,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     {/* Modal confirmation annulation match */}
     {confirmUnmatch && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="2" y1="2" x2="22" y2="22"/></svg></div>
           <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Annuler le match avec {confirmUnmatch.partner?.name} ?</h3>
           <p style={{ fontSize: "0.85rem", color: "#666", marginBottom: 24, lineHeight: 1.6 }}>La conversation et les messages seront supprimés. L'autre personne ne sera pas notifiée.</p>
@@ -8151,7 +7627,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     {/* Modal confirmation blocage */}
     {confirmBlockMatch && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}>
+        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
           </div>
@@ -8482,7 +7958,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
 
 type ReportRowLike = { id?: string; reason: string; reporter_id: string; reported_id: string | null; status?: string; created_at?: string };
 
-export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange, onGoDiscover }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null) => void; onGoDiscover?: () => void }) {
+export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; hasNew: boolean } | null) => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   const [showGroup, setShowGroup] = useState(false); // Groupe Premium : écran séparé, indépendant de la logique 1-à-1
@@ -9375,30 +8851,15 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       const onlySupport = hasSupport ? [{ ...supportMatch, lastMsg: supportRows.find(r => isSupportReason(r.reason)) ? { match_id: "__support__", sender_id: supportRows.find(r => isSupportReason(r.reason))!.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId, content: cleanSupportReason(supportRows.find(r => isSupportReason(r.reason))!.reason), is_read: true, created_at: supportRows.find(r => isSupportReason(r.reason))!.created_at } : undefined } as Match] : [];
       setConvs(onlySupport); await loadStatuses(onlySupport); onUnreadCount(0); setLoading(false); return onlySupport;
     }
-    // ── Requêtes regroupées : au lieu de 3 requêtes PAR conversation (profil, dernier message,
-    //    non-lus), on récupère TOUS les profils en un seul appel, et le dernier message + les
-    //    non-lus de TOUTES les conversations en un seul appel via la fonction SQL dédiée. Pour 15
-    //    conversations, ça passe de ~45 requêtes à 3, peu importe le nombre de conversations. ──
-    const partnerIds = Array.from(new Set(res.map(m => m.user1 === auth.userId ? m.user2 : m.user1)));
-    const matchIds = res.map(m => m.id);
-    const [profilesRows, summaryRows] = await Promise.all([
-      partnerIds.length ? sb.query<Profile>(auth.token, "profiles", `?id=in.(${partnerIds.join(",")})`) : Promise.resolve([] as Profile[]),
-      matchIds.length ? fetch(`${SUPABASE_URL}/rest/v1/rpc/get_conversations_summary`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
-        body: JSON.stringify({ p_user_id: auth.userId, p_match_ids: matchIds }),
-      }).then(r => r.ok ? r.json() : []).catch(() => []) : Promise.resolve([]),
-    ]);
-    const profilesById: Record<string, Profile> = {};
-    profilesRows.forEach(p => { profilesById[p.id] = p; });
-    const summaryByMatch: Record<string, any> = {};
-    (summaryRows as any[]).forEach(s => { summaryByMatch[s.match_id] = s; });
-    const enriched = res.map(m => {
+    const enriched = await Promise.all(res.map(async m => {
       const pid = m.user1 === auth.userId ? m.user2 : m.user1;
-      const s = summaryByMatch[m.id];
-      const lastMsg: Message | undefined = s ? { match_id: m.id, sender_id: s.last_sender_id, content: s.last_content, is_read: s.last_is_read, created_at: s.last_created_at } as Message : undefined;
-      return { ...m, partner: profilesById[pid], lastMsg, unreadCount: s ? Number(s.unread_count) || 0 : 0 };
-    });
+      const [profiles, lastMsgs, unread] = await Promise.all([
+        sb.query<Profile>(auth.token, "profiles", `?id=eq.${pid}`),
+        sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&order=created_at.desc&limit=1`),
+        sb.query<Message>(auth.token, "messages", `?match_id=eq.${m.id}&sender_id=neq.${auth.userId}&is_read=eq.false`),
+      ]);
+      return { ...m, partner: profiles[0], lastMsg: lastMsgs[0], unreadCount: (Array.isArray(unread) ? unread.filter(u => u.sender_id !== SUPPORT_TEAM_ID) : []).length };
+    }));
     const filtered = enriched.filter(c => c.partner);
     // Dédupliquer par partner id
     const seenPartners = new Set<string>();
@@ -9557,15 +9018,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     setPartnerActionLoading(false);
   };
 
-  const sendingRef = useRef(false);
   const send = useCallback(async () => {
     if (!text.trim() || !open) return;
-    // ── Protection anti-double-envoi : si un envoi est déjà en cours, on ignore les taps
-    // supplémentaires au lieu d'envoyer plusieurs fois le même message (ex: connexion lente,
-    // la personne retape "Envoyer" en pensant que rien ne s'est passé). ──
-    if (sendingRef.current) return;
-    sendingRef.current = true;
-    try {
     try { (navigator as any).vibrate?.(12); } catch {}
     // ── Mode édition : on met à jour le message existant au lieu d'en créer un nouveau ──
     if (editingMsg && editingMsg.id) {
@@ -9645,9 +9099,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`);
     }
     // Tout autre échec (réseau, etc.) : on ne fait rien, le champ reste rempli pour réessayer
-    } finally {
-      sendingRef.current = false;
-    }
   }, [auth, open, text, replyTo, msgCount, onShowPremium, editingMsg]);
 
   // Étape 1 : sélection d'une photo → ouvre l'écran d'aperçu (aucun envoi immédiat)
@@ -10289,16 +9740,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     const lastSeenKey = `moyo_status_last_seen_${auth.userId}`;
     let lastSeen = 0;
     try { lastSeen = Number(localStorage.getItem(lastSeenKey) || 0); } catch {}
-    // Nombre de personnes ayant posté un statut plus récent que la dernière consultation
-    // (on regarde le plus récent élément de chaque groupe, pas le plus ancien).
-    const newCount = statusGroups.filter(g => {
-      const mostRecent = g.items[g.items.length - 1];
-      return new Date(mostRecent?.created_at || 0).getTime() > lastSeen;
-    }).length;
+    const newestOther = statusGroups.reduce((max, g) => Math.max(max, new Date(g.first.created_at || 0).getTime()), 0);
     onStatusStackChange?.({
       count: statusGroups.length + (myStatuses.length ? 1 : 0),
       groups: statusGroups.slice(0, 3).map(g => ({ userId: g.userId, photo_url: g.first.profile?.photo_url, gender: g.first.profile?.gender })),
-      newCount,
+      hasNew: newestOther > lastSeen,
     });
     return () => onStatusStackChange?.(null);
   }, [statusGroups, myStatuses.length]);
@@ -10311,7 +9757,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       onStatusStackChange?.({
         count: statusGroups.length + (myStatuses.length ? 1 : 0),
         groups: statusGroups.slice(0, 3).map(g => ({ userId: g.userId, photo_url: g.first.profile?.photo_url, gender: g.first.profile?.gender })),
-        newCount: 0,
+        hasNew: false,
       });
     };
     window.addEventListener("moyo-open-status-sheet", handler);
@@ -10319,68 +9765,58 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
   }, [statusGroups, myStatuses.length]);
 
   // ── Bandeau (statuts + onglets) en position:fixed sur mobile — jamais affecté par un scroll,
-  //    contrairement à sticky, qui avait posé problème avant que les vrais soucis de structure de
-  //    scroll (double zone de défilement) ne soient corrigés. Maintenant que c'est réglé, sticky
-  //    est la solution la plus robuste : le navigateur garantit lui-même le bon comportement, sans
-  //    calcul de hauteur à synchroniser manuellement en JS. ──
+  //    contrairement à sticky qui s'est montré peu fiable sur certains iPhone. Sa hauteur réelle est
+  //    mesurée en JS (elle varie selon FEATURE_STATUSES/FEATURE_GROUP_PREMIUM) pour décaler d'autant
+  //    le début de la liste, qui reste la SEULE chose à défiler. ──
   const msgBannerRef = useRef<HTMLDivElement | null>(null);
+  const [msgBannerHeight, setMsgBannerHeight] = useState(0);
+  useEffect(() => {
+    const el = msgBannerRef.current;
+    if (!el) return;
+    const measure = () => setMsgBannerHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isWideMsg]);
 
   // ── Liste des conversations (commun mobile + desktop) ──
-  // ── Grille CSS à 2 rangées : "auto" (bandeau, ne peut JAMAIS se réduire à zéro, par définition
-  //    du CSS Grid) + "1fr" (liste, prend tout le reste et défile seule). Contrairement au flexbox
-  //    (où un élément peut se retrouver écrasé à zéro dans certains calculs de hauteur imbriquée —
-  //    un piège bien connu de flexbox), une rangée "auto" en Grid garde toujours sa taille réelle,
-  //    quoi qu'il arrive autour. C'est la technique la plus robuste pour ce type d'écran. ──
-  const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0, background: G.blanc, overflow: "hidden" }}>
-    {/* ── Bandeau (statuts + onglets) : hauteur naturelle, ne rétrécit jamais (flexShrink:0). ── */}
-    <div ref={msgBannerRef} style={{ flexShrink: 0, background: G.blanc }}>
+  const convList = <div style={{ display: "flex", flexDirection: "column", height: "100%", flex: "1 1 auto", minHeight: 0, background: G.blanc }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "none", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc, paddingTop: isWideMsg ? 0 : msgBannerHeight }}>
+    {/* ── Bandeau (statuts + onglets) : position:fixed sur mobile (jamais scrollable, quel que soit
+        l'appareil), position:sticky sur desktop (colonne latérale déjà bornée, jamais posé problème). ── */}
+    <div ref={msgBannerRef} style={isWideMsg ? { position: "sticky", top: 0, zIndex: 5, background: G.blanc } : { position: "fixed", top: 45, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 90, background: G.blanc }}>
     <input ref={statusInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleStatusFile(e.target.files?.[0])} />
     {FEATURE_GROUP_PREMIUM && (
-    <div className="moyo-tactile" style={{ display: "flex", alignItems: "center", padding: "4px 12px 8px", background: G.blanc, gap: 8 }}>
-      <div onClick={() => setShowGroup(false)} className="moyo-tactile" style={{
-        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-        padding: "11px 0", cursor: "pointer",
-        background: !showGroup ? G.rouge : "#EEEBE6",
-        borderRadius: 50,
-        boxShadow: !showGroup ? "0 3px 12px rgba(192,57,43,0.3)" : "none",
-        transition: "background 0.2s, box-shadow 0.2s",
+    <div style={{ display: "flex", alignItems: "flex-end", padding: "10px 10px 0", background: "#E4E1DC", gap: 2 }}>
+      <div onClick={() => setShowGroup(false)} style={{
+        flex: 1, textAlign: "center", padding: "12px 0 14px", cursor: "pointer",
+        background: !showGroup ? G.rouge : "#D6D2CB",
+        borderRadius: "16px 16px 0 0",
+        position: "relative", zIndex: !showGroup ? 2 : 1,
+        boxShadow: !showGroup ? "0 -2px 8px rgba(0,0,0,0.15)" : "none",
+        transition: "background 0.15s",
       }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={!showGroup ? "#fff" : "#8a8378"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? "#fff" : "#8a8378" }}>Messages privés</span>
+        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: !showGroup ? "#fff" : "#7a7568" }}>Messages privés</span>
       </div>
-      <div onClick={requestJoinGroup} className="moyo-tactile" style={{
-        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-        padding: "11px 0", cursor: "pointer", position: "relative",
-        background: showGroup ? G.rouge : "#EEEBE6",
-        borderRadius: 50,
-        boxShadow: showGroup ? "0 3px 12px rgba(192,57,43,0.3)" : "none",
-        transition: "background 0.2s, box-shadow 0.2s",
+      <div onClick={requestJoinGroup} style={{
+        flex: 1, textAlign: "center", padding: "12px 0 14px", cursor: "pointer",
+        background: showGroup ? G.rouge : "#D6D2CB",
+        borderRadius: "16px 16px 0 0",
+        position: "relative", zIndex: showGroup ? 2 : 1,
+        boxShadow: showGroup ? "0 -2px 8px rgba(0,0,0,0.15)" : "none",
+        transition: "background 0.15s",
       }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={showGroup ? "#fff" : "#8a8378"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#8a8378" }}>Groupe</span>
+        <span style={{ fontSize: "0.76rem", fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase", color: showGroup ? "#fff" : "#7a7568" }}>Groupe</span>
+        {groupPendingCount > 0 && (
+          <span style={{ position: "absolute", top: -6, right: 10, background: G.or, color: "#fff", fontSize: "0.58rem", fontWeight: 800, borderRadius: 50, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)", zIndex: 3 }}>{groupPendingCount > 99 ? "99+" : groupPendingCount}</span>
+        )}
       </div>
     </div>
     )}
     </div>
-    {/* ── Zone de contenu : seule zone qui défile, prend tout l'espace restant (flex:1). ── */}
-    <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", overflowAnchor: "none", padding: "0", background: G.blanc }}>
       {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div> : convs.length === 0
-        ? <div style={{ textAlign: "center", padding: "44px 24px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ position: "relative", width: 110, height: 80, marginBottom: 22 }}>
-              <svg width="34" height="34" viewBox="0 0 24 24" style={{ position: "absolute", left: 24, top: 34 }}><circle cx="4" cy="3" r="1.4" fill={G.or}/><circle cx="20" cy="18" r="1" fill={G.or}/><path d="M10 0l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill={G.or}/></svg>
-              <svg width="52" height="42" viewBox="0 0 52 42" fill="none" style={{ position: "absolute", left: 0, top: 26 }}>
-                <path d="M4 4h34a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H18l-9 9v-9H4a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" fill="#F5F0EB" stroke={G.rouge} strokeWidth="2"/>
-                <circle cx="14" cy="15" r="2" fill={G.rouge}/><circle cx="21" cy="15" r="2" fill={G.rouge}/><circle cx="28" cy="15" r="2" fill={G.rouge}/>
-              </svg>
-              <svg width="46" height="38" viewBox="0 0 46 38" fill="none" style={{ position: "absolute", right: 0, top: 0 }}>
-                <path d="M42 2H8a4 4 0 0 0-4 4v14a4 4 0 0 0 4 4h5v9l9-9h20a4 4 0 0 0 4-4V6a4 4 0 0 0-4-4z" fill={G.rouge}/>
-                <path d="M23 20c-4-2.6-6.5-5-6.5-8a3.6 3.6 0 0 1 6.5-2 3.6 3.6 0 0 1 6.5 2c0 3-2.5 5.4-6.5 8z" fill="#fff"/>
-              </svg>
-            </div>
-            <div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#2a2a2a", marginBottom: 8, lineHeight: 1.35 }}>Ton prochain match n'est<br/>qu'à un like.</div>
-            <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.6, maxWidth: 260, margin: "0 0 22px" }}>Envoie quelques likes aux profils qui te plaisent. Dès qu'un like est réciproque, la conversation s'ouvre ici.</p>
-            <button onClick={onGoDiscover} className="moyo-tactile" style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "13px 28px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 12px rgba(192,57,43,0.3)" }}>Envoyer des likes</button>
-          </div>
+        ? <div style={{ textAlign: "center", padding: "40px 16px", color: "#888" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 10px" }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p style={{ fontSize: "0.82rem" }}>Fais des matchs pour commencer à discuter !</p></div>
         : (() => {
             // ── Tri par date du dernier message (plus récent en haut) ──
             const formatConvTime = (dateStr?: string): string => {
@@ -10495,15 +9931,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                           if (!ct) return "Dis bonjour !";
                           const isPhoto = ct.startsWith("[img]") && ct.endsWith("[/img]");
                           const isVoiceMsg = ct.startsWith("[audio]") && ct.endsWith("[/audio]");
-                          const replyIcon = <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>;
-                          const replyMatch = ct.match(/^\[↩ (.+?) : ([\s\S]+?)\]\n([\s\S]*)$/);
-                          if (replyMatch) {
-                            const body = replyMatch[3] || "";
-                            const bodyIsPhoto = body.startsWith("[img]") && body.endsWith("[/img]");
-                            const bodyIsVoice = body.startsWith("[audio]") && body.endsWith("[/audio]");
-                            const bodyLabel = bodyIsVoice ? "Message vocal" : bodyIsPhoto ? "Photo" : body;
-                            return <span style={{ display: "inline-flex", alignItems: "center", gap: 4, verticalAlign: "middle" }}>{replyIcon}<span>{bodyLabel}</span></span>;
-                          }
                           if (isPhoto || isVoiceMsg || lm?.is_destroyed || lm?.is_view_once) {
                             const micIcon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>;
                             let label = isVoiceMsg ? "Message vocal" : "Photo";
@@ -11473,7 +10900,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
           {burnMsg && (
             <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 40px)", maxWidth: 440, display: "flex", alignItems: "center", gap: 11, background: "rgba(0,0,0,0.62)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 14, padding: "13px 16px", color: "#ddd", fontSize: "0.8rem", lineHeight: 1.45, zIndex: 2 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span><b style={{ color: "#fff" }}>Photo à vue unique</b>, elle vient d'être détruite et ne pourra plus être affichée.</span>
+              <span><b style={{ color: "#fff" }}>Photo à vue unique</b> — elle vient d'être détruite et ne pourra plus être affichée.</span>
             </div>
           )}
         </div>
@@ -11537,7 +10964,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
 
       {/* Modal suppression */}
       {showDeleteConv && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
           <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
           <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 8, color: G.brun }}>Supprimer la conversation ?</h3>
           <p style={{ fontSize: "0.88rem", color: "#666", marginBottom: 20, lineHeight: 1.6 }}>Tous les messages seront supprimés. Cette action est irréversible.</p>
@@ -11642,7 +11069,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     </div>
   );
 
-  return <div style={{ padding: 0, display: "flex", flexDirection: isWideMsg ? "row" : "column", height: "100%", overflow: "hidden", background: G.blanc }}>
+  return <div style={{ padding: 0, display: "flex", flexDirection: isWideMsg ? "row" : "column", height: isWideMsg ? "100%" : (msgViewportHeight ? `${msgViewportHeight - 116}px` : "calc(100dvh - 116px)"), overflow: isWideMsg ? undefined : "hidden" }}>
     {isWideMsg ? (
       <>
         {/* ── COLONNE GAUCHE : liste conversations ── */}
@@ -11895,7 +11322,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         <GroupChat auth={auth} onBack={() => setShowGroup(false)} onShowPremium={onShowPremium} onOpenPrivateChat={(partnerId) => {
           const target = convs.find(c => c.partner?.id === partnerId);
           if (target) { setShowGroup(false); openChat(target); }
-          else setToast({ msg: "Conversation introuvable, vous êtes bien en match ?", type: "error" });
+          else setToast({ msg: "Conversation introuvable — vous êtes bien en match ?", type: "error" });
         }} />
       </div>
     )}
@@ -12119,12 +11546,8 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
     setProfileViewLiked(true);
     try { await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: profileView.id }); setToast({ msg: "Profil liké !", type: "success" }); } catch {}
   };
-  const sendingGroupRef = useRef(false);
   const sendText = async () => {
     if (!text.trim() || isRemoved) return;
-    if (sendingGroupRef.current) return;
-    sendingGroupRef.current = true;
-    try {
     // Modération : insultes, arnaques, contenu interdit — le partage de contact/réseaux sociaux
     // reste volontairement libre ici, le groupe étant réservé aux membres Premium (déjà autorisé
     // pour eux en messagerie privée aussi).
@@ -12147,9 +11570,6 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
       const res = await sb.insert<GroupMessage>(auth.token, "group_messages", { sender_id: auth.userId, content });
       if (res[0]) setMsgs(m => [...m, res[0]]);
     } catch {}
-    } finally {
-      sendingGroupRef.current = false;
-    }
   };
   const autoResizeTextarea = () => {
     const el = textareaRef.current;
@@ -12786,7 +12206,7 @@ function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob
 
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
         <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Pince pour zoomer</div>
         <div ref={canvasContainerRef} data-zoomable="true" style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
@@ -12861,7 +12281,7 @@ function RelationalNudge({ auth, onGoProfile }: { auth: Auth; onGoProfile: () =>
   if (!show) return null;
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10050, display: "flex", alignItems: "center", justifyContent: "center", padding: 22 }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 22, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "26px 22px 20px", textAlign: "center" }}>
           <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
           <div style={{ fontWeight: 800, fontSize: "1.15rem", color: "#fff" }}>Trouvez votre âme sœur 💛</div>
@@ -13122,7 +12542,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
       {/* ── Modal erreur même genre ── */}
       {errorModal && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.25s ease" }}>
+          <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.25s ease" }}>
             <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "28px 24px 20px", textAlign: "center" }}>
               <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -13712,7 +13132,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
       {/* ── MODALE MODIFIER MOT DE PASSE ── */}
       {showChangePassword && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 360 }}>
+          <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 360 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>Modifier mon mot de passe</div>
               <div onClick={() => { setShowChangePassword(false); setPwError(""); setPwForm({ newPw: "", confirmPw: "" }); setPwSuccess(false); }} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", background: G.gris, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -14068,17 +13488,8 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 </div>
               </div>
               <div style={{ marginLeft: 12, flexShrink: 0, textAlign: "right" }}>
-                {/diaspora/i.test(profile?.city || "") ? (
-                  <>
-                    <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>Seulement</div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or }}>{PREMIUM_PRICE_EUR}€ <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>/ mois</span></div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>À partir de</div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or }}>{minEnabledPremiumPrice().toLocaleString()} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA</span></div>
-                  </>
-                )}
+                <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>À partir de</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.or }}>{minEnabledPremiumPrice().toLocaleString()} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>FCFA</span></div>
               </div>
             </div>
           );
@@ -14185,7 +13596,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           {/* Modal saisie du code */}
           {showVerifyModal && (
             <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-              <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+              <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
                 {verifySuccess ? (
                   <>
                     <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
@@ -14328,7 +13739,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Statut en ligne</div>
-                  <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{!hidden ? "Visible par les autres" : "Masqué, personne ne le voit"}</div>
+                  <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{!hidden ? "Visible par les autres" : "Masqué — personne ne le voit"}</div>
                 </div>
               </div>
               <div onClick={async () => {
@@ -14666,7 +14077,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
 
       {showLogout && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+          <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </div>
@@ -14682,7 +14093,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
 
       {showDelete && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+          <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>⚠️</div>
             <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Supprimer mon compte ?</h3>
             <p style={{ fontSize: "0.88rem", fontWeight: 400, color: "#666", marginBottom: 6, lineHeight: 1.6 }}>Ton profil, tes likes, tes matchs et tes messages seront <strong style={{ color: G.brun }}>définitivement supprimés</strong>.</p>
@@ -14722,7 +14133,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   // ── Modal cadeau spécial ──
   if (isGift) return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 28, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 28px 80px rgba(0,0,0,0.35)" }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 28, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 28px 80px rgba(0,0,0,0.35)" }}>
         {/* Header festif */}
         <div style={{ background: "linear-gradient(135deg,#D4A843,#B8922E)", padding: "30px 22px 22px", textAlign: "center", position: "relative" }}>
           {/* Confettis SVG */}
@@ -14756,7 +14167,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
 
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 28px 80px rgba(0,0,0,0.28)" }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 28px 80px rgba(0,0,0,0.28)" }}>
         <div style={{ background: isInfo ? "linear-gradient(135deg,#eaf4fb,#d0eaf8)" : "linear-gradient(135deg,#fff5e0,#ffe4a0)", padding: "26px 22px 18px", textAlign: "center" }}>
           <div style={{ width: 58, height: 58, borderRadius: "50%", background: isInfo ? "rgba(41,128,185,0.15)" : "rgba(243,156,18,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             {isInfo
@@ -14830,7 +14241,7 @@ export default function App() {
     if (!document.getElementById("moyo-theme-vars")) {
       const s = document.createElement("style");
       s.id = "moyo-theme-vars";
-      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A;--c-profile-bg:#E4E6ED;--c-pill-fg:#333333;--c-pill-bd:#dddddd;--c-card-bd:#E8E8E8;--c-ghost-bg:rgba(44,26,14,0.06);--c-shell-bg:#e7e7e9}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5;--c-profile-bg:radial-gradient(circle at top,#1A1A24 0%,#111118 45%,#0D0D13 100%);--c-pill-fg:#FFFFFF;--c-pill-bd:rgba(255,255,255,0.4);--c-card-bd:rgba(255,255,255,0.12);--c-ghost-bg:rgba(255,255,255,0.1);--c-shell-bg:#000000}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
+      s.textContent = ':root{--c-creme:#F0F1F5;--c-cremeDark:#E4E6ED;--c-blanc:#FFFFFF;--c-gris:#E8DDD0;--c-brun:#2C1A0E;--c-brunLight:#5C3D2A;--c-profile-bg:#E4E6ED;--c-pill-fg:#333333;--c-pill-bd:#dddddd;--c-card-bd:#E8E8E8;--c-ghost-bg:rgba(44,26,14,0.06)}:root[data-theme="dark"],[data-theme="dark"]{--c-creme:#0D0E12;--c-cremeDark:#171920;--c-blanc:#000000;--c-gris:#2A1F12;--c-brun:#F1DFD3;--c-brunLight:#D7B8A5;--c-profile-bg:radial-gradient(circle at top,#1A1A24 0%,#111118 45%,#0D0D13 100%);--c-pill-fg:#FFFFFF;--c-pill-bd:rgba(255,255,255,0.4);--c-card-bd:rgba(255,255,255,0.12);--c-ghost-bg:rgba(255,255,255,0.1)}html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:#0D0E12}';
       document.head.appendChild(s);
     }
   }, [darkMode]);
@@ -14840,21 +14251,13 @@ export default function App() {
   const [assistantEnabled, setAssistantEnabled] = useState(true);
   useEffect(() => {
     if (!auth) return;
-    const recompute = () => {
-      try {
-        const stored = localStorage.getItem(`moyo_assistant_${auth.userId}`);
-        // Si la personne n'a jamais touché son propre interrupteur, on suit le réglage général (admin).
-        // Si elle a fait un choix explicite (une fois ou l'autre), ce choix prime toujours, même si
-        // l'admin désactive l'assistant pour tout le monde — chacun garde la main sur son propre écran.
-        setAssistantEnabled(stored === null ? FEATURE_ASSISTANT : stored !== "0");
-      } catch {}
-    };
-    recompute();
-    // Les réglages (FEATURE_ASSISTANT) se chargent en tâche de fond, en dehors de React — pour un
-    // compte tout juste créé, ce chargement peut encore être en cours au moment du premier calcul
-    // ci-dessus. On réécoute donc ce signal pour corriger dès que la vraie valeur est connue.
-    window.addEventListener("moyo-settings-loaded", recompute);
-    return () => window.removeEventListener("moyo-settings-loaded", recompute);
+    try {
+      const stored = localStorage.getItem(`moyo_assistant_${auth.userId}`);
+      // Si la personne n'a jamais touché son propre interrupteur, on suit le réglage général (admin).
+      // Si elle a fait un choix explicite (une fois ou l'autre), ce choix prime toujours, même si
+      // l'admin désactive l'assistant pour tout le monde — chacun garde la main sur son propre écran.
+      setAssistantEnabled(stored === null ? FEATURE_ASSISTANT : stored !== "0");
+    } catch {}
   }, [auth?.userId]);
   const toggleAssistant = () => {
     setAssistantEnabled(prev => {
@@ -14874,7 +14277,7 @@ export default function App() {
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [userGender, setUserGender] = useState<string>("");
-  const [selfBan, setSelfBan] = useState<{ until: string | null; name?: string; email?: string; reason?: string | null } | null>(null);
+  const [selfBan, setSelfBan] = useState<{ until: string | null; name?: string; email?: string } | null>(null);
   const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string; pairKey?: string } | null>(null);
   // ── Sondages (côté membre) ──
   const [activeSurvey, setActiveSurvey] = useState<any | null>(null);
@@ -14896,7 +14299,7 @@ export default function App() {
   // ── Pile de statuts affichée dans l'en-tête (remplace Guide sur l'onglet Messages) : Messages
   //    remplit ces données via callback, AppShell les affiche — aucun portail/ReactDOM nécessaire,
   //    juste une donnée transmise normalement de composant à composant. ──
-  const [statusStackData, setStatusStackData] = useState<{ count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null>(null);
+  const [statusStackData, setStatusStackData] = useState<{ count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; hasNew: boolean } | null>(null);
   const [adminBadgeCount, setAdminBadgeCount] = useState(0);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showAdminConfig, setShowAdminConfig] = useState(false);
@@ -14918,20 +14321,6 @@ export default function App() {
     window.addEventListener("moyo-open-admin-config", handler);
     return () => window.removeEventListener("moyo-open-admin-config", handler);
   }, [auth]);
-
-  // ── Empêche le navigateur/iOS d'essayer d'adapter automatiquement les couleurs quand le
-  //    système est en mode sombre — l'app n'a pas encore de vrai mode sombre construit (aucune
-  //    couleur n'a de variante adaptée), donc cette "aide" automatique du navigateur ne fait que
-  //    rendre certains textes en couleur fixe (comme "Dating") invisibles sur fond assombri. ──
-  useEffect(() => {
-    let meta = document.querySelector('meta[name="color-scheme"]') as HTMLMetaElement | null;
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.name = "color-scheme";
-      document.head.appendChild(meta);
-    }
-    meta.setAttribute("content", "light");
-  }, []);
 
   // ── Viewport mobile : adapter à la largeur de l'écran, empêcher le zoom intempestif ──
   useEffect(() => {
@@ -15328,15 +14717,14 @@ export default function App() {
     if (!auth?.userId) return;
     const checkBan = async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=is_banned,ban_until,ban_reason`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=is_banned,ban_until`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         if (!r.ok) return;
         const d = await r.json().catch(() => []);
         const p = Array.isArray(d) ? d[0] : null;
         if (!p) return;
         const tempActive = p.ban_until && new Date(p.ban_until).getTime() > Date.now();
         if (p.is_banned || tempActive) {
-          try { await sb.update(auth.token, "profiles", auth.userId, { last_notice_acknowledged: true }); } catch {}
-          setSelfBan({ until: p.is_banned ? null : p.ban_until, name: auth.name, email: auth.email, reason: p.ban_reason || null });
+          setSelfBan({ until: p.is_banned ? null : p.ban_until, name: auth.name, email: auth.email });
           setAuth(null);
           try { localStorage.removeItem("moyo_session"); } catch {}
         }
@@ -15382,7 +14770,6 @@ export default function App() {
         },
         body: JSON.stringify({ acknowledged: true, acknowledged_at: new Date().toISOString() }),
       });
-      await sb.update(auth.token, "profiles", auth.userId, { last_notice_acknowledged: true });
     } catch {}
     setPendingWarning(null);
   };
@@ -15601,12 +14988,12 @@ export default function App() {
         const [rPending, rUnreadReviews, rPendingPayments] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/reports?select=id&status=eq.pending`, { headers: h }),
           fetch(`${SUPABASE_URL}/rest/v1/app_ratings?select=id&is_read=eq.false`, { headers: h }),
-          fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id&status=eq.pending&archived=eq.false`, { headers: h }),
+          fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id&status=eq.pending`, { headers: h }),
         ]);
         const parseCount = (r: Response) => { const h2 = r.headers.get("content-range"); return h2 ? parseInt(h2.split("/")[1]) || 0 : 0; };
-        // Demandes de mise en relation en attente — compte réel, sans dépendre d'un repère stocké
-        // localement sur un appareil (qui ne se synchronise jamais entre plusieurs comptes admin).
-        const rMatchReqs = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&select=id`, { headers: h });
+        // Ajouter les nouvelles demandes de mise en relation
+        const lastReqSeen = localStorage.getItem("moyo_requests_seen") || "1970-01-01";
+        const rMatchReqs = await fetch(`${SUPABASE_URL}/rest/v1/match_requests?status=eq.pending&created_at=gt.${lastReqSeen}&select=id`, { headers: h });
         const matchReqCount = parseCount(rMatchReqs);
         // Demandes de mise en avant (statuts Moyo Dating) en attente de validation
         const rFeatReqs = await fetch(`${SUPABASE_URL}/rest/v1/feature_requests?status=eq.en_attente&select=id`, { headers: h });
@@ -15614,10 +15001,7 @@ export default function App() {
         // Rendez-vous en attente
         const rApptReqs = await fetch(`${SUPABASE_URL}/rest/v1/appointments?status=eq.en_attente&select=id`, { headers: h });
         const apptReqCount = parseCount(rApptReqs);
-        // Demandes d'adhésion au Groupe Premium en attente (absentes du décompte jusqu'ici)
-        const rGroupReqs = await fetch(`${SUPABASE_URL}/rest/v1/group_members?status=eq.pending&select=user_id`, { headers: h });
-        const groupReqCount = parseCount(rGroupReqs);
-        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount + featReqCount + apptReqCount + groupReqCount;
+        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount + featReqCount + apptReqCount;
         setAdminBadgeCount(prev => prev === newCount ? prev : newCount);
       } catch {}
     };
@@ -15772,7 +15156,7 @@ export default function App() {
 
   const InstallBanner = showInstall ? (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
         {/* Header */}
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "28px 24px 22px", textAlign: "center" }}>
           <div style={{ fontSize: "2rem", color: "#fff", fontWeight: 800, marginBottom: 4 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: "#fff", fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span></div>
@@ -15808,7 +15192,7 @@ export default function App() {
   if (!sessionLoaded) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: G.blanc }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>;
 
   // ── Écran de bannissement (éjection en direct) : prioritaire sur tout le reste ──
-  if (selfBan) return <BanScreen until={selfBan.until} name={selfBan.name} email={selfBan.email} reason={selfBan.reason} onExpire={() => { setSelfBan(null); setPage("login"); }} onBack={() => { setSelfBan(null); setPage("landing"); }} />;
+  if (selfBan) return <BanScreen until={selfBan.until} name={selfBan.name} email={selfBan.email} onExpire={() => { setSelfBan(null); setPage("login"); }} onBack={() => { setSelfBan(null); setPage("landing"); }} />;
 
   // ── Mode Admin Desktop : ?admin=1 dans l'URL ──
   if (new URLSearchParams(window.location.search).get("admin") === "1") {
@@ -15834,10 +15218,10 @@ export default function App() {
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv} assistantEnabled={assistantEnabled} statusStackData={statusStackData}>
       <div key={tab} className="page-anim" style={{ width: "100%", height: "100%" }}>
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
-      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onGoDiscover={() => setTab("discover")} />}
+      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
-      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} onGoDiscover={() => setTab("discover")} />}
+      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} assistantEnabled={assistantEnabled} onToggleAssistant={toggleAssistant} />}
       {tab === "admin" && <Suspense fallback={<AdminLoadingFallback />}><AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} /></Suspense>}
       </div>
@@ -15885,7 +15269,7 @@ export default function App() {
     {/* ── SONDAGE : invitation ── */}
     {activeSurvey && !showSurveyInvite && !pendingWarning && !pendingBroadcast && !pendingProposal && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 22, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
           <div style={{ background: "linear-gradient(135deg,#2980b9,#1c5e8c)", padding: "26px 22px", textAlign: "center" }}>
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -15967,7 +15351,7 @@ export default function App() {
     {/* Flux A : proposition suite à une demande de mise en relation */}
     {pendingProposal && pendingProposal.source === "request" && !pendingWarning && !pendingBroadcast && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
+        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
           <div style={{ background: `linear-gradient(135deg,${G.vert},#0f3d25)`, padding: "24px 20px 18px", textAlign: "center" }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
               <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
@@ -15994,7 +15378,7 @@ export default function App() {
     {/* Flux B : suggestion spontanée Moyo Dating (modal existant "On pense à toi") */}
     {pendingProposal && pendingProposal.source !== "request" && !pendingWarning && !pendingBroadcast && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
+        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
           {/* Header */}
           <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
