@@ -3700,7 +3700,18 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const pdata = await pr.json().catch(() => []);
         if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profiles[p.id] = p; });
       }
-      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, user1: m.user1, user2: m.user2, profile1: profiles[m.user1], profile2: profiles[m.user2] })));
+      const matchIds = data.map((m: any) => m.id);
+      const countsByMatch: Record<string, number> = {};
+      try {
+        const cr = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_match_message_counts`, {
+          method: "POST",
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ p_match_ids: matchIds }),
+        });
+        const cdata = await cr.json().catch(() => []);
+        if (Array.isArray(cdata)) cdata.forEach((c: any) => { countsByMatch[c.match_id] = Number(c.message_count) || 0; });
+      } catch {}
+      setMatchList(data.map((m: any) => ({ id: m.id, created_at: m.created_at, user1: m.user1, user2: m.user2, profile1: profiles[m.user1], profile2: profiles[m.user2], message_count: countsByMatch[m.id] || 0 })));
     } catch {}
     setMatchListLoading(false);
   };
@@ -4776,7 +4787,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Liste des matchs ──
   const [showMatchList, setShowMatchList] = useState(false);
-  const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
+  const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile; message_count?: number }[]>([]);
   const [matchListSearch, setMatchListSearch] = useState("");
   const [matchListViewMode, setMatchListViewMode] = useState<"list" | "grid">("list");
   const [mmFollowViewMode, setMmFollowViewMode] = useState<"list" | "grid">("list");
@@ -5985,7 +5996,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       // Supabase : DELETE avec filtre IN sur les IDs archivés uniquement
       const inList = archivedIds.map(id => `"${id}"`).join(",");
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/reports?id=in.(${archivedIds.join(",")})&status=in.(reviewed,rejected,banned)`,
+        `${SUPABASE_URL}/rest/v1/reports?id=in.(${archivedIds.join(",")})`,
         {
           method: "DELETE",
           headers: {
@@ -11033,9 +11044,18 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{m.profile1?.photo_url && <img src={m.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                         <div style={{ minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.profile1?.name || "?"}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile1?.age ? `${m.profile1.age} ans` : ""}{m.profile1?.city ? ` · ${m.profile1.city}` : ""}</div></div>
                       </div>
-                      <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                      <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                         <div style={{ fontSize: "0.55rem", color: "#aaa", whiteSpace: "nowrap" }}>{new Date(m.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" })}</div>
+                        <div style={{
+                          fontSize: "0.62rem", fontWeight: 800, whiteSpace: "nowrap", borderRadius: 50, padding: "2px 8px",
+                          background: !m.message_count ? "rgba(230,126,34,0.12)" : "rgba(0,0,0,0.05)",
+                          color: !m.message_count ? "#e67e22" : "#888",
+                          display: "flex", alignItems: "center", gap: 4,
+                        }}>
+                          {!!m.message_count && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
+                          {!m.message_count ? "0 message" : m.message_count}
+                        </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{m.profile2?.photo_url && <img src={m.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>

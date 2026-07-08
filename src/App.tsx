@@ -9644,7 +9644,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         await sb.insert(auth.token, "reports", {
           reporter_id: auth.userId,
           reported_id: null,
-          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim().substring(0, 120)} · Réponse auto envoyée`,
+          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim()} · Réponse auto envoyée`,
           status: "pending",
         });
         // ── Réponse automatique de l'Assistant Moyo Dating à l'auteur (apparaît dans SA messagerie support) ──
