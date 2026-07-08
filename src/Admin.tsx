@@ -1696,14 +1696,14 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -1711,7 +1711,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact,
         featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
@@ -1772,6 +1772,20 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         )}
       </OffCanvasSection>
       <OffCanvasSection title="Mots interdits (modération)">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
+          <div>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#1a1a1a" }}>Modération auto (insultes, menaces, arnaques, contenu sexuel)</div>
+            <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Bloque l'envoi et crée une alerte système. Désactiver arrête tous les messages ci-dessous d'être filtrés.</div>
+          </div>
+          <SwitchBtn on={appConfig.featureModerationInsults === "true"} onToggle={async () => { const v = appConfig.featureModerationInsults !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, featureModerationInsults: v })); await patch("feature_moderation_insults", v); }} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#1a1a1a" }}>Blocage partage de contact (comptes gratuits)</div>
+            <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Bloque numéros, WhatsApp, Instagram, etc. pour les membres non-Premium. Les Premium ne sont jamais concernés.</div>
+          </div>
+          <SwitchBtn on={appConfig.featureModerationContact === "true"} onToggle={async () => { const v = appConfig.featureModerationContact !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, featureModerationContact: v })); await patch("feature_moderation_contact", v); }} />
+        </div>
         <div style={{ fontSize: "0.74rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
           Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
         </div>
@@ -2958,6 +2972,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     ban_reason?: string | null;
     last_notice_acknowledged?: boolean;
     last_notice_at?: string | null;
+    has_installed_pwa?: boolean;
     is_visible?: boolean;
     created_at?: string;
     last_seen?: string;
@@ -5082,6 +5097,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     retentionD7: null as number | null,
     retentionD30: null as number | null,
     retentionSample: 0,
+    pwaInstalls: 0,
   });
 
   // ── Reports ──
@@ -5456,7 +5472,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
       const [rTotalUsers, rMatches, rMessages, rTotalReports,
              rPremium, rVerified, rBanned, rMale, rFemale, rTodayUsers,
-             rTotalLikes, rLikesToday] = await Promise.all([
+             rTotalLikes, rLikesToday, rPwaInstalls] = await Promise.all([
         fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/matches?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/messages?select=id`, { headers: countHeader }),
@@ -5469,6 +5485,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         fetch(`${SUPABASE_URL}/rest/v1/profiles?created_at=gte.${todayIso}&select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/likes?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${todayIso}&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?has_installed_pwa=eq.true&select=id`, { headers: countHeader }),
       ]);
 
       // ── Likes par jour (30 derniers jours) ──
@@ -5555,6 +5572,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         retentionD7,
         retentionD30,
         retentionSample: sample.length,
+        pwaInstalls: parseCount(rPwaInstalls),
       });
       setReports(reps);
       // ── Charger automatiquement les profils reporter + reported ──
@@ -7451,6 +7469,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Premium actifs", stats.premiumUsers, "#D4A843", "premium"],
                     ["Profils vérifiés", stats.verifiedUsers, G.vert, "verified"],
                     ["Profils bannis", stats.bannedUsers, "#e74c3c", "banned"],
+                    ["App installée (PWA)", stats.pwaInstalls, "#8e44ad", null],
                   ] as [string, number, string, string | null][]).map(([label, val, color, action]) => (
                     <div key={label} onClick={() => {
                       if (action === "premium") setShowPremiumList(true);

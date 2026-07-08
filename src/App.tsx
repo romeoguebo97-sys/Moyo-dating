@@ -282,6 +282,10 @@ let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
 export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
 let FEATURE_GROUP_PHOTOS = true;
+// Modération automatique : insultes/menaces/arnaques/contenu sexuel (moderateMessage).
+let FEATURE_MODERATION_INSULTS = true;
+// Blocage automatique du partage de numéro/réseaux pour les comptes gratuits (hasContactInfo).
+let FEATURE_MODERATION_CONTACT = true;
 let APPOINTMENTS_ENABLED = true;
 let APPT_PHONE_ENABLED = true;
 let APPT_PHYSICAL_ENABLED = true;
@@ -359,6 +363,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_group_premium"] !== undefined) FEATURE_GROUP_PREMIUM = map["feature_group_premium"] !== "false";
   if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
+  if (map["feature_moderation_insults"] !== undefined) FEATURE_MODERATION_INSULTS = map["feature_moderation_insults"] !== "false";
+  if (map["feature_moderation_contact"] !== undefined) FEATURE_MODERATION_CONTACT = map["feature_moderation_contact"] !== "false";
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
@@ -1310,22 +1316,83 @@ export const sb = {
     });
   },
 
-  subscribeRealtime(token: string, table: string, filter: string, callback: () => void): WebSocket | null {
+  // ── Connexion Realtime partagée : une SEULE connexion WebSocket par utilisateur, sur laquelle on
+  //    "s'abonne" à plusieurs tables à la fois (comme plusieurs stations captées par une même antenne),
+  //    au lieu d'ouvrir une connexion séparée par écoute (messages, likes, matchs, vues, avertissements,
+  //    broadcasts...). Avant ce correctif, chaque personne active ouvrait 7 à 10+ connexions simultanées
+  //    rien que pour les badges — ce qui épuisait très vite le quota de connexions Realtime de Supabase
+  //    à seulement quelques centaines d'utilisateurs actifs en même temps. Le contrat public de
+  //    subscribeRealtime() ne change pas (toujours un objet avec .close()), donc aucun des appels
+  //    existants dans le reste du code n'a besoin d'être modifié. ──
+  _rtSocket: null as WebSocket | null,
+  _rtToken: null as string | null,
+  _rtListeners: {} as Record<string, Set<() => void>>,
+  _rtReconnectTimer: null as any,
+  _rtEnsureSocket(token: string): WebSocket {
+    if (this._rtSocket && this._rtToken === token &&
+        (this._rtSocket.readyState === WebSocket.OPEN || this._rtSocket.readyState === WebSocket.CONNECTING)) {
+      return this._rtSocket;
+    }
+    try { this._rtSocket?.close(); } catch {}
+    this._rtToken = token;
+    const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
+    const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
+    this._rtSocket = ws;
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
+      // Ré-abonnement à tous les topics encore actifs (utile après une reconnexion)
+      Object.keys(this._rtListeners).forEach(topic => {
+        if (this._rtListeners[topic]?.size > 0) {
+          ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
+        }
+      });
+    };
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") {
+          this._rtListeners[msg.topic]?.forEach(cb => { try { cb(); } catch {} });
+        }
+      } catch {}
+    };
+    ws.onerror = () => {};
+    ws.onclose = () => {
+      if (this._rtSocket !== ws) return;
+      this._rtSocket = null;
+      const hasListeners = Object.values(this._rtListeners).some(s => s && s.size > 0);
+      if (hasListeners) {
+        clearTimeout(this._rtReconnectTimer);
+        this._rtReconnectTimer = setTimeout(() => { if (this._rtToken) this._rtEnsureSocket(this._rtToken); }, 2000);
+      }
+    };
+    return ws;
+  },
+  subscribeRealtime(token: string, table: string, filter: string, callback: () => void): { close: () => void } | null {
     try {
-      const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
-      const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
-        ws.send(JSON.stringify({ topic: `realtime:public:${table}:${filter}`, event: "phx_join", payload: { access_token: token }, ref: "2" }));
+      const topic = `realtime:public:${table}:${filter}`;
+      if (!this._rtListeners[topic]) this._rtListeners[topic] = new Set();
+      const isFirstForTopic = this._rtListeners[topic].size === 0;
+      this._rtListeners[topic].add(callback);
+      const ws = this._rtEnsureSocket(token);
+      if (isFirstForTopic && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
+      }
+      // Si le socket n'est pas encore ouvert, l'abonnement se fera automatiquement dans onopen ci-dessus.
+      return {
+        close: () => {
+          const set = this._rtListeners[topic];
+          if (!set) return;
+          set.delete(callback);
+          if (set.size === 0) {
+            delete this._rtListeners[topic];
+            try {
+              if (this._rtSocket && this._rtSocket.readyState === WebSocket.OPEN) {
+                this._rtSocket.send(JSON.stringify({ topic, event: "phx_leave", payload: {}, ref: topic + "_leave" }));
+              }
+            } catch {}
+          }
+        },
       };
-      ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data);
-          if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") callback();
-        } catch {}
-      };
-      ws.onerror = () => {};
-      return ws;
     } catch { return null; }
   },
 };
@@ -9617,7 +9684,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       return;
     }
     // Modération : insultes, arnaques, contenu interdit
-    const mod = moderateMessage(text);
+    const mod = FEATURE_MODERATION_INSULTS ? moderateMessage(text) : { blocked: false };
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       // ── Alerte système auto-mod : ce n'est PAS un signalement utilisateur contre un autre profil.
@@ -9638,7 +9705,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       }
       return;
     }
-    if (!auth.isPremium && hasContactInfo(text)) {
+    if (FEATURE_MODERATION_CONTACT && !auth.isPremium && hasContactInfo(text)) {
       // ── Signalement automatique : tentative de partage/demande de contact par un compte gratuit ──
       try {
         await sb.insert(auth.token, "reports", {
@@ -12170,7 +12237,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
     // Modération : insultes, arnaques, contenu interdit — le partage de contact/réseaux sociaux
     // reste volontairement libre ici, le groupe étant réservé aux membres Premium (déjà autorisé
     // pour eux en messagerie privée aussi).
-    const mod = moderateMessage(text);
+    const mod = FEATURE_MODERATION_INSULTS ? moderateMessage(text) : { blocked: false };
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       try {
@@ -14897,6 +14964,22 @@ export default function App() {
     // ci-dessus. On réécoute donc ce signal pour corriger dès que la vraie valeur est connue.
     window.addEventListener("moyo-settings-loaded", recompute);
     return () => window.removeEventListener("moyo-settings-loaded", recompute);
+  }, [auth?.userId]);
+  // ── Détection app installée (PWA) : si la personne utilise l'app depuis l'icône installée
+  //    (mode standalone), on l'enregistre une seule fois sur son profil. Sert uniquement de
+  //    compteur pour le dashboard admin ("X utilisateurs ont l'app installée") — fonctionne sur
+  //    Android ET iOS, contrairement à l'événement 'appinstalled' qui ne marche que sur Android/Chrome. ──
+  useEffect(() => {
+    if (!auth) return;
+    const isStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (!isStandalone) return;
+    try {
+      const flaggedKey = `moyo_pwa_flagged_${auth.userId}`;
+      if (localStorage.getItem(flaggedKey)) return; // déjà enregistré, on évite un appel réseau inutile à chaque session
+      sb.update(auth.token, "profiles", auth.userId, { has_installed_pwa: true }).then(() => {
+        localStorage.setItem(flaggedKey, "1");
+      }).catch(() => {});
+    } catch {}
   }, [auth?.userId]);
   const toggleAssistant = () => {
     setAssistantEnabled(prev => {
