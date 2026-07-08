@@ -1984,7 +1984,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </div>
           </div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>Comment veux-tu payer ?</div>
+          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>{isDiaspora ? title : "Comment veux-tu payer ?"}</div>
           <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>{isDiaspora ? `Abonnement mensuel · ${PREMIUM_PRICE_EUR}€ / mois` : `${selectedPlan.label} · ${planAmount.toLocaleString("fr-FR")} FCFA`}</div>
         </div>
         <div style={{ flex: 1, padding: "0 20px" }}>
@@ -2058,8 +2058,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
   // ════════ VERSION B — ÉTAPE 3/3 : PAIEMENT + PREUVE (ID ou capture d'écran) ════════
   if (step === "b3" && b2Operator) {
     const OPS: Record<string, any> = {
-      mtn: { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", logo: mtnLogo(20) },
-      airtel: { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", logo: airtelLogo(22) },
+      mtn: { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", responsable: PAY_MTN_RESPONSABLE, logo: mtnLogo(20) },
+      airtel: { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", responsable: PAY_AIRTEL_RESPONSABLE, logo: airtelLogo(22) },
       wero: { name: "Wero", main: "#5C2D91", onColor: "#fff", phoneNumber: PAY_WERO_NUMBER, placeholder: "Référence de l'envoi (si tu en as une)", operator: "Wero", isPhoneTransfer: true, logo: <div style={{ background: "#FFDE00", borderRadius: 6, padding: "4px 8px", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#1a1a1a", fontWeight: 900, fontSize: "0.85rem", letterSpacing: "-0.02em" }}>wero</span></div> },
       paypal: { name: "PayPal", main: "#003087", onColor: "#fff", phoneNumber: PAY_PAYPAL_NUMBER, placeholder: "Référence de la transaction PayPal", operator: "PayPal", isPhoneTransfer: true, logo: <div style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.62rem", fontStyle: "italic" }}>Pay</div> },
     };
@@ -2103,6 +2103,11 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               </div>
             ) : (
               <>
+                {B3OP.responsable && (
+                  <div style={{ fontSize: "0.74rem", color: "#8a7a5a", marginBottom: 10, lineHeight: 1.4 }}>
+                    Effectue ton paiement {B3OP.name}, qui sera reçu et traité par notre Responsable des finances : <strong style={{ color: G.brun }}>{B3OP.responsable}</strong>
+                  </div>
+                )}
                 {/* Carte 1 : appuyer pour payer */}
                 <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
