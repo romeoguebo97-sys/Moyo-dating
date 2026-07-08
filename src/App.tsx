@@ -1049,6 +1049,53 @@ const getStatusSignedFallbackUrl = async (token: string, url?: string | null): P
 // Ne touche à AUCUNE logique réseau : c'est juste un timer parallèle.
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
+// ── État interne de la connexion Realtime partagée (voir sb.subscribeRealtime plus bas) ──
+let _rtSocket: WebSocket | null = null;
+let _rtToken: string | null = null;
+const _rtListeners: Record<string, Set<() => void>> = {};
+let _rtReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+function _rtEnsureSocket(token: string): WebSocket {
+  if (_rtSocket && _rtToken === token &&
+      (_rtSocket.readyState === WebSocket.OPEN || _rtSocket.readyState === WebSocket.CONNECTING)) {
+    return _rtSocket;
+  }
+  try { _rtSocket?.close(); } catch {}
+  _rtToken = token;
+  const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
+  const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
+  _rtSocket = ws;
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
+    // Ré-abonnement à tous les topics encore actifs (utile après une reconnexion)
+    Object.keys(_rtListeners).forEach(topic => {
+      const set = _rtListeners[topic];
+      if (set && set.size > 0) {
+        ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
+      }
+    });
+  };
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") {
+        const cbs = _rtListeners[msg.topic];
+        cbs?.forEach(cb => { try { cb(); } catch {} });
+      }
+    } catch {}
+  };
+  ws.onerror = () => {};
+  ws.onclose = () => {
+    if (_rtSocket !== ws) return;
+    _rtSocket = null;
+    const hasListeners = Object.values(_rtListeners).some(s => s && s.size > 0);
+    if (hasListeners) {
+      if (_rtReconnectTimer) clearTimeout(_rtReconnectTimer);
+      _rtReconnectTimer = setTimeout(() => { if (_rtToken) _rtEnsureSocket(_rtToken); }, 2000);
+    }
+  };
+  return ws;
+}
+
 export const sb = {
   // ── Callback injecté par App pour déclencher la déconnexion propre ──
   _onAuthFailure: null as (() => void) | null,
@@ -1324,70 +1371,27 @@ export const sb = {
   //    à seulement quelques centaines d'utilisateurs actifs en même temps. Le contrat public de
   //    subscribeRealtime() ne change pas (toujours un objet avec .close()), donc aucun des appels
   //    existants dans le reste du code n'a besoin d'être modifié. ──
-  _rtSocket: null as WebSocket | null,
-  _rtToken: null as string | null,
-  _rtListeners: {} as Record<string, Set<() => void>>,
-  _rtReconnectTimer: null as any,
-  _rtEnsureSocket(token: string): WebSocket {
-    if (this._rtSocket && this._rtToken === token &&
-        (this._rtSocket.readyState === WebSocket.OPEN || this._rtSocket.readyState === WebSocket.CONNECTING)) {
-      return this._rtSocket;
-    }
-    try { this._rtSocket?.close(); } catch {}
-    this._rtToken = token;
-    const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
-    const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
-    this._rtSocket = ws;
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
-      // Ré-abonnement à tous les topics encore actifs (utile après une reconnexion)
-      Object.keys(this._rtListeners).forEach(topic => {
-        if (this._rtListeners[topic]?.size > 0) {
-          ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
-        }
-      });
-    };
-    ws.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data);
-        if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") {
-          this._rtListeners[msg.topic]?.forEach(cb => { try { cb(); } catch {} });
-        }
-      } catch {}
-    };
-    ws.onerror = () => {};
-    ws.onclose = () => {
-      if (this._rtSocket !== ws) return;
-      this._rtSocket = null;
-      const hasListeners = Object.values(this._rtListeners).some(s => s && s.size > 0);
-      if (hasListeners) {
-        clearTimeout(this._rtReconnectTimer);
-        this._rtReconnectTimer = setTimeout(() => { if (this._rtToken) this._rtEnsureSocket(this._rtToken); }, 2000);
-      }
-    };
-    return ws;
-  },
   subscribeRealtime(token: string, table: string, filter: string, callback: () => void): { close: () => void } | null {
     try {
       const topic = `realtime:public:${table}:${filter}`;
-      if (!this._rtListeners[topic]) this._rtListeners[topic] = new Set();
-      const isFirstForTopic = this._rtListeners[topic].size === 0;
-      this._rtListeners[topic].add(callback);
-      const ws = this._rtEnsureSocket(token);
+      if (!_rtListeners[topic]) _rtListeners[topic] = new Set();
+      const isFirstForTopic = _rtListeners[topic].size === 0;
+      _rtListeners[topic].add(callback);
+      const ws = _rtEnsureSocket(token);
       if (isFirstForTopic && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
       }
       // Si le socket n'est pas encore ouvert, l'abonnement se fera automatiquement dans onopen ci-dessus.
       return {
         close: () => {
-          const set = this._rtListeners[topic];
+          const set = _rtListeners[topic];
           if (!set) return;
           set.delete(callback);
           if (set.size === 0) {
-            delete this._rtListeners[topic];
+            delete _rtListeners[topic];
             try {
-              if (this._rtSocket && this._rtSocket.readyState === WebSocket.OPEN) {
-                this._rtSocket.send(JSON.stringify({ topic, event: "phx_leave", payload: {}, ref: topic + "_leave" }));
+              if (_rtSocket && _rtSocket.readyState === WebSocket.OPEN) {
+                _rtSocket.send(JSON.stringify({ topic, event: "phx_leave", payload: {}, ref: topic + "_leave" }));
               }
             } catch {}
           }
