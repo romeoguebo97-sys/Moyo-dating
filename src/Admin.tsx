@@ -266,14 +266,20 @@ function EditableRow({ label, value, open, onOpen, editValue, onEdit, onSave, hi
 
 // ── Éditeur de liste de mots (ajout/suppression individuels, effet immédiat) — remplace l'ancien
 //    éditeur en bloc de texte pour "Liste des mots interdits" et "Mots contacts". ──
-function WordListEditor({ label, value, hint, onSave }: { label: string; value: string; hint?: string; onSave: (newValue: string) => Promise<void> | void }) {
+function WordListEditor({ label, value, hint, onSave, builtinValue, onSaveBuiltin }: { label: string; value: string; hint?: string; onSave: (newValue: string) => Promise<void> | void; builtinValue?: string; onSaveBuiltin?: (newValue: string) => Promise<void> | void }) {
   const G2 = { rouge: "#C0392B", gris: "#E8E0D8", blanc: "#FFFFFF", creme: "#F7F3EF" };
   const [open, setOpen] = React.useState(false);
   const [newWord, setNewWord] = React.useState("");
   const [saving, setSaving] = React.useState(false);
-  const words = (value || "").split(/[,\n]/).map(w => w.trim()).filter(Boolean);
+  const customWords = (value || "").split(/[,\n]/).map(w => w.trim()).filter(Boolean);
+  // Si builtinValue est fourni, on fusionne les mots codés en dur (moins ceux désactivés) avec
+  // les mots personnalisés, affichés exactement de la même façon, dans une seule liste.
+  const disabledBuiltin = new Set((builtinValue || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean));
+  const activeBuiltinWords = builtinValue !== undefined ? BUILTIN_MODERATION_WORDS.map(w => w.word).filter(w => !disabledBuiltin.has(w.toLowerCase())) : [];
+  const words = [...activeBuiltinWords, ...customWords];
+  const isBuiltin = (w: string) => activeBuiltinWords.includes(w);
 
-  const persist = async (list: string[]) => {
+  const persistCustom = async (list: string[]) => {
     setSaving(true);
     try { await onSave(list.join(", ")); } finally { setSaving(false); }
   };
@@ -281,10 +287,17 @@ function WordListEditor({ label, value, hint, onSave }: { label: string; value: 
     const w = newWord.trim();
     if (!w || saving) return;
     if (words.some(x => x.toLowerCase() === w.toLowerCase())) { setNewWord(""); return; }
-    persist([...words, w]);
+    persistCustom([...customWords, w]);
     setNewWord("");
   };
-  const removeWord = (w: string) => persist(words.filter(x => x !== w));
+  const removeWord = async (w: string) => {
+    if (isBuiltin(w) && onSaveBuiltin) {
+      setSaving(true);
+      try { await onSaveBuiltin([...disabledBuiltin, w.toLowerCase()].join(", ")); } finally { setSaving(false); }
+    } else {
+      persistCustom(customWords.filter(x => x !== w));
+    }
+  };
 
   return (
     <div>
@@ -296,7 +309,7 @@ function WordListEditor({ label, value, hint, onSave }: { label: string; value: 
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G2.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><polyline points="6 9 12 15 18 9"/></svg>
       </div>
       {open && (
-        <div style={{ marginTop: 4, padding: "12px", background: G2.blanc, borderRadius: 8, border: `1px solid ${G2.gris}` }}>
+        <div style={{ marginTop: 4, padding: "12px", background: G2.blanc, borderRadius: 8, border: `1px solid ${G2.gris}`, maxHeight: 360, overflowY: "auto" }}>
           {hint && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 10 }}>💡 {hint}</div>}
           {words.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
@@ -333,61 +346,6 @@ const BUILTIN_MODERATION_WORDS: { word: string; type: "insult" | "scam" | "sexua
   ...["envoie moi", "vire moi", "transfert", "western union", "moneygram", "recharge moi", "carte cadeau", "bitcoin", "crypto facile", "investissement rapide", "placement", "bénéfice", "profit garanti", "double argent", "multiplie argent", "paypal urgent", "clique ici", "gagne de l'argent", "casino", "paris sportif", "j'ai besoin d'argent", "problème financier", "urgence financière", "aide financière", "prêt argent", "dépanne moi", "avance moi", "envoie l'argent", "héritage", "succession", "millions fcfa", "compte bloqué", "ambassade", "visa contre", "billet bloqué", "viens whatsapp"].map(word => ({ word, type: "scam" as const, group: "Arnaques" })),
   ...["photo nue", "video nue", "plan cul", "viens dans mon lit", "pipe", "branlette", "branler", "sucer", "chatte", "bite", "queue", "nude", "envoie tes seins", "viens coucher", "baise", "baiser", "nique", "sexe"].map(word => ({ word, type: "sexual" as const, group: "Contenu sexuel" })),
 ];
-
-// ── Éditeur des mots intégrés par défaut : contrairement à WordListEditor, l'univers de mots est
-//    fixe (codé dans l'app), on ne fait qu'activer/désactiver chacun individuellement — jamais en
-//    supprimer ni en ajouter de nouveaux ici (pour ça, "Liste des mots interdits" au-dessus suffit). ──
-function BuiltinWordsEditor({ value, onSave }: { value: string; onSave: (newValue: string) => Promise<void> | void }) {
-  const G2 = { rouge: "#C0392B", gris: "#E8E0D8", blanc: "#FFFFFF", creme: "#F7F3EF" };
-  const [open, setOpen] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
-  const disabled = new Set((value || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean));
-  const groups = Array.from(new Set(BUILTIN_MODERATION_WORDS.map(w => w.group)));
-
-  const toggleWord = async (word: string) => {
-    setSaving(true);
-    const next = new Set(disabled);
-    if (next.has(word)) next.delete(word); else next.add(word);
-    try { await onSave(Array.from(next).join(", ")); } finally { setSaving(false); }
-  };
-
-  return (
-    <div>
-      <div onClick={() => setOpen(o => !o)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: open ? "rgba(192,57,43,0.06)" : G2.creme, cursor: "pointer", border: `1px solid ${open ? G2.rouge : "transparent"}` }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#2C1A0E" }}>Mots intégrés (par défaut)</div>
-          <div style={{ fontSize: "0.7rem", color: "#999" }}>{BUILTIN_MODERATION_WORDS.length - disabled.size} actifs sur {BUILTIN_MODERATION_WORDS.length}{disabled.size > 0 ? ` · ${disabled.size} désactivé${disabled.size > 1 ? "s" : ""}` : ""}</div>
-        </div>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G2.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-      {open && (
-        <div style={{ marginTop: 4, padding: "12px", background: G2.blanc, borderRadius: 8, border: `1px solid ${G2.gris}`, maxHeight: 340, overflowY: "auto" }}>
-          <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 10 }}>💡 Clique sur un mot pour l'autoriser (grisé) ou le réactiver. Ne modifie jamais le moteur de détection, seulement ce mot précis.</div>
-          {groups.map(group => (
-            <div key={group} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#999", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>{group}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {BUILTIN_MODERATION_WORDS.filter(w => w.group === group).map(w => {
-                  const isDisabled = disabled.has(w.word);
-                  return (
-                    <button key={w.word} onClick={() => toggleWord(w.word)} disabled={saving} style={{
-                      border: "none", borderRadius: 50, padding: "5px 10px", fontSize: "0.75rem", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer",
-                      background: isDisabled ? "#F0F0F0" : "rgba(192,57,43,0.08)",
-                      color: isDisabled ? "#aaa" : G2.rouge,
-                      textDecoration: isDisabled ? "line-through" : "none",
-                    }}>
-                      {w.word}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 
 export function AdminDesktopPage() {
@@ -846,12 +804,19 @@ export function AdminDesktopPage() {
                 Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
               </div>
               <WordListEditor label="Liste des mots interdits" value={appConfig.customBannedWords}
-                hint="Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+                hint="Inclut les mots déjà intégrés par défaut (insultes, menaces, arnaques...) et ceux que tu ajoutes. Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+                builtinValue={appConfig.disabledBuiltinWords}
                 onSave={async (newValue) => {
                   if (!auth) return;
                   await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.custom_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
                   setAppConfig(c => ({ ...c, customBannedWords: newValue }));
                   buildCustomBannedRegex(newValue);
+                }}
+                onSaveBuiltin={async (newValue) => {
+                  if (!auth) return;
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.disabled_builtin_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
+                  setAppConfig(c => ({ ...c, disabledBuiltinWords: newValue }));
+                  setExemptedBuiltinWords(newValue);
                 }} />
               <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
                 <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux.
@@ -864,15 +829,6 @@ export function AdminDesktopPage() {
                   setAppConfig(c => ({ ...c, contactBannedWords: newValue }));
                   buildContactBannedRegex(newValue);
                 }} />
-              <div style={{ marginTop: 8 }}>
-                <BuiltinWordsEditor value={appConfig.disabledBuiltinWords}
-                  onSave={async (newValue) => {
-                    if (!auth) return;
-                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.disabled_builtin_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
-                    setAppConfig(c => ({ ...c, disabledBuiltinWords: newValue }));
-                    setExemptedBuiltinWords(newValue);
-                  }} />
-              </div>
               <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
                 <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
               </div>
@@ -1915,11 +1871,17 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
           Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
         </div>
         <WordListEditor label="Liste des mots interdits" value={appConfig.customBannedWords}
-          hint="Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+          hint="Inclut les mots déjà intégrés par défaut (insultes, menaces, arnaques...) et ceux que tu ajoutes. Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+          builtinValue={appConfig.disabledBuiltinWords}
           onSave={async (newValue) => {
             await patch("custom_banned_words", newValue);
             setAppConfig(c => ({ ...c, customBannedWords: newValue }));
             buildCustomBannedRegex(newValue);
+          }}
+          onSaveBuiltin={async (newValue) => {
+            await patch("disabled_builtin_words", newValue);
+            setAppConfig(c => ({ ...c, disabledBuiltinWords: newValue }));
+            setExemptedBuiltinWords(newValue);
           }} />
         <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
           <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux.
@@ -1931,14 +1893,6 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
             setAppConfig(c => ({ ...c, contactBannedWords: newValue }));
             buildContactBannedRegex(newValue);
           }} />
-        <div style={{ marginTop: 8 }}>
-          <BuiltinWordsEditor value={appConfig.disabledBuiltinWords}
-            onSave={async (newValue) => {
-              await patch("disabled_builtin_words", newValue);
-              setAppConfig(c => ({ ...c, disabledBuiltinWords: newValue }));
-              setExemptedBuiltinWords(newValue);
-            }} />
-        </div>
         <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
           <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
         </div>

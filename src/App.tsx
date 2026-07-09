@@ -4021,29 +4021,26 @@ function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () 
 }
 
 function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children: React.ReactNode; onBack: () => void; title?: string; subtitle?: string; stepInfo?: React.ReactNode }) {
-  return <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: G.blanc, padding: 0, overflowX: "hidden" }}>
-    <div style={{ position: "relative", flexShrink: 0 }}>
-      <svg viewBox="0 0 400 260" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 220, display: "block" }} preserveAspectRatio="none">
-        <path d="M0,0 L400,0 L400,150 C300,210 100,110 0,175 Z" fill={G.rouge} />
-        <path d="M0,0 L400,0 L400,110 C300,160 110,85 0,140 Z" fill={G.rougeDark} opacity="0.5" />
-      </svg>
-      <div onClick={onBack} style={{ position: "relative", zIndex: 2, padding: "16px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-        </div>
-        <span style={{ color: "#fff", fontWeight: 600, fontSize: "0.9rem" }}>Accueil</span>
+  return <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: G.creme, padding: 0, overflowX: "hidden" }}>
+    <div style={{ padding: "20px 20px 0" }}>
+      <div onClick={onBack} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
       </div>
-      {title && (
-        <div style={{ position: "relative", zIndex: 2, padding: "6px 22px 0", color: "#fff" }}>
-          <div style={{ fontSize: "1.4rem", fontWeight: 800 }}>{title}</div>
-          {subtitle && <div style={{ fontSize: "0.85rem", opacity: 0.9, marginTop: 4 }}>{subtitle}</div>}
-          {stepInfo}
-        </div>
-      )}
     </div>
-    <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px 40px" }}><div style={{ background: G.blanc, borderRadius: 24, padding: "8px 24px 36px", width: "100%", maxWidth: 420, overflowX: "hidden" }}>{children}</div></div>
+    <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "16px 16px 40px" }}>
+      <div style={{ width: "100%", maxWidth: 420, overflowX: "hidden" }}>
+        {title && (
+          <div style={{ textAlign: "center", marginBottom: 26 }}>
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: G.brun }}>{title}</div>
+            {subtitle && <div style={{ fontSize: "0.85rem", color: "#888", marginTop: 4 }}>{subtitle}</div>}
+            {stepInfo}
+          </div>
+        )}
+        {children}
+      </div>
+    </div>
   </div>;
 }
 
@@ -4607,20 +4604,20 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   return (
     <AuthLayout onBack={() => step === 1 ? onNav("landing") : setStep(s => s - 1)} title="Crée ton compte" stepInfo={
       <>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(255,255,255,0.2)", borderRadius: 50, padding: "6px 16px" }}>
-          <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 800, color: G.rouge }}>{step}</div>
-          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#fff" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 16px" }}>
+          <div style={{ width: 20, height: 20, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 800, color: "#fff" }}>{step}</div>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: G.rouge }}>
             {step === 1 && "Identifiant et mot de passe"}
             {step === 2 && "Choisis ton sexe"}
             {step === 3 && "Photo de profil"}
             {step === 4 && "Tes informations"}
             {step === 5 && "Informations complémentaires"}
           </span>
-          <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>{step}/5</span>
+          <span style={{ fontSize: "0.72rem", color: "#888", fontWeight: 500 }}>{step}/5</span>
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
           {[1, 2, 3, 4, 5].map(s => (
-            <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? "#fff" : "rgba(255,255,255,0.3)", transition: "background 0.3s" }} />
+            <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? G.rouge : G.gris, transition: "background 0.3s" }} />
           ))}
         </div>
       </>
