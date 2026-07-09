@@ -282,6 +282,10 @@ let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
 export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
 let FEATURE_GROUP_PHOTOS = true;
+// Modération automatique : insultes/menaces/arnaques/contenu sexuel (moderateMessage).
+let FEATURE_MODERATION_INSULTS = true;
+// Blocage automatique du partage de numéro/réseaux pour les comptes gratuits (hasContactInfo).
+let FEATURE_MODERATION_CONTACT = true;
 let APPOINTMENTS_ENABLED = true;
 let APPT_PHONE_ENABLED = true;
 let APPT_PHYSICAL_ENABLED = true;
@@ -343,7 +347,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,premium_screen_variant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -359,6 +363,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_group_premium"] !== undefined) FEATURE_GROUP_PREMIUM = map["feature_group_premium"] !== "false";
   if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
+  if (map["feature_moderation_insults"] !== undefined) FEATURE_MODERATION_INSULTS = map["feature_moderation_insults"] !== "false";
+  if (map["feature_moderation_contact"] !== undefined) FEATURE_MODERATION_CONTACT = map["feature_moderation_contact"] !== "false";
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
@@ -1043,6 +1049,53 @@ const getStatusSignedFallbackUrl = async (token: string, url?: string | null): P
 // Ne touche à AUCUNE logique réseau : c'est juste un timer parallèle.
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
+// ── État interne de la connexion Realtime partagée (voir sb.subscribeRealtime plus bas) ──
+let _rtSocket: WebSocket | null = null;
+let _rtToken: string | null = null;
+const _rtListeners: Record<string, Set<() => void>> = {};
+let _rtReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+function _rtEnsureSocket(token: string): WebSocket {
+  if (_rtSocket && _rtToken === token &&
+      (_rtSocket.readyState === WebSocket.OPEN || _rtSocket.readyState === WebSocket.CONNECTING)) {
+    return _rtSocket;
+  }
+  try { _rtSocket?.close(); } catch {}
+  _rtToken = token;
+  const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
+  const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
+  _rtSocket = ws;
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
+    // Ré-abonnement à tous les topics encore actifs (utile après une reconnexion)
+    Object.keys(_rtListeners).forEach(topic => {
+      const set = _rtListeners[topic];
+      if (set && set.size > 0) {
+        ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
+      }
+    });
+  };
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") {
+        const cbs = _rtListeners[msg.topic];
+        cbs?.forEach(cb => { try { cb(); } catch {} });
+      }
+    } catch {}
+  };
+  ws.onerror = () => {};
+  ws.onclose = () => {
+    if (_rtSocket !== ws) return;
+    _rtSocket = null;
+    const hasListeners = Object.values(_rtListeners).some(s => s && s.size > 0);
+    if (hasListeners) {
+      if (_rtReconnectTimer) clearTimeout(_rtReconnectTimer);
+      _rtReconnectTimer = setTimeout(() => { if (_rtToken) _rtEnsureSocket(_rtToken); }, 2000);
+    }
+  };
+  return ws;
+}
+
 export const sb = {
   // ── Callback injecté par App pour déclencher la déconnexion propre ──
   _onAuthFailure: null as (() => void) | null,
@@ -1310,22 +1363,40 @@ export const sb = {
     });
   },
 
-  subscribeRealtime(token: string, table: string, filter: string, callback: () => void): WebSocket | null {
+  // ── Connexion Realtime partagée : une SEULE connexion WebSocket par utilisateur, sur laquelle on
+  //    "s'abonne" à plusieurs tables à la fois (comme plusieurs stations captées par une même antenne),
+  //    au lieu d'ouvrir une connexion séparée par écoute (messages, likes, matchs, vues, avertissements,
+  //    broadcasts...). Avant ce correctif, chaque personne active ouvrait 7 à 10+ connexions simultanées
+  //    rien que pour les badges — ce qui épuisait très vite le quota de connexions Realtime de Supabase
+  //    à seulement quelques centaines d'utilisateurs actifs en même temps. Le contrat public de
+  //    subscribeRealtime() ne change pas (toujours un objet avec .close()), donc aucun des appels
+  //    existants dans le reste du code n'a besoin d'être modifié. ──
+  subscribeRealtime(token: string, table: string, filter: string, callback: () => void): { close: () => void } | null {
     try {
-      const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
-      const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
-        ws.send(JSON.stringify({ topic: `realtime:public:${table}:${filter}`, event: "phx_join", payload: { access_token: token }, ref: "2" }));
+      const topic = `realtime:public:${table}:${filter}`;
+      if (!_rtListeners[topic]) _rtListeners[topic] = new Set();
+      const isFirstForTopic = _rtListeners[topic].size === 0;
+      _rtListeners[topic].add(callback);
+      const ws = _rtEnsureSocket(token);
+      if (isFirstForTopic && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
+      }
+      // Si le socket n'est pas encore ouvert, l'abonnement se fera automatiquement dans onopen ci-dessus.
+      return {
+        close: () => {
+          const set = _rtListeners[topic];
+          if (!set) return;
+          set.delete(callback);
+          if (set.size === 0) {
+            delete _rtListeners[topic];
+            try {
+              if (_rtSocket && _rtSocket.readyState === WebSocket.OPEN) {
+                _rtSocket.send(JSON.stringify({ topic, event: "phx_leave", payload: {}, ref: topic + "_leave" }));
+              }
+            } catch {}
+          }
+        },
       };
-      ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data);
-          if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") callback();
-        } catch {}
-      };
-      ws.onerror = () => {};
-      return ws;
     } catch { return null; }
   },
 };
@@ -4691,6 +4762,9 @@ const BOT_FAQ = [
   { q: ["annuler", "unmatch", "fin"], r: "Dans Matchs → 3 traits → Annuler le match. La conversation et les messages sont supprimés. L'autre personne n'est pas notifiée." },
   { q: ["répondre", "citer", "reply", "bandeau", "réponse message"], r: "Appuyez longuement sur un message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
   { q: ["vocal", "note vocale", "message vocal", "micro", "audio", "enregistrer message"], r: "L'envoi de messages vocaux est réservé aux membres Premium (l'écoute d'un vocal reçu est libre pour tous). Maintenez appuyé le bouton micro pour enregistrer (1 minute max), glissez vers la gauche pour annuler ou vers le haut pour verrouiller l'enregistrement mains libres. Avant l'envoi, vous pouvez réécouter votre vocal et choisir entre Vocal normal (lecture illimitée, vitesses x1/x1.5/x2) ou Écoute unique (il se détruit automatiquement dès que le destinataire a fini de l'écouter)." },
+  { q: ["numéro", "coordonnées", "whatsapp", "instagram", "snapchat", "partager mon contact", "partage de contact", "pourquoi mon message n'est pas envoyé", "message bloqué", "message pas envoyé", "réseau social"], r: "Le partage de numéro de téléphone, WhatsApp, Instagram ou tout autre moyen de contact en dehors de Moyo Dating est réservé aux membres Premium. Si vous êtes en compte gratuit, ce type de message est automatiquement bloqué avant l'envoi et l'Assistant Moyo Dating vous en informe directement dans votre messagerie. Cette règle protège la sécurité de tous les membres. Pour partager vos coordonnées librement, passez Premium." },
+  { q: ["banni", "bannissement", "pourquoi je suis banni", "compte suspendu", "compte bloqué", "insulte", "arnaque", "mots interdits", "avertissement"], r: "Un compte peut être suspendu ou banni en cas de non-respect des règles de la communauté : insultes, menaces, propos à caractère sexuel non sollicités, tentatives d'arnaque, ou partage répété de coordonnées en compte gratuit. La modération automatique bloque ces messages avant leur envoi et vous affiche une alerte à l'écran expliquant pourquoi. En cas de récidive après avertissement, le compte peut être suspendu temporairement ou définitivement banni. Si vous pensez que votre bannissement est une erreur, contactez notre équipe via l'Assistant Moyo Dating." },
+  { q: ["photo interdite", "photo inappropriée", "photo refusée", "photo supprimée", "règle photo", "photo profil"], r: "Les photos de profil et de statuts doivent vous représenter vous-même, sans contenu à caractère sexuel, violent ou choquant, ni coordonnées visibles (numéro écrit sur l'image, réseau social affiché). Toute photo signalée ou détectée comme inappropriée peut être retirée par notre équipe, avec un avertissement du compte concerné. En cas de récidive, le compte peut être suspendu ou banni." },
   { q: ["offrir premium", "demander premium", "cadeau premium", "offrir abonnement", "demander abonnement", "demander cadeau", "cadeau doré"], r: "Dans une conversation : si vous êtes Premium et que l'autre ne l'est pas, un bouton cadeau doré 🎁 permet de lui offrir Premium. Si vous n'êtes pas Premium et que l'autre l'est, un bouton 💝 permet de lui demander de vous l'offrir (une fenêtre de confirmation s'ouvre ; limite de 2 demandes par mois et par conversation). La personne reçoit alors un message avec un bouton pour offrir Premium en un clic." },
   { q: ["modifier message", "éditer message", "corriger message"], r: "Appuyez longuement sur l'un de vos messages → Modifier (possible pendant 15 minutes après l'envoi). Le message modifié affiche la mention 'modifié'." },
   { q: ["supprimer message", "effacer message", "pour moi", "pour tous"], r: "Appuyez longuement sur un message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque le message uniquement de votre côté)." },
@@ -5329,16 +5403,17 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         depuis le bouton dédié dans le header/menu Découvrir. */}
     {assistantEnabled && !isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
     {showGuide && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
-      <div className="moyo-sheet-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
-        {/* Header */}
-        <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px", position: "relative" }}>
+      <div className="moyo-sheet-in" style={{ background: G.blanc, maxHeight: "85vh", borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        {/* Header (fixe, ne défile pas) */}
+        <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px", position: "relative", flexShrink: 0 }}>
           <div onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 14, right: 16, cursor: "pointer", opacity: 0.8 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </div>
           <div style={{ fontSize: "1.6rem", color: "#fff", fontWeight: 800 }}>Guide <span style={{ color: G.or }}>Moyo Dating</span></div>
           <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem", marginTop: 4 }}>Tout ce que vous devez savoir</div>
         </div>
-        {/* Accordéon */}
+        {/* Corps : seule zone qui défile réellement, plus de conflit overflow */}
+        <div style={{ overflowY: "auto", flex: "1 1 auto", minHeight: 0, WebkitOverflowScrolling: "touch" }}>
         <div style={{ padding: "8px 0" }}>
           {[
             { title: "Découvrir des profils", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>, items: [
@@ -5422,6 +5497,26 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         "🌍 Diaspora - Payez par carte : appuyez sur le bouton vert 'Visa / Mastercard'. Vous êtes redirigé vers une page de paiement sécurisée Stripe. Entrez votre carte bancaire et confirmez. L'activation est automatique et immédiate.",
         "Une fois Premium activé, actualisez l'application pour que le statut soit mis à jour.",
       ]},
+      { title: "Partage de coordonnées : ce qu'il faut savoir", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>, items: [
+        "Le partage de numéro de téléphone, WhatsApp, Instagram, Snapchat ou tout autre moyen de contact en dehors de Moyo Dating est réservé aux membres Premium.",
+        "Si vous êtes en compte gratuit et que vous tentez d'envoyer ce type d'information dans un message, celui-ci est automatiquement bloqué avant même d'être envoyé, et un message de l'Assistant Moyo Dating vous en informe immédiatement dans votre messagerie.",
+        "Cette règle existe pour votre sécurité : elle protège les échanges sur la plateforme et évite les arnaques qui se poursuivent hors de l'app, là où nous ne pouvons plus vous protéger.",
+        "En cas de récidive répétée après avertissement, votre compte peut être suspendu temporairement ou définitivement banni.",
+        "Pour partager vos coordonnées en toute liberté avec vos matchs, passez Premium.",
+      ]},
+      { title: "Mots interdits, insultes et arnaques", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, items: [
+        "Moyo Dating utilise une modération automatique qui détecte et bloque les insultes, menaces, propos à caractère sexuel non sollicités, et tentatives d'arnaque avant même que le message ne soit envoyé.",
+        "Si un de vos messages est bloqué, il ne part jamais à votre interlocuteur : vous voyez une alerte à l'écran vous expliquant pourquoi, et un signalement est automatiquement transmis à notre équipe de modération.",
+        "Les demandes d'argent, propositions suspectes ou tentatives de manipulation financière sont particulièrement surveillées : Moyo Dating ne vous demandera jamais d'argent en dehors des paiements officiels dans l'app.",
+        "En cas de comportement répété malgré les avertissements, votre compte peut être suspendu temporairement ou banni définitivement, selon la gravité.",
+        "Vous pouvez à tout moment signaler un comportement suspect via le menu ☰ d'un profil ou l'Assistant Moyo Dating.",
+      ]},
+      { title: "Photos : ce qui est interdit", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>, items: [
+        "Les photos de profil et de statuts doivent vous représenter vous-même, sans contenu à caractère sexuel, violent ou choquant.",
+        "Les photos contenant des coordonnées visibles (numéro écrit sur une image, réseau social affiché, etc.) sont soumises aux mêmes règles que le partage de contact par message.",
+        "Toute photo signalée par la communauté ou détectée comme inappropriée peut être retirée par notre équipe, avec avertissement du compte concerné.",
+        "En cas de récidive, le compte peut être suspendu temporairement ou définitivement banni.",
+      ]},
       { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo Dating est réservé aux personnes majeures de 18 ans et plus.", "La modération automatique bloque les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement est automatiquement transmis à notre équipe.", "Si votre comportement enfreint les règles, un administrateur peut vous envoyer un avertissement officiel. Une notification apparaît à votre prochaine connexion. Après plusieurs avertissements, le compte peut être banni.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
       { title: "Assistant Moyo Dating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/></svg>, items: ["L'icône verte en forme de robot à côté du bouton Guide ouvre l'Assistant Moyo Dating.", "Il propose deux options : Besoin d'aide (répond instantanément à vos questions sur l'app) et Signaler un problème (comportement abusif, arnaque, harcèlement).", "Les signalements sont traités par notre équipe sous 24h."] },
           ].map((s, i) => (
@@ -5455,6 +5550,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, lineHeight: 1.5 }}>Notre équipe est disponible pour vous aider.</p>
             <button onClick={() => { setShowGuide(false); setShowBot(true); }} style={{ display: "inline-block", background: G.rouge, color: "#fff", borderRadius: 50, padding: "10px 24px", fontSize: "0.85rem", fontWeight: 700, border: "none", cursor: "pointer" }}>Contacter notre équipe</button>
           </div>
+        </div>
         </div>
       </div>
     </div>}
@@ -9629,7 +9725,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       return;
     }
     // Modération : insultes, arnaques, contenu interdit
-    const mod = moderateMessage(text);
+    const mod = FEATURE_MODERATION_INSULTS ? moderateMessage(text) : { blocked: false };
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       // ── Alerte système auto-mod : ce n'est PAS un signalement utilisateur contre un autre profil.
@@ -9650,13 +9746,13 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       }
       return;
     }
-    if (!auth.isPremium && hasContactInfo(text)) {
+    if (FEATURE_MODERATION_CONTACT && !auth.isPremium && hasContactInfo(text)) {
       // ── Signalement automatique : tentative de partage/demande de contact par un compte gratuit ──
       try {
         await sb.insert(auth.token, "reports", {
           reporter_id: auth.userId,
           reported_id: null,
-          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim().substring(0, 120)} · Réponse auto envoyée`,
+          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim()} · Réponse auto envoyée`,
           status: "pending",
         });
         // ── Réponse automatique de l'Assistant Moyo Dating à l'auteur (apparaît dans SA messagerie support) ──
@@ -11970,7 +12066,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
     // Modération : insultes, arnaques, contenu interdit — le partage de contact/réseaux sociaux
     // reste volontairement libre ici, le groupe étant réservé aux membres Premium (déjà autorisé
     // pour eux en messagerie privée aussi).
-    const mod = moderateMessage(text);
+    const mod = FEATURE_MODERATION_INSULTS ? moderateMessage(text) : { blocked: false };
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       try {

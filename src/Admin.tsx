@@ -264,6 +264,68 @@ function EditableRow({ label, value, open, onOpen, editValue, onEdit, onSave, hi
   );
 }
 
+// ── Éditeur de liste de mots (ajout/suppression individuels, effet immédiat) — remplace l'ancien
+//    éditeur en bloc de texte pour "Liste des mots interdits" et "Mots contacts". ──
+function WordListEditor({ label, value, hint, onSave }: { label: string; value: string; hint?: string; onSave: (newValue: string) => Promise<void> | void }) {
+  const G2 = { rouge: "#C0392B", gris: "#E8E0D8", blanc: "#FFFFFF", creme: "#F7F3EF" };
+  const [open, setOpen] = React.useState(false);
+  const [newWord, setNewWord] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const words = (value || "").split(/[,\n]/).map(w => w.trim()).filter(Boolean);
+
+  const persist = async (list: string[]) => {
+    setSaving(true);
+    try { await onSave(list.join(", ")); } finally { setSaving(false); }
+  };
+  const addWord = () => {
+    const w = newWord.trim();
+    if (!w || saving) return;
+    if (words.some(x => x.toLowerCase() === w.toLowerCase())) { setNewWord(""); return; }
+    persist([...words, w]);
+    setNewWord("");
+  };
+  const removeWord = (w: string) => persist(words.filter(x => x !== w));
+
+  return (
+    <div>
+      <div onClick={() => setOpen(o => !o)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: open ? "rgba(192,57,43,0.06)" : G2.creme, cursor: "pointer", border: `1px solid ${open ? G2.rouge : "transparent"}` }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#2C1A0E" }}>{label}</div>
+          <div style={{ fontSize: "0.7rem", color: "#999" }}>{words.length === 0 ? "(aucun)" : `${words.length} mot${words.length > 1 ? "s" : ""}`}</div>
+        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G2.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      {open && (
+        <div style={{ marginTop: 4, padding: "12px", background: G2.blanc, borderRadius: 8, border: `1px solid ${G2.gris}` }}>
+          {hint && <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 10 }}>💡 {hint}</div>}
+          {words.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+              {words.map(w => (
+                <span key={w} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(192,57,43,0.08)", color: G2.rouge, borderRadius: 50, padding: "5px 5px 5px 10px", fontSize: "0.76rem", fontWeight: 600 }}>
+                  {w}
+                  <button onClick={() => removeWord(w)} disabled={saving} title="Retirer" style={{ border: "none", background: "rgba(192,57,43,0.18)", color: G2.rouge, borderRadius: "50%", width: 16, height: 16, fontSize: "0.62rem", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}>✕</button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              value={newWord}
+              onChange={e => setNewWord(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addWord(); } }}
+              placeholder="Ajouter un mot ou une expression…"
+              style={{ flex: 1, minWidth: 0, boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(192,57,43,0.3)", fontSize: "0.8rem", outline: "none" }}
+            />
+            <button onClick={addWord} disabled={!newWord.trim() || saving} style={{ border: "none", background: G2.rouge, color: "#fff", borderRadius: 8, width: 36, flexShrink: 0, cursor: (newWord.trim() && !saving) ? "pointer" : "not-allowed", opacity: newWord.trim() ? 1 : 0.5, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AdminDesktopPage() {
   const [auth, setAuth] = React.useState<Auth | null>(null);
   const [checked, setChecked] = React.useState(false);
@@ -716,30 +778,24 @@ export function AdminDesktopPage() {
               <div style={{ fontSize: "0.74rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
                 Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
               </div>
-              <EditableRow label="Liste des mots interdits" value={appConfig.customBannedWords || "(aucun)"} open={editingConfig === "custom_banned_words"}
-                onOpen={() => { setEditingConfig(editingConfig === "custom_banned_words" ? null : "custom_banned_words"); setEditingConfigValue(appConfig.customBannedWords); }}
-                editValue={editingConfigValue} onEdit={setEditingConfigValue}
-                hint="Ex : mot1, expression deux, mot3"
-                onSave={async () => {
+              <WordListEditor label="Liste des mots interdits" value={appConfig.customBannedWords}
+                hint="Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+                onSave={async (newValue) => {
                   if (!auth) return;
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.custom_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
-                  setAppConfig(c => ({ ...c, customBannedWords: editingConfigValue }));
-                  buildCustomBannedRegex(editingConfigValue);
-                  setEditingConfig(null);
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.custom_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
+                  setAppConfig(c => ({ ...c, customBannedWords: newValue }));
+                  buildCustomBannedRegex(newValue);
                 }} />
               <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
-                <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
+                <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux.
               </div>
-              <EditableRow label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords || "(aucun)"} open={editingConfig === "contact_banned_words"}
-                onOpen={() => { setEditingConfig(editingConfig === "contact_banned_words" ? null : "contact_banned_words"); setEditingConfigValue(appConfig.contactBannedWords); }}
-                editValue={editingConfigValue} onEdit={setEditingConfigValue}
-                hint="Ex : messenger, signal, mon réseau"
-                onSave={async () => {
+              <WordListEditor label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords}
+                hint="Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+                onSave={async (newValue) => {
                   if (!auth) return;
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.contact_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
-                  setAppConfig(c => ({ ...c, contactBannedWords: editingConfigValue }));
-                  buildContactBannedRegex(editingConfigValue);
-                  setEditingConfig(null);
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.contact_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
+                  setAppConfig(c => ({ ...c, contactBannedWords: newValue }));
+                  buildContactBannedRegex(newValue);
                 }} />
               <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
                 <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
@@ -1782,28 +1838,22 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         <div style={{ fontSize: "0.74rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
           Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
         </div>
-        <EditableRow label="Liste des mots interdits" value={appConfig.customBannedWords || "(aucun)"} open={editingConfig === "custom_banned_words"}
-          onOpen={() => { setEditingConfig(editingConfig === "custom_banned_words" ? null : "custom_banned_words"); setEditingConfigValue(appConfig.customBannedWords); }}
-          editValue={editingConfigValue} onEdit={setEditingConfigValue}
-          hint="Ex : mot1, expression deux, mot3"
-          onSave={async () => {
-            await patch("custom_banned_words", editingConfigValue);
-            setAppConfig(c => ({ ...c, customBannedWords: editingConfigValue }));
-            buildCustomBannedRegex(editingConfigValue);
-            setEditingConfig(null);
+        <WordListEditor label="Liste des mots interdits" value={appConfig.customBannedWords}
+          hint="Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+          onSave={async (newValue) => {
+            await patch("custom_banned_words", newValue);
+            setAppConfig(c => ({ ...c, customBannedWords: newValue }));
+            buildCustomBannedRegex(newValue);
           }} />
         <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
-          <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux. Séparez par une virgule ou un retour à la ligne.
+          <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux.
         </div>
-        <EditableRow label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords || "(aucun)"} open={editingConfig === "contact_banned_words"}
-          onOpen={() => { setEditingConfig(editingConfig === "contact_banned_words" ? null : "contact_banned_words"); setEditingConfigValue(appConfig.contactBannedWords); }}
-          editValue={editingConfigValue} onEdit={setEditingConfigValue}
-          hint="Ex : messenger, signal, mon réseau"
-          onSave={async () => {
-            await patch("contact_banned_words", editingConfigValue);
-            setAppConfig(c => ({ ...c, contactBannedWords: editingConfigValue }));
-            buildContactBannedRegex(editingConfigValue);
-            setEditingConfig(null);
+        <WordListEditor label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords}
+          hint="Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+          onSave={async (newValue) => {
+            await patch("contact_banned_words", newValue);
+            setAppConfig(c => ({ ...c, contactBannedWords: newValue }));
+            buildContactBannedRegex(newValue);
           }} />
         <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
           <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
@@ -6054,7 +6104,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       // Supabase : DELETE avec filtre IN sur les IDs archivés uniquement
       const inList = archivedIds.map(id => `"${id}"`).join(",");
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/reports?id=in.(${archivedIds.join(",")})&status=in.(reviewed,rejected,banned)`,
+        `${SUPABASE_URL}/rest/v1/reports?id=in.(${archivedIds.join(",")})`,
         {
           method: "DELETE",
           headers: {
