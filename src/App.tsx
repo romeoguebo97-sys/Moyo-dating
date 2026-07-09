@@ -131,6 +131,35 @@ const CONTACT_PATTERNS = [
 ];
 // Mots interdits "contacts" (gratuit uniquement) — ajoutés par l'admin depuis Configuration → Sécurité
 let CONTACT_BANNED_REGEX: RegExp | null = null;
+// ── Mots intégrés par défaut, affichés et désactivables individuellement depuis l'admin
+//    (Configuration → Sécurité & Système → "Mots intégrés (par défaut)"). Chaque mot ici est
+//    juste une étiquette lisible ; la détection réelle reste gérée par MODERATION_RULES
+//    ci-dessous, qu'on ne modifie jamais — on filtre seulement APRÈS le déclenchement, si le mot
+//    exact détecté fait partie de la liste que l'admin a désactivée. ──
+export const BUILTIN_MODERATION_WORDS: { word: string; type: "insult" | "scam" | "sexual"; group: string }[] = [
+  // Insultes
+  ...["putain", "pute", "salope", "connard", "con", "fdp", "fils de pute", "bâtard", "va te faire", "enculé", "merde", "ta gueule", "ferme la", "idiot", "imbécile", "abruti", "débile", "crétin", "nègre", "singe", "bamboula", "tafiole", "tapette", "mongol", "nique ta mère", "ntm", "tg", "sale chien", "sale con", "sale pute", "bouffon", "clochard", "porc", "sale race", "sale noir", "sale blanc", "sale arabe", "sale africain", "sale congolais", "sale étranger", "retourne dans ton pays", "nigga"].map(word => ({ word, type: "insult" as const, group: "Insultes" })),
+  // Menaces
+  ...["je vais te tuer", "je vais te frapper", "je vais te retrouver", "je vais venir chez toi", "je vais te violer", "suicide toi", "crève", "meurs"].map(word => ({ word, type: "insult" as const, group: "Menaces" })),
+  // Lingala / Congo
+  ...["likata", "libolo", "lisoko", "punda", "malewa", "mbwa", "boloko", "bandeko ya mabe", "wumela", "zoba", "lokuta"].map(word => ({ word, type: "insult" as const, group: "Lingala / Congo" })),
+  // Arnaques
+  ...["envoie moi", "vire moi", "transfert", "western union", "moneygram", "recharge moi", "carte cadeau", "bitcoin", "crypto facile", "investissement rapide", "placement", "bénéfice", "profit garanti", "double argent", "multiplie argent", "paypal urgent", "clique ici", "gagne de l'argent", "casino", "paris sportif", "j'ai besoin d'argent", "problème financier", "urgence financière", "aide financière", "prêt argent", "dépanne moi", "avance moi", "envoie l'argent", "héritage", "succession", "millions fcfa", "compte bloqué", "ambassade", "visa contre", "billet bloqué", "viens whatsapp"].map(word => ({ word, type: "scam" as const, group: "Arnaques" })),
+  // Contenu sexuel
+  ...["photo nue", "video nue", "plan cul", "viens dans mon lit", "pipe", "branlette", "branler", "sucer", "chatte", "bite", "queue", "nude", "envoie tes seins", "viens coucher", "baise", "baiser", "nique", "sexe"].map(word => ({ word, type: "sexual" as const, group: "Contenu sexuel" })),
+];
+let EXEMPTED_BUILTIN_WORDS: Set<string> = new Set();
+export const setExemptedBuiltinWords = (raw: string) => {
+  EXEMPTED_BUILTIN_WORDS = new Set((raw || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean));
+};
+// Un mot détecté par une règle est exempté si son texte contient un des mots retirés par l'admin
+// (couvre les variantes d'orthographe puisque chaque règle regroupe plusieurs formes du même mot).
+const isExemptedMatch = (matchedText: string): boolean => {
+  const lower = matchedText.toLowerCase();
+  for (const w of EXEMPTED_BUILTIN_WORDS) { if (lower.includes(w) || w.includes(lower)) return true; }
+  return false;
+};
+
 export const buildContactBannedRegex = (raw: string) => {
   const words = (raw || "").split(/[\n,;]+/).map(w => w.trim()).filter(Boolean);
   if (words.length === 0) { CONTACT_BANNED_REGEX = null; return; }
@@ -185,7 +214,8 @@ export const buildCustomBannedRegex = (raw: string) => {
 
 const moderateMessage = (text: string): { blocked: boolean; type?: "insult" | "scam" | "sexual" } => {
   for (const rule of MODERATION_RULES) {
-    if (rule.pattern.test(text)) return { blocked: true, type: rule.type };
+    const match = text.match(rule.pattern);
+    if (match && !isExemptedMatch(match[0])) return { blocked: true, type: rule.type };
   }
   if (CUSTOM_BANNED_REGEX && CUSTOM_BANNED_REGEX.test(text)) return { blocked: true, type: "insult" };
   return { blocked: false };
@@ -252,6 +282,54 @@ function activePlansText(): string {
   return parts.slice(0, -1).join(", ") + " ou " + parts[parts.length - 1];
 }
 function activePlansCount(): number { return [PLAN_WEEK_ENABLED, PLAN_MONTH_ENABLED, PLAN_2MONTH_ENABLED].filter(Boolean).length; }
+// FAQ complète (30 questions), réutilisée à la fois sur la page d'accueil et dans le Guide de
+// l'app — une fonction (pas une constante figée) pour toujours refléter les réglages admin actuels
+// (limites, prix, bonus de parrainage...).
+function getLandingFaqItems(): { icon: string; titre: string; desc: string }[] {
+  return [
+    { icon: "Q", titre: "Moyo Dating est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium : ${activePlansText()}.` },
+    { icon: "Q", titre: "Comment naviguer entre les profils ?", desc: "3 modes disponibles : Vue carte (swipe gauche/droite ou boutons ←→), Vue liste (défilement vertical), Plein écran (immersion totale, footer masqué). Passez d'un mode à l'autre via les boutons en haut de l'écran Découvrir." },
+    { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo Dating parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
+    { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: `${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché.` },
+    { icon: "Q", titre: "Puis-je voir le profil complet de quelqu'un gratuitement ?", desc: "Oui. Appuyez sur le bouton ☰ de n'importe quelle carte → 'Voir le profil'. C'est gratuit pour tous les membres, sans restriction." },
+    { icon: "Q", titre: "Comment annuler un match ?", desc: "Dans Matchs, appuyez sur les 3 traits → Annuler le match. La conversation, les likes et les vues sont supprimés. L'autre personne n'est pas notifiée." },
+    { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, le bouton cadeau apparait uniquement si vous êtes Premium. Vous pouvez offrir le Premium à votre partenaire non-premium, en choisissant la formule (1 semaine, 1 mois ou 2 mois)." },
+    { icon: "Q", titre: "Comment obtenir le badge vérifié ?", desc: "Profil → Faire vérifier mon compte → WhatsApp. Gratuit, vérification sous 24h." },
+    { icon: "Q", titre: "Comment inviter un ami ?", desc: "Dans Profil, appuyez sur Inviter un ami. Un message pré-rempli s'ouvre sur WhatsApp ou le partage natif." },
+    { icon: "Q", titre: "Comment activer le mode sombre ?", desc: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
+    { icon: "Q", titre: "Comment rendre mon profil invisible ?", desc: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
+    { icon: "Q", titre: "Pourquoi je ne vois pas mon profil dans Découvrir ?", desc: "Votre profil doit être complet jusqu'à la dernière étape de l'inscription pour apparaître dans Découvrir. Vérifiez aussi que votre profil est bien visible dans les paramètres." },
+    { icon: "Q", titre: "À quoi servent les onglets Likes et Vus ?", desc: "Deux onglets séparés : Likes (personnes qui vous ont liké) et Vus (personnes qui ont visité votre profil). Tout le monde voit le compteur. Premium requis pour voir les cartes et l'identité des personnes." },
+    { icon: "Q", titre: "Qui apparaît dans mes Vues ?", desc: "Uniquement les membres Premium qui ont consulté votre profil. Les membres gratuits ne génèrent pas de vues et n'apparaissent pas dans votre liste Vues." },
+    { icon: "Q", titre: "Comment suis-je informé d'un nouveau match ?", desc: "Dès qu'un match est créé, un message de bienvenue apparaît automatiquement dans la conversation. Le badge rouge sur l'onglet Messages se met à jour en temps réel." },
+    { icon: "Q", titre: "Si je unlike quelqu'un, que se passe-t-il ?", desc: "Le like disparait des deux côtés instantanément. Si vous aviez un match, la conversation et tous les messages sont supprimés." },
+    { icon: "Q", titre: "Que se passe-t-il si j'envoie un message irrespectueux ?", desc: "Moyo Dating bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement automatique est envoyé à notre équipe." },
+    { icon: "Q", titre: "Pourquoi je ne peux pas partager mon numéro ou mon WhatsApp ?", desc: "Pour ta sécurité et contre les arnaques, le partage d'un numéro, d'un réseau social ou d'un lien est bloqué dans les messages et dans le profil (bio, nom…) pour les comptes gratuits. Cela vaut même si tu espaces les chiffres ou les écris en lettres. L'abonnement Premium débloque le partage de coordonnées en conversation privée." },
+    { icon: "Q", titre: "Mon compte est suspendu avec un décompte, que faire ?", desc: "Il s'agit d'une suspension temporaire suite à un non-respect des règles. Tu n'as rien à faire : à la fin du décompte affiché, tu peux te reconnecter automatiquement. Une suspension définitive, elle, nécessite de contacter l'assistance." },
+    { icon: "Q", titre: "Comment réagir à un message ?", desc: "Appuyez longuement sur un message pour ouvrir le menu de réactions (👍 ❤️ 😂 😮 😢 🙏). Une seule réaction par message est autorisée." },
+    { icon: "Q", titre: "Comment contacter l'assistance Moyo Dating ?", desc: "Appuyez sur l'icône verte (Assistant Moyo Dating) à côté du bouton Guide. Vous pouvez poser vos questions ou signaler un problème directement depuis l'app." },
+    { icon: "Q", titre: "Puis-je voir le profil de quelqu'un depuis les messages ?", desc: "Oui. Dans une conversation, appuyez sur la photo de profil de votre match en haut de l'écran pour voir sa fiche complète." },
+    { icon: "Q", titre: "Comment répondre à un message précis ?", desc: "Appuyez longuement sur le message → Répondre. Un bandeau s'affiche avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
+    { icon: "Q", titre: "Comment supprimer un message ?", desc: "Appuyez longuement sur le message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque uniquement de votre côté)." },
+    { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Vous devez cliquer 'OK, j'ai compris' pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
+    { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → section Congo → choisissez votre opérateur → effectuez le paiement → entrez le numéro de transaction (ID) reçu par SMS → appuyez sur 'J'ai payé'. L'activation est rapide, sous 15 minutes." },
+    { icon: "Q", titre: "Je suis en Europe, comment payer le Premium ?", desc: "Appuyez sur 'Passer Premium' → section Diaspora → bouton 'Visa / Mastercard'. Vous êtes redirigé vers une page de paiement sécurisée Stripe. Entrez votre carte bancaire et confirmez. L'activation est automatique et immédiate." },
+    { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "Pour MTN/Airtel : l'activation se fait sous 15 minutes. Pour les paiements par carte (Stripe) : l'activation est automatique et immédiate. Si après 15 minutes vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo Dating." },
+    { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche votre statut en temps réel : nombre de jours restants, ou 'Actif' si votre abonnement est en cours." },
+    { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: `Depuis votre page Profil, appuyez sur 'Parrainer un ami'. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez des jours Premium offerts selon sa formule : ${REFERRAL_BONUS_WEEK} jours (1 semaine), ${REFERRAL_BONUS_MONTH} jours (1 mois) ou ${REFERRAL_BONUS_2MONTH} jours (2 mois).` },
+    { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Messages → choisissez une photo. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
+    { icon: "Q", titre: "Comment créer mon compte ?", desc: "L'inscription est gratuite et rapide en 3 étapes : email + mot de passe, photo de profil, puis informations personnelles. Votre compte est actif immédiatement." },
+    { icon: "Q", titre: "Je n'ai pas reçu l'email de confirmation ?", desc: "Vérifiez vos spams ou courriers indésirables. Si vous ne le trouvez pas, contactez notre équipe via l'Assistant Moyo Dating avec votre adresse email." },
+    { icon: "Q", titre: "Je me suis retrouvé déconnecté, pourquoi ?", desc: "Moyo Dating essaie toujours de maintenir votre session active automatiquement. Si une déconnexion survient, elle est due à une expiration de session trop longue sans activité. Il vous suffit de vous reconnecter une fois et la session reste active." },
+    { icon: "Q", titre: "Puis-je supprimer ma conversation avec Assistance Moyo Dating ?", desc: "Oui. Dans Messages → conversation Assistance Moyo Dating → icône 🗑️ en haut à droite → Supprimer. L'historique disparaît de votre côté. Notre équipe conserve les échanges pour le suivi." },
+    { icon: "Q", titre: "Combien de temps avant qu'on me réponde sur Assistance Moyo Dating ?", desc: "Notre équipe répond sous 24h. Le statut 'Répond sous 24h' s'affiche en haut de la conversation." },
+    { icon: "Q", titre: "Comment envoyer un message vocal ?", desc: "L'envoi de vocaux est réservé aux membres Premium (l'écoute d'un vocal reçu est libre pour tous). Maintenez appuyé le bouton micro pour enregistrer (1 minute max). Avant l'envoi, choisissez entre Vocal normal (lecture illimitée) ou Écoute unique (il se détruit après écoute)." },
+    { icon: "Q", titre: "Qu'est-ce que le Groupe Premium ?", desc: "Un salon de discussion partagé, réservé aux membres Premium, accessible via le bouton Groupe en haut de la Messagerie. Contrairement à vos conversations privées, tout ce que vous y écrivez est visible par les autres membres. Une demande doit être validée par un administrateur avant d'y accéder." },
+    { icon: "Q", titre: "Comment prendre rendez-vous avec l'équipe Moyo ?", desc: "Depuis le menu, choisissez Rendez-vous, puis un créneau disponible (téléphonique ou physique selon disponibilité). Précisez votre motif (étudier votre cas, améliorer votre profil, préparer une mise en relation) et l'équipe confirme." },
+    { icon: "Q", titre: "Qu'est-ce que le profil relationnel ?", desc: "Un questionnaire (Profil → Demander une mise en relation) qui décrit ce que vous recherchez, pour que l'équipe Moyo Dating vous propose des profils compatibles. Le remplir est gratuit ; l'envoi de la demande à l'équipe est réservé aux membres Premium." },
+    { icon: "Q", titre: "Comment être mis en avant sur les Statuts Moyo Dating ?", desc: "Vous pouvez demander une mise en avant spéciale pour apparaître dans les Statuts officiels de l'app pendant 24h. Chaque demande est examinée et validée par l'équipe avant publication." },
+  ];
+}
 // Déduit la durée (en jours) du Premium à partir du montant payé, selon la formule choisie.
 // Le mois (et tout montant non reconnu : Stripe, cadeau…) retombe sur premium_duration_days.
 // Récompense de parrainage (en jours) selon le montant payé par le filleul.
@@ -347,7 +425,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -373,6 +451,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_show_likes_views_free"] !== undefined) FEATURE_SHOW_LIKES_VIEWS_FREE = map["feature_show_likes_views_free"] === "true";
   if (map["premium_screen_variant"] === "b" || map["premium_screen_variant"] === "a") PREMIUM_SCREEN_VARIANT = map["premium_screen_variant"];
   if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
+  if (map["disabled_builtin_words"] !== undefined) setExemptedBuiltinWords(map["disabled_builtin_words"]);
   if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
   if (map["pay_mtn_number"]) PAY_MTN_NUMBER = map["pay_mtn_number"];
   if (map["pay_mtn_responsable"]) PAY_MTN_RESPONSABLE = map["pay_mtn_responsable"];
@@ -2870,44 +2949,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "star3", titre: "Céleste - Diaspora Belgique", desc: "Enfin une appli faite pour nous ! J'ai trouvé quelqu'un de sérieux en 2 semaines." },
 { icon: "thumbup", titre: "Patrick - Pointe-Noire", desc: "Simple, propre, efficace. Exactement ce qu'il fallait pour la diaspora congolaise." },
     ]},
-    { id: "faq", title: "Questions fréquentes", emoji: "❓", items: [
-      { icon: "Q", titre: "Moyo Dating est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium : ${activePlansText()}.` },
-      { icon: "Q", titre: "Comment naviguer entre les profils ?", desc: "3 modes disponibles : Vue carte (swipe gauche/droite ou boutons ←→), Vue liste (défilement vertical), Plein écran (immersion totale, footer masqué). Passez d'un mode à l'autre via les boutons en haut de l'écran Découvrir." },
-      { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo Dating parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
-      { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: `${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché.` },
-      { icon: "Q", titre: "Puis-je voir le profil complet de quelqu'un gratuitement ?", desc: "Oui. Appuyez sur le bouton ☰ de n'importe quelle carte → 'Voir le profil'. C'est gratuit pour tous les membres, sans restriction." },
-      { icon: "Q", titre: "Comment annuler un match ?", desc: "Dans Matchs, appuyez sur les 3 traits → Annuler le match. La conversation, les likes et les vues sont supprimés. L'autre personne n'est pas notifiée." },
-      { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, le bouton cadeau apparait uniquement si vous êtes Premium. Vous pouvez offrir le Premium à votre partenaire non-premium, en choisissant la formule (1 semaine, 1 mois ou 2 mois)." },
-      { icon: "Q", titre: "Comment obtenir le badge vérifié ?", desc: "Profil → Faire vérifier mon compte → WhatsApp. Gratuit, vérification sous 24h." },
-      { icon: "Q", titre: "Comment inviter un ami ?", desc: "Dans Profil, appuyez sur Inviter un ami. Un message pré-rempli s'ouvre sur WhatsApp ou le partage natif." },
-      { icon: "Q", titre: "Comment activer le mode sombre ?", desc: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
-      { icon: "Q", titre: "Comment rendre mon profil invisible ?", desc: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
-      { icon: "Q", titre: "Pourquoi je ne vois pas mon profil dans Découvrir ?", desc: "Votre profil doit être complet jusqu'à la dernière étape de l'inscription pour apparaître dans Découvrir. Vérifiez aussi que votre profil est bien visible dans les paramètres." },
-      { icon: "Q", titre: "À quoi servent les onglets Likes et Vus ?", desc: "Deux onglets séparés : Likes (personnes qui vous ont liké) et Vus (personnes qui ont visité votre profil). Tout le monde voit le compteur. Premium requis pour voir les cartes et l'identité des personnes." },
-      { icon: "Q", titre: "Qui apparaît dans mes Vues ?", desc: "Uniquement les membres Premium qui ont consulté votre profil. Les membres gratuits ne génèrent pas de vues et n'apparaissent pas dans votre liste Vues." },
-      { icon: "Q", titre: "Comment suis-je informé d'un nouveau match ?", desc: "Dès qu'un match est créé, un message de bienvenue apparaît automatiquement dans la conversation. Le badge rouge sur l'onglet Messages se met à jour en temps réel." },
-      { icon: "Q", titre: "Si je unlike quelqu'un, que se passe-t-il ?", desc: "Le like disparait des deux côtés instantanément. Si vous aviez un match, la conversation et tous les messages sont supprimés." },
-      { icon: "Q", titre: "Que se passe-t-il si j'envoie un message irrespectueux ?", desc: "Moyo Dating bloque automatiquement les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement automatique est envoyé à notre équipe." },
-      { icon: "Q", titre: "Pourquoi je ne peux pas partager mon numéro ou mon WhatsApp ?", desc: "Pour ta sécurité et contre les arnaques, le partage d'un numéro, d'un réseau social ou d'un lien est bloqué dans les messages et dans le profil (bio, nom…) pour les comptes gratuits. Cela vaut même si tu espaces les chiffres ou les écris en lettres. L'abonnement Premium débloque le partage de coordonnées en conversation privée." },
-      { icon: "Q", titre: "Mon compte est suspendu avec un décompte, que faire ?", desc: "Il s'agit d'une suspension temporaire suite à un non-respect des règles. Tu n'as rien à faire : à la fin du décompte affiché, tu peux te reconnecter automatiquement. Une suspension définitive, elle, nécessite de contacter l'assistance." },
-      { icon: "Q", titre: "Comment réagir à un message ?", desc: "Appuyez longuement sur un message pour ouvrir le menu de réactions (👍 ❤️ 😂 😮 😢 🙏). Une seule réaction par message est autorisée." },
-      { icon: "Q", titre: "Comment contacter l'assistance Moyo Dating ?", desc: "Appuyez sur l'icône verte (Assistant Moyo Dating) à côté du bouton Guide. Vous pouvez poser vos questions ou signaler un problème directement depuis l'app." },
-      { icon: "Q", titre: "Puis-je voir le profil de quelqu'un depuis les messages ?", desc: "Oui. Dans une conversation, appuyez sur la photo de profil de votre match en haut de l'écran pour voir sa fiche complète." },
-      { icon: "Q", titre: "Comment répondre à un message précis ?", desc: "Appuyez longuement sur le message → Répondre. Un bandeau s'affiche avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
-      { icon: "Q", titre: "Comment supprimer un message ?", desc: "Appuyez longuement sur le message → Supprimer pour tous (efface le message des deux côtés) ou Supprimer pour moi (masque uniquement de votre côté)." },
-      { icon: "Q", titre: "Que se passe-t-il si je reçois un avertissement ?", desc: "Une notification officielle MOYO apparaît à votre prochaine connexion. Vous devez cliquer 'OK, j'ai compris' pour continuer. Plusieurs avertissements peuvent entraîner la suspension du compte." },
-      { icon: "Q", titre: "Comment payer le Premium via MTN ou Airtel ?", desc: "Appuyez sur 'Passer Premium' → section Congo → choisissez votre opérateur → effectuez le paiement → entrez le numéro de transaction (ID) reçu par SMS → appuyez sur 'J'ai payé'. L'activation est rapide, sous 15 minutes." },
-      { icon: "Q", titre: "Je suis en Europe, comment payer le Premium ?", desc: "Appuyez sur 'Passer Premium' → section Diaspora → bouton 'Visa / Mastercard'. Vous êtes redirigé vers une page de paiement sécurisée Stripe. Entrez votre carte bancaire et confirmez. L'activation est automatique et immédiate." },
-      { icon: "Q", titre: "Mon paiement a été envoyé mais le Premium n'est pas activé ?", desc: "Pour MTN/Airtel : l'activation se fait sous 15 minutes. Pour les paiements par carte (Stripe) : l'activation est automatique et immédiate. Si après 15 minutes vous n'avez rien reçu, contactez notre équipe via l'Assistant Moyo Dating." },
-      { icon: "Q", titre: "Comment voir combien de jours il me reste sur mon Premium ?", desc: "Sur votre page Profil, le bouton Premium devient doré et affiche votre statut en temps réel : nombre de jours restants, ou 'Actif' si votre abonnement est en cours." },
-      { icon: "Q", titre: "Comment fonctionne le parrainage ?", desc: `Depuis votre page Profil, appuyez sur 'Parrainer un ami'. Lorsqu'un ami s'inscrit via votre lien et passe Premium, vous gagnez des jours Premium offerts selon sa formule : ${REFERRAL_BONUS_WEEK} jours (1 semaine), ${REFERRAL_BONUS_MONTH} jours (1 mois) ou ${REFERRAL_BONUS_2MONTH} jours (2 mois).` },
-      { icon: "Q", titre: "Comment publier un statut ?", desc: "Appuyez sur votre avatar dans la barre des statuts en haut de Messages → choisissez une photo. Maximum 2 statuts actifs par 24h. Ils expirent automatiquement après 24h." },
-      { icon: "Q", titre: "Comment créer mon compte ?", desc: "L'inscription est gratuite et rapide en 3 étapes : email + mot de passe, photo de profil, puis informations personnelles. Votre compte est actif immédiatement." },
-      { icon: "Q", titre: "Je n'ai pas reçu l'email de confirmation ?", desc: "Vérifiez vos spams ou courriers indésirables. Si vous ne le trouvez pas, contactez notre équipe via l'Assistant Moyo Dating avec votre adresse email." },
-      { icon: "Q", titre: "Je me suis retrouvé déconnecté, pourquoi ?", desc: "Moyo Dating essaie toujours de maintenir votre session active automatiquement. Si une déconnexion survient, elle est due à une expiration de session trop longue sans activité. Il vous suffit de vous reconnecter une fois et la session reste active." },
-      { icon: "Q", titre: "Puis-je supprimer ma conversation avec Assistance Moyo Dating ?", desc: "Oui. Dans Messages → conversation Assistance Moyo Dating → icône 🗑️ en haut à droite → Supprimer. L'historique disparaît de votre côté. Notre équipe conserve les échanges pour le suivi." },
-      { icon: "Q", titre: "Combien de temps avant qu'on me réponde sur Assistance Moyo Dating ?", desc: "Notre équipe répond sous 24h. Le statut 'Répond sous 24h' s'affiche en haut de la conversation." },
-    ]},
+    { id: "faq", title: "Questions fréquentes", emoji: "❓", items: getLandingFaqItems() },
     { id: "securite", title: "Sécurité & Confidentialité", emoji: "🔒", items: [
       { icon: "shield", titre: "Données sécurisées", desc: "Vos informations sont hébergées de manière sécurisée et ne sont jamais partagées avec des tiers." },
       { icon: "eyeoff", titre: "Profil invisible", desc: "Rendez votre profil invisible depuis vos paramètres sans supprimer votre compte." },
@@ -4275,6 +4317,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   // Nettoyer le flag après lecture
   if (isResume) sessionStorage.removeItem("moyo_signup_resume");
 
+  const [showRequirementsIntro, setShowRequirementsIntro] = useState(!isResume);
   const [step, setStep] = useState(isResume && resumeToken && resumeUid ? 2 : 1);
   const [tempToken, setTempToken] = useState<string | null>(isResume ? resumeToken : sessionStorage.getItem("moyo_signup_token"));
   const [tempUserId, setTempUserId] = useState<string | null>(isResume ? resumeUid : sessionStorage.getItem("moyo_signup_uid"));
@@ -4535,6 +4578,39 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     }
   };
 
+  if (showRequirementsIntro) {
+    const requirements = [
+      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, label: "Une adresse email valide", detail: "Pour créer ton compte et le sécuriser." },
+      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, label: "Un mot de passe", detail: "6 caractères minimum." },
+      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>, label: "Une photo de profil", detail: "Une vraie photo récente de toi, visage visible." },
+      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, label: "Ton âge", detail: "18 ans minimum, obligatoire." },
+      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>, label: "Ta ville", detail: "Pour te proposer des profils adaptés." },
+      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, label: "Ton sexe", detail: "Homme ou Femme." },
+    ];
+    return (
+      <AuthLayout onBack={() => onNav("landing")}>
+        <div style={{ textAlign: "center", marginBottom: 26 }}>
+          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: 12 }}>Avant de commencer</h2>
+          <p style={{ color: "#777", fontSize: "0.85rem", marginTop: 6, lineHeight: 1.5 }}>Voici ce qu'il te faudra pour créer ton compte (environ 2 minutes) :</p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+          {requirements.map((r, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "13px 15px" }}>
+              <div style={{ width: 38, height: 38, borderRadius: 11, background: `linear-gradient(135deg, ${G.rouge}, ${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{r.icon}</div>
+              <div>
+                <div style={{ fontSize: "0.87rem", fontWeight: 700, color: G.brun }}>{r.label}</div>
+                <div style={{ fontSize: "0.76rem", color: "#888", marginTop: 1 }}>{r.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <Btn variant="primary" onClick={() => setShowRequirementsIntro(false)} style={{ width: "100%", marginBottom: 10 }}>Commencer l'inscription →</Btn>
+        <Btn variant="ghost" onClick={() => onNav("landing")} style={{ width: "100%" }}>Retour</Btn>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout onBack={() => step === 1 ? onNav("landing") : setStep(s => s - 1)}>
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
@@ -4549,7 +4625,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "#fff" }}>{step}</div>
           <span style={{ fontSize: "0.88rem", fontWeight: 700, color: G.rouge }}>
             {step === 1 && "Identifiant et mot de passe"}
-            {step === 2 && "Choisis ton genre"}
+            {step === 2 && "Choisis ton sexe"}
             {step === 3 && "Photo de profil"}
             {step === 4 && "Tes informations"}
             {step === 5 && "Informations complémentaires"}
@@ -4581,8 +4657,8 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       {/* ÉTAPE 2 - Genre (déplacé ici pour être choisi avant la photo) */}
       {step === 2 && <>
         <div style={{ textAlign: "center", marginBottom: 8 }}>
-          <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#222", margin: "0 0 8px" }}>Quel est ton genre ?</h3>
-          <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.5, margin: "0 0 24px" }}>Cela nous aide à te proposer les profils qui te correspondent.</p>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#222", margin: "0 0 8px" }}>Quel est ton sexe ?</h3>
+          <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.5, margin: "0 0 24px" }}>Si tu es un homme, clique sur Homme. Si tu es une femme, clique sur Femme. Puis appuie sur Suivant.</p>
         </div>
         <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
           {(["Homme", "Femme"] as const).map(g => {
@@ -5517,7 +5593,35 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         "Toute photo signalée par la communauté ou détectée comme inappropriée peut être retirée par notre équipe, avec avertissement du compte concerné.",
         "En cas de récidive, le compte peut être suspendu temporairement ou définitivement banni.",
       ]},
-      { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo Dating est réservé aux personnes majeures de 18 ans et plus.", "La modération automatique bloque les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement est automatiquement transmis à notre équipe.", "Si votre comportement enfreint les règles, un administrateur peut vous envoyer un avertissement officiel. Une notification apparaît à votre prochaine connexion. Après plusieurs avertissements, le compte peut être banni.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
+      { title: "Groupe Premium", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: [
+        "Le Groupe Premium est un salon de discussion réservé aux membres Premium, accessible via le bouton Groupe en haut de la Messagerie.",
+        "Contrairement à vos conversations privées, tout ce que vous écrivez dans le Groupe est visible par tous les autres membres Premium présents.",
+        "Pour y accéder, envoyez une demande depuis le bouton Groupe : un administrateur doit la valider avant que vous puissiez y écrire.",
+        "Le partage de photos dans le Groupe peut être activé ou désactivé par l'équipe Moyo Dating selon les périodes.",
+      ]},
+      { title: "Rendez-vous avec l'équipe Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, items: [
+        "Vous pouvez prendre rendez-vous avec l'équipe Moyo Dating pour étudier votre cas, améliorer votre profil, ou préparer une mise en relation personnalisée.",
+        "Deux formats possibles selon ce qui est activé : rendez-vous téléphonique, ou rendez-vous physique (un tarif peut s'appliquer pour le physique, indiqué avant confirmation).",
+        "Choisissez un créneau disponible, précisez le motif de votre demande, et l'équipe confirme le rendez-vous.",
+      ]},
+      { title: "Messages vocaux", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>, items: [
+        "L'envoi de messages vocaux est réservé aux membres Premium. L'écoute d'un vocal reçu, elle, est libre pour tous.",
+        "Maintenez appuyé le bouton micro pour enregistrer (1 minute maximum). Glissez vers la gauche pour annuler, ou vers le haut pour verrouiller l'enregistrement mains libres.",
+        "Avant l'envoi, vous pouvez réécouter votre vocal et choisir entre Vocal normal (lecture illimitée, vitesses x1/x1.5/x2) ou Écoute unique (il se détruit automatiquement une fois écouté par le destinataire).",
+      ]},
+      { title: "Profil relationnel", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><path d="M9 12l2 2 4-4"/></svg>, items: [
+        "Le profil relationnel est un questionnaire (accessible depuis Profil → Demander une mise en relation) qui décrit ce que vous recherchez, pour que l'équipe Moyo Dating vous propose des profils vraiment compatibles.",
+        "Le remplir est gratuit et ne prend qu'une minute. La création de la carte est ouverte à tous.",
+        "L'envoi de votre demande à l'équipe (pour être proposé à des profils compatibles) est réservé aux membres Premium.",
+        "Vous pouvez modifier ou supprimer votre profil relationnel à tout moment depuis Profil.",
+      ]},
+      { title: "Mise en avant sur les Statuts", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
+        "En plus de votre statut personnel, vous pouvez demander une mise en avant spéciale : votre profil apparaît alors dans les Statuts Moyo Dating (le statut officiel de l'app) pendant 24h, pour une visibilité maximale.",
+        "Chaque demande de mise en avant est examinée et validée par l'équipe Moyo Dating avant publication.",
+        "Vous pouvez annuler une demande de mise en avant en attente à tout moment ; l'annulation est définitive.",
+      ]},
+      { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo Dating est réservé aux personnes majeures de 18 ans et plus.", "La modération automatique bloque les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement est automatiquement transmis à notre équipe.", "Si votre comportement enfreint les règles, un administrateur peut vous envoyer un avertissement officiel. Une notification apparaît à votre prochaine connexion. Après plusieurs avertissements, le compte peut être banni.", "En cas de bannissement, un encadré Motif s'affiche sur votre écran pour expliquer clairement la raison exacte (par exemple : partage de coordonnées, contenu inapproprié...). Si vous pensez qu'il s'agit d'une erreur, contactez notre équipe via WhatsApp depuis cet écran.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
+      { title: "Questions fréquentes", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, items: getLandingFaqItems() },
       { title: "Assistant Moyo Dating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/></svg>, items: ["L'icône verte en forme de robot à côté du bouton Guide ouvre l'Assistant Moyo Dating.", "Il propose deux options : Besoin d'aide (répond instantanément à vos questions sur l'app) et Signaler un problème (comportement abusif, arnaque, harcèlement).", "Les signalements sont traités par notre équipe sous 24h."] },
           ].map((s, i) => (
             <div key={i} style={{ borderBottom: `1px solid ${G.gris}` }}>
@@ -5535,9 +5639,18 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
               {openGuideSection === i && (
                 <div style={{ padding: "4px 20px 16px" }}>
                   {s.items.map((item, j) => (
-                    <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: j < s.items.length - 1 ? `1px solid ${G.gris}` : "none" }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: G.rouge, flexShrink: 0, marginTop: 6 }} />
-                      <p style={{ fontSize: "0.83rem", color: "#555", lineHeight: 1.6, margin: 0 }}>{item}</p>
+                    <div key={j} style={{ padding: "8px 0", borderBottom: j < s.items.length - 1 ? `1px solid ${G.gris}` : "none" }}>
+                      {typeof item === "string" ? (
+                        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: G.rouge, flexShrink: 0, marginTop: 6 }} />
+                          <p style={{ fontSize: "0.83rem", color: "#555", lineHeight: 1.6, margin: 0 }}>{item}</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun, marginBottom: 4 }}>{item.titre}</div>
+                          <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
