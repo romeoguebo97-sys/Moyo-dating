@@ -2759,17 +2759,11 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
 
   if (linkExpired) {
     return (
-      <AuthLayout onBack={() => onNav("landing")}>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
-            <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
-          </div>
-        </div>
-        <div style={{ textAlign: "center", padding: "12px 8px 24px" }}>
+      <AuthLayout onBack={() => onNav("landing")} title="Ce lien n'est plus valide">
+        <div style={{ textAlign: "center", padding: "20px 8px 24px" }}>
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#222", margin: "0 0 10px" }}>Ce lien n'est plus valide</h2>
           <p style={{ color: "#666", fontSize: "0.88rem", lineHeight: 1.6, margin: "0 0 4px" }}>Il a déjà été utilisé, ou il a expiré (les liens de réinitialisation ne sont valables qu'une seule fois, pendant un temps limité).</p>
         </div>
         <Btn variant="primary" onClick={() => { try { sessionStorage.setItem("moyo_auto_forgot", "1"); } catch {} onNav("login"); }} style={{ width: "100%" }}>Redemander un lien →</Btn>
@@ -2778,16 +2772,10 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
   }
 
   return (
-    <AuthLayout onBack={() => onNav("landing")}>
+    <AuthLayout onBack={() => onNav("landing")} title="Nouveau mot de passe" subtitle="Choisis un nouveau mot de passe sécurisé">
       <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      <div style={{ textAlign: "center", marginBottom: 28 }}>
-        <div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}>
-          <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
-        </div>
-        <h2 style={{  fontSize: "1.5rem", fontWeight: 700, marginTop: 8 }}>Nouveau mot de passe</h2>
-        <p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Choisis un nouveau mot de passe sécurisé</p>
-      </div>
+      <div style={{ marginTop: 20 }} />
       <Input label="Nouveau mot de passe" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimum 6 caractères" icon="lock" hint="Au moins 6 caractères" />
       <Input label="Confirmer le mot de passe" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Répète ton mot de passe" icon="lock" />
       <Btn variant="primary" onClick={handleReset} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!password || !confirm}>
@@ -4032,17 +4020,30 @@ function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () 
   );
 }
 
-function AuthLayout({ children, onBack }: { children: React.ReactNode; onBack: () => void }) {
-  return <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: `linear-gradient(160deg,${G.creme},${G.cremeDark})`, padding: 0, overflowX: "hidden" }}>
-    <div onClick={onBack} style={{ padding: "16px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ width: 42, height: 42, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(192,57,43,0.35)", flexShrink: 0 }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5M12 19l-7-7 7-7"/>
-        </svg>
+function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children: React.ReactNode; onBack: () => void; title?: string; subtitle?: string; stepInfo?: React.ReactNode }) {
+  return <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: G.blanc, padding: 0, overflowX: "hidden" }}>
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <svg viewBox="0 0 400 260" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 220, display: "block" }} preserveAspectRatio="none">
+        <path d="M0,0 L400,0 L400,150 C300,210 100,110 0,175 Z" fill={G.rouge} />
+        <path d="M0,0 L400,0 L400,110 C300,160 110,85 0,140 Z" fill={G.rougeDark} opacity="0.5" />
+      </svg>
+      <div onClick={onBack} style={{ position: "relative", zIndex: 2, padding: "16px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </div>
+        <span style={{ color: "#fff", fontWeight: 600, fontSize: "0.9rem" }}>Accueil</span>
       </div>
-      <span style={{ color: "#555", fontWeight: 600, fontSize: "0.9rem" }}>Accueil</span>
+      {title && (
+        <div style={{ position: "relative", zIndex: 2, padding: "6px 22px 0", color: "#fff" }}>
+          <div style={{ fontSize: "1.4rem", fontWeight: 800 }}>{title}</div>
+          {subtitle && <div style={{ fontSize: "0.85rem", opacity: 0.9, marginTop: 4 }}>{subtitle}</div>}
+          {stepInfo}
+        </div>
+      )}
     </div>
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px 40px" }}><div style={{ background: G.blanc, borderRadius: 24, padding: "36px 24px", width: "100%", maxWidth: 420, boxShadow: "0 20px 70px rgba(44,26,14,0.12)", overflowX: "hidden" }}>{children}</div></div>
+    <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px 40px" }}><div style={{ background: G.blanc, borderRadius: 24, padding: "8px 24px 36px", width: "100%", maxWidth: 420, overflowX: "hidden" }}>{children}</div></div>
   </div>;
 }
 
@@ -4238,13 +4239,10 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     const closeForgot = () => { setShowForgot(false); setForgotMethod("choice"); setForgotSent(false); setForgotEmail(""); setForgotName(""); };
     const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}\n\nPouvez-vous m'aider à le changer ?`)}`;
     return (
-      <AuthLayout onBack={forgotMethod === "choice" ? () => onNav("landing") : () => setForgotMethod("choice")}>
+      <AuthLayout onBack={forgotMethod === "choice" ? () => onNav("landing") : () => setForgotMethod("choice")} title="Mot de passe oublié">
         <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
         {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: 8 }}>Mot de passe oublié</h2>
-        </div>
+        <div style={{ marginTop: 20 }} />
 
         {forgotMethod === "choice" && (
           <>
@@ -4306,7 +4304,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     );
   }
 
-  return <AuthLayout onBack={() => onNav("landing")}><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<div style={{ textAlign: "center", marginBottom: 28 }}><div style={{  fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div><h2 style={{  fontSize: "1.6rem", fontWeight: 700, marginTop: 6 }}>Bon retour !</h2><p style={{ color: "#555", fontSize: "0.85rem", marginTop: 4 }}>Retrouve tes matchs</p></div><Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
 function SignUp({ onNav }: { onNav: (p: string) => void }) {
@@ -4588,13 +4586,8 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, label: "Ton sexe", detail: "Homme ou Femme." },
     ];
     return (
-      <AuthLayout onBack={() => onNav("landing")}>
-        <div style={{ textAlign: "center", marginBottom: 26 }}>
-          <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: 12 }}>Avant de commencer</h2>
-          <p style={{ color: "#777", fontSize: "0.85rem", marginTop: 6, lineHeight: 1.5 }}>Voici ce qu'il te faudra pour créer ton compte (environ 2 minutes) :</p>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+      <AuthLayout onBack={() => onNav("landing")} title="Avant de commencer" subtitle="Voici ce qu'il te faudra pour créer ton compte (environ 2 minutes) :">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28, marginTop: 20 }}>
           {requirements.map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "13px 15px" }}>
               <div style={{ width: 38, height: 38, borderRadius: 11, background: `linear-gradient(135deg, ${G.rouge}, ${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{r.icon}</div>
@@ -4612,34 +4605,31 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   }
 
   return (
-    <AuthLayout onBack={() => step === 1 ? onNav("landing") : setStep(s => s - 1)}>
-      <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
-      {successMsg && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111", marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{signupSuccessMsg}</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-
-      {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div style={{ fontSize: "2rem", color: G.rouge, fontWeight: 700 }}><span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span></div>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 6 }}>Crée ton compte</h2>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 16px" }}>
-          <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "#fff" }}>{step}</div>
-          <span style={{ fontSize: "0.88rem", fontWeight: 700, color: G.rouge }}>
+    <AuthLayout onBack={() => step === 1 ? onNav("landing") : setStep(s => s - 1)} title="Crée ton compte" stepInfo={
+      <>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(255,255,255,0.2)", borderRadius: 50, padding: "6px 16px" }}>
+          <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 800, color: G.rouge }}>{step}</div>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#fff" }}>
             {step === 1 && "Identifiant et mot de passe"}
             {step === 2 && "Choisis ton sexe"}
             {step === 3 && "Photo de profil"}
             {step === 4 && "Tes informations"}
             {step === 5 && "Informations complémentaires"}
           </span>
-          <span style={{ fontSize: "0.75rem", color: "#555", fontWeight: 500 }}>{step}/5</span>
+          <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>{step}/5</span>
         </div>
-      </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+          {[1, 2, 3, 4, 5].map(s => (
+            <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? "#fff" : "rgba(255,255,255,0.3)", transition: "background 0.3s" }} />
+          ))}
+        </div>
+      </>
+    }>
+      <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
+      {successMsg && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111", marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{signupSuccessMsg}</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Barre de progression */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
-        {[1, 2, 3, 4, 5].map(s => (
-          <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? G.rouge : G.gris, transition: "background 0.3s" }} />
-        ))}
-      </div>
+      <div style={{ marginTop: 20 }} />
 
       {/* ÉTAPE 1 - Email + mot de passe */}
       {step === 1 && <>
@@ -5644,6 +5634,17 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
                         <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                           <div style={{ width: 6, height: 6, borderRadius: "50%", background: G.rouge, flexShrink: 0, marginTop: 6 }} />
                           <p style={{ fontSize: "0.83rem", color: "#555", lineHeight: 1.6, margin: 0 }}>{item}</p>
+                        </div>
+                      ) : item.icon === "Q" ? (
+                        <div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
+                            <div style={{ background: G.rouge, color: "#fff", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>Q</div>
+                            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>{item.titre}</div>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                            <div style={{ background: G.or, color: "#111", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>R</div>
+                            <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                          </div>
                         </div>
                       ) : (
                         <div>
