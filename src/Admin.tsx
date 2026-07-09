@@ -307,6 +307,8 @@ export function AdminDesktopPage() {
     customBannedWords: "",
     contactBannedWords: "",
     autoModContactReply: AUTO_MOD_CONTACT_REPLY,
+    featureModerationInsults: "true",
+    featureModerationContact: "true",
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
@@ -322,6 +324,7 @@ export function AdminDesktopPage() {
       "limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
       "premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days",
       "feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium",
+      "feature_moderation_insults","feature_moderation_contact",
       "appointments_enabled","phone_appointments_enabled","physical_appointments_enabled",
       "appointment_physical_price",
       "maintenance_mode","maintenance_message",
@@ -363,6 +366,8 @@ export function AdminDesktopPage() {
         featureAssistant: map["feature_assistant"] || c.featureAssistant,
         featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
         featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos,
+        featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults,
+        featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact,
         appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
         phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
         physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
@@ -630,6 +635,8 @@ export function AdminDesktopPage() {
                 ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
                 ["feature_group_premium", "featureGroupPremium" as keyof typeof appConfig, "Groupe Premium"],
                 ["feature_group_photos", "featureGroupPhotos" as keyof typeof appConfig, "Photos dans le Groupe"],
+                ["feature_moderation_insults", "featureModerationInsults" as keyof typeof appConfig, "Modération auto (insultes, menaces, arnaques, sexuel)"],
+                ["feature_moderation_contact", "featureModerationContact" as keyof typeof appConfig, "Blocage partage de contact (comptes gratuits)"],
               ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
                   <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>{label}</div>
@@ -1696,14 +1703,14 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -1711,7 +1718,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact,
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
         featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
@@ -1772,20 +1779,6 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         )}
       </OffCanvasSection>
       <OffCanvasSection title="Mots interdits (modération)">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 8 }}>
-          <div>
-            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#1a1a1a" }}>Modération auto (insultes, menaces, arnaques, contenu sexuel)</div>
-            <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Bloque l'envoi et crée une alerte système. Désactiver arrête tous les messages ci-dessous d'être filtrés.</div>
-          </div>
-          <SwitchBtn on={appConfig.featureModerationInsults === "true"} onToggle={async () => { const v = appConfig.featureModerationInsults !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, featureModerationInsults: v })); await patch("feature_moderation_insults", v); }} />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 14 }}>
-          <div>
-            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#1a1a1a" }}>Blocage partage de contact (comptes gratuits)</div>
-            <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Bloque numéros, WhatsApp, Instagram, etc. pour les membres non-Premium. Les Premium ne sont jamais concernés.</div>
-          </div>
-          <SwitchBtn on={appConfig.featureModerationContact === "true"} onToggle={async () => { const v = appConfig.featureModerationContact !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, featureModerationContact: v })); await patch("feature_moderation_contact", v); }} />
-        </div>
         <div style={{ fontSize: "0.74rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
           Ces mots/expressions seront bloqués dans les messages, en plus de la liste automatique. Séparez-les par une virgule ou un retour à la ligne. La modification prend effet au prochain chargement de l'app pour les membres.
         </div>
@@ -2972,7 +2965,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     ban_reason?: string | null;
     last_notice_acknowledged?: boolean;
     last_notice_at?: string | null;
-    has_installed_pwa?: boolean;
     is_visible?: boolean;
     created_at?: string;
     last_seen?: string;
@@ -4758,7 +4750,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Listes cliquables des cartes stats "Nouveaux aujourd'hui / Profils vérifiés / bannis / incomplets" ──
   // (même principe que "Premium actifs" ci-dessus, mutualisé pour éviter 4 x 3 states dupliqués)
-  type SimpleUserListType = "today" | "verified" | "banned" | "incomplete";
+  type SimpleUserListType = "today" | "verified" | "banned" | "incomplete" | "pwa";
   const [userListModal, setUserListModal] = useState<SimpleUserListType | null>(null);
   const [userListProfiles, setUserListProfiles] = useState<AdminProfile[]>([]);
   const [userListLoading, setUserListLoading] = useState(false);
@@ -4783,6 +4775,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
       gradient: "linear-gradient(135deg,#e67e22,#c0392b)",
     },
+    pwa: {
+      title: "App installée (PWA)",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
+      gradient: "linear-gradient(135deg,#8e44ad,#5e2d73)",
+    },
   }[t]);
   useEffect(() => {
     if (!userListModal || !auth) return;
@@ -4794,6 +4791,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       verified: `is_verified=eq.true&order=created_at.desc`,
       banned: `is_banned=eq.true&order=created_at.desc`,
       incomplete: `is_complete=eq.false&order=created_at.desc`,
+      pwa: `has_installed_pwa=eq.true&order=created_at.desc`,
     };
     fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,name,age,city,gender,photo_url,is_verified,is_banned,is_complete,created_at&${filterQs[userListModal]}&limit=200`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
@@ -5374,6 +5372,48 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setArchivingConv(null);
   };
   const [supportReplyText, setSupportReplyText] = useState("");
+
+  // ── Nouveau message : permet à l'admin d'écrire EN PREMIER à un membre via l'Assistant Moyo
+  //    Dating, sans attendre qu'il contacte le support. Réutilise exactement la même logique
+  //    d'insertion que sendSupportReply (préfixe SUPPORT_PREFIX_REPLY), donc le message apparaît
+  //    chez l'utilisateur exactement comme une réponse normale de l'Assistance. ──
+  const [newMsgOpen, setNewMsgOpen] = useState(false);
+  const [newMsgSearch, setNewMsgSearch] = useState("");
+  const [newMsgResults, setNewMsgResults] = useState<{ id: string; name: string }[]>([]);
+  const [newMsgSearching, setNewMsgSearching] = useState(false);
+  const [newMsgTarget, setNewMsgTarget] = useState<{ id: string; name: string } | null>(null);
+  const [newMsgText, setNewMsgText] = useState("");
+  const [newMsgSending, setNewMsgSending] = useState(false);
+  const searchUsersForNewMsg = async (q: string) => {
+    setNewMsgSearch(q);
+    if (q.trim().length < 2) { setNewMsgResults([]); return; }
+    setNewMsgSearching(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(q.trim())}*&select=id,name&limit=8`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+      });
+      const d = await r.json().catch(() => []);
+      setNewMsgResults(Array.isArray(d) ? d : []);
+    } catch { setNewMsgResults([]); }
+    setNewMsgSearching(false);
+  };
+  const closeNewMsg = () => { setNewMsgOpen(false); setNewMsgSearch(""); setNewMsgResults([]); setNewMsgTarget(null); setNewMsgText(""); };
+  const sendNewSupportMessage = async () => {
+    if (!newMsgTarget || !newMsgText.trim()) return;
+    setNewMsgSending(true);
+    try {
+      await sb.insert<ReportRow>(auth.token, "reports", {
+        reporter_id: newMsgTarget.id,
+        reported_id: newMsgTarget.id,
+        reason: `${SUPPORT_PREFIX_REPLY} ${newMsgText.trim()}`,
+        status: "reviewed",
+      });
+      showToast(`Message envoyé à ${newMsgTarget.name} dans sa messagerie.`, "success");
+      closeNewMsg();
+      loadStats();
+    } catch { showToast("Impossible d'envoyer le message.", "error"); }
+    setNewMsgSending(false);
+  };
 
   // ── Users ──
   const [users, setUsers] = useState<AdminProfile[]>([]);
@@ -6014,7 +6054,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       // Supabase : DELETE avec filtre IN sur les IDs archivés uniquement
       const inList = archivedIds.map(id => `"${id}"`).join(",");
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/reports?id=in.(${archivedIds.join(",")})`,
+        `${SUPABASE_URL}/rest/v1/reports?id=in.(${archivedIds.join(",")})&status=in.(reviewed,rejected,banned)`,
         {
           method: "DELETE",
           headers: {
@@ -6271,6 +6311,60 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <Btn variant="ghost" onClick={() => setConfirmModal(null)} style={{ flex: 1, padding: "11px" }}>Annuler</Btn>
               <Btn variant="danger" onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }} style={{ flex: 1, padding: "11px" }}>Confirmer</Btn>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nouveau message (Assistant Moyo Dating → écrire en premier à un membre) */}
+      {newMsgOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10010, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "24px 22px", width: "100%", maxWidth: 380, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun }}>Nouveau message</div>
+              <button onClick={closeNewMsg} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
+            </div>
+
+            {!newMsgTarget ? (
+              <>
+                <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 10 }}>Choisis le membre à qui écrire en premier.</div>
+                <input
+                  autoFocus
+                  value={newMsgSearch}
+                  onChange={e => searchUsersForNewMsg(e.target.value)}
+                  placeholder="Rechercher un membre par nom…"
+                  style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "11px 14px", fontSize: "0.86rem", outline: "none", marginBottom: 12 }}
+                />
+                {newMsgSearching && <div style={{ textAlign: "center", padding: 14, color: "#aaa", fontSize: "0.8rem" }}>Recherche…</div>}
+                {!newMsgSearching && newMsgSearch.trim().length >= 2 && newMsgResults.length === 0 && (
+                  <div style={{ textAlign: "center", padding: 14, color: "#aaa", fontSize: "0.8rem" }}>Aucun résultat</div>
+                )}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {newMsgResults.map(u => (
+                    <div key={u.id} onClick={() => { setNewMsgTarget({ id: u.id, name: u.name }); setNewMsgResults([]); setNewMsgSearch(""); }} style={{ padding: "10px 12px", borderRadius: 10, background: G.creme, cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, color: G.brun }}>
+                      {u.name}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: G.creme, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+                  <span style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun, flex: 1 }}>À : {newMsgTarget.name}</span>
+                  <button onClick={() => setNewMsgTarget(null)} style={{ border: "none", background: "none", color: G.rouge, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Changer</button>
+                </div>
+                <textarea
+                  autoFocus
+                  value={newMsgText}
+                  onChange={e => setNewMsgText(e.target.value)}
+                  placeholder="Écris ton message…"
+                  rows={4}
+                  style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "11px 14px", fontSize: "0.86rem", outline: "none", resize: "vertical", fontFamily: "inherit", marginBottom: 14 }}
+                />
+                <Btn variant="primary" disabled={!newMsgText.trim() || newMsgSending} onClick={sendNewSupportMessage} style={{ width: "100%" }}>
+                  {newMsgSending ? "Envoi…" : "Envoyer"}
+                </Btn>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -7469,12 +7563,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Premium actifs", stats.premiumUsers, "#D4A843", "premium"],
                     ["Profils vérifiés", stats.verifiedUsers, G.vert, "verified"],
                     ["Profils bannis", stats.bannedUsers, "#e74c3c", "banned"],
-                    ["App installée (PWA)", stats.pwaInstalls, "#8e44ad", null],
+                    ["App installée (PWA)", stats.pwaInstalls, "#8e44ad", "pwa"],
                   ] as [string, number, string, string | null][]).map(([label, val, color, action]) => (
                     <div key={label} onClick={() => {
                       if (action === "premium") setShowPremiumList(true);
                       else if (action === "matches") setShowMatchList(true);
-                      else if (action === "today" || action === "verified" || action === "banned") setUserListModal(action);
+                      else if (action === "today" || action === "verified" || action === "banned" || action === "pwa") setUserListModal(action);
                     }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
                       <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val}</div>
                       <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>{label}</div>
@@ -8465,6 +8559,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </h3>
               {effectiveFilter === "archived" && archivedCount > 0 && (
                 <span style={{ fontSize: "0.7rem", color: "#aaa" }}>Supprimables</span>
+              )}
+              {activeTab === "messagerie" && msgSubTab === "assistant" && (
+                <button onClick={() => setNewMsgOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "8px 14px", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer" }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Nouveau message
+                </button>
               )}
             </div>
 

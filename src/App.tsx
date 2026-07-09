@@ -282,10 +282,6 @@ let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
 export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
 let FEATURE_GROUP_PHOTOS = true;
-// Modération automatique : insultes/menaces/arnaques/contenu sexuel (moderateMessage).
-let FEATURE_MODERATION_INSULTS = true;
-// Blocage automatique du partage de numéro/réseaux pour les comptes gratuits (hasContactInfo).
-let FEATURE_MODERATION_CONTACT = true;
 let APPOINTMENTS_ENABLED = true;
 let APPT_PHONE_ENABLED = true;
 let APPT_PHYSICAL_ENABLED = true;
@@ -363,8 +359,6 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_group_premium"] !== undefined) FEATURE_GROUP_PREMIUM = map["feature_group_premium"] !== "false";
   if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
-  if (map["feature_moderation_insults"] !== undefined) FEATURE_MODERATION_INSULTS = map["feature_moderation_insults"] !== "false";
-  if (map["feature_moderation_contact"] !== undefined) FEATURE_MODERATION_CONTACT = map["feature_moderation_contact"] !== "false";
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
@@ -581,7 +575,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -1049,53 +1043,6 @@ const getStatusSignedFallbackUrl = async (token: string, url?: string | null): P
 // Ne touche à AUCUNE logique réseau : c'est juste un timer parallèle.
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
-// ── État interne de la connexion Realtime partagée (voir sb.subscribeRealtime plus bas) ──
-let _rtSocket: WebSocket | null = null;
-let _rtToken: string | null = null;
-const _rtListeners: Record<string, Set<() => void>> = {};
-let _rtReconnectTimer: ReturnType<typeof setTimeout> | null = null;
-function _rtEnsureSocket(token: string): WebSocket {
-  if (_rtSocket && _rtToken === token &&
-      (_rtSocket.readyState === WebSocket.OPEN || _rtSocket.readyState === WebSocket.CONNECTING)) {
-    return _rtSocket;
-  }
-  try { _rtSocket?.close(); } catch {}
-  _rtToken = token;
-  const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
-  const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
-  _rtSocket = ws;
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
-    // Ré-abonnement à tous les topics encore actifs (utile après une reconnexion)
-    Object.keys(_rtListeners).forEach(topic => {
-      const set = _rtListeners[topic];
-      if (set && set.size > 0) {
-        ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
-      }
-    });
-  };
-  ws.onmessage = (e) => {
-    try {
-      const msg = JSON.parse(e.data);
-      if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") {
-        const cbs = _rtListeners[msg.topic];
-        cbs?.forEach(cb => { try { cb(); } catch {} });
-      }
-    } catch {}
-  };
-  ws.onerror = () => {};
-  ws.onclose = () => {
-    if (_rtSocket !== ws) return;
-    _rtSocket = null;
-    const hasListeners = Object.values(_rtListeners).some(s => s && s.size > 0);
-    if (hasListeners) {
-      if (_rtReconnectTimer) clearTimeout(_rtReconnectTimer);
-      _rtReconnectTimer = setTimeout(() => { if (_rtToken) _rtEnsureSocket(_rtToken); }, 2000);
-    }
-  };
-  return ws;
-}
-
 export const sb = {
   // ── Callback injecté par App pour déclencher la déconnexion propre ──
   _onAuthFailure: null as (() => void) | null,
@@ -1363,40 +1310,22 @@ export const sb = {
     });
   },
 
-  // ── Connexion Realtime partagée : une SEULE connexion WebSocket par utilisateur, sur laquelle on
-  //    "s'abonne" à plusieurs tables à la fois (comme plusieurs stations captées par une même antenne),
-  //    au lieu d'ouvrir une connexion séparée par écoute (messages, likes, matchs, vues, avertissements,
-  //    broadcasts...). Avant ce correctif, chaque personne active ouvrait 7 à 10+ connexions simultanées
-  //    rien que pour les badges — ce qui épuisait très vite le quota de connexions Realtime de Supabase
-  //    à seulement quelques centaines d'utilisateurs actifs en même temps. Le contrat public de
-  //    subscribeRealtime() ne change pas (toujours un objet avec .close()), donc aucun des appels
-  //    existants dans le reste du code n'a besoin d'être modifié. ──
-  subscribeRealtime(token: string, table: string, filter: string, callback: () => void): { close: () => void } | null {
+  subscribeRealtime(token: string, table: string, filter: string, callback: () => void): WebSocket | null {
     try {
-      const topic = `realtime:public:${table}:${filter}`;
-      if (!_rtListeners[topic]) _rtListeners[topic] = new Set();
-      const isFirstForTopic = _rtListeners[topic].size === 0;
-      _rtListeners[topic].add(callback);
-      const ws = _rtEnsureSocket(token);
-      if (isFirstForTopic && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
-      }
-      // Si le socket n'est pas encore ouvert, l'abonnement se fera automatiquement dans onopen ci-dessus.
-      return {
-        close: () => {
-          const set = _rtListeners[topic];
-          if (!set) return;
-          set.delete(callback);
-          if (set.size === 0) {
-            delete _rtListeners[topic];
-            try {
-              if (_rtSocket && _rtSocket.readyState === WebSocket.OPEN) {
-                _rtSocket.send(JSON.stringify({ topic, event: "phx_leave", payload: {}, ref: topic + "_leave" }));
-              }
-            } catch {}
-          }
-        },
+      const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
+      const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
+        ws.send(JSON.stringify({ topic: `realtime:public:${table}:${filter}`, event: "phx_join", payload: { access_token: token }, ref: "2" }));
       };
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") callback();
+        } catch {}
+      };
+      ws.onerror = () => {};
+      return ws;
     } catch { return null; }
   },
 };
@@ -1852,7 +1781,7 @@ function UploadRingOverlay({ active, size, ringColor, children }: { active: bool
   );
 }
 
-function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string }) {
+function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string; giftFor?: { id: string; name: string } | null }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer");
   // ── Congo ou diaspora ? Déterminé depuis la ville du profil ("Diaspora Europe", "Diaspora
   //    Amérique", etc. sont déjà des options existantes dans le formulaire de profil). Tant que
@@ -1931,7 +1860,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
     })();
   }, [token]);
 
-  const title = reason && reason.trim() ? reason.trim() : "Passez à Premium";
+  const title = giftFor ? `Offrir Premium à ${giftFor.name}` : (reason && reason.trim() ? reason.trim() : "Passez à Premium");
   const fmt = (n: number | null) => n === null ? "…" : n.toLocaleString("fr-FR");
 
   const highlights = [
@@ -2055,7 +1984,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </div>
           </div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>{isDiaspora ? title : "Comment veux-tu payer ?"}</div>
+          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>{(isDiaspora || giftFor) ? title : "Comment veux-tu payer ?"}</div>
           <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>{isDiaspora ? `Abonnement mensuel · ${PREMIUM_PRICE_EUR}€ / mois` : `${selectedPlan.label} · ${planAmount.toLocaleString("fr-FR")} FCFA`}</div>
         </div>
         <div style={{ flex: 1, padding: "0 20px" }}>
@@ -2085,7 +2014,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
                 if (!PAY_CB_ENABLED) return;
                 try {
                   const win = window.open("", "_blank");
-                  const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
+                  const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: giftFor ? giftFor.id : userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
                   const data = await r.json();
                   if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
                 } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
@@ -2239,23 +2168,28 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
     const submitId = async () => {
       setTxLoading(true); setTxErr(null);
       const ref = txRef.trim();
+      const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
-          method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({ p_transaction_id: ref, p_user_id: userId }),
-        });
-        const data = await r.json().catch(() => null);
-        if (r.ok && data && data.success) {
-          setTxGrantDays(typeof data.days === "number" ? data.days : null);
-          setTxActivated(true); setTxSent(true); setTxLoading(false); return;
+        // En mode cadeau, on ne tente jamais l'activation auto instantanée (elle est prévue pour un
+        // achat pour soi-même) : on passe directement par la demande manuelle, pour être certain que
+        // c'est bien le destinataire du cadeau qui est crédité, pas la personne qui paie.
+        if (!giftFor) {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
+            method: "POST", headers: commonHeaders,
+            body: JSON.stringify({ p_transaction_id: ref, p_user_id: userId }),
+          });
+          const data = await r.json().catch(() => null);
+          if (r.ok && data && data.success) {
+            setTxGrantDays(typeof data.days === "number" ? data.days : null);
+            setTxActivated(true); setTxSent(true); setTxLoading(false); return;
+          }
+          if (data && data.error === "already_used") {
+            setTxErr("Paiement déjà utilisé. Ce numéro de transaction a déjà servi à activer un abonnement.");
+            setTxLoading(false); return;
+          }
+          await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
         }
-        if (data && data.error === "already_used") {
-          setTxErr("Paiement déjà utilisé. Ce numéro de transaction a déjà servi à activer un abonnement.");
-          setTxLoading(false); return;
-        }
-        const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: ref, amount: submitAmount, status: "pending" }) });
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: ref, amount: submitAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}) }) });
         setTxActivated(false); setTxSent(true);
       } catch {
         setTxActivated(false); setTxSent(true);
@@ -2277,8 +2211,10 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
         if (!uploadRes.ok) throw new Error("upload_failed");
         const screenshotUrl = `${SUPABASE_URL}/storage/v1/object/public/payment-proofs/${path}`;
         const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: null, screenshot_url: screenshotUrl, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: `[capture] ${screenshotUrl}`, amount: submitAmount, status: "pending" }) });
+        if (!giftFor) {
+          await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: null, screenshot_url: screenshotUrl, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
+        }
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: `[capture] ${screenshotUrl}`, amount: submitAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}) }) });
         setScreenshotSent(true);
       } catch {
         setTxErr("Envoi impossible, réessaie dans un instant.");
@@ -2293,7 +2229,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={txActivated ? "#1A5C3A" : gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
           </div>
           <div style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{txActivated ? "Premium activé !" : "Demande envoyée"}</div>
-          <p style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 20 }}>{txActivated ? `Ton abonnement ${selectedPlan.label} est actif dès maintenant.` : "Notre équipe vérifie ton paiement, ça ne prend généralement pas longtemps."}</p>
+          <p style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 20 }}>{txActivated ? `Ton abonnement ${selectedPlan.label} est actif dès maintenant.` : (giftFor ? `Notre équipe vérifie le paiement. Le Premium de ${giftFor.name} sera activé sous peu.` : "Notre équipe vérifie ton paiement, ça ne prend généralement pas longtemps.")}</p>
           <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>Terminer</Btn>
         </div>
       </div>
@@ -2457,7 +2393,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               if (!PAY_CB_ENABLED) return;
               try {
                 const win = window.open("", "_blank");
-                const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
+                const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY }, body: JSON.stringify({ user_id: giftFor ? giftFor.id : userId, user_email: userEmail || "", amount_euros: PREMIUM_PRICE_EUR }) });
                 const data = await r.json();
                 if (data.url && win) win.location.href = data.url; else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
               } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
@@ -2490,45 +2426,50 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
     setTxLoading(true);
     setTxErr(null);
     const ref = txRef.trim();
+    const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
     try {
-      // 1) Vérification automatique : on cherche le paiement reçu par SMS (Moyo Dating Payment Listener).
-      //    La formule est déterminée par le MONTANT RÉELLEMENT REÇU, pas par la formule choisie.
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ p_transaction_id: ref, p_user_id: userId }),
-      });
-      const data = await r.json().catch(() => null);
+      // En mode cadeau, pas d'activation auto instantanée (voir même logique côté flow B) : on
+      // s'assure que c'est bien le destinataire du cadeau qui est crédité, via la demande manuelle.
+      if (!giftFor) {
+        // 1) Vérification automatique : on cherche le paiement reçu par SMS (Moyo Dating Payment Listener).
+        //    La formule est déterminée par le MONTANT RÉELLEMENT REÇU, pas par la formule choisie.
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
+          method: "POST",
+          headers: commonHeaders,
+          body: JSON.stringify({ p_transaction_id: ref, p_user_id: userId }),
+        });
+        const data = await r.json().catch(() => null);
 
-      if (r.ok && data && data.success) {
-        // Premium activé instantanément.
-        setTxGrantDays(typeof data.days === "number" ? data.days : null);
-        setTxActivated(true);
-        setTxSent(true);
-        setTxLoading(false);
-        return;
+        if (r.ok && data && data.success) {
+          // Premium activé instantanément.
+          setTxGrantDays(typeof data.days === "number" ? data.days : null);
+          setTxActivated(true);
+          setTxSent(true);
+          setTxLoading(false);
+          return;
+        }
+
+        if (data && data.error === "already_used") {
+          setTxErr("Paiement déjà utilisé. Ce numéro de transaction a déjà servi à activer un abonnement.");
+          setTxLoading(false);
+          return;
+        }
+
+        // 2) Repli : transaction pas encore reçue (SMS en route) ou fonction absente →
+        //    on crée une DEMANDE DE VÉRIFICATION MANUELLE et on conserve la demande
+        //    de paiement classique, pour que l'équipe Moyo Dating garde la main (rien n'est perdu).
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
       }
-
-      if (data && data.error === "already_used") {
-        setTxErr("Paiement déjà utilisé. Ce numéro de transaction a déjà servi à activer un abonnement.");
-        setTxLoading(false);
-        return;
-      }
-
-      // 2) Repli : transaction pas encore reçue (SMS en route) ou fonction absente →
-      //    on crée une DEMANDE DE VÉRIFICATION MANUELLE et on conserve la demande
-      //    de paiement classique, pour que l'équipe Moyo Dating garde la main (rien n'est perdu).
-      const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}) }) });
       setTxActivated(false);
       setTxSent(true);
     } catch {
       // En cas d'erreur réseau, on tente quand même d'enregistrer la demande (vérification + paiement).
-      const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
-      try { await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }); } catch {}
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending" }) });
+        if (!giftFor) await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) });
+      } catch {}
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}) }) });
       } catch {}
       setTxActivated(false);
       setTxSent(true);
@@ -2600,7 +2541,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail }: { onClose: 
               ) : (
                 <>
                   <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>✓ Numéro ID envoyé avec succès !</div>
-                  <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Votre paiement est en cours de vérification. L'activation est automatique dès réception, sinon notre équipe la validera dans les plus brefs délais.</div>
+                  <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>{giftFor ? `Votre paiement est en cours de vérification. Le Premium de ${giftFor.name} sera activé dans les plus brefs délais.` : "Votre paiement est en cours de vérification. L'activation est automatique dès réception, sinon notre équipe la validera dans les plus brefs délais."}</div>
                 </>
               )}
               <button onClick={onClose} style={{ marginTop: 14, background: "#27ae60", color: "#fff", border: "none", borderRadius: 50, padding: "11px 26px", fontWeight: 700, cursor: "pointer", fontSize: "0.86rem" }}>Fermer</button>
@@ -8558,7 +8499,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
 
 type ReportRowLike = { id?: string; reason: string; reporter_id: string; reported_id: string | null; status?: string; created_at?: string };
 
-export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId, onConvOpen, onStatusStackChange, onGoDiscover }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null) => void; onGoDiscover?: () => void }) {
+export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium, initialPartnerId, onConvOpen, onStatusStackChange, onGoDiscover }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; onShowGiftPremium?: (partner: { id: string; name: string }) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null) => void; onGoDiscover?: () => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   const [showGroup, setShowGroup] = useState(false); // Groupe Premium : écran séparé, indépendant de la logique 1-à-1
@@ -9688,7 +9629,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       return;
     }
     // Modération : insultes, arnaques, contenu interdit
-    const mod = FEATURE_MODERATION_INSULTS ? moderateMessage(text) : { blocked: false };
+    const mod = moderateMessage(text);
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       // ── Alerte système auto-mod : ce n'est PAS un signalement utilisateur contre un autre profil.
@@ -9709,13 +9650,13 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
       }
       return;
     }
-    if (FEATURE_MODERATION_CONTACT && !auth.isPremium && hasContactInfo(text)) {
+    if (!auth.isPremium && hasContactInfo(text)) {
       // ── Signalement automatique : tentative de partage/demande de contact par un compte gratuit ──
       try {
         await sb.insert(auth.token, "reports", {
           reporter_id: auth.userId,
           reported_id: null,
-          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim()} · Réponse auto envoyée`,
+          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim().substring(0, 120)} · Réponse auto envoyée`,
           status: "pending",
         });
         // ── Réponse automatique de l'Assistant Moyo Dating à l'auteur (apparaît dans SA messagerie support) ──
@@ -10334,20 +10275,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
     }).catch(() => {});
   };
 
-  const [showGift, setShowGift] = useState(false);
-  const [giftStep, setGiftStep] = useState<"operator" | "mtn" | "airtel">("operator");
-  const [giftTxRef, setGiftTxRef] = useState("");
-  const [giftTxSent, setGiftTxSent] = useState(false);
-  const [giftPlanId, setGiftPlanId] = useState("1mois");
-  const GIFT_PLANS = [
-    PLAN_WEEK_ENABLED && { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA },
-    PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, popular: true },
-    PLAN_2MONTH_ENABLED && { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
-  ].filter(Boolean) as { id: string; label: string; per: string; amount: number; popular?: boolean; badge?: string | null }[];
-  const giftPlan = GIFT_PLANS.find(p => p.id === giftPlanId) || GIFT_PLANS[0];
-  const giftAmount = giftPlan.amount;
-  const [giftTxLoading, setGiftTxLoading] = useState(false);
-
   const isWideMsg = window.innerWidth >= 768;
   // ── Hauteur utilisable mesurée en JS (visualViewport), plus fiable que 100dvh sur iOS où la
   //    barre d'adresse/les zones de sécurité faussent parfois le calcul CSS de quelques pixels —
@@ -10678,7 +10605,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
         )}
         {/* Bouton cadeau - offrir Premium : visible UNIQUEMENT aux utilisateurs Premium */}
         {FEATURE_GIFT_PREMIUM && auth.isPremium && !open.partner?.is_premium && (
-          <div onClick={() => setShowGift(true)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Offrir Premium">
+          <div onClick={() => open.partner && onShowGiftPremium?.({ id: open.partner.id, name: open.partner.name })} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Offrir Premium">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
               <path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
@@ -10691,204 +10618,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
           </svg>
         </div>
       </div>
-
-      {/* Modal Offrir Premium */}
-      {showGift && (
-        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom)" }}>
-
-            {/* ── Étape choix opérateur ── */}
-            {giftStep === "operator" && (
-              <>
-                <div style={{ background: `linear-gradient(135deg,#D4A843,#B8922E)`, padding: "20px 20px 18px" }}>
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-                    <div onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ cursor: "pointer", background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
-                    </div>
-                    <div>
-                      <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.72rem", fontWeight: 600 }}>Offrir à</div>
-                      <div style={{ color: "#fff", fontSize: "1.2rem", fontWeight: 800 }}>{open.partner?.name}</div>
-                    </div>
-                    <div style={{ marginLeft: "auto", textAlign: "right" }}>
-                      <div style={{ color: "#fff", fontSize: "1.4rem", fontWeight: 800 }}>{`${giftAmount.toLocaleString()} FCFA`}</div>
-                      <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>{giftPlan.label} Premium</div>
-                    </div>
-                  </div>
-                </div>
-                <div style={{ padding: "20px 20px 28px" }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>{GIFT_PLANS.length > 1 ? "Choisissez la formule à offrir" : "Formule à offrir"}</div>
-                  <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-                    {GIFT_PLANS.map(pl => {
-                      const sel = pl.id === giftPlanId;
-                      return (
-                        <div key={pl.id} onClick={() => setGiftPlanId(pl.id)} style={{ flex: 1, position: "relative", cursor: "pointer", background: sel ? "#FBF1D8" : G.blanc, border: `2px solid ${sel ? "#D4A843" : "#ece9e2"}`, borderRadius: 14, padding: "13px 6px 11px", textAlign: "center", boxShadow: sel ? "0 4px 14px rgba(212,168,67,0.28)" : "0 1px 4px rgba(0,0,0,0.04)" }}>
-                          {pl.popular && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: "#D4A843", color: "#fff", fontSize: "0.52rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 8px", borderRadius: 50, whiteSpace: "nowrap" }}>POPULAIRE</div>}
-                          {pl.badge && <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: "#1A5C3A", color: "#fff", fontSize: "0.52rem", fontWeight: 800, letterSpacing: 0.5, padding: "2px 8px", borderRadius: 50, whiteSpace: "nowrap" }}>{pl.badge}</div>}
-                          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: sel ? "#7a5a10" : "#8a8a8a", marginBottom: 5 }}>{pl.label}</div>
-                          <div style={{ fontSize: "0.95rem", fontWeight: 800, color: sel ? "#3a2e10" : "#1a1a2e", lineHeight: 1.05 }}>{pl.amount.toLocaleString("fr-FR")}</div>
-                          <div style={{ fontSize: "0.58rem", fontWeight: 700, color: sel ? "#7a5a10" : "#9a9a9a" }}>FCFA</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#888", textAlign: "center", marginBottom: 14, textTransform: "uppercase", letterSpacing: 0.5 }}>Congo - Choisissez votre opérateur</div>
-                  <button onClick={() => PAY_MTN_ENABLED && setGiftStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "linear-gradient(135deg,#FFCC00,#F5A623)" : "#cccccc", color: PAY_MTN_ENABLED ? "#1a1a1a" : "#888", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: PAY_MTN_ENABLED ? "0 4px 14px rgba(245,166,35,0.35)" : "none", opacity: PAY_MTN_ENABLED ? 1 : 0.7 }}>
-                    <div style={{ width: "18%", display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
-                      <svg viewBox="0 0 120 60" width="54" height="27" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
-                    </div>
-                    <span style={{ flex: 1, textAlign: "center" }}>MTN Mobile Money{!PAY_MTN_ENABLED && <span style={{ display: "block", fontSize: "0.62rem", fontWeight: 700 }}>Temporairement indisponible</span>}</span>
-                  </button>
-                  <button onClick={() => PAY_AIRTEL_ENABLED && setGiftStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: PAY_AIRTEL_ENABLED ? "linear-gradient(135deg,#e8f4f8,#d0e8f0)" : "#cccccc", color: PAY_AIRTEL_ENABLED ? "#c0392b" : "#888", border: PAY_AIRTEL_ENABLED ? "2px solid #e74c3c" : "2px solid #bbb", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: PAY_AIRTEL_ENABLED ? "0 4px 14px rgba(231,76,60,0.15)" : "none", opacity: PAY_AIRTEL_ENABLED ? 1 : 0.7 }}>
-                    <div style={{ width: "18%", display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
-                      <svg viewBox="0 0 80 60" width="40" height="30" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="80" height="60" fill="#fff0f0" rx="4"/>
-                        <path d="M12 38 Q8 18 22 12 Q36 6 38 20 Q40 34 28 36 Q16 38 14 30" fill="#e74c3c" stroke="none"/>
-                        <text x="44" y="28" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#e74c3c">airtel</text>
-                        <text x="44" y="44" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="13" fill="#D4A843">money</text>
-                      </svg>
-                    </div>
-                    <span style={{ flex: 1, textAlign: "center" }}>Airtel Money{!PAY_AIRTEL_ENABLED && <span style={{ display: "block", fontSize: "0.62rem", fontWeight: 700 }}>Temporairement indisponible</span>}</span>
-                  </button>
-                  {/* Stripe pour la diaspora */}
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#888", textAlign: "center", margin: "14px 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>Diaspora - Payer par carte</div>
-                  <button onClick={async () => {
-                    try {
-                      const win = window.open("", "_blank");
-                      const r = await fetch(`${SUPABASE_URL}/functions/v1/create-stripe-session`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY },
-                        body: JSON.stringify({ user_id: open.partner?.id || auth.userId, user_email: auth.email || "", amount_euros: PREMIUM_PRICE_EUR }),
-                      });
-                      const data = await r.json();
-                      if (data.url && win) { win.location.href = data.url; }
-                      else { win?.close(); alert("Erreur : " + (data.error || "inconnue")); }
-                    } catch (e: any) { alert("Erreur : " + (e?.message || "réseau")); }
-                  }} disabled={!PAY_CB_ENABLED} style={{ width: "100%", background: PAY_CB_ENABLED ? "linear-gradient(135deg,#1A5C3A,#0D2E1C)" : "#cccccc", color: PAY_CB_ENABLED ? "white" : "#888", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.95rem", fontWeight: 800, cursor: PAY_CB_ENABLED ? "pointer" : "not-allowed", marginBottom: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: PAY_CB_ENABLED ? "0 4px 14px rgba(26,92,58,0.4)" : "none", opacity: PAY_CB_ENABLED ? 1 : 0.7 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={PAY_CB_ENABLED ? "white" : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                      Visa / Mastercard · {PREMIUM_PRICE_EUR}€ · 1 mois
-                    </span>
-                    {!PAY_CB_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}>Temporairement indisponible</span>}
-                  </button>
-                  <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ width: "100%", fontSize: "0.88rem", color: "#555", cursor: "pointer", fontWeight: 600, padding: "13px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc }}>Non merci, plus tard</button>
-                </div>
-              </>
-            )}
-
-            {/* ── Étape MTN ── */}
-            {giftStep === "mtn" && (
-              <>
-                <div style={{ background: "linear-gradient(135deg,#FFCC00,#F5A623)", padding: "20px 20px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                    <div onClick={() => setGiftStep("operator")} style={{ cursor: "pointer", background: "rgba(0,0,0,0.1)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                    </div>
-                    <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, display: "flex", alignItems: "center", gap: 8 }}>
-                      <svg viewBox="0 0 120 60" width="42" height="21" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="4"/><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="4"/><text x="60" y="38" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#1a1a1a">MTN</text></svg>
-                      Cadeau Premium pour {open.partner?.name}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(0,0,0,0.6)", marginLeft: 42 }}>{`${giftAmount.toLocaleString()} FCFA · ${giftPlan.label}`}</div>
-                </div>
-                <div style={{ padding: "20px 20px 32px" }}>
-                  <div style={{ background: "#fffbf0", border: "2px solid #FFCC00", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#F5A623", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement MTN Mobile Money, qui sera reçu et traité par notre Responsable des finances : {PAY_MTN_RESPONSABLE}</div>
-                    <a href={`tel:*105*2*1*${PAY_MTN_NUMBER}*${giftAmount}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#FFCC00,#F5A623)", color: G.brun, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(245,166,35,0.35)", boxSizing: "border-box" as any }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                      {`Appuyer pour payer - ${giftAmount.toLocaleString()} FCFA`}
-                    </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*105*1*1*${PAY_MTN_NUMBER}*${giftAmount}#`}</div>
-                  </div>
-                  <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
-                    <div style={{ fontSize: "0.78rem", color: "#777", marginBottom: 10, lineHeight: 1.5 }}>Après validation du paiement MTN, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
-                    <input value={giftTxRef} onChange={e => setGiftTxRef(e.target.value)} placeholder="Ex de l'ID : 7753031542" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${giftTxRef ? "#FFCC00" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
-                  </div>
-                  {!giftTxSent ? (
-                    <button disabled={!giftTxRef.trim() || giftTxLoading} onClick={async () => {
-                      setGiftTxLoading(true);
-                      try {
-                        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                          body: JSON.stringify({ user_id: auth.userId, operator: "MTN", tx_ref: giftTxRef.trim(), amount: giftAmount, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
-                        });
-                        setGiftTxSent(true);
-                      } catch { setGiftTxSent(true); }
-                      setGiftTxLoading(false);
-                    }} style={{ width: "100%", background: !giftTxRef.trim() || giftTxLoading ? "#ccc" : "linear-gradient(135deg,#FFCC00,#F5A623)", color: G.brun, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !giftTxRef.trim() ? "not-allowed" : "pointer" }}>
-                      {giftTxLoading ? "Envoi en cours…" : "J'ai payé - Envoyer la preuve"}
-                    </button>
-                  ) : (
-                    <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: "18px", textAlign: "center" }}>
-                      <div style={{ fontSize: "2rem", marginBottom: 8 }}>✅</div>
-                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>Preuve envoyée !</div>
-                      <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier et activer le Premium de {open.partner?.name} rapidement.</div>
-                      <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ marginTop: 14, background: "#27ae60", color: "#fff", border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-            {giftStep === "airtel" && (
-              <>
-                <div style={{ background: "linear-gradient(135deg,#e74c3c,#c0392b)", padding: "20px 20px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                    <div onClick={() => setGiftStep("operator")} style={{ cursor: "pointer", background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                    </div>
-                    <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#fff" }}>Cadeau Airtel Money pour {open.partner?.name}</div>
-                  </div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", marginLeft: 42 }}>{`${giftAmount.toLocaleString()} FCFA - ${giftPlan.label} Premium`}</div>
-                </div>
-                <div style={{ padding: "20px 20px 32px" }}>
-                  <div style={{ background: "#fff5f5", border: "2px solid #e74c3c", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>① Effectuez votre paiement Airtel Money, qui sera reçu et traité par notre Responsable des finances : {PAY_AIRTEL_RESPONSABLE}</div>
-                    <a href={`tel:*128*2*1*1*${PAY_AIRTEL_NUMBER}*${giftAmount}%23`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", boxShadow: "0 4px 14px rgba(231,76,60,0.35)", boxSizing: "border-box" as any }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                      {`Appuyer pour payer - ${giftAmount.toLocaleString()} FCFA`}
-                    </a>
-                    <div style={{ textAlign: "center", marginTop: 8, fontSize: "0.78rem", color: "#888", fontFamily: "monospace", letterSpacing: 1 }}>{`*128*2*1*1*${PAY_AIRTEL_NUMBER}*${giftAmount}#`}</div>
-                  </div>
-                  <div style={{ background: G.creme, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>② Entrez votre numéro de transaction</div>
-                    <div style={{ fontSize: "0.78rem", color: "#777", marginBottom: 10, lineHeight: 1.5 }}>Après validation du paiement Airtel, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
-                    <input value={giftTxRef} onChange={e => setGiftTxRef(e.target.value)} placeholder="Ex de l'ID : PP260523.2232.A52074" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 10, border: `2px solid ${giftTxRef ? "#e74c3c" : G.gris}`, fontSize: "0.9rem", outline: "none", fontFamily: "inherit", fontWeight: 600 }} />
-                  </div>
-                  {!giftTxSent ? (
-                    <button disabled={!giftTxRef.trim() || giftTxLoading} onClick={async () => {
-                      setGiftTxLoading(true);
-                      try {
-                        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-                          body: JSON.stringify({ user_id: auth.userId, operator: "Airtel", tx_ref: giftTxRef.trim(), amount: giftAmount, status: "pending", gift_for: open.partner?.id, gift_for_name: open.partner?.name }),
-                        });
-                        setGiftTxSent(true);
-                      } catch { setGiftTxSent(true); }
-                      setGiftTxLoading(false);
-                    }} style={{ width: "100%", background: !giftTxRef.trim() || giftTxLoading ? "#ccc" : "linear-gradient(135deg,#e74c3c,#c0392b)", color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !giftTxRef.trim() ? "not-allowed" : "pointer" }}>
-                      {giftTxLoading ? "Envoi en cours…" : "J'ai payé - Envoyer la preuve"}
-                    </button>
-                  ) : (
-                    <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: "18px", textAlign: "center" }}>
-                      <div style={{ fontSize: "2rem", marginBottom: 8 }}>✅</div>
-                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>Preuve envoyée !</div>
-                      <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Notre équipe va vérifier et activer le Premium de {open.partner?.name} rapidement.</div>
-                      <button onClick={() => { setShowGift(false); setGiftStep("operator"); setGiftTxRef(""); setGiftTxSent(false); }} style={{ marginTop: 14, background: "#27ae60", color: "#fff", border: "none", borderRadius: 50, padding: "12px 28px", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }}>Fermer</button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Zone messages */}
       <div ref={scrollContainerRef} onScroll={(e) => {
@@ -11095,7 +10824,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                               </div>
                               {/* Le bouton "Offrir Premium" n'apparaît que pour le destinataire Premium */}
                               {!isMine && auth.isPremium && !open.partner?.is_premium && (
-                                <button onClick={(e) => { e.stopPropagation(); setShowGift(true); }} style={{ background: "linear-gradient(135deg,#D4A843,#B8860B)", color: "#fff", border: "none", borderRadius: 50, padding: "9px 14px", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                                <button onClick={(e) => { e.stopPropagation(); if (open.partner) onShowGiftPremium?.({ id: open.partner.id, name: open.partner.name }); }} style={{ background: "linear-gradient(135deg,#D4A843,#B8860B)", color: "#fff", border: "none", borderRadius: 50, padding: "9px 14px", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                                   Lui offrir Premium 🎁
                                 </button>
@@ -11681,7 +11410,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, initialPartnerId,
                   <div onClick={() => setPartnerMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 1 }} />
                   <div style={{ position: "absolute", top: 54, right: 58, background: G.blanc, borderRadius: 14, overflow: "hidden", boxShadow: "0 8px 28px rgba(0,0,0,0.25)", zIndex: 2, minWidth: 185 }}>
                     {auth.isPremium && !open.partner.is_premium && (
-                      <div onClick={() => { setPartnerMenuOpen(false); setShowPartnerProfile(false); setShowGift(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#B8860B", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 8 }}>
+                      <div onClick={() => { setPartnerMenuOpen(false); setShowPartnerProfile(false); if (open.partner) onShowGiftPremium?.({ id: open.partner.id, name: open.partner.name }); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#B8860B", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 8 }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                         Offrir Premium
                       </div>
@@ -12241,7 +11970,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
     // Modération : insultes, arnaques, contenu interdit — le partage de contact/réseaux sociaux
     // reste volontairement libre ici, le groupe étant réservé aux membres Premium (déjà autorisé
     // pour eux en messagerie privée aussi).
-    const mod = FEATURE_MODERATION_INSULTS ? moderateMessage(text) : { blocked: false };
+    const mod = moderateMessage(text);
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       try {
@@ -14949,6 +14678,22 @@ export default function App() {
   }, [darkMode]);
   const [tab, setTab] = useState("discover");
   const [auth, setAuth] = useState<Auth | null>(null);
+  // ── Détection app installée (PWA) : si la personne utilise l'app depuis l'icône installée
+  //    (mode standalone), on l'enregistre une seule fois sur son profil. Sert uniquement de
+  //    compteur pour le dashboard admin ("X utilisateurs ont l'app installée") — fonctionne sur
+  //    Android ET iOS, contrairement à l'événement 'appinstalled' qui ne marche que sur Android/Chrome. ──
+  useEffect(() => {
+    if (!auth) return;
+    const isStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (!isStandalone) return;
+    try {
+      const flaggedKey = `moyo_pwa_flagged_${auth.userId}`;
+      if (localStorage.getItem(flaggedKey)) return; // déjà enregistré, on évite un appel réseau inutile à chaque session
+      sb.update(auth.token, "profiles", auth.userId, { has_installed_pwa: true }).then(() => {
+        localStorage.setItem(flaggedKey, "1");
+      }).catch(() => {});
+    } catch {}
+  }, [auth?.userId]);
   // ── Assistant flottant : préférence par utilisateur (activé par défaut) ──
   const [assistantEnabled, setAssistantEnabled] = useState(true);
   useEffect(() => {
@@ -14969,22 +14714,6 @@ export default function App() {
     window.addEventListener("moyo-settings-loaded", recompute);
     return () => window.removeEventListener("moyo-settings-loaded", recompute);
   }, [auth?.userId]);
-  // ── Détection app installée (PWA) : si la personne utilise l'app depuis l'icône installée
-  //    (mode standalone), on l'enregistre une seule fois sur son profil. Sert uniquement de
-  //    compteur pour le dashboard admin ("X utilisateurs ont l'app installée") — fonctionne sur
-  //    Android ET iOS, contrairement à l'événement 'appinstalled' qui ne marche que sur Android/Chrome. ──
-  useEffect(() => {
-    if (!auth) return;
-    const isStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
-    if (!isStandalone) return;
-    try {
-      const flaggedKey = `moyo_pwa_flagged_${auth.userId}`;
-      if (localStorage.getItem(flaggedKey)) return; // déjà enregistré, on évite un appel réseau inutile à chaque session
-      sb.update(auth.token, "profiles", auth.userId, { has_installed_pwa: true }).then(() => {
-        localStorage.setItem(flaggedKey, "1");
-      }).catch(() => {});
-    } catch {}
-  }, [auth?.userId]);
   const toggleAssistant = () => {
     setAssistantEnabled(prev => {
       const v = !prev;
@@ -14998,6 +14727,7 @@ export default function App() {
   const [likesReceived, setLikesReceived] = useState(0);
   const [viewsReceived, setViewsReceived] = useState(0);
   const [premiumModal, setPremiumModal] = useState<string | null>(null);
+  const [giftTarget, setGiftTarget] = useState<{ id: string; name: string } | null>(null);
   const [premiumSuccess, setPremiumSuccess] = useState(false);
   const [premiumCancelled, setPremiumCancelled] = useState(false);
   const [pendingWarning, setPendingWarning] = useState<{ id: string; warning_number: number; reason: string } | null>(null);
@@ -15896,6 +15626,7 @@ export default function App() {
     };
   }, [auth?.userId, userGender]);
   const showPremium = (r = "") => setPremiumModal(r || "Passe Premium pour débloquer toutes les fonctionnalités !");
+  const showGiftPremium = (partner: { id: string; name: string }) => { setGiftTarget(partner); setPremiumModal(`Offrir Premium à ${partner.name}`); };
 
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
@@ -15966,13 +15697,13 @@ export default function App() {
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onGoDiscover={() => setTab("discover")} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
-      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} onGoDiscover={() => setTab("discover")} />}
+      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} onShowGiftPremium={showGiftPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} onGoDiscover={() => setTab("discover")} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} assistantEnabled={assistantEnabled} onToggleAssistant={toggleAssistant} />}
       {tab === "admin" && <Suspense fallback={<AdminLoadingFallback />}><AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} /></Suspense>}
       </div>
     </AppShell>
     {auth && <RelationalNudge auth={auth} onGoProfile={() => setTab("profile")} />}
-    {premiumModal && <PremiumModal reason={premiumModal} onClose={() => setPremiumModal(null)} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} />}
+    {premiumModal && <PremiumModal reason={premiumModal} onClose={() => { setPremiumModal(null); setGiftTarget(null); }} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} giftFor={giftTarget} />}
     {privacyNotice && <PrivacyNoticeModal gender={privacyNotice.gender} onClose={ackPrivacyNotice} />}
     {premiumSuccess && (
       <div onClick={() => setPremiumSuccess(false)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100000, padding: 20, backdropFilter: "blur(3px)" }}>
