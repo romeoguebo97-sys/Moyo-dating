@@ -1684,6 +1684,7 @@ export function Btn({ children, variant = "primary", onClick, style = {}, disabl
   };
   const v: Record<string, React.CSSProperties> = {
     primary: { background: G.rouge, color: "#fff", boxShadow: "0 4px 18px rgba(192,57,43,0.3)" },
+    authPrimary: { background: "linear-gradient(135deg,#CC5347,#B8392E)", color: "#fff", boxShadow: "0 6px 20px rgba(184,57,46,0.28)" },
     gold: { background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111" },
     outline: { background: "transparent", color: G.brun, border: `2px solid ${G.brun}` },
     ghost: { background: "var(--c-ghost-bg)", color: G.brun },
@@ -1710,26 +1711,24 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
 
   if (variant === "line") {
     return (
-      <div style={{ marginBottom: 0, width: "100%" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: `1.5px solid ${error ? "#e74c3c" : focus ? G.rouge : "#EEE7DA"}`, transition: "border-color 0.2s" }}>
-          {svgIcon && <span style={{ color: G.rouge, display: "flex", flexShrink: 0 }}>{svgIcon}</span>}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {label && <div style={{ fontSize: "0.63rem", fontWeight: 700, color: "#b3a893", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 2 }}>{label}</div>}
-            <input
-              ref={inputRef}
-              type={isPwd ? (showPwd ? "text" : "password") : type}
-              value={value}
-              onChange={onChange}
-              placeholder={placeholder}
-              onFocus={() => setFocus(true)}
-              onBlur={() => setFocus(false)}
-              style={{ width: "100%", boxSizing: "border-box", border: "none", background: "transparent", padding: 0, fontSize: "16px", color: G.brun, outline: "none", display: "block" }}
-            />
-          </div>
+      <div style={{ marginBottom: 18, width: "100%" }}>
+        {label && <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#1B1330", marginBottom: 8 }}>{label}</div>}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, background: G.blanc, border: `1.5px solid ${error ? "#e74c3c" : focus ? G.rouge : "#F0E4E2"}`, borderRadius: 18, padding: "9px 16px 9px 9px", transition: "border-color 0.2s" }}>
+          {svgIcon && <span style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(192,57,43,0.1)", color: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{svgIcon}</span>}
+          <input
+            ref={inputRef}
+            type={isPwd ? (showPwd ? "text" : "password") : type}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            onFocus={() => setFocus(true)}
+            onBlur={() => setFocus(false)}
+            style={{ flex: 1, minWidth: 0, boxSizing: "border-box", border: "none", background: "transparent", padding: 0, fontSize: "16px", color: G.brun, outline: "none", display: "block" }}
+          />
           {isPwd && <span onClick={() => setShowPwd(s => !s)} style={{ cursor: "pointer", opacity: 0.5, flexShrink: 0, display: "flex" }}>
             {showPwd
-              ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-              : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             }
           </span>}
         </div>
@@ -2797,7 +2796,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
           </div>
           <p style={{ color: "#666", fontSize: "0.88rem", lineHeight: 1.6, margin: "0 0 4px" }}>Il a déjà été utilisé, ou il a expiré (les liens de réinitialisation ne sont valables qu'une seule fois, pendant un temps limité).</p>
         </div>
-        <Btn variant="primary" onClick={() => { try { sessionStorage.setItem("moyo_auto_forgot", "1"); } catch {} onNav("login"); }} style={{ width: "100%" }}>Redemander un lien →</Btn>
+        <Btn variant="authPrimary" onClick={() => { try { sessionStorage.setItem("moyo_auto_forgot", "1"); } catch {} onNav("login"); }} style={{ width: "100%" }}>Redemander un lien →</Btn>
       </AuthLayout>
     );
   }
@@ -2809,7 +2808,7 @@ function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
       <div style={{ marginTop: 20 }} />
       <Input label="Nouveau mot de passe" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimum 6 caractères" icon="lock" hint="Au moins 6 caractères" variant="line" />
       <Input label="Confirmer le mot de passe" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Répète ton mot de passe" icon="lock" variant="line" />
-      <Btn variant="primary" onClick={handleReset} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!password || !confirm}>
+      <Btn variant="authPrimary" onClick={handleReset} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!password || !confirm}>
         Changer mon mot de passe ✓
       </Btn>
     </AuthLayout>
@@ -4053,28 +4052,68 @@ function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () 
 
 function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children: React.ReactNode; onBack: () => void; title?: string; subtitle?: string; stepInfo?: React.ReactNode }) {
   const isWide = typeof window !== "undefined" && window.innerWidth >= 768;
-  return <div style={{ minHeight: "100vh", background: G.creme, position: "relative", overflow: "hidden" }}>
-    {/* Cœur en filigrane, en fond, très discret — seul repère décoratif de l'écran */}
-    <svg width="520" height="520" viewBox="0 0 230 230" fill="none" stroke={G.rouge} strokeWidth="3" style={{ position: "absolute", top: -60, right: -140, opacity: 0.05, pointerEvents: "none" }}>
-      <path d="M115 195C60 155 20 120 20 78C20 48 42 28 68 28C88 28 104 40 115 58C126 40 142 28 162 28C188 28 210 48 210 78C210 120 170 155 115 195Z" />
-    </svg>
-    <div onClick={onBack} style={{ position: "absolute", top: isWide ? 28 : 20, left: isWide ? 32 : 20, zIndex: 3, width: isWide ? 40 : 34, height: isWide ? 40 : 34, borderRadius: "50%", border: `1.5px solid ${G.gris}`, background: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a6f5f" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M19 12H5M12 19l-7-7 7-7"/>
-      </svg>
-    </div>
-    <div style={{ position: "relative", zIndex: 2, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: isWide ? "60px 20px" : "76px 20px 40px" }}>
-      <div style={{
-        width: "100%", maxWidth: 420, overflowX: "hidden",
-        ...(isWide ? { background: G.blanc, borderRadius: 28, padding: "48px 44px", boxShadow: "0 30px 80px rgba(44,26,14,0.1), 0 2px 8px rgba(44,26,14,0.04)" } : {}),
-      }}>
-        {title && (
-          <div style={{ marginBottom: 26 }}>
-            <div style={{ fontSize: isWide ? "2rem" : "1.55rem", fontWeight: 800, color: "#241505", lineHeight: 1.15, letterSpacing: "-0.02em" }}>{title}</div>
-            {subtitle && <div style={{ fontSize: isWide ? "0.9rem" : "0.8rem", color: "#a89c8a", marginTop: isWide ? 10 : 8, lineHeight: 1.5 }}>{subtitle}</div>}
+
+  // ── Desktop : pas de vague rouge, juste un bouton retour et le titre en texte sombre au-dessus
+  //    d'une carte blanche centrée. La vague est un traitement pensé pour le mobile uniquement. ──
+  if (isWide) {
+    return <div style={{ minHeight: "100vh", background: G.creme, position: "relative" }}>
+      <div style={{ padding: "28px 32px 0" }}>
+        <div onClick={onBack} style={{ width: 44, height: 44, borderRadius: "50%", background: G.blanc, boxShadow: "0 4px 14px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px 60px" }}>
+        <div style={{ width: "100%", maxWidth: 420, overflowX: "hidden", background: G.blanc, borderRadius: 28, padding: "40px 44px", boxShadow: "0 30px 80px rgba(44,26,14,0.1), 0 2px 8px rgba(44,26,14,0.04)" }}>
+          {title && (
+            <div style={{ marginBottom: 26 }}>
+              <div style={{ fontSize: "2rem", fontWeight: 800, color: "#1B1330", lineHeight: 1.15 }}>{title}</div>
+              {subtitle && <div style={{ fontSize: "0.9rem", color: "#8a8494", marginTop: 8, lineHeight: 1.5 }}>{subtitle}</div>}
+              {stepInfo}
+            </div>
+          )}
+          {children}
+        </div>
+      </div>
+    </div>;
+  }
+
+  // ── Mobile : en-tête vague rouge (uniquement quand il y a un titre) ──
+  return <div style={{ minHeight: "100vh", background: G.blanc, position: "relative", overflow: "hidden" }}>
+    {title && (
+      <div style={{ position: "relative" }}>
+        <svg viewBox="0 0 400 300" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 280, display: "block" }} preserveAspectRatio="none">
+          <path d="M0,0 L400,0 L400,190 C300,255 100,145 0,215 Z" fill={G.rouge} />
+        </svg>
+        <div style={{ position: "relative", zIndex: 2, padding: "20px 20px 0" }}>
+          <div onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </div>
+            <span style={{ color: "#fff", fontWeight: 600, fontSize: "0.9rem" }}>Accueil</span>
+          </div>
+          <div style={{ marginTop: 20, paddingBottom: 90 }}>
+            <div style={{ fontSize: "1.7rem", fontWeight: 800, color: "#fff", lineHeight: 1.15 }}>{title}</div>
+            {subtitle && <div style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.85)", marginTop: 8, lineHeight: 1.5 }}>{subtitle}</div>}
             {stepInfo}
           </div>
-        )}
+        </div>
+      </div>
+    )}
+    {!title && (
+      <div style={{ padding: "20px 20px 0" }}>
+        <div onClick={onBack} style={{ width: 40, height: 40, borderRadius: "50%", background: G.blanc, boxShadow: "0 4px 14px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </div>
+      </div>
+    )}
+    <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "20px 20px 40px" }}>
+      <div style={{ width: "100%", maxWidth: 420, overflowX: "hidden" }}>
         {children}
       </div>
     </div>
@@ -4314,7 +4353,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
           ) : (
             <>
               <Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" variant="line" />
-              <Btn variant="primary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien</Btn>
+              <Btn variant="authPrimary" onClick={handleForgot} style={{ width: "100%", marginBottom: 12 }}>Envoyer le lien</Btn>
               <div style={{ textAlign: "center" }}><span onClick={() => setForgotMethod("choice")} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div>
             </>
           )
@@ -4338,10 +4377,11 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     );
   }
 
-  return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: 14 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="primary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: 14 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="authPrimary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
 function SignUp({ onNav }: { onNav: (p: string) => void }) {
+  const isWideScreen = typeof window !== "undefined" && window.innerWidth >= 768;
   // Reprendre l'inscription si redirigé depuis la connexion avec un profil incomplet
   const resumeToken = sessionStorage.getItem("moyo_signup_token");
   const resumeUid = sessionStorage.getItem("moyo_signup_uid");
@@ -4621,7 +4661,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     ];
     return (
       <AuthLayout onBack={() => onNav("landing")} title="Avant de commencer" subtitle="Voici ce qu'il te faudra pour créer ton compte (environ 2 minutes) :">
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28, marginTop: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28, marginTop: 16 }}>
           {requirements.map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "13px 15px" }}>
               <div style={{ width: 38, height: 38, borderRadius: 11, background: `linear-gradient(135deg, ${G.rouge}, ${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{r.icon}</div>
@@ -4632,7 +4672,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
             </div>
           ))}
         </div>
-        <Btn variant="primary" onClick={() => setShowRequirementsIntro(false)} style={{ width: "100%", marginBottom: 10 }}>Commencer l'inscription →</Btn>
+        <Btn variant="authPrimary" onClick={() => setShowRequirementsIntro(false)} style={{ width: "100%", marginBottom: 10 }}>Commencer l'inscription →</Btn>
         <Btn variant="ghost" onClick={() => onNav("landing")} style={{ width: "100%" }}>Retour</Btn>
       </AuthLayout>
     );
@@ -4641,20 +4681,20 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   return (
     <AuthLayout onBack={() => step === 1 ? onNav("landing") : setStep(s => s - 1)} title="Crée ton compte" stepInfo={
       <>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: "rgba(192,57,43,0.08)", border: `1.5px solid rgba(192,57,43,0.2)`, borderRadius: 50, padding: "6px 16px" }}>
-          <div style={{ width: 20, height: 20, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 800, color: "#fff" }}>{step}</div>
-          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: G.rouge }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, background: isWideScreen ? "rgba(192,57,43,0.08)" : "rgba(255,255,255,0.18)", border: isWideScreen ? `1.5px solid rgba(192,57,43,0.2)` : "none", borderRadius: 50, padding: "6px 16px" }}>
+          <div style={{ width: 20, height: 20, borderRadius: "50%", background: isWideScreen ? G.rouge : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 800, color: isWideScreen ? "#fff" : G.rouge }}>{step}</div>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isWideScreen ? G.rouge : "#fff" }}>
             {step === 1 && "Identifiant et mot de passe"}
             {step === 2 && "Choisis ton sexe"}
             {step === 3 && "Photo de profil"}
             {step === 4 && "Tes informations"}
             {step === 5 && "Informations complémentaires"}
           </span>
-          <span style={{ fontSize: "0.72rem", color: "#888", fontWeight: 500 }}>{step}/5</span>
+          <span style={{ fontSize: "0.72rem", color: isWideScreen ? "#888" : "rgba(255,255,255,0.8)", fontWeight: 500 }}>{step}/5</span>
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
           {[1, 2, 3, 4, 5].map(s => (
-            <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? G.rouge : G.gris, transition: "background 0.3s" }} />
+            <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? (isWideScreen ? G.rouge : "#fff") : (isWideScreen ? G.gris : "rgba(255,255,255,0.3)"), transition: "background 0.3s" }} />
           ))}
         </div>
       </>
@@ -4669,7 +4709,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       {step === 1 && <>
         <Input label="Email" type="email" value={form.email} onChange={e => upd("email", e.target.value)} placeholder="ton@email.com" icon="email" variant="line" />
         <Input label="Veuillez définir votre mot de passe" type="password" value={form.password} onChange={e => upd("password", e.target.value)} placeholder="Minimum 6 caractères" icon="lock" hint="Au moins 6 caractères" variant="line" />
-        <Btn variant="primary" onClick={checkEmailAndContinue} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn>
+        <Btn variant="authPrimary" onClick={checkEmailAndContinue} loading={loading} style={{ width: "100%", marginTop: 8 }} disabled={!form.email || form.password.length < 6}>Continuer →</Btn>
         <p style={{ textAlign: "center", marginTop: 14, fontSize: "0.7rem", color: "#aaa", lineHeight: 1.6, padding: "0 12px" }}>
           En continuant, vous acceptez nos{" "}
           <a href="https://dating.moyo-congo.com/#confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: "#888", textDecoration: "underline" }}>Conditions d'utilisation</a>
@@ -4717,7 +4757,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Retour</Btn>
-          <Btn variant="primary" onClick={() => setStep(3)} style={{ flex: 2 }} disabled={!form.gender}>Suivant →</Btn>
+          <Btn variant="authPrimary" onClick={() => setStep(3)} style={{ flex: 2 }} disabled={!form.gender}>Suivant →</Btn>
         </div>
       </>}
 
@@ -4772,7 +4812,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(2)} style={{ flex: 1 }}>← Retour</Btn>
-          <Btn variant="primary" onClick={handlePhotoAndContinue} loading={uploadingPhoto} style={{ flex: 2 }} disabled={!photoPreview}>
+          <Btn variant="authPrimary" onClick={handlePhotoAndContinue} loading={uploadingPhoto} style={{ flex: 2 }} disabled={!photoPreview}>
             {uploadingPhoto ? "Upload en cours..." : "Continuer →"}
           </Btn>
         </div>
@@ -4800,7 +4840,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(3)} style={{ flex: 1 }}>← Retour</Btn>
-          <Btn variant="primary" onClick={() => setStep(5)} style={{ flex: 2 }} disabled={!form.name.trim() || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city}>Suivant →</Btn>
+          <Btn variant="authPrimary" onClick={() => setStep(5)} style={{ flex: 2 }} disabled={!form.name.trim() || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city}>Suivant →</Btn>
         </div>
       </>}
 
@@ -4825,7 +4865,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(4)} style={{ flex: 1 }}>← Retour</Btn>
-          <Btn variant="primary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }} disabled={!form.name || !form.gender || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city}>Créer mon compte</Btn>
+          <Btn variant="authPrimary" onClick={handleSubmit} loading={loading} style={{ flex: 2 }} disabled={!form.name || !form.gender || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city}>Créer mon compte</Btn>
         </div>
       </>}
 
