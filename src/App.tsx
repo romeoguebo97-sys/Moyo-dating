@@ -668,6 +668,7 @@ export type Auth = {
   userId: string;
   name: string;
   email: string;
+  photoUrl?: string | null;
   isPremium: boolean;
   isAdmin: boolean;
   adminLevel?: "admin" | "superadmin";
@@ -4303,6 +4304,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         userId: res.user.id,
         name: profiles[0].name || "Utilisateur",
         email: res.user.email || "",
+        photoUrl: profiles[0].photo_url || null,
         isPremium: profiles[0].is_premium || false,
         isAdmin: profiles[0].is_admin || false,
         adminLevel: (profiles[0] as any).admin_level || undefined,
@@ -4836,7 +4838,6 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
       {/* ÉTAPE 4 - Tes informations (obligatoire) */}
       {step === 4 && <>
-        <p style={{ fontSize: "0.85rem", color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>Parle-nous un peu de toi : ces informations nous aident à te proposer les bonnes personnes.</p>
         <Input label={<>Prénom <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} value={form.name} onChange={e => upd("name", e.target.value)} placeholder="Ex: Faïda" icon="user" variant="line" />
         <Input label={<>Âge <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(obligatoire)</span></>} type="number" value={form.age} onChange={e => { const v = e.target.value.slice(0,2); upd("age", v); }} placeholder="Ex: 25" icon="cake" hint="Entre 18 et 99 ans" error={form.age && parseInt(form.age) < 18 ? "Vous devez avoir au moins 18 ans." : undefined} variant="line" />
         <div style={{ marginBottom: 18 }}>

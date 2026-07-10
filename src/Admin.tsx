@@ -228,9 +228,9 @@ function SwitchBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 function OffCanvasSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ breakInside: "avoid" } as React.CSSProperties}>
-      <div style={{ padding: "14px 20px 10px", borderTop: "1px solid #eee" }}>
-        <div style={{ fontWeight: 700, fontSize: "0.7rem", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>{title}</div>
+    <div style={{ breakInside: "avoid", marginBottom: 16 } as React.CSSProperties}>
+      <div style={{ padding: "16px 18px", background: G.blanc, borderRadius: 10, border: "1px solid #E1E4EA" }}>
+        <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "#1a1a1a", marginBottom: 12 }}>{title}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{children}</div>
       </div>
     </div>
@@ -240,7 +240,7 @@ function EditableRow({ label, value, open, onOpen, editValue, onEdit, onSave, hi
   const G2 = { rouge: "#C0392B", gris: "#E8E0D8", blanc: "#FFFFFF", creme: "#F7F3EF" };
   return (
     <div>
-      <div onClick={onOpen} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: open ? "rgba(192,57,43,0.06)" : G2.creme, cursor: "pointer", border: `1px solid ${open ? G2.rouge : "transparent"}` }}>
+      <div onClick={onOpen} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, background: open ? "rgba(192,57,43,0.06)" : "#FAFAFA", cursor: "pointer", border: `1px solid ${open ? G2.rouge : "#F0F0F0"}` }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#2C1A0E" }}>{label}</div>
           <div style={{ fontSize: "0.7rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
@@ -539,8 +539,10 @@ export function AdminDesktopPage() {
         <div style={{ fontSize: "0.8rem", color: "#bbb" }}>- espace de modération</div>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+            {auth.photoUrl
+              ? <img src={auth.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
           </div>
           <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{auth.name}</div>
         </div>
@@ -605,10 +607,10 @@ export function AdminDesktopPage() {
               </div>
             </div>
             {/* ── Zone contenu ── */}
-            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "10px 26px 30px", minWidth: 0 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0 22px", alignItems: "start", alignContent: "start" }}>
+            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "18px 26px 30px", minWidth: 0, background: "#EEF2F8" }}>
+            <div style={{ columnCount: 2, columnGap: 22 }}>
             {configTab === "general" && <OffCanvasSection title="Règles">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#FAFAFA", borderRadius: 12 }}>
                 <div>
                   <div style={{ fontSize: "0.83rem", fontWeight: 600 }}>Bloquer like même genre</div>
                   <div style={{ fontSize: "0.72rem", color: "#888" }}>Homme - Homme / Femme - Femme</div>
@@ -732,7 +734,7 @@ export function AdminDesktopPage() {
                 ["feature_moderation_insults", "featureModerationInsults" as keyof typeof appConfig, "Modération auto (insultes, menaces, arnaques, sexuel)"],
                 ["feature_moderation_contact", "featureModerationContact" as keyof typeof appConfig, "Blocage partage de contact (comptes gratuits)"],
               ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
-                <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
+                <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#FAFAFA", borderRadius: 12 }}>
                   <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>{label}</div>
                   <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => {
                     if (!auth) return;
@@ -2614,6 +2616,7 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Profils vérifiés", "Comptes ayant obtenu le badge de vérification. Carte cliquable → liste des profils vérifiés."],
         ["Profils bannis", "Comptes actuellement bannis de la plateforme. Carte cliquable → liste des profils bannis."],
         ["Profils incomplets", "Comptes dont l'inscription n'a jamais été terminée (section Rétention). Carte cliquable → liste des profils incomplets."],
+        ["App installée (PWA)", "Nombre de membres ayant déjà ouvert l'app depuis l'icône installée sur leur téléphone (Android ou iOS). Carte cliquable → liste des profils concernés."],
       ] },
     ],
   },
@@ -2668,6 +2671,8 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Messagerie", "Boîte de réception regroupant tous les échanges avec les utilisateurs (signalements + support), groupés par utilisateur. Le bouton Répondre arrive sous le nom Assistance Moyo Dating."],
         ["Archives", "Tous les signalements traités, rejetés, ou archivés. Recherche, filtres par type et par action, regroupement par date et pagination. Chaque ligne se déplie ou se supprime."],
         ["Modération auto des contacts", "Quand un utilisateur gratuit tente de partager un numéro, un réseau ou un lien (message OU profil), l'envoi est bloqué et un signalement [AUTO-MOD CONTACT] est créé en catégorie Système."],
+        ["Gestion des mots interdits", "Configuration ⚙️ → Sécurité & Système → « Liste des mots interdits » et « Mots contacts » : chaque mot (y compris ceux déjà intégrés par défaut — insultes, arnaques, noms d'applis...) s'ajoute ou se retire individuellement en un clic, effet immédiat. Deux interrupteurs séparés permettent aussi de couper entièrement la modération des insultes/arnaques ou le blocage de partage de contact."],
+        ["Écrire en premier à un membre", "Dans Signalements → Messagerie, le bouton « + Nouveau message » permet de rechercher un membre et de lui écrire directement via l'Assistant Moyo Dating, sans attendre qu'il contacte le support en premier."],
       ] },
       { kind: "subhead", text: "Traitement des signalements" },
       { kind: "statusRows", items: [
@@ -2687,6 +2692,8 @@ const HELP_SECTIONS: HelpSection[] = [
       ] },
       { kind: "subhead", text: "Avertissements utilisateurs" },
       { kind: "paragraph", text: <>Un avertissement est une étape préventive avant bannissement. L'utilisateur voit une modal officielle MOYO à sa prochaine connexion. Lorsqu'il clique <strong>"OK, j'ai compris"</strong>, la plateforme enregistre qu'il a pris connaissance de l'avertissement. L'admin peut suivre le 1er, 2e ou 3e avertissement et adapter la décision.</> },
+      { kind: "subhead", text: "Motif de bannissement" },
+      { kind: "paragraph", text: <>Au moment de bannir, un motif peut être renseigné (réutilise la même liste que les avertissements). L'utilisateur banni le voit clairement affiché sur son écran de blocage, avec un bouton pour contacter l'équipe sur WhatsApp s'il conteste.</> },
     ],
   },
   {
@@ -2703,6 +2710,9 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Actions du suivi", "Voir chaque profil. Si les deux acceptent → « Voir le match » + « 💌 Encourager le couple ». Prolonger (+1j/+3j/+7j) ou Réactiver une expirée. Annuler une proposition en attente. « Reproposer un autre profil » après refus/expiration. Archiver. Note interne par couple."],
         ["Propositions vs Suivi", "L'onglet « Propositions » regroupe les propositions spontanées et celles issues d'une demande. Les couples créés depuis le Matchmaking sont suivis séparément dans « Suivi couples Matchmaking »."],
         ["Créer / Proposer un match", "Créez un match direct entre deux membres, ou proposez-leur une mise en relation qu'ils peuvent accepter ou refuser."],
+        ["Auto-proposition (Matchmaking intelligent)", "Dans Matchmaking intelligent, un bloc dédié permet d'activer une proposition automatique des meilleures suggestions (seuil de compatibilité et limite par nuit réglables), sans rien changer au calcul manuel existant. Journal consultable de ce qui a été proposé automatiquement."],
+        ["Auto-proposition spontanée", "Dans Propositions, un bloc dédié applique automatiquement la règle « l'homme doit être plus âgé » : immédiatement à l'inscription d'un nouveau compte, puis 3 fois par jour pour les autres. Plafonnée par personne (par passage et par jour) pour ne pas saturer les gens. N'inclut jamais les comptes admin, ni un couple ayant déjà refusé."],
+        ["Pastille « Auto-propose »", "Sur chaque carte de proposition (grille ou liste), une pastille violette indique si elle a été créée automatiquement, pour la distinguer d'une proposition faite à la main."],
       ] },
     ],
   },
@@ -2711,7 +2721,8 @@ const HELP_SECTIONS: HelpSection[] = [
     icon: helpIco(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />, G.rouge),
     blocks: [
       { kind: "rows", color: G.rouge, items: [
-        ["Assistant Moyo Dating", "Centre de support. À gauche : la conversation avec l'utilisateur. À droite : la bibliothèque de Modèles de réponse."],
+        ["Assistant Moyo Dating", "Centre de support. À gauche : la conversation avec l'utilisateur. À droite : la bibliothèque de Modèles de réponse. Le bouton « + Nouveau message » permet d'écrire en premier à n'importe quel membre, sans attendre qu'il contacte le support."],
+        ["Accusé de lecture", "Un point vert « Lu » ou orange « Pas encore vu » s'affiche sous chaque profil ayant reçu un avertissement ou un message admin, dans la liste et la fiche détaillée."],
         ["Modèles de réponse", "Réponses prédéfinies pour répondre plus vite. Créez (titre, catégorie, contenu), modifiez/supprimez, recherchez et filtrez. Le bouton Copier place le texte dans le presse-papiers. Modèles partagés entre tous les admins."],
         ["Diffusion générale", "Envoie une annonce aux utilisateurs : message, modèle rapide, cible (genre × abonnement) et date d'expiration. L'audience estimée et les diffusions actives sont affichées."],
       ] },
@@ -2847,31 +2858,13 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Textes des modals", "6 modals personnalisables : message même genre H/F, titre et sous-titre du match, message Premium, message likes épuisés."],
         ["Limites & Quotas", "Likes gratuits/jour, messages gratuits/match, taille max des photos, message de bienvenue après match. Modifiable sans redéployer."],
         ["Prix & Abonnement", "Prix Premium en FCFA et durée en jours. ⚠️ Le prix modifie les boutons de paiement. La durée s'applique aux nouveaux abonnements."],
-        ["Fonctionnalités on/off", "Activer/désactiver Statuts, Cadeau Premium et Assistant IA. Effet au prochain chargement de l'app."],
+        ["Fonctionnalités on/off", "Activer/désactiver Statuts, Cadeau Premium, Assistant IA, Modération auto (insultes/menaces/arnaques/sexuel) et Blocage partage de contact (comptes gratuits). Effet au prochain chargement de l'app."],
         ["🔔 Notifications admin", "Pour chaque admin, choisir ses notifications push : Signalements, Matchs, Paiements. Ex : activer 'Paiements' pour le responsable des paiements."],
         ["Photo de l'Assistant", "Onglet Équipe → 'Photo de l'Assistant Moyo Dating' : changez la photo affichée pour l'Assistant Moyo Dating en un clic (upload direct), ou réinitialisez à l'icône par défaut. Effet immédiat sur toutes les conversations."],
         ["💳 Moyens de paiement", "Couper rapidement un moyen de paiement (MTN, Airtel, Visa/Mastercard). Une fois coupé : grisé et 'Temporairement indisponible' partout."],
         ["🔴 Mode maintenance", "Active un écran de maintenance pour tous. Seuls les admins peuvent encore accéder. Message personnalisable."],
         ["Gestion des admins", "Visible par le Super Admin uniquement : nommer Admin, Super Admin ou retirer les droits via l'email."],
         ["Niveaux d'accès", "Super Admin : accès total (Paiements + Configuration ☰). Admin simple : tout sauf Paiements et Configuration."],
-      ] },
-    ],
-  },
-  {
-    id: "news", label: "✨ Nouveautés récentes", color: G.or,
-    icon: helpIco(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />, G.or),
-    blocks: [
-      { kind: "rows", color: G.or, items: [
-        ["Notes vocales", "Nouvelle messagerie vocale dans les conversations (Premium) : enregistrement par appui long avec glisser pour annuler/verrouiller, aperçu avant envoi, vitesses de lecture x1/x1.5/x2, et un mode exclusif vocal à écoute unique qui se détruit après la première écoute."],
-        ["Photo de l'Assistant modifiable", "Configuration ☰ → Équipe : la photo de l'Assistant Moyo Dating se change désormais en un clic depuis l'admin, sans toucher au code."],
-        ["Cartes stats cliquables", "Nouveaux aujourd'hui, Profils vérifiés, Profils bannis et Profils incomplets fonctionnent maintenant comme Premium actifs : cliquez pour voir la liste des profils concernés."],
-        ["📝 Notes internes", "Sur chaque fiche utilisateur et signalement, un bloc de notes visibles uniquement par les admins. Idéal pour se coordonner. N'importe quel admin peut supprimer une note."],
-        ["🗂 Archives repliées", "Dans Signalements → Archivés, chaque carte est repliée. Cliquez pour le détail, 'Replier' pour refermer."],
-        ["🔔 Notifications utilisateur", "Les utilisateurs peuvent (ré)activer leurs notifications depuis leur Profil, même après un refus initial."],
-        ["🎁💝 Offrir / Demander Premium", "En conversation : un Premium peut OFFRIR Premium (🎁), un non-Premium peut DEMANDER (💝, max 2/mois)."],
-        ["💳 Paiements réorganisés", "4 sous-onglets : Demandes, Traitées, Données financières (réinitialisable) et Archivage. Archiver ne retire plus le Premium."],
-        ["🗂 Historique : suppression multiple", "Le bouton 'Sélectionner' permet de cocher et supprimer plusieurs actions d'un coup (Super Admin)."],
-        ["🎚 Interrupteurs de fonctionnalités", "Configuration ⚙️ → Fonctionnalités : Statuts, Cadeau Premium et Assistant IA s'activent/désactivent réellement."],
       ] },
     ],
   },
@@ -3164,6 +3157,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     expires_at: string;
     created_by: string;
     created_at: string;
+    origin?: string | null;
     profile1?: AdminProfile;
     profile2?: AdminProfile;
   };
@@ -3752,6 +3746,52 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [proposeSelected2, setProposeSelected2] = useState<AdminProfile | null>(null);
   const [proposeP1Locked, setProposeP1Locked] = useState(false);
   const [proposeDuration, setProposeDuration] = useState("48");
+  // ── Propositions spontanées automatiques (règle : homme plus âgé), lues chaque nuit par la
+  //    fonction Supabase auto-propose-spontaneous. Le bouton manuel "Proposer un match" reste
+  //    inchangé et continue de fonctionner exactement pareil. ──
+  const [spAutoEnabled, setSpAutoEnabled] = useState(false);
+  const [spAutoDailyLimit, setSpAutoDailyLimit] = useState("6");
+  const [spAutoPerRunLimit, setSpAutoPerRunLimit] = useState("2");
+  const [spAutoLog, setSpAutoLog] = useState<any[]>([]);
+  const [spAutoLogLoading, setSpAutoLogLoading] = useState(false);
+  useEffect(() => {
+    if (!auth) return;
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(spontaneous_auto_propose_enabled,spontaneous_auto_daily_limit,spontaneous_auto_per_run_limit)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const rows = await r.json().catch(() => []);
+        const map: Record<string, string> = {};
+        (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
+        if (map["spontaneous_auto_propose_enabled"] !== undefined) setSpAutoEnabled(map["spontaneous_auto_propose_enabled"] === "true");
+        if (map["spontaneous_auto_daily_limit"] !== undefined) setSpAutoDailyLimit(map["spontaneous_auto_daily_limit"]);
+        if (map["spontaneous_auto_per_run_limit"] !== undefined) setSpAutoPerRunLimit(map["spontaneous_auto_per_run_limit"]);
+      } catch {}
+    })();
+  }, [auth?.userId]);
+  const saveSpAutoSetting = async (key: string, value: string) => {
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+    } catch {}
+  };
+  const loadSpAutoLog = async () => {
+    if (!auth) return;
+    setSpAutoLogLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?origin=eq.spontaneous_auto&select=id,user1_id,user2_id,created_at,status&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const rows = await r.json().catch(() => []);
+      const list = Array.isArray(rows) ? rows : [];
+      const ids = Array.from(new Set(list.flatMap((p: any) => [p.user1_id, p.user2_id])));
+      let namesById: Record<string, string> = {};
+      if (ids.length) {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const prows = await pr.json().catch(() => []);
+        (Array.isArray(prows) ? prows : []).forEach((p: any) => { namesById[p.id] = p.name; });
+      }
+      setSpAutoLog(list.map((p: any) => ({ ...p, manName: namesById[p.user1_id] || "?", womanName: namesById[p.user2_id] || "?" })));
+    } catch {}
+    setSpAutoLogLoading(false);
+  };
   const [proposeLoading, setProposeLoading] = useState(false);
 
   // Charge la liste générale des profils (pour Personne 1, dès l'ouverture de la modale)
@@ -11105,6 +11145,46 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <button onClick={() => openProposeNew()} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Nouvelle proposition</button>
                 <button onClick={loadProposals} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
               </div>
+
+              {/* Auto-proposition spontanée nocturne */}
+              <div style={{ background: G.blanc, borderRadius: 14, padding: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: "0.8rem", fontWeight: 800, color: G.brun }}>Auto-proposition spontanée</div>
+                    <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Propose automatiquement des paires selon ta règle (l'homme plus âgé que la femme), sans profil relationnel — immédiatement à l'inscription d'un nouveau compte, puis 3 fois par jour (8h/14h/20h) pour les autres. Ne force jamais un couple avec un historique de refus, et n'inclut jamais les comptes admin.</div>
+                  </div>
+                  <SwitchBtn on={spAutoEnabled} onToggle={() => { const v = !spAutoEnabled; setSpAutoEnabled(v); saveSpAutoSetting("spontaneous_auto_propose_enabled", v ? "true" : "false"); }} />
+                </div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 140px" }}>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 4 }}>Par personne, par passage</div>
+                    <input type="number" min={1} max={10} value={spAutoPerRunLimit} onChange={e => setSpAutoPerRunLimit(e.target.value)} onBlur={() => saveSpAutoSetting("spontaneous_auto_per_run_limit", spAutoPerRunLimit)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
+                  </div>
+                  <div style={{ flex: "1 1 140px" }}>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 4 }}>Par personne, par jour (max)</div>
+                    <input type="number" min={1} max={50} value={spAutoDailyLimit} onChange={e => setSpAutoDailyLimit(e.target.value)} onBlur={() => saveSpAutoSetting("spontaneous_auto_daily_limit", spAutoDailyLimit)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
+                  </div>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <button onClick={() => { setSpAutoLog([]); loadSpAutoLog(); }} style={{ background: "rgba(230,126,34,0.08)", color: "#d35400", border: "1.5px solid rgba(230,126,34,0.2)", borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>
+                    {spAutoLogLoading ? "Chargement…" : "Voir le journal des auto-propositions"}
+                  </button>
+                  {spAutoLog.length > 0 && (
+                    <div style={{ marginTop: 10, maxHeight: 220, overflowY: "auto", border: `1px solid ${G.gris}`, borderRadius: 10 }}>
+                      {spAutoLog.map(p => (
+                        <div key={p.id} style={{ padding: "9px 12px", borderBottom: `1px solid ${G.gris}`, fontSize: "0.76rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ color: G.brun, fontWeight: 600 }}>{p.manName} ↔ {p.womanName}</span>
+                          <span style={{ color: "#aaa" }}>{new Date(p.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!spAutoLogLoading && spAutoLog.length === 0 && (
+                    <div style={{ fontSize: "0.72rem", color: "#bbb", marginTop: 8 }}>Aucune auto-proposition pour l'instant.</div>
+                  )}
+                </div>
+              </div>
+
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                 {([["pending","En attente","#f39c12"],["pending_response","En attente de réponse","#2980b9"],["accepted","Acceptée","#27ae60"],["refused","Refusée","#e74c3c"],["expired","Expirée","#888"]] as [typeof proposalsStatusFilter, string, string][]).map(([key, label, color]) => (
                   <div key={label as string} onClick={() => setProposalsStatusFilter(f => f === key ? null : key)}
@@ -11156,7 +11236,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           </div>
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: `1px solid ${G.gris}` }}>
-                          <div style={{ fontSize: "0.68rem", fontWeight: 700, color: statusInfo.color, background: statusInfo.bg, padding: "3px 8px", borderRadius: 50 }}>{statusInfo.label}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ fontSize: "0.68rem", fontWeight: 700, color: statusInfo.color, background: statusInfo.bg, padding: "3px 8px", borderRadius: 50 }}>{statusInfo.label}</div>
+                            {(p.origin === "matchmaking_auto" || p.origin === "spontaneous_auto") && (
+                              <div title={p.origin === "matchmaking_auto" ? "Créée automatiquement (Matchmaking intelligent)" : "Créée automatiquement (règle d'âge)"} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.62rem", fontWeight: 700, color: "#7c3aed", background: "rgba(124,58,237,0.1)", padding: "3px 8px", borderRadius: 50 }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                Auto-propose
+                              </div>
+                            )}
+                          </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ fontSize: "0.62rem", color: "#aaa" }}>{new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
                             {p.status === "expired" && <button onClick={async () => {
