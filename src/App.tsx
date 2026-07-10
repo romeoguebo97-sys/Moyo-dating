@@ -1814,7 +1814,7 @@ export function Toast({ msg, type = "success", onClose }: { msg: string; type?: 
       borderRadius: isError ? 16 : 50,
       fontSize: "0.84rem",
       fontWeight: 600,
-      zIndex: 9999,
+      zIndex: 12010,
       boxShadow: isError
         ? "0 12px 40px rgba(192,57,43,0.35), inset 0 1px 0 rgba(255,255,255,0.1)"
         : "0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12)",
@@ -2275,7 +2275,11 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor }: { 
               </div>
             </div>
             <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 3 }}>Effectue ton paiement</div>
-            <div style={{ fontSize: "0.8rem", color: "#999", marginBottom: 20 }}>Suis les instructions ci-dessous pour valider ton paiement.</div>
+            {!B3OP.isPhoneTransfer && B3OP.responsable && (
+              <div style={{ fontSize: "0.74rem", color: "#8a7a5a", marginBottom: 20, lineHeight: 1.4 }}>
+                Effectue ton paiement {B3OP.name}, qui sera reçu et traité par notre Responsable des finances : <strong style={{ color: G.brun }}>{B3OP.responsable}</strong>
+              </div>
+            )}
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
@@ -2298,11 +2302,6 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor }: { 
               </div>
             ) : (
               <>
-                {B3OP.responsable && (
-                  <div style={{ fontSize: "0.74rem", color: "#8a7a5a", marginBottom: 10, lineHeight: 1.4 }}>
-                    Effectue ton paiement {B3OP.name}, qui sera reçu et traité par notre Responsable des finances : <strong style={{ color: G.brun }}>{B3OP.responsable}</strong>
-                  </div>
-                )}
                 {/* Carte 1 : appuyer pour payer */}
                 <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -8621,6 +8620,34 @@ const pauseAllVoiceAudiosExcept = (except: HTMLAudioElement | null) => {
 };
 
 const isAudioMsg = (content: string) => content.startsWith("[audio]") && content.endsWith("[/audio]");
+// ── Séparateur de date style WhatsApp : "Aujourd'hui" / "Hier" / "12 juillet" / "12 juillet 2025" ──
+const formatDateSeparator = (dateStr: string): string => {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const startOfDay = (dt: Date) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return "Hier";
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString("fr-FR", sameYear ? { day: "numeric", month: "long" } : { day: "numeric", month: "long", year: "numeric" });
+};
+// Retourne le séparateur à afficher AVANT le message d'index i, ou null si le jour n'a pas changé
+// depuis le message précédent (donc rien à afficher).
+const dateSeparatorFor = (msgs: { created_at?: string }[], i: number): string | null => {
+  const cur = msgs[i]?.created_at;
+  if (!cur) return null;
+  const prev = i > 0 ? msgs[i - 1]?.created_at : null;
+  if (prev) {
+    const a = new Date(cur), b = new Date(prev);
+    if (a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()) return null;
+  }
+  return formatDateSeparator(cur);
+};
+const DateSeparator = ({ label }: { label: string }) => (
+  <div style={{ display: "flex", justifyContent: "center", margin: "14px 0 6px" }}>
+    <div style={{ background: "rgba(0,0,0,0.06)", color: "#777", fontSize: "0.72rem", fontWeight: 600, padding: "5px 14px", borderRadius: 50 }}>{label}</div>
+  </div>
+);
 
 // ── Flux micro partagé au niveau module (pas un useRef) : le composant Messages est démonté/remonté
 //    à chaque changement d'onglet de la barre du bas ({tab === "messages" && <Messages .../>}), ce qui
@@ -10961,7 +10988,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           };
           const handleLongPressEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
           return (
-            <div key={i} className="msg-row" ref={el => { msgRefs.current[m.id] = el; }}
+            <React.Fragment key={i}>
+              {dateSeparatorFor(msgs, i) && <DateSeparator label={dateSeparatorFor(msgs, i)!} />}
+            <div className="msg-row" ref={el => { msgRefs.current[m.id] = el; }}
               onTouchStart={(e) => { const t = e.touches[0]; swipeRef.current = { x: t.clientX, y: t.clientY, el: e.currentTarget as HTMLElement, active: false }; }}
               onTouchMove={(e) => {
                 const s = swipeRef.current; if (!s || !s.el) return;
@@ -11199,6 +11228,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 </div>
               )}
             </div>
+            </React.Fragment>
           );
         })}
           <div ref={bottomRef} />
@@ -12478,7 +12508,9 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
           const bubbleBody = replyMatch ? replyMatch[3] : m.content;
           const isImg = isImage(bubbleBody);
           return (
-            <div key={m.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: 14 }}>
+            <React.Fragment key={m.id || i}>
+              {dateSeparatorFor(msgs, i) && <DateSeparator label={dateSeparatorFor(msgs, i)!} />}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start", marginBottom: 14 }}>
               {showSender && <div onClick={() => openProfileView(m.sender_id)} style={{ fontSize: "0.68rem", fontWeight: 700, color: G.rouge, marginLeft: 44, marginBottom: 2, cursor: "pointer" }}>{prof?.name || "..."}</div>}
               <div style={{ display: "flex", gap: 8, alignItems: "flex-end", maxWidth: "82%", flexDirection: isMine ? "row-reverse" : "row" }}>
                 {!isMine && <div onClick={() => openProfileView(m.sender_id)} style={{ cursor: "pointer" }}><Avatar url={prof?.photo_url} gender={prof?.gender} size={30} /></div>}
@@ -12510,6 +12542,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
                 </div>
               </div>
             </div>
+            </React.Fragment>
           );
         })}
         </div>
@@ -16147,7 +16180,7 @@ export default function App() {
             {pendingProposal.proposerAge ? <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 4 }}>{pendingProposal.proposerAge} ans</div> : null}
           </div>
           <div style={{ padding: "12px 20px 24px" }}>
-            <button onClick={() => { persistDismissedProp(pendingProposal.id); if (pendingProposal.pairKey) persistDismissedProp(pendingProposal.pairKey); setPendingProposal(null); setPropJump(n => n + 1); setTab("matches"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>Voir la proposition</button>
+            <button onClick={() => { setPendingProposal(null); setPropJump(n => n + 1); setTab("matches"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>Voir la proposition</button>
           </div>
         </div>
       </div>

@@ -422,6 +422,19 @@ export function AdminDesktopPage() {
   });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
+  const [matchProposalExpiryDaysCfg, setMatchProposalExpiryDaysCfg] = React.useState("30");
+  React.useEffect(() => {
+    if (!auth) return;
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.match_proposal_expiry_days&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(rows => { const v = Array.isArray(rows) && rows[0]?.value; if (v) setMatchProposalExpiryDaysCfg(v); }).catch(() => {});
+  }, [auth?.userId]);
+  const saveMatchProposalExpiryDaysCfg = async (v: string) => {
+    setMatchProposalExpiryDaysCfg(v);
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.match_proposal_expiry_days`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+    } catch {}
+  };
   const [appConfig, setAppConfig] = React.useState({
     limitLikes: "5",
     limitMessages: "3",
@@ -745,6 +758,14 @@ export function AdminDesktopPage() {
                     setEditingConfig(null);
                   }} />
               ))}
+              <EditableRow label="Durée d'expiration des matchs proposés (jours)" value={matchProposalExpiryDaysCfg} open={editingConfig === "match_proposal_expiry_days"} type="number"
+                onOpen={() => { setEditingConfig(editingConfig === "match_proposal_expiry_days" ? null : "match_proposal_expiry_days"); setEditingConfigValue(matchProposalExpiryDaysCfg); }}
+                editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                hint="S'applique aux nouvelles propositions et réactivations (manuelles, Matchmaking intelligent, auto-propositions). N'affecte pas celles déjà en cours."
+                onSave={async () => {
+                  await saveMatchProposalExpiryDaysCfg(editingConfigValue);
+                  setEditingConfig(null);
+                }} />
             </OffCanvasSection>}
             {configTab === "tarifs" && <OffCanvasSection title="Prix & Abonnement">
               {([
@@ -1866,14 +1887,16 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
+  const [matchProposalExpiryDaysM, setMatchProposalExpiryDaysM] = React.useState("30");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
         const map: Record<string, string> = {};
         data.forEach((d: { key: string; value: string }) => { map[d.key] = d.value; });
+        if (map["match_proposal_expiry_days"]) setMatchProposalExpiryDaysM(map["match_proposal_expiry_days"]);
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
         setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
@@ -1919,6 +1942,11 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         {([["limit_match_requests","limitMatchRequests" as keyof typeof appConfig,"Demandes mise en relation/mois",appConfig.limitMatchRequests],["limit_status_boosts","limitStatusBoosts" as keyof typeof appConfig,"Boosts statut/mois",appConfig.limitStatusBoosts]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
           <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await saveSetting(key, editingConfigValue, auth.token); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "limit_match_requests") FREE_LIMITS.matchRequests = parseInt(editingConfigValue) || 2; if (key === "limit_status_boosts") FREE_LIMITS.statusBoosts = parseInt(editingConfigValue) || 2; setEditingConfig(null); }} />
         ))}
+        <EditableRow label="Durée d'expiration des matchs proposés (jours)" value={matchProposalExpiryDaysM} type="number" open={editingConfig === "match_proposal_expiry_days"}
+          onOpen={() => { setEditingConfig(editingConfig === "match_proposal_expiry_days" ? null : "match_proposal_expiry_days"); setEditingConfigValue(matchProposalExpiryDaysM); }}
+          editValue={editingConfigValue} onEdit={setEditingConfigValue}
+          hint="S'applique aux nouvelles propositions et réactivations (manuelles, Matchmaking intelligent, auto-propositions)."
+          onSave={async () => { await patch("match_proposal_expiry_days", editingConfigValue); setMatchProposalExpiryDaysM(editingConfigValue); setEditingConfig(null); }} />
       </OffCanvasSection>
       <OffCanvasSection title="Prix & Abonnement">
         {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix 1 mois (FCFA)",appConfig.premiumPriceFcfa],["premium_price_week_fcfa","premiumPriceWeekFcfa" as keyof typeof appConfig,"Prix 1 semaine (FCFA)",appConfig.premiumPriceWeekFcfa],["premium_price_2month_fcfa","premiumPrice2monthFcfa" as keyof typeof appConfig,"Prix 2 mois (FCFA)",appConfig.premiumPrice2monthFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["eur_to_fcfa_rate","eurToFcfaRate" as keyof typeof appConfig,"Taux 1 € en FCFA",appConfig.eurToFcfaRate],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée 1 mois (jours)",appConfig.premiumDurationDays],["premium_days_week","premiumDaysWeek" as keyof typeof appConfig,"Durée 1 semaine (jours)",appConfig.premiumDaysWeek],["premium_days_2month","premiumDays2month" as keyof typeof appConfig,"Durée 2 mois (jours)",appConfig.premiumDays2month],["likes_notification_delay_hours","likesNotifDelayHours" as keyof typeof appConfig,"Notif likes après (heures)",appConfig.likesNotifDelayHours]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
@@ -3396,9 +3424,11 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       const mR = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${id1},user2.eq.${id2}),and(user1.eq.${id2},user2.eq.${id1}))&select=id&limit=1`, { headers: H });
       const m = await mR.json().catch(() => []);
       if (Array.isArray(m) && m.length > 0) return { kind: "block", reason: "match", message: `⛔ ${name1} et ${name2} sont déjà en relation (un match existe entre eux).` };
-      // 2) Propositions entre les deux (non archivées)
+      // 2) Propositions entre les deux — TOUTES, y compris archivées : l'archivage ne doit
+      //    jamais effacer un refus de l'historique de sécurité, sinon on pourrait reproposer
+      //    quelqu'un qui a déjà refusé simplement parce que la proposition a été archivée.
       const pR = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?or=(and(user1_id.eq.${id1},user2_id.eq.${id2}),and(user1_id.eq.${id2},user2_id.eq.${id1}))&order=created_at.desc&select=id,status,refused_by,user1_response,user2_response,expires_at,archived,created_at`, { headers: H });
-      const props = (await pR.json().catch(() => [])).filter((p: any) => !p.archived);
+      const props = await pR.json().catch(() => []);
       const now = Date.now();
       const isRefused = (p: any) => p.status === "refused" || !!p.refused_by || p.user1_response === "refused" || p.user2_response === "refused";
       const isExpired = (p: any) => !isRefused(p) && p.status !== "accepted" && p.status !== "matched" && p.expires_at && new Date(p.expires_at).getTime() < now;
@@ -3420,7 +3450,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
   const mmDoPropose = async (s: any) => {
     try {
-      const expiresAt = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
+      const expiresAt = new Date(Date.now() + (parseInt(matchProposalExpiryDays) || 30) * 24 * 3600 * 1000).toISOString();
       await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ user1_id: s.man.id, user2_id: s.woman.id, expires_at: expiresAt, created_by: auth.userId, source: "request", origin: "matchmaking" }) });
       logAdminAction(auth.token, auth.userId, auth.name, `Couple proposé (matchmaking) : ${s.man.name} ↔ ${s.woman.name} - ${s.score}%`, s.man.id);
       showToast("Couple proposé !", "success");
@@ -3802,6 +3832,29 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [proposeSelected2, setProposeSelected2] = useState<AdminProfile | null>(null);
   const [proposeP1Locked, setProposeP1Locked] = useState(false);
   const [proposeDuration, setProposeDuration] = useState("48");
+  // ── Durée d'expiration globale des propositions de match (en jours), pilotable depuis
+  //    Configuration → Tarifs & Paiements. Sert de valeur par défaut pour toute nouvelle
+  //    proposition (manuelle, réactivation, matchmaking, auto-propositions). ──
+  const [matchProposalExpiryDays, setMatchProposalExpiryDays] = useState("30");
+  useEffect(() => {
+    if (!auth) return;
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.match_proposal_expiry_days&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const rows = await r.json().catch(() => []);
+        const v = Array.isArray(rows) && rows[0]?.value;
+        if (v) { setMatchProposalExpiryDays(v); setProposeDuration(String(parseInt(v) * 24)); }
+      } catch {}
+    })();
+  }, [auth?.userId]);
+  const saveMatchProposalExpiryDays = async (v: string) => {
+    setMatchProposalExpiryDays(v);
+    setProposeDuration(String((parseInt(v) || 30) * 24));
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.match_proposal_expiry_days`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+    } catch {}
+  };
   // ── Propositions spontanées automatiques (règle : homme plus âgé), lues chaque nuit par la
   //    fonction Supabase auto-propose-spontaneous. Le bouton manuel "Proposer un match" reste
   //    inchangé et continue de fonctionner exactement pareil. ──
@@ -3979,7 +4032,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   const PROPOSALS_PAGE_SIZE = 30;
-  const loadProposals = async (page = 0, statusFilter: typeof proposalsStatusFilter = null, autoOnly = false) => {
+  const loadProposals = async (page = 0, statusFilter: typeof proposalsStatusFilter = null, originFilter: typeof proposalsOriginFilter = null) => {
     setProposalsLoading(true);
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&expires_at=lt.${new Date().toISOString()}`, {
@@ -3996,8 +4049,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       else if (statusFilter === "refused") qs += `&status=eq.refused`;
       else if (statusFilter === "expired") qs += `&status=eq.expired`;
       else if (statusFilter === "pending" || statusFilter === "pending_response") qs += `&status=eq.pending`;
-      // Filtre "Auto-propose" appliqué côté serveur également.
-      if (autoOnly) qs += `&origin=in.(matchmaking_auto,spontaneous_auto)`;
+      // Filtre origine (Auto-propose / Manuelle) appliqué côté serveur également.
+      if (originFilter === "auto") qs += `&origin=in.(matchmaking_auto,spontaneous_auto)`;
+      else if (originFilter === "manual") qs += `&or=(origin.is.null,origin.not.in.(matchmaking_auto,spontaneous_auto))`;
       const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?${qs}`, {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
       });
@@ -4209,7 +4263,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Vue & tri utilisateurs admin ──
   const [usersViewMode, setUsersViewMode] = useState<"grid" | "list">("grid");
   const [usersSort, setUsersSort] = useState<"created_at.desc" | "created_at.asc" | "name.asc" | "name.desc" | "last_seen.desc" | "age.asc" | "age.desc" | "online" | "premium" | "lifetime" | "admin" | "verified" | "banned" | "male" | "female">("created_at.desc");
-  const [usersFilter, setUsersFilter] = useState<"admin" | "premium" | "verified" | "banned" | "male" | "female" | null>(null);
+  type UserFilterKey = "admin" | "premium" | "verified" | "banned" | "male" | "female" | "online" | "recent";
+  const [usersFilters, setUsersFilters] = useState<Set<UserFilterKey>>(new Set());
   const [adminViewedProfile, setAdminViewedProfile] = useState<Profile | null>(null);
   const openAdminProfile = async (userId: string) => {
     try {
@@ -5077,7 +5132,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [archivedViewMode, setArchivedViewMode] = useState<"list" | "grid">("list");
   const [proposalsViewMode, setProposalsViewMode] = useState<"list" | "grid">("list");
   const [proposalsStatusFilter, setProposalsStatusFilter] = useState<"pending" | "pending_response" | "accepted" | "refused" | "expired" | null>(null);
-  const [proposalsAutoFilter, setProposalsAutoFilter] = useState(false);
+  const [proposalsOriginFilter, setProposalsOriginFilter] = useState<"auto" | "manual" | null>(null);
   const [proposalsPage, setProposalsPage] = useState(0);
   const [proposalsSearchName, setProposalsSearchName] = useState("");
   const propFilterCategory = (p: any): "pending" | "pending_response" | "accepted" | "refused" | "expired" => {
@@ -5690,6 +5745,29 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Users ──
   const [users, setUsers] = useState<AdminProfile[]>([]);
+  // ── Likes reçus en attente de retour (pas encore devenus un match), par utilisateur —
+  //    calculé pour la page actuellement affichée uniquement (pas pour tous les comptes). ──
+  const [pendingLikesCount, setPendingLikesCount] = useState<Record<string, number>>({});
+  const loadPendingLikes = async (pageUsers: AdminProfile[]) => {
+    if (!auth || pageUsers.length === 0) { setPendingLikesCount({}); return; }
+    try {
+      const ids = pageUsers.map(u => u.id);
+      const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+      const [likesRaw, matchesRaw] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/likes?to_user=in.(${ids.join(",")})&select=from_user,to_user&limit=5000`, { headers: H }).then(r => r.json()).catch(() => []),
+        fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.in.(${ids.join(",")}),user2.in.(${ids.join(",")}))&select=user1,user2&limit=5000`, { headers: H }).then(r => r.json()).catch(() => []),
+      ]);
+      const matchedPairs = new Set((Array.isArray(matchesRaw) ? matchesRaw : []).map((m: any) => [m.user1, m.user2].sort().join("_")));
+      const counts: Record<string, number> = {};
+      (Array.isArray(likesRaw) ? likesRaw : []).forEach((l: any) => {
+        if (!l.to_user || !l.from_user) return;
+        const pairKey = [l.from_user, l.to_user].sort().join("_");
+        if (matchedPairs.has(pairKey)) return; // déjà un match → plus "en attente"
+        counts[l.to_user] = (counts[l.to_user] || 0) + 1;
+      });
+      setPendingLikesCount(counts);
+    } catch { setPendingLikesCount({}); }
+  };
   // Helper : premium à vie
   const isLifetimePremium = (u: AdminProfile) => !!u.premium_until && new Date(u.premium_until).getFullYear() >= 2090;
   // ── Un compte est "actuellement banni" soit définitivement (is_banned), soit temporairement
@@ -5913,7 +5991,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Chargement des utilisateurs avec recherche ──
-  const loadUsers = async (search = "", page = 0, sort = usersSort, searchEmail = "", filter = usersFilter) => {
+  const loadUsers = async (search = "", page = 0, sort = usersSort, searchEmail = "", filters = usersFilters) => {
     setUsersLoading(true);
     try {
       const pageSize = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
@@ -5933,8 +6011,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         "banned":   "is_banned.desc.nullslast,created_at.desc",
       };
       const serverSort = serverSorts[sort] || "created_at.desc";
-      // Filtre réel (exclut, pas juste réordonne) — appliqué côté serveur, donc valable sur
-      // toutes les pages, pas seulement celle affichée à l'instant.
+      // Filtres réels (excluent, pas juste réordonnent) — combinables entre eux (ET), appliqués
+      // côté serveur, donc valables sur toutes les pages, pas seulement celle affichée.
+      const onlineThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString(); // 5 min, comme ailleurs dans l'app
+      const recentThreshold = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(); // 7 jours
       const filterClauses: Record<string, string> = {
         admin: "is_admin=eq.true",
         premium: "is_premium=eq.true",
@@ -5942,8 +6022,10 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         banned: "is_banned=eq.true",
         male: "gender=eq.Homme",
         female: "gender=eq.Femme",
+        online: `last_seen=gte.${onlineThreshold}`,
+        recent: `last_seen=gte.${recentThreshold}`,
       };
-      const filterQs = filter ? `&${filterClauses[filter]}` : "";
+      const filterQs = Array.from(filters).map(f => `&${filterClauses[f]}`).join("");
       let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       if (search.trim() || searchEmail.trim()) {
         const nameQ = search.trim() ? `name.ilike.*${encodeURIComponent(search.trim())}*` : null;
@@ -5976,9 +6058,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
           }
           return best;
         };
-        setUsers([...res].sort((a, b) => score(a) - score(b)));
+        const sorted = [...res].sort((a, b) => score(a) - score(b));
+        setUsers(sorted);
+        loadPendingLikes(sorted);
       } else {
         setUsers(res);
+        loadPendingLikes(res);
       }
     } catch (e: any) {
       console.error("[Moyo][Admin][Users] ❌ Erreur :", e?.message || e);
@@ -8145,16 +8230,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             </div>
           </div>
-          {/* ── Filtres réels (excluent, contrairement au tri ci-dessus) — s'appliquent sur toutes
-               les pages, pas seulement celle affichée. ── */}
+          {/* ── Filtres réels (excluent, contrairement au tri ci-dessus) — combinables entre eux
+               (ex: Femmes + En ligne), s'appliquent sur toutes les pages, pas seulement celle
+               affichée. ── */}
           <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
-            {([["admin","⚙️ Admin"],["premium","★ Premium"],["verified","✓ Vérifiés"],["banned","⛔ Bannis"],["male","👨 Hommes"],["female","👩 Femmes"]] as [typeof usersFilter, string][]).map(([key, label]) => (
-              <div key={label} onClick={() => { const next = usersFilter === key ? null : key; setUsersFilter(next); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, next); }}
-                style={{ fontSize: "0.72rem", fontWeight: 600, color: usersFilter === key ? "#fff" : "#555", background: usersFilter === key ? G.rouge : G.creme, border: `1.5px solid ${usersFilter === key ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 11px", cursor: "pointer" }}>
+            {([["admin","⚙️ Admin"],["premium","★ Premium"],["verified","✓ Vérifiés"],["banned","⛔ Bannis"],["male","👨 Hommes"],["female","👩 Femmes"],["online","🟢 En ligne"],["recent","🕓 Actif < 7j"]] as [UserFilterKey, string][]).map(([key, label]) => (
+              <div key={label} onClick={() => {
+                  const next = new Set(usersFilters);
+                  if (next.has(key)) next.delete(key); else next.add(key);
+                  setUsersFilters(next); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, next);
+                }}
+                style={{ fontSize: "0.72rem", fontWeight: 600, color: usersFilters.has(key) ? "#fff" : "#555", background: usersFilters.has(key) ? G.rouge : G.creme, border: `1.5px solid ${usersFilters.has(key) ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 11px", cursor: "pointer" }}>
                 {label}
               </div>
             ))}
-            {usersFilter && <div onClick={() => { setUsersFilter(null); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, null); }} style={{ fontSize: "0.72rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "5px 9px", textDecoration: "underline" }}>Tout afficher</div>}
+            {usersFilters.size > 0 && <div onClick={() => { const empty = new Set<any>(); setUsersFilters(empty); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, empty); }} style={{ fontSize: "0.72rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "5px 9px", textDecoration: "underline" }}>Tout afficher</div>}
           </div>
 
           {usersLoading ? (
@@ -8298,6 +8388,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
                           <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
                         </div>
+                        {/* Likes reçus en attente de retour (pas encore devenus un match) */}
+                        {!!pendingLikesCount[u.id] && (
+                          <div title="Likes reçus en attente d'un retour (pas encore un match)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(233,30,140,0.08)", color: "#e91e8c", borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0, marginLeft: 6 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                            {pendingLikesCount[u.id]}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -8374,6 +8471,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           )}
                         </div>
                       </div>
+                      {!!pendingLikesCount[u.id] && (
+                        <div title="Likes reçus en attente d'un retour (pas encore un match)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(233,30,140,0.08)", color: "#e91e8c", borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                          {pendingLikesCount[u.id]}
+                        </div>
+                      )}
                       {isLoading && (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 0.8s ease-in-out infinite", flexShrink: 0 }}><circle cx="12" cy="12" r="10"/></svg>
                       )}
@@ -11249,7 +11352,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 </div>
                 <button onClick={() => openProposeNew()} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Nouvelle proposition</button>
-                <button onClick={() => loadProposals(proposalsPage, proposalsStatusFilter, proposalsAutoFilter)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+                <button onClick={() => loadProposals(proposalsPage, proposalsStatusFilter, proposalsOriginFilter)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
               </div>
 
               {/* Auto-proposition spontanée nocturne */}
@@ -11296,16 +11399,20 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                 {([["pending","En attente","#f39c12"],["pending_response","En attente de réponse","#2980b9"],["accepted","Acceptée","#27ae60"],["refused","Refusée","#e74c3c"],["expired","Expirée","#888"]] as [typeof proposalsStatusFilter, string, string][]).map(([key, label, color]) => (
-                  <div key={label as string} onClick={() => { const next = proposalsStatusFilter === key ? null : key; setProposalsStatusFilter(next); setProposalsPage(0); loadProposals(0, next, proposalsAutoFilter); }}
+                  <div key={label as string} onClick={() => { const next = proposalsStatusFilter === key ? null : key; setProposalsStatusFilter(next); setProposalsPage(0); loadProposals(0, next, proposalsOriginFilter); }}
                     style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: color as string, fontWeight: 600, cursor: "pointer", padding: "4px 9px", borderRadius: 50, background: proposalsStatusFilter === key ? `${color}1f` : "transparent", border: `1.5px solid ${proposalsStatusFilter === key ? color : "transparent"}` }}>
                     <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={color as string}/></svg><span>{label}</span>
                   </div>
                 ))}
-                <div onClick={() => { const next = !proposalsAutoFilter; setProposalsAutoFilter(next); setProposalsPage(0); loadProposals(0, proposalsStatusFilter, next); }}
-                  style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#7c3aed", fontWeight: 600, cursor: "pointer", padding: "4px 9px", borderRadius: 50, background: proposalsAutoFilter ? "rgba(124,58,237,0.12)" : "transparent", border: `1.5px solid ${proposalsAutoFilter ? "#7c3aed" : "transparent"}` }}>
+                <div onClick={() => { const next = proposalsOriginFilter === "auto" ? null : "auto"; setProposalsOriginFilter(next); setProposalsPage(0); loadProposals(0, proposalsStatusFilter, next); }}
+                  style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#7c3aed", fontWeight: 600, cursor: "pointer", padding: "4px 9px", borderRadius: 50, background: proposalsOriginFilter === "auto" ? "rgba(124,58,237,0.12)" : "transparent", border: `1.5px solid ${proposalsOriginFilter === "auto" ? "#7c3aed" : "transparent"}` }}>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Auto-propose</span>
                 </div>
-                {(proposalsStatusFilter || proposalsAutoFilter) && <div onClick={() => { setProposalsStatusFilter(null); setProposalsAutoFilter(false); setProposalsPage(0); loadProposals(0, null, false); }} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
+                <div onClick={() => { const next = proposalsOriginFilter === "manual" ? null : "manual"; setProposalsOriginFilter(next); setProposalsPage(0); loadProposals(0, proposalsStatusFilter, next); }}
+                  style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#555", fontWeight: 600, cursor: "pointer", padding: "4px 9px", borderRadius: 50, background: proposalsOriginFilter === "manual" ? "rgba(85,85,85,0.12)" : "transparent", border: `1.5px solid ${proposalsOriginFilter === "manual" ? "#555" : "transparent"}` }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Manuelle</span>
+                </div>
+                {(proposalsStatusFilter || proposalsOriginFilter) && <div onClick={() => { setProposalsStatusFilter(null); setProposalsOriginFilter(null); setProposalsPage(0); loadProposals(0, null, null); }} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
               </div>
               <div style={{ marginBottom: 14 }}>
                 <input value={proposalsSearchName} onChange={e => setProposalsSearchName(e.target.value)} placeholder="Rechercher une personne (prénom, page actuelle)…" style={{ width: "100%", maxWidth: 340, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
@@ -11404,9 +11511,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               })()}
               {!proposalsLoading && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 18 }}>
-                  <Btn variant="ghost" onClick={() => { const p = Math.max(0, proposalsPage - 1); setProposalsPage(p); loadProposals(p, proposalsStatusFilter, proposalsAutoFilter); }} disabled={proposalsPage === 0} style={{ padding: "8px 16px", fontSize: "0.78rem" }}>← Précédent</Btn>
+                  <Btn variant="ghost" onClick={() => { const p = Math.max(0, proposalsPage - 1); setProposalsPage(p); loadProposals(p, proposalsStatusFilter, proposalsOriginFilter); }} disabled={proposalsPage === 0} style={{ padding: "8px 16px", fontSize: "0.78rem" }}>← Précédent</Btn>
                   <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Page {proposalsPage + 1}</div>
-                  <Btn variant="ghost" onClick={() => { const p = proposalsPage + 1; setProposalsPage(p); loadProposals(p, proposalsStatusFilter, proposalsAutoFilter); }} disabled={proposals.length < PROPOSALS_PAGE_SIZE} style={{ padding: "8px 16px", fontSize: "0.78rem" }}>Suivant →</Btn>
+                  <Btn variant="ghost" onClick={() => { const p = proposalsPage + 1; setProposalsPage(p); loadProposals(p, proposalsStatusFilter, proposalsOriginFilter); }} disabled={proposals.length < PROPOSALS_PAGE_SIZE} style={{ padding: "8px 16px", fontSize: "0.78rem" }}>Suivant →</Btn>
                 </div>
               )}
             </div>
