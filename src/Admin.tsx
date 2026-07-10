@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
-  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
   setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
 } from "./App";
 
@@ -266,7 +266,7 @@ function EditableRow({ label, value, open, onOpen, editValue, onEdit, onSave, hi
 
 // ── Éditeur de liste de mots (ajout/suppression individuels, effet immédiat) — remplace l'ancien
 //    éditeur en bloc de texte pour "Liste des mots interdits" et "Mots contacts". ──
-function WordListEditor({ label, value, hint, onSave, builtinValue, onSaveBuiltin }: { label: string; value: string; hint?: string; onSave: (newValue: string) => Promise<void> | void; builtinValue?: string; onSaveBuiltin?: (newValue: string) => Promise<void> | void }) {
+function WordListEditor({ label, value, hint, onSave, builtinValue, onSaveBuiltin, builtinWordsList }: { label: string; value: string; hint?: string; onSave: (newValue: string) => Promise<void> | void; builtinValue?: string; onSaveBuiltin?: (newValue: string) => Promise<void> | void; builtinWordsList?: string[] }) {
   const G2 = { rouge: "#C0392B", gris: "#E8E0D8", blanc: "#FFFFFF", creme: "#F7F3EF" };
   const [open, setOpen] = React.useState(false);
   const [newWord, setNewWord] = React.useState("");
@@ -275,7 +275,8 @@ function WordListEditor({ label, value, hint, onSave, builtinValue, onSaveBuilti
   // Si builtinValue est fourni, on fusionne les mots codés en dur (moins ceux désactivés) avec
   // les mots personnalisés, affichés exactement de la même façon, dans une seule liste.
   const disabledBuiltin = new Set((builtinValue || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean));
-  const activeBuiltinWords = builtinValue !== undefined ? BUILTIN_MODERATION_WORDS.map(w => w.word).filter(w => !disabledBuiltin.has(w.toLowerCase())) : [];
+  const builtinSource = builtinWordsList || BUILTIN_MODERATION_WORDS.map(w => w.word);
+  const activeBuiltinWords = builtinValue !== undefined ? builtinSource.filter(w => !disabledBuiltin.has(w.toLowerCase())) : [];
   const words = [...activeBuiltinWords, ...customWords];
   const isBuiltin = (w: string) => activeBuiltinWords.includes(w);
 
@@ -347,6 +348,9 @@ const BUILTIN_MODERATION_WORDS: { word: string; type: "insult" | "scam" | "sexua
   ...["photo nue", "video nue", "plan cul", "viens dans mon lit", "pipe", "branlette", "branler", "sucer", "chatte", "bite", "queue", "nude", "envoie tes seins", "viens coucher", "baise", "baiser", "nique", "sexe"].map(word => ({ word, type: "sexual" as const, group: "Contenu sexuel" })),
 ];
 
+// ── Doit rester identique à BUILTIN_CONTACT_WORDS dans App.tsx (juste pour l'affichage ici) ──
+const BUILTIN_CONTACT_WORDS = ["whatsapp", "telegram", "snapchat", "viber", "wechat", "skype", "discord", "messenger", "imo", "signal", "zangi", "botim", "kakao", "facebook", "instagram", "tiktok", "twitter", "numéro", "téléphone", "tel", "portable", "mobile", "phone", "visio", "vocal", "contact", "arobase"];
+
 
 export function AdminDesktopPage() {
   const [auth, setAuth] = React.useState<Auth | null>(null);
@@ -394,6 +398,7 @@ export function AdminDesktopPage() {
     featureModerationInsults: "true",
     featureModerationContact: "true",
     disabledBuiltinWords: "",
+    disabledBuiltinContactWords: "",
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
@@ -416,6 +421,7 @@ export function AdminDesktopPage() {
       "custom_banned_words",
       "contact_banned_words",
       "disabled_builtin_words",
+      "disabled_builtin_contact_words",
       "auto_mod_contact_reply",
     ];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
@@ -455,6 +461,7 @@ export function AdminDesktopPage() {
         featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults,
         featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact,
         disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords,
+        disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords,
         appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
         phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
         physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
@@ -822,12 +829,20 @@ export function AdminDesktopPage() {
                 <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux.
               </div>
               <WordListEditor label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords}
-                hint="Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+                hint="Inclut les mots déjà intégrés par défaut (whatsapp, instagram, numéro...) et ceux que tu ajoutes. Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+                builtinValue={appConfig.disabledBuiltinContactWords}
+                builtinWordsList={BUILTIN_CONTACT_WORDS}
                 onSave={async (newValue) => {
                   if (!auth) return;
                   await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.contact_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
                   setAppConfig(c => ({ ...c, contactBannedWords: newValue }));
                   buildContactBannedRegex(newValue);
+                }}
+                onSaveBuiltin={async (newValue) => {
+                  if (!auth) return;
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.disabled_builtin_contact_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
+                  setAppConfig(c => ({ ...c, disabledBuiltinContactWords: newValue }));
+                  setExemptedContactWords(newValue);
                 }} />
               <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
                 <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
@@ -1791,14 +1806,14 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -1807,7 +1822,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
         setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
-        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords }));
+        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -1887,11 +1902,18 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
           <b>Mots « contacts », membres gratuits uniquement.</b> Bloqués uniquement pour les comptes gratuits (les Premium peuvent les envoyer). Idéal pour empêcher le partage d'autres applis/réseaux.
         </div>
         <WordListEditor label="Mots contacts (gratuit uniquement)" value={appConfig.contactBannedWords}
-          hint="Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+          hint="Inclut les mots déjà intégrés par défaut (whatsapp, instagram, numéro...) et ceux que tu ajoutes. Chaque mot est ajouté ou retiré individuellement, effet immédiat pour les nouveaux messages."
+          builtinValue={appConfig.disabledBuiltinContactWords}
+          builtinWordsList={BUILTIN_CONTACT_WORDS}
           onSave={async (newValue) => {
             await patch("contact_banned_words", newValue);
             setAppConfig(c => ({ ...c, contactBannedWords: newValue }));
             buildContactBannedRegex(newValue);
+          }}
+          onSaveBuiltin={async (newValue) => {
+            await patch("disabled_builtin_contact_words", newValue);
+            setAppConfig(c => ({ ...c, disabledBuiltinContactWords: newValue }));
+            setExemptedContactWords(newValue);
           }} />
         <div style={{ fontSize: "0.74rem", color: "#888", margin: "16px 0 10px", lineHeight: 1.5, borderTop: `1px solid ${G.gris}`, paddingTop: 14 }}>
           <b>Message automatique de l'Assistant Moyo Dating.</b> Envoyé automatiquement à un membre gratuit dès qu'il tente de partager des coordonnées. Il s'affiche dans sa conversation avec l'Assistant Moyo Dating.
@@ -3190,6 +3212,52 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [mmStats, setMmStats] = useState({ created: 0, pending: 0, avg: 0 });
   const [mmView, setMmView] = useState<any | null>(null);
   const [mmFilters, setMmFilters] = useState({ pastRefusals: true, existingMatches: true, reported: true, banned: true, teamRefused: true, activeOnly: false });
+  // ── Auto-proposition nocturne : ces réglages sont lus par la fonction Supabase
+  //    (auto-propose-matchmaking) exécutée chaque nuit par une tâche planifiée. Le calcul de
+  //    compatibilité et les filtres restent strictement identiques au système manuel. ──
+  const [mmAutoEnabled, setMmAutoEnabled] = useState(false);
+  const [mmAutoMinScore, setMmAutoMinScore] = useState("80");
+  const [mmAutoDailyLimit, setMmAutoDailyLimit] = useState("8");
+  const [mmAutoLog, setMmAutoLog] = useState<any[]>([]);
+  const [mmAutoLogLoading, setMmAutoLogLoading] = useState(false);
+  useEffect(() => {
+    if (!auth) return;
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(mm_auto_propose_enabled,mm_auto_propose_min_score,mm_auto_propose_daily_limit)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const rows = await r.json().catch(() => []);
+        const map: Record<string, string> = {};
+        (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
+        if (map["mm_auto_propose_enabled"] !== undefined) setMmAutoEnabled(map["mm_auto_propose_enabled"] === "true");
+        if (map["mm_auto_propose_min_score"] !== undefined) setMmAutoMinScore(map["mm_auto_propose_min_score"]);
+        if (map["mm_auto_propose_daily_limit"] !== undefined) setMmAutoDailyLimit(map["mm_auto_propose_daily_limit"]);
+      } catch {}
+    })();
+  }, [auth?.userId]);
+  const saveMmAutoSetting = async (key: string, value: string) => {
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+    } catch {}
+  };
+  const loadMmAutoLog = async () => {
+    if (!auth) return;
+    setMmAutoLogLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?origin=eq.matchmaking_auto&select=id,user1_id,user2_id,created_at,status&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const rows = await r.json().catch(() => []);
+      const list = Array.isArray(rows) ? rows : [];
+      const ids = Array.from(new Set(list.flatMap((p: any) => [p.user1_id, p.user2_id])));
+      let namesById: Record<string, string> = {};
+      if (ids.length) {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const prows = await pr.json().catch(() => []);
+        (Array.isArray(prows) ? prows : []).forEach((p: any) => { namesById[p.id] = p.name; });
+      }
+      setMmAutoLog(list.map((p: any) => ({ ...p, manName: namesById[p.user1_id] || "?", womanName: namesById[p.user2_id] || "?" })));
+    } catch {}
+    setMmAutoLogLoading(false);
+  };
   const pairKey = (a: string, b: string) => [a, b].sort().join("_");
   // ── Contraintes OBLIGATOIRES (vérifiées avant tout score) ──
   const mmEligible = (a: any, b: any) => {
@@ -10797,6 +10865,48 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           </button>
                         );
                       })}
+                    </div>
+                  </div>
+
+                  {/* Auto-proposition nocturne */}
+                  <div style={{ background: G.blanc, borderRadius: 14, padding: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontSize: "0.8rem", fontWeight: 800, color: G.brun }}>Auto-proposition nocturne</div>
+                        <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Propose automatiquement chaque nuit les meilleures paires, sans que tu aies à cliquer — même calcul et mêmes exclusions que ci-dessus. Ne force jamais un couple qui a un historique de refus.</div>
+                      </div>
+                      <SwitchBtn on={mmAutoEnabled} onToggle={() => { const v = !mmAutoEnabled; setMmAutoEnabled(v); saveMmAutoSetting("mm_auto_propose_enabled", v ? "true" : "false"); }} />
+                    </div>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <div style={{ flex: "1 1 140px" }}>
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 4 }}>Score minimum pour proposer</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <input type="number" min={50} max={99} value={mmAutoMinScore} onChange={e => setMmAutoMinScore(e.target.value)} onBlur={() => saveMmAutoSetting("mm_auto_propose_min_score", mmAutoMinScore)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
+                          <span style={{ fontSize: "0.76rem", color: "#888" }}>%</span>
+                        </div>
+                      </div>
+                      <div style={{ flex: "1 1 140px" }}>
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 4 }}>Limite par nuit</div>
+                        <input type="number" min={1} max={50} value={mmAutoDailyLimit} onChange={e => setMmAutoDailyLimit(e.target.value)} onBlur={() => saveMmAutoSetting("mm_auto_propose_daily_limit", mmAutoDailyLimit)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 12 }}>
+                      <button onClick={() => { setMmAutoLog([]); loadMmAutoLog(); }} style={{ background: "rgba(124,58,237,0.08)", color: "#7c3aed", border: "1.5px solid rgba(124,58,237,0.2)", borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>
+                        {mmAutoLogLoading ? "Chargement…" : "Voir le journal des auto-propositions"}
+                      </button>
+                      {mmAutoLog.length > 0 && (
+                        <div style={{ marginTop: 10, maxHeight: 220, overflowY: "auto", border: `1px solid ${G.gris}`, borderRadius: 10 }}>
+                          {mmAutoLog.map(p => (
+                            <div key={p.id} style={{ padding: "9px 12px", borderBottom: `1px solid ${G.gris}`, fontSize: "0.76rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ color: G.brun, fontWeight: 600 }}>{p.manName} ↔ {p.womanName}</span>
+                              <span style={{ color: "#aaa" }}>{new Date(p.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {!mmAutoLogLoading && mmAutoLog.length === 0 && (
+                        <div style={{ fontSize: "0.72rem", color: "#bbb", marginTop: 8 }}>Aucune auto-proposition pour l'instant.</div>
+                      )}
                     </div>
                   </div>
 

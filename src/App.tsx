@@ -89,7 +89,7 @@ const RELIGIONS = [
   "Brahnamiste", "Autre", "Athée", "Non pratiquant(e)",
 ];
 const CONTACT_PATTERNS = [
-  // ── Détection automatique ──
+  // ── Détection automatique (jamais désactivable, ce ne sont pas des "mots") ──
   /(?:\+?\d[\s.\-]*){7,}/,                                   // suite de 7+ chiffres même très espacés (0 6 6 8 9 3 5 1 9) — anti-contournement
   /(?:\+|\b00)\d{2,3}/,                                       // indicatifs internationaux : +33 +242 +243 +225 +221 +237, 0033…
   /\b0[67]\b/,                                                // préfixes mobiles 06 / 07
@@ -97,16 +97,16 @@ const CONTACT_PATTERNS = [
   /@[a-z0-9._]{2,}/i,                                         // pseudos précédés de @ (@instagram, @gmail, @snapchat…)
   /(https?:\/\/|www\.|wa\.me|t\.me|\.me\/|bit\.ly|tinyurl|tiktok\.com)/i, // liens
   /z[ée]ro\s?(six|sept)/i,                                    // « zéro six » / « zéro sept »
-  // ── Applications & réseaux ──
+];
+// ── Mots-clés "contacts" désactivables individuellement depuis l'admin (comme les mots interdits),
+//    séparés de CONTACT_PATTERNS ci-dessus qui reste toujours actif (détection technique). ──
+const CONTACT_WORD_PATTERNS = [
   /(whatsapp|whatsap|whatsab|watsap|watsapp|wtsapp|wassap|\bwa\b|\bw\.?a\b|telegram|telega|snapchat|\bsnap\b|viber|wechat|we.?chat|skype|discord|messenger|\bimo\b|\bsignal\b|zangi|botim|\bkakao\b)/i,
   /(facebook|face.?book|\bfb\b|instagram|insta.?gram|\binsta\b|tiktok|tik.?tok|twitter)/i,
-  // ── Contournements « lettres espacées » ──
   /w\s*h\s*a\s*t\s*s\s*a\s*p\s*p/i,
   /n\s*u\s*m\s*[ée]?\s*r\s*o/i,
   /s\s*n\s*a\s*p/i,
-  // ── Mots « contact » ──
   /(num[ée]ro|\bnumero\b|\bnum\b|t[ée]l[ée]phone|telephone|\btél\b|\btel\b(?!\s+(que|qu'|quel|le|les))|portable|\bmobile\b|\bphone\b|\bvisio\b|\bvocal\b|ar?obase)/i,
-  // ── Expressions de demande / redirection (même sans mot « contact ») ──
   /(donne|passe|envoie|envoi|file|balance|prends?|laisse).{0,14}(moi|ton|mon|votre).{0,8}(num[ée]ro|numero|\bnum\b|contact|mobile|portable|t[ée]l|whatsapp|insta|snap|facebook|phone|06|07)/i,
   /je te donne.{0,8}(mon|num[ée]ro|contact|whatsapp|insta|snap)/i,
   /(ton|votre|mon|son|nos|vos)\s*contacts?\b/i,
@@ -119,16 +119,23 @@ const CONTACT_PATTERNS = [
   /tu as.{0,8}(whatsapp|insta|instagram|snap|snapchat|telegram|facebook|tiktok|un compte)/i,
   /appel(le)?[\s-]?(moi|nous|vid[ée]o|vocal)/i,
   /fais.?moi.?un.?appel/i,
-  // ── Anciens motifs conservés ──
   /(mon num|mon numero|mon numéro|appelle.?moi|contacte.?moi|écris.?moi.?sur|ecris.?moi.?sur|rejoins.?moi.?sur|mon contact\b|mon tel\b)/i,
-  // ── Équivalents en anglais (contournement repéré : demander en anglais pour échapper aux
-  //    motifs français ci-dessus) ──
   /(give|send|text|share).{0,10}(me).{0,8}(your).{0,8}(number|whatsapp|contact|phone|insta|snap)/i,
   /(what.?s|whats).{0,4}your.{0,8}(number|whatsapp|contact|phone|insta|instagram|snap|snapchat)/i,
   /(text|call|message|whatsapp).{0,4}me\b/i,
   /(my|your)\s(number|whatsapp|phone number|contact|insta|instagram|snap|snapchat)\b/i,
   /do you have\s(whatsapp|instagram|telegram|snapchat|a phone)/i,
 ];
+const BUILTIN_CONTACT_WORDS = ["whatsapp", "telegram", "snapchat", "viber", "wechat", "skype", "discord", "messenger", "imo", "signal", "zangi", "botim", "kakao", "facebook", "instagram", "tiktok", "twitter", "numéro", "téléphone", "tel", "portable", "mobile", "phone", "visio", "vocal", "contact", "arobase"];
+let EXEMPTED_CONTACT_WORDS: Set<string> = new Set();
+export const setExemptedContactWords = (raw: string) => {
+  EXEMPTED_CONTACT_WORDS = new Set((raw || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean));
+};
+const isExemptedContactMatch = (matchedText: string): boolean => {
+  const lower = matchedText.toLowerCase();
+  for (const w of EXEMPTED_CONTACT_WORDS) { if (lower.includes(w) || w.includes(lower)) return true; }
+  return false;
+};
 // Mots interdits "contacts" (gratuit uniquement) — ajoutés par l'admin depuis Configuration → Sécurité
 let CONTACT_BANNED_REGEX: RegExp | null = null;
 // ── Mots intégrés par défaut, affichés et désactivables individuellement depuis l'admin
@@ -177,10 +184,16 @@ const countObfuscatedDigits = (text: string): number => {
   if (seq) for (const s of seq) spelled += (s.match(/z[ée]ro|zero|une|un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|one|two|three|four|five|six|seven|eight|nine|ten/g) || []).length;
   return realDigits + spelled;
 };
-const hasContactInfo = (text: string): boolean =>
-  CONTACT_PATTERNS.some(p => p.test(text))
-  || (CONTACT_BANNED_REGEX !== null && CONTACT_BANNED_REGEX.test(text))
-  || countObfuscatedDigits(text) >= 8; // 8 chiffres ou plus (sous n'importe quelle forme) = numéro déguisé
+const hasContactInfo = (text: string): boolean => {
+  if (CONTACT_PATTERNS.some(p => p.test(text))) return true; // détection technique, toujours active
+  for (const p of CONTACT_WORD_PATTERNS) {
+    const m = text.match(p);
+    if (m && !isExemptedContactMatch(m[0])) return true;
+  }
+  if (CONTACT_BANNED_REGEX !== null && CONTACT_BANNED_REGEX.test(text)) return true;
+  if (countObfuscatedDigits(text) >= 8) return true; // 8 chiffres ou plus (sous n'importe quelle forme) = numéro déguisé
+  return false;
+};
 
 
 // ── MODÉRATION : insultes, arnaques, contenu interdit ──
@@ -425,7 +438,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -452,6 +465,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["premium_screen_variant"] === "b" || map["premium_screen_variant"] === "a") PREMIUM_SCREEN_VARIANT = map["premium_screen_variant"];
   if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
   if (map["disabled_builtin_words"] !== undefined) setExemptedBuiltinWords(map["disabled_builtin_words"]);
+  if (map["disabled_builtin_contact_words"] !== undefined) setExemptedContactWords(map["disabled_builtin_contact_words"]);
   if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
   if (map["pay_mtn_number"]) PAY_MTN_NUMBER = map["pay_mtn_number"];
   if (map["pay_mtn_responsable"]) PAY_MTN_RESPONSABLE = map["pay_mtn_responsable"];
@@ -4112,7 +4126,7 @@ function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children:
         </div>
       </div>
     )}
-    <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "8px 20px 40px" }}>
+    <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "2px 20px 40px" }}>
       <div style={{ width: "100%", maxWidth: 420, overflowX: "hidden" }}>
         {children}
       </div>
@@ -4223,6 +4237,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   const [forgotMethod, setForgotMethod] = useState<"choice" | "email" | "whatsapp">("choice");
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotName, setForgotName] = useState("");
+  const [forgotDesiredPassword, setForgotDesiredPassword] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
 
   const handleLogin = async () => {
@@ -4310,7 +4325,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   if (banInfo) return <BanScreen until={banInfo.until} name={banInfo.name} email={banInfo.email} reason={banInfo.reason} onExpire={() => setBanInfo(null)} onBack={() => setBanInfo(null)} />;
   if (showForgot) {
     const closeForgot = () => { setShowForgot(false); setForgotMethod("choice"); setForgotSent(false); setForgotEmail(""); setForgotName(""); };
-    const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}\n\nPouvez-vous m'aider à le changer ?`)}`;
+    const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}${forgotDesiredPassword.trim() ? `\nMot de passe souhaité : ${forgotDesiredPassword.trim()}` : ""}\n\nPouvez-vous m'aider à le changer ?`)}`;
     return (
       <AuthLayout onBack={forgotMethod === "choice" ? () => onNav("landing") : () => setForgotMethod("choice")} title="Mot de passe oublié">
         <ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />
@@ -4364,6 +4379,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
             <p style={{ color: "#666", fontSize: "0.82rem", lineHeight: 1.5, marginBottom: 18 }}>Renseigne ton email pour qu'on retrouve ton compte, puis envoie ta demande sur WhatsApp, on te répond avec un nouveau mot de passe.</p>
             <Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" variant="line" />
             <Input label={<>Ton prénom <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 500 }}>(optionnel, aide à te retrouver plus vite)</span></>} value={forgotName} onChange={e => setForgotName(e.target.value)} placeholder="Ex: Faïda" icon="user" variant="line" />
+            <Input label={<>Mot de passe souhaité <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 500 }}>(optionnel)</span></>} type="password" value={forgotDesiredPassword} onChange={e => setForgotDesiredPassword(e.target.value)} placeholder="Le mot de passe que tu veux" icon="lock" hint="Si tu ne remplis pas ce champ, on t'en attribuera un nouveau." variant="line" />
             <a href={forgotEmail.trim() ? waSupportLink : undefined} target="_blank" rel="noopener noreferrer"
               onClick={e => { if (!forgotEmail.trim()) { e.preventDefault(); setErrorMsg("Entre ton email d'abord."); } }}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: forgotEmail.trim() ? "#25D366" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 12 }}>
@@ -4652,22 +4668,22 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 
   if (showRequirementsIntro) {
     const requirements = [
-      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, label: "Une adresse email valide", detail: "Pour créer ton compte et le sécuriser." },
-      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, label: "Un mot de passe", detail: "6 caractères minimum." },
-      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>, label: "Une photo de profil", detail: "Une vraie photo récente de toi, visage visible." },
-      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, label: "Ton âge", detail: "18 ans minimum, obligatoire." },
-      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>, label: "Ta ville", detail: "Pour te proposer des profils adaptés." },
-      { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, label: "Ton sexe", detail: "Homme ou Femme." },
+      { icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, label: "Une adresse email valide", detail: "Pour créer ton compte et le sécuriser." },
+      { icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, label: "Un mot de passe", detail: "6 caractères minimum." },
+      { icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>, label: "Une photo de profil", detail: "Une vraie photo récente de toi, visage visible." },
+      { icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="15" height="15" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, label: "Ton âge", detail: "18 ans minimum, obligatoire." },
+      { icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>, label: "Ta ville", detail: "Pour te proposer des profils adaptés." },
+      { icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, label: "Ton sexe", detail: "Homme ou Femme." },
     ];
     return (
       <AuthLayout onBack={() => onNav("landing")} title="Avant de commencer" subtitle="Voici ce qu'il te faudra pour créer ton compte (environ 2 minutes) :">
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28, marginTop: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24, marginTop: 0 }}>
           {requirements.map((r, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "13px 15px" }}>
-              <div style={{ width: 38, height: 38, borderRadius: 11, background: `linear-gradient(135deg, ${G.rouge}, ${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{r.icon}</div>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 13, padding: "10px 13px" }}>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${G.rouge}, ${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{r.icon}</div>
               <div>
-                <div style={{ fontSize: "0.87rem", fontWeight: 700, color: G.brun }}>{r.label}</div>
-                <div style={{ fontSize: "0.76rem", color: "#888", marginTop: 1 }}>{r.detail}</div>
+                <div style={{ fontSize: "0.84rem", fontWeight: 700, color: G.brun }}>{r.label}</div>
+                <div style={{ fontSize: "0.73rem", color: "#888", marginTop: 1 }}>{r.detail}</div>
               </div>
             </div>
           ))}
