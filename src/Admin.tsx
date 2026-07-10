@@ -266,6 +266,59 @@ function EditableRow({ label, value, open, onOpen, editValue, onEdit, onSave, hi
 
 // ── Éditeur de liste de mots (ajout/suppression individuels, effet immédiat) — remplace l'ancien
 //    éditeur en bloc de texte pour "Liste des mots interdits" et "Mots contacts". ──
+// ── Éditeur d'horaires (ex: "08:00,14:00,20:00") — ajout/retrait individuel, effet immédiat.
+//    Utilisé pour piloter entièrement depuis l'admin QUAND les auto-propositions se déclenchent,
+//    sans jamais avoir besoin de retoucher au SQL/à la fonction pour changer un horaire. ──
+function TimesEditor({ value, onSave }: { value: string; onSave: (newValue: string) => Promise<void> | void }) {
+  const G2 = { rouge: "#C0392B", gris: "#E8E0D8", blanc: "#FFFFFF", creme: "#F7F3EF" };
+  const [newTime, setNewTime] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const times = (value || "").split(",").map(t => t.trim()).filter(Boolean).sort();
+
+  const persist = async (list: string[]) => {
+    setSaving(true);
+    try { await onSave(list.slice().sort().join(",")); } finally { setSaving(false); }
+  };
+  const addTime = () => {
+    const t = newTime.trim();
+    if (!t || saving) return;
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) return;
+    if (times.includes(t)) { setNewTime(""); return; }
+    persist([...times, t]);
+    setNewTime("");
+  };
+  const removeTime = (t: string) => persist(times.filter(x => x !== t));
+
+  return (
+    <div>
+      <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Horaires de déclenchement (heure UTC)</div>
+      {times.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+          {times.map(t => (
+            <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(192,57,43,0.08)", color: G2.rouge, borderRadius: 50, padding: "5px 5px 5px 10px", fontSize: "0.76rem", fontWeight: 700 }}>
+              {t}
+              <button onClick={() => removeTime(t)} disabled={saving} title="Retirer cet horaire" style={{ border: "none", background: "rgba(192,57,43,0.18)", color: G2.rouge, borderRadius: "50%", width: 16, height: 16, fontSize: "0.62rem", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}>✕</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 6 }}>
+        <input
+          type="time"
+          value={newTime}
+          onChange={e => setNewTime(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTime(); } }}
+          style={{ flex: 1, minWidth: 0, boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1.5px solid rgba(192,57,43,0.3)", fontSize: "0.8rem", outline: "none" }}
+        />
+        <button onClick={addTime} disabled={!newTime.trim() || saving} style={{ border: "none", background: G2.rouge, color: "#fff", borderRadius: 8, width: 36, flexShrink: 0, cursor: (newTime.trim() && !saving) ? "pointer" : "not-allowed", opacity: newTime.trim() ? 1 : 0.5, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <div style={{ fontSize: "0.66rem", color: "#bbb", marginTop: 6 }}>Vérifié toutes les 15 min : ajoute, retire ou change un horaire ici, effet dès le prochain passage.</div>
+    </div>
+  );
+}
+
 function WordListEditor({ label, value, hint, onSave, builtinValue, onSaveBuiltin, builtinWordsList }: { label: string; value: string; hint?: string; onSave: (newValue: string) => Promise<void> | void; builtinValue?: string; onSaveBuiltin?: (newValue: string) => Promise<void> | void; builtinWordsList?: string[] }) {
   const G2 = { rouge: "#C0392B", gris: "#E8E0D8", blanc: "#FFFFFF", creme: "#F7F3EF" };
   const [open, setOpen] = React.useState(false);
@@ -2711,7 +2764,7 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Propositions vs Suivi", "L'onglet « Propositions » regroupe les propositions spontanées et celles issues d'une demande. Les couples créés depuis le Matchmaking sont suivis séparément dans « Suivi couples Matchmaking »."],
         ["Créer / Proposer un match", "Créez un match direct entre deux membres, ou proposez-leur une mise en relation qu'ils peuvent accepter ou refuser."],
         ["Auto-proposition (Matchmaking intelligent)", "Dans Matchmaking intelligent, un bloc dédié permet d'activer une proposition automatique des meilleures suggestions (seuil de compatibilité et limite par nuit réglables), sans rien changer au calcul manuel existant. Journal consultable de ce qui a été proposé automatiquement."],
-        ["Auto-proposition spontanée", "Dans Propositions, un bloc dédié applique automatiquement la règle « l'homme doit être plus âgé » : immédiatement à l'inscription d'un nouveau compte, puis 3 fois par jour pour les autres. Plafonnée par personne (par passage et par jour) pour ne pas saturer les gens. N'inclut jamais les comptes admin, ni un couple ayant déjà refusé."],
+        ["Auto-proposition spontanée", "Dans Propositions, un bloc dédié applique automatiquement la règle « l'homme doit être plus âgé » : immédiatement à l'inscription d'un nouveau compte, puis aux horaires que tu choisis toi-même pour les autres (ajout/retrait libre, aucun code à modifier). Plafonnée par personne (par passage et par jour) pour ne pas saturer les gens. N'inclut jamais les comptes admin, ni un couple ayant déjà refusé."],
         ["Pastille « Auto-propose »", "Sur chaque carte de proposition (grille ou liste), une pastille violette indique si elle a été créée automatiquement, pour la distinguer d'une proposition faite à la main."],
       ] },
     ],
@@ -3210,6 +3263,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   //    (auto-propose-matchmaking) exécutée chaque nuit par une tâche planifiée. Le calcul de
   //    compatibilité et les filtres restent strictement identiques au système manuel. ──
   const [mmAutoEnabled, setMmAutoEnabled] = useState(false);
+  const [mmAutoTimes, setMmAutoTimes] = useState("03:00");
   const [mmAutoMinScore, setMmAutoMinScore] = useState("80");
   const [mmAutoDailyLimit, setMmAutoDailyLimit] = useState("8");
   const [mmAutoLog, setMmAutoLog] = useState<any[]>([]);
@@ -3218,13 +3272,14 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     if (!auth) return;
     (async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(mm_auto_propose_enabled,mm_auto_propose_min_score,mm_auto_propose_daily_limit)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(mm_auto_propose_enabled,mm_auto_times,mm_auto_min_score,mm_auto_daily_limit)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const rows = await r.json().catch(() => []);
         const map: Record<string, string> = {};
         (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
         if (map["mm_auto_propose_enabled"] !== undefined) setMmAutoEnabled(map["mm_auto_propose_enabled"] === "true");
-        if (map["mm_auto_propose_min_score"] !== undefined) setMmAutoMinScore(map["mm_auto_propose_min_score"]);
-        if (map["mm_auto_propose_daily_limit"] !== undefined) setMmAutoDailyLimit(map["mm_auto_propose_daily_limit"]);
+        if (map["mm_auto_times"] !== undefined) setMmAutoTimes(map["mm_auto_times"]);
+        if (map["mm_auto_min_score"] !== undefined) setMmAutoMinScore(map["mm_auto_min_score"]);
+        if (map["mm_auto_daily_limit"] !== undefined) setMmAutoDailyLimit(map["mm_auto_daily_limit"]);
       } catch {}
     })();
   }, [auth?.userId]);
@@ -3750,6 +3805,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   //    fonction Supabase auto-propose-spontaneous. Le bouton manuel "Proposer un match" reste
   //    inchangé et continue de fonctionner exactement pareil. ──
   const [spAutoEnabled, setSpAutoEnabled] = useState(false);
+  const [spAutoTimes, setSpAutoTimes] = useState("08:00,14:00,20:00");
   const [spAutoDailyLimit, setSpAutoDailyLimit] = useState("6");
   const [spAutoPerRunLimit, setSpAutoPerRunLimit] = useState("2");
   const [spAutoLog, setSpAutoLog] = useState<any[]>([]);
@@ -3758,11 +3814,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     if (!auth) return;
     (async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(spontaneous_auto_propose_enabled,spontaneous_auto_daily_limit,spontaneous_auto_per_run_limit)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(spontaneous_auto_propose_enabled,spontaneous_auto_times,spontaneous_auto_daily_limit,spontaneous_auto_per_run_limit)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const rows = await r.json().catch(() => []);
         const map: Record<string, string> = {};
         (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
         if (map["spontaneous_auto_propose_enabled"] !== undefined) setSpAutoEnabled(map["spontaneous_auto_propose_enabled"] === "true");
+        if (map["spontaneous_auto_times"] !== undefined) setSpAutoTimes(map["spontaneous_auto_times"]);
         if (map["spontaneous_auto_daily_limit"] !== undefined) setSpAutoDailyLimit(map["spontaneous_auto_daily_limit"]);
         if (map["spontaneous_auto_per_run_limit"] !== undefined) setSpAutoPerRunLimit(map["spontaneous_auto_per_run_limit"]);
       } catch {}
@@ -5000,9 +5057,12 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [matchListSearch, setMatchListSearch] = useState("");
   const [matchListViewMode, setMatchListViewMode] = useState<"list" | "grid">("list");
   const [mmFollowViewMode, setMmFollowViewMode] = useState<"list" | "grid">("list");
+  const [mmFollowStatusFilter, setMmFollowStatusFilter] = useState<"pending" | "pending_response" | "accepted" | "refused" | "expired" | null>(null);
+  const [mmFollowSearchName, setMmFollowSearchName] = useState("");
   const [archivedViewMode, setArchivedViewMode] = useState<"list" | "grid">("list");
   const [proposalsViewMode, setProposalsViewMode] = useState<"list" | "grid">("list");
   const [proposalsStatusFilter, setProposalsStatusFilter] = useState<"pending" | "pending_response" | "accepted" | "refused" | "expired" | null>(null);
+  const [proposalsSearchName, setProposalsSearchName] = useState("");
   const propFilterCategory = (p: any): "pending" | "pending_response" | "accepted" | "refused" | "expired" => {
     if (p.status === "accepted") return "accepted";
     if (p.status === "refused") return "refused";
@@ -5575,7 +5635,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   //    chez l'utilisateur exactement comme une réponse normale de l'Assistance. ──
   const [newMsgOpen, setNewMsgOpen] = useState(false);
   const [newMsgSearch, setNewMsgSearch] = useState("");
-  const [newMsgResults, setNewMsgResults] = useState<{ id: string; name: string }[]>([]);
+  const [newMsgResults, setNewMsgResults] = useState<{ id: string; name: string; age?: number; city?: string; photo_url?: string }[]>([]);
   const [newMsgSearching, setNewMsgSearching] = useState(false);
   const [newMsgTarget, setNewMsgTarget] = useState<{ id: string; name: string } | null>(null);
   const [newMsgText, setNewMsgText] = useState("");
@@ -5585,7 +5645,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     if (q.trim().length < 2) { setNewMsgResults([]); return; }
     setNewMsgSearching(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(q.trim())}*&select=id,name&limit=8`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(q.trim())}*&select=id,name,age,city,photo_url&limit=8`, {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
       });
       const d = await r.json().catch(() => []);
@@ -6536,8 +6596,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {newMsgResults.map(u => (
-                    <div key={u.id} onClick={() => { setNewMsgTarget({ id: u.id, name: u.name }); setNewMsgResults([]); setNewMsgSearch(""); }} style={{ padding: "10px 12px", borderRadius: 10, background: G.creme, cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, color: G.brun }}>
-                      {u.name}
+                    <div key={u.id} onClick={() => { setNewMsgTarget({ id: u.id, name: u.name }); setNewMsgResults([]); setNewMsgSearch(""); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10, background: G.creme, cursor: "pointer" }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", background: G.blanc, flexShrink: 0 }}>{u.photo_url && <img src={u.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: "0.85rem", fontWeight: 600, color: G.brun }}>{u.name}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#888" }}>{u.age ? `${u.age} ans` : ""}{u.age && u.city ? " · " : ""}{u.city || ""}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -10913,21 +10977,24 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                       <div>
                         <div style={{ fontSize: "0.8rem", fontWeight: 800, color: G.brun }}>Auto-proposition nocturne</div>
-                        <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Propose automatiquement chaque nuit les meilleures paires, sans que tu aies à cliquer — même calcul et mêmes exclusions que ci-dessus. Ne force jamais un couple qui a un historique de refus.</div>
+                        <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Propose automatiquement, aux horaires que tu choisis, les meilleures paires — sans que tu aies à cliquer. Même calcul et mêmes exclusions que ci-dessus. Ne force jamais un couple qui a un historique de refus.</div>
                       </div>
                       <SwitchBtn on={mmAutoEnabled} onToggle={() => { const v = !mmAutoEnabled; setMmAutoEnabled(v); saveMmAutoSetting("mm_auto_propose_enabled", v ? "true" : "false"); }} />
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <TimesEditor value={mmAutoTimes} onSave={async (v) => { setMmAutoTimes(v); await saveMmAutoSetting("mm_auto_times", v); }} />
                     </div>
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                       <div style={{ flex: "1 1 140px" }}>
                         <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 4 }}>Score minimum pour proposer</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <input type="number" min={50} max={99} value={mmAutoMinScore} onChange={e => setMmAutoMinScore(e.target.value)} onBlur={() => saveMmAutoSetting("mm_auto_propose_min_score", mmAutoMinScore)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
+                          <input type="number" min={50} max={99} value={mmAutoMinScore} onChange={e => setMmAutoMinScore(e.target.value)} onBlur={() => saveMmAutoSetting("mm_auto_min_score", mmAutoMinScore)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
                           <span style={{ fontSize: "0.76rem", color: "#888" }}>%</span>
                         </div>
                       </div>
                       <div style={{ flex: "1 1 140px" }}>
-                        <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 4 }}>Limite par nuit</div>
-                        <input type="number" min={1} max={50} value={mmAutoDailyLimit} onChange={e => setMmAutoDailyLimit(e.target.value)} onBlur={() => saveMmAutoSetting("mm_auto_propose_daily_limit", mmAutoDailyLimit)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 4 }}>Limite par passage</div>
+                        <input type="number" min={1} max={50} value={mmAutoDailyLimit} onChange={e => setMmAutoDailyLimit(e.target.value)} onBlur={() => saveMmAutoSetting("mm_auto_daily_limit", mmAutoDailyLimit)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
                       </div>
                     </div>
                     <div style={{ marginTop: 12 }}>
@@ -10997,14 +11064,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     return (
                       <div key={s.key} style={{ background: G.blanc, borderRadius: 16, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 12, border: `1px solid ${G.gris}` }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                          <Person p={s.man} />
+                          <Person p={s.woman} />
                           <div style={{ textAlign: "center", flex: "0 0 auto", margin: "0 auto" }}>
                             <div style={{ background: `${lvl.color}14`, border: `1.5px solid ${lvl.color}40`, borderRadius: 12, padding: "8px 14px" }}>
                               <div style={{ fontSize: "0.66rem", fontWeight: 800, color: lvl.color, textTransform: "uppercase", letterSpacing: 0.3 }}>{lvl.label}</div>
                               <div style={{ fontSize: "0.74rem", color: "#999", fontWeight: 600 }}>{s.score}%</div>
                             </div>
                           </div>
-                          <Person p={s.woman} />
+                          <Person p={s.man} />
                         </div>
 
                         {s.reasons.length > 0 && (
@@ -11151,9 +11218,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                   <div>
                     <div style={{ fontSize: "0.8rem", fontWeight: 800, color: G.brun }}>Auto-proposition spontanée</div>
-                    <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Propose automatiquement des paires selon ta règle (l'homme plus âgé que la femme), sans profil relationnel — immédiatement à l'inscription d'un nouveau compte, puis 3 fois par jour (8h/14h/20h) pour les autres. Ne force jamais un couple avec un historique de refus, et n'inclut jamais les comptes admin.</div>
+                    <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Propose automatiquement des paires selon ta règle (l'homme plus âgé que la femme), sans profil relationnel — immédiatement à l'inscription d'un nouveau compte, puis aux horaires que tu choisis ci-dessous pour les autres. Ne force jamais un couple avec un historique de refus, et n'inclut jamais les comptes admin.</div>
                   </div>
                   <SwitchBtn on={spAutoEnabled} onToggle={() => { const v = !spAutoEnabled; setSpAutoEnabled(v); saveSpAutoSetting("spontaneous_auto_propose_enabled", v ? "true" : "false"); }} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <TimesEditor value={spAutoTimes} onSave={async (v) => { setSpAutoTimes(v); await saveSpAutoSetting("spontaneous_auto_times", v); }} />
                 </div>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <div style={{ flex: "1 1 140px" }}>
@@ -11194,6 +11264,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 ))}
                 {proposalsStatusFilter && <div onClick={() => setProposalsStatusFilter(null)} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
               </div>
+              <div style={{ marginBottom: 14 }}>
+                <input value={proposalsSearchName} onChange={e => setProposalsSearchName(e.target.value)} placeholder="Rechercher une personne (prénom)…" style={{ width: "100%", maxWidth: 340, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
+                {proposalsSearchName.trim() && (() => {
+                  const q = proposalsSearchName.trim().toLowerCase();
+                  const base = proposalsStatusFilter ? proposals.filter(p => propFilterCategory(p) === proposalsStatusFilter) : proposals;
+                  const n = base.filter(p => (p.profile1?.name || "").toLowerCase().includes(q) || (p.profile2?.name || "").toLowerCase().includes(q)).length;
+                  return <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 6 }}>{n} proposition{n > 1 ? "s" : ""} {proposalsStatusFilter ? "dans ce filtre " : ""}pour « {proposalsSearchName.trim()} »</div>;
+                })()}
+              </div>
               {proposalsLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
               ) : proposals.length === 0 ? (
@@ -11202,7 +11281,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition</div>
                 </div>
               ) : (() => {
-                const visibleProposals = proposalsStatusFilter ? proposals.filter(p => propFilterCategory(p) === proposalsStatusFilter) : proposals;
+                const nameFiltered = proposalsStatusFilter ? proposals.filter(p => propFilterCategory(p) === proposalsStatusFilter) : proposals;
+                const q = proposalsSearchName.trim().toLowerCase();
+                const visibleProposals = q ? nameFiltered.filter(p => (p.profile1?.name || "").toLowerCase().includes(q) || (p.profile2?.name || "").toLowerCase().includes(q)) : nameFiltered;
                 if (visibleProposals.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition dans cette catégorie</div>;
                 return (
                 <div style={proposalsViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
@@ -11214,24 +11295,30 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       : p.status === "accepted" ? { label: "Match créé", color: "#27ae60", bg: "rgba(39,174,96,0.08)" }
                       : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? p.profile1?.name : p.profile2?.name || "..."}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
                       : { label: "Expirée", color: "#888", bg: "rgba(0,0,0,0.04)" };
+                    // Toujours femme à gauche, homme à droite — peu importe l'ordre user1/user2 en base.
+                    const p1IsWoman = p.profile1?.gender === "Femme";
+                    const leftProfile = p1IsWoman ? p.profile1 : p.profile2;
+                    const rightProfile = p1IsWoman ? p.profile2 : p.profile1;
+                    const leftResponse = p1IsWoman ? p.user1_response : p.user2_response;
+                    const rightResponse = p1IsWoman ? p.user2_response : p.user1_response;
                     return (
                       <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}` }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user1_response === "accepted" ? "#27ae60" : p.user1_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile1?.photo_url && <img src={p.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${leftResponse === "accepted" ? "#27ae60" : leftResponse === "refused" ? "#e74c3c" : G.gris}` }}>{leftProfile?.photo_url && <img src={leftProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile1?.name || "?"}</div>
-                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile1?.city || ""}</div>
-                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user1_response === "accepted" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#27ae60"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : p.user1_response === "refused" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#e74c3c"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{leftProfile?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{leftProfile?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{leftResponse === "accepted" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#27ae60"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : leftResponse === "refused" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#e74c3c"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
                             </div>
                           </div>
                           <div style={{ flexShrink: 0, textAlign: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><div style={{ marginTop: 2 }}><svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={statusInfo.color}/></svg></div></div>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
-                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user2_response === "accepted" ? "#27ae60" : p.user2_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile2?.photo_url && <img src={p.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${rightResponse === "accepted" ? "#27ae60" : rightResponse === "refused" ? "#e74c3c" : G.gris}` }}>{rightProfile?.photo_url && <img src={rightProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                             <div style={{ minWidth: 0, textAlign: "right" }}>
-                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile2?.name || "?"}</div>
-                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile2?.city || ""}</div>
-                              <div style={{ fontSize: "0.62rem", fontWeight: 600, justifyContent: "flex-end" }}>{p.user2_response === "accepted" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#27ae60",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : p.user2_response === "refused" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#e74c3c",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rightProfile?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{rightProfile?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600, justifyContent: "flex-end" }}>{rightResponse === "accepted" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#27ae60",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Accepté</span> : rightResponse === "refused" ? <span style={{display: "flex",alignItems: "center",gap: 3,color:"#e74c3c",justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refusé</span> : <span style={{color:"#aaa"}}>En attente</span>}</div>
                             </div>
                           </div>
                         </div>
@@ -11327,11 +11414,22 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <button onClick={loadMmFollow} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
               </div>
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                {([["En attente", "#f39c12"], ["Un seul a répondu", "#2980b9"], ["Les deux ont accepté", "#27ae60"], ["Refusée", "#e74c3c"], ["Expirée", "#888"]] as [string, string][]).map(([label, color]) => (
-                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color, fontWeight: 600 }}>
-                    <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={color} /></svg><span>{label}</span>
+                {([["pending", "En attente", "#f39c12"], ["pending_response", "Un seul a répondu", "#2980b9"], ["accepted", "Les deux ont accepté", "#27ae60"], ["refused", "Refusée", "#e74c3c"], ["expired", "Expirée", "#888"]] as [typeof mmFollowStatusFilter, string, string][]).map(([key, label, color]) => (
+                  <div key={label as string} onClick={() => setMmFollowStatusFilter(f => f === key ? null : key)}
+                    style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: color as string, fontWeight: 600, cursor: "pointer", padding: "4px 9px", borderRadius: 50, background: mmFollowStatusFilter === key ? `${color}1f` : "transparent", border: `1.5px solid ${mmFollowStatusFilter === key ? color : "transparent"}` }}>
+                    <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={color as string} /></svg><span>{label}</span>
                   </div>
                 ))}
+                {mmFollowStatusFilter && <div onClick={() => setMmFollowStatusFilter(null)} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <input value={mmFollowSearchName} onChange={e => setMmFollowSearchName(e.target.value)} placeholder="Rechercher une personne (prénom)…" style={{ width: "100%", maxWidth: 340, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
+                {mmFollowSearchName.trim() && (() => {
+                  const q = mmFollowSearchName.trim().toLowerCase();
+                  const base = mmFollowStatusFilter ? mmFollow.filter(p => propFilterCategory(p) === mmFollowStatusFilter) : mmFollow;
+                  const n = base.filter(p => (p.profile1?.name || "").toLowerCase().includes(q) || (p.profile2?.name || "").toLowerCase().includes(q)).length;
+                  return <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 6 }}>{n} couple{n > 1 ? "s" : ""} {mmFollowStatusFilter ? "dans ce filtre " : ""}pour « {mmFollowSearchName.trim()} »</div>;
+                })()}
               </div>
               {mmFollowLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg></div>
@@ -11339,33 +11437,46 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ textAlign: "center", padding: "40px 20px" }}>
                   <div style={{ color: "#aaa", fontSize: "0.88rem", lineHeight: 1.6 }}>Aucun couple matchmaking en suivi pour l'instant.<br />Propose un couple depuis « Matchmaking intelligent » et il apparaîtra ici.</div>
                 </div>
-              ) : (
+              ) : (() => {
+                const statusFiltered = mmFollowStatusFilter ? mmFollow.filter(p => propFilterCategory(p) === mmFollowStatusFilter) : mmFollow;
+                const nq = mmFollowSearchName.trim().toLowerCase();
+                const visibleMmFollow = nq ? statusFiltered.filter(p => (p.profile1?.name || "").toLowerCase().includes(nq) || (p.profile2?.name || "").toLowerCase().includes(nq)) : statusFiltered;
+                if (visibleMmFollow.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun couple dans cette catégorie</div>;
+                return (
                 <div style={mmFollowViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
-                  {mmFollow.map(p => {
+                  {visibleMmFollow.map(p => {
                     const oneAnswered = p.user1_response === "accepted" || p.user2_response === "accepted";
                     const statusInfo = p.status === "pending"
                       ? { label: oneAnswered ? "Un seul a répondu" : "En attente", color: oneAnswered ? "#2980b9" : "#f39c12", bg: oneAnswered ? "rgba(41,128,185,0.08)" : "rgba(243,156,18,0.08)" }
                       : p.status === "accepted" ? { label: "Les deux ont accepté", color: "#27ae60", bg: "rgba(39,174,96,0.08)" }
                       : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? (p.profile1?.name || "?") : (p.profile2?.name || "?")}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
                       : { label: "Expirée", color: "#888", bg: "rgba(0,0,0,0.04)" };
+                    // Toujours femme à gauche, homme à droite — peu importe l'ordre user1/user2 en base.
+                    const p1IsWoman = p.profile1?.gender === "Femme";
+                    const leftProfile = p1IsWoman ? p.profile1 : p.profile2;
+                    const rightProfile = p1IsWoman ? p.profile2 : p.profile1;
+                    const leftResponse = p1IsWoman ? p.user1_response : p.user2_response;
+                    const rightResponse = p1IsWoman ? p.user2_response : p.user1_response;
+                    const leftRespondedAt = p1IsWoman ? p.user1_responded_at : p.user2_responded_at;
+                    const rightRespondedAt = p1IsWoman ? p.user2_responded_at : p.user1_responded_at;
                     return (
                       <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}` }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user1_response === "accepted" ? "#27ae60" : p.user1_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile1?.photo_url && <img src={p.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${leftResponse === "accepted" ? "#27ae60" : leftResponse === "refused" ? "#e74c3c" : G.gris}` }}>{leftProfile?.photo_url && <img src={leftProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile1?.name || "?"}</div>
-                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile1?.city || ""}</div>
-                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user1_response === "accepted" ? <span style={{ color: "#27ae60" }}>✓ Accepté{p.user1_responded_at ? ` · ${fmtDT(p.user1_responded_at)}` : ""}</span> : p.user1_response === "refused" ? <span style={{ color: "#e74c3c" }}>✕ Refusé{p.user1_responded_at ? ` · ${fmtDT(p.user1_responded_at)}` : ""}</span> : <span style={{ color: "#aaa" }}>En attente</span>}</div>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{leftProfile?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{leftProfile?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{leftResponse === "accepted" ? <span style={{ color: "#27ae60" }}>✓ Accepté{leftRespondedAt ? ` · ${fmtDT(leftRespondedAt)}` : ""}</span> : leftResponse === "refused" ? <span style={{ color: "#e74c3c" }}>✕ Refusé{leftRespondedAt ? ` · ${fmtDT(leftRespondedAt)}` : ""}</span> : <span style={{ color: "#aaa" }}>En attente</span>}</div>
                             </div>
                           </div>
                           <div style={{ flexShrink: 0, textAlign: "center" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="#16a34a" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg><div style={{ marginTop: 2 }}><svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={statusInfo.color} /></svg></div></div>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
-                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${p.user2_response === "accepted" ? "#27ae60" : p.user2_response === "refused" ? "#e74c3c" : G.gris}` }}>{p.profile2?.photo_url && <img src={p.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${rightResponse === "accepted" ? "#27ae60" : rightResponse === "refused" ? "#e74c3c" : G.gris}` }}>{rightProfile?.photo_url && <img src={rightProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                             <div style={{ minWidth: 0, textAlign: "right" }}>
-                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.profile2?.name || "?"}</div>
-                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{p.profile2?.city || ""}</div>
-                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{p.user2_response === "accepted" ? <span style={{ color: "#27ae60" }}>✓ Accepté{p.user2_responded_at ? ` · ${fmtDT(p.user2_responded_at)}` : ""}</span> : p.user2_response === "refused" ? <span style={{ color: "#e74c3c" }}>✕ Refusé{p.user2_responded_at ? ` · ${fmtDT(p.user2_responded_at)}` : ""}</span> : <span style={{ color: "#aaa" }}>En attente</span>}</div>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rightProfile?.name || "?"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "#888" }}>{rightProfile?.city || ""}</div>
+                              <div style={{ fontSize: "0.62rem", fontWeight: 600 }}>{rightResponse === "accepted" ? <span style={{ color: "#27ae60" }}>✓ Accepté{rightRespondedAt ? ` · ${fmtDT(rightRespondedAt)}` : ""}</span> : rightResponse === "refused" ? <span style={{ color: "#e74c3c" }}>✕ Refusé{rightRespondedAt ? ` · ${fmtDT(rightRespondedAt)}` : ""}</span> : <span style={{ color: "#aaa" }}>En attente</span>}</div>
                             </div>
                           </div>
                         </div>
@@ -11402,7 +11513,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     );
                   })}
                 </div>
-              )}
+                );
+              })()}
             </div>
             );
           })()}
@@ -11443,11 +11555,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 return (
                 <div style={matchListViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 8 } : { display: "flex", flexDirection: "column", gap: 8 }}>
                   {q && <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 2, gridColumn: "1/-1" }}>{filtered.length} match{filtered.length > 1 ? "s" : ""} avec « {matchListSearch} »</div>}
-                  {filtered.map((m, i) => (
+                  {filtered.map((m, i) => {
+                    const p1IsWoman = m.profile1?.gender === "Femme";
+                    const leftProfile = p1IsWoman ? m.profile1 : m.profile2;
+                    const rightProfile = p1IsWoman ? m.profile2 : m.profile1;
+                    return (
                     <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: G.blanc, borderRadius: 14, boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{m.profile1?.photo_url && <img src={m.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
-                        <div style={{ minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.profile1?.name || "?"}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile1?.age ? `${m.profile1.age} ans` : ""}{m.profile1?.city ? ` · ${m.profile1.city}` : ""}</div></div>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{leftProfile?.photo_url && <img src={leftProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                        <div style={{ minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{leftProfile?.name || "?"}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{leftProfile?.age ? `${leftProfile.age} ans` : ""}{leftProfile?.city ? ` · ${leftProfile.city}` : ""}</div></div>
                       </div>
                       <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -11463,15 +11579,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexDirection: "row-reverse" }}>
-                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{m.profile2?.photo_url && <img src={m.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
-                        <div style={{ minWidth: 0, textAlign: "right" }}><div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.profile2?.name || "?"}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{m.profile2?.age ? `${m.profile2.age} ans` : ""}{m.profile2?.city ? ` · ${m.profile2.city}` : ""}</div></div>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid #8e44ad` }}>{rightProfile?.photo_url && <img src={rightProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                        <div style={{ minWidth: 0, textAlign: "right" }}><div style={{ fontWeight: 700, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rightProfile?.name || "?"}</div><div style={{ fontSize: "0.68rem", color: "#888" }}>{rightProfile?.age ? `${rightProfile.age} ans` : ""}{rightProfile?.city ? ` · ${rightProfile.city}` : ""}</div></div>
                       </div>
                       <button onClick={() => confirm(`Annuler le match entre ${m.profile1?.name || "?"} et ${m.profile2?.name || "?"} ? Leur conversation sera supprimée et ils ne seront plus en relation.`, () => adminCancelMatch(m))} title="Annuler le match" style={{ flexShrink: 0, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         Annuler
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 );
               })()}
