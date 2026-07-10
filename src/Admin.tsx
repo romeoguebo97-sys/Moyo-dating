@@ -3268,6 +3268,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [mmAutoDailyLimit, setMmAutoDailyLimit] = useState("8");
   const [mmAutoLog, setMmAutoLog] = useState<any[]>([]);
   const [mmAutoLogLoading, setMmAutoLogLoading] = useState(false);
+  const [mmAutoLogOpen, setMmAutoLogOpen] = useState(false);
   useEffect(() => {
     if (!auth) return;
     (async () => {
@@ -3810,6 +3811,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [spAutoPerRunLimit, setSpAutoPerRunLimit] = useState("2");
   const [spAutoLog, setSpAutoLog] = useState<any[]>([]);
   const [spAutoLogLoading, setSpAutoLogLoading] = useState(false);
+  const [spAutoLogOpen, setSpAutoLogOpen] = useState(false);
   useEffect(() => {
     if (!auth) return;
     (async () => {
@@ -3976,7 +3978,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setMatchListLoading(false);
   };
 
-  const loadProposals = async () => {
+  const PROPOSALS_PAGE_SIZE = 30;
+  const loadProposals = async (page = 0, statusFilter: typeof proposalsStatusFilter = null, autoOnly = false) => {
     setProposalsLoading(true);
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&expires_at=lt.${new Date().toISOString()}`, {
@@ -3984,7 +3987,18 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
         body: JSON.stringify({ status: "expired" })
       });
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?archived=not.eq.true&order=created_at.desc&limit=100`, {
+      const offset = page * PROPOSALS_PAGE_SIZE;
+      let qs = `archived=not.eq.true&order=created_at.desc&limit=${PROPOSALS_PAGE_SIZE}&offset=${offset}`;
+      // Filtre par statut appliqué CÔTÉ SERVEUR — s'applique donc à toutes les pages, pas
+      // seulement à celle actuellement affichée. "pending" couvre aussi "pending_response"
+      // (même statut brut ; la distinction fine se fait ensuite dans la page reçue).
+      if (statusFilter === "accepted") qs += `&status=eq.accepted`;
+      else if (statusFilter === "refused") qs += `&status=eq.refused`;
+      else if (statusFilter === "expired") qs += `&status=eq.expired`;
+      else if (statusFilter === "pending" || statusFilter === "pending_response") qs += `&status=eq.pending`;
+      // Filtre "Auto-propose" appliqué côté serveur également.
+      if (autoOnly) qs += `&origin=in.(matchmaking_auto,spontaneous_auto)`;
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?${qs}`, {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
       });
       const data = await r.json().catch(() => []);
@@ -3993,7 +4007,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       const profiles: Record<string, AdminProfile> = {};
       for (let i = 0; i < ids.length; i += 50) {
         const batch = ids.slice(i, i + 50);
-        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,photo_url`, {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,gender,photo_url`, {
           headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
         });
         const pdata = await pr.json().catch(() => []);
@@ -4195,6 +4209,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Vue & tri utilisateurs admin ──
   const [usersViewMode, setUsersViewMode] = useState<"grid" | "list">("grid");
   const [usersSort, setUsersSort] = useState<"created_at.desc" | "created_at.asc" | "name.asc" | "name.desc" | "last_seen.desc" | "age.asc" | "age.desc" | "online" | "premium" | "lifetime" | "admin" | "verified" | "banned" | "male" | "female">("created_at.desc");
+  const [usersFilter, setUsersFilter] = useState<"admin" | "premium" | "verified" | "banned" | "male" | "female" | null>(null);
   const [adminViewedProfile, setAdminViewedProfile] = useState<Profile | null>(null);
   const openAdminProfile = async (userId: string) => {
     try {
@@ -5062,6 +5077,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [archivedViewMode, setArchivedViewMode] = useState<"list" | "grid">("list");
   const [proposalsViewMode, setProposalsViewMode] = useState<"list" | "grid">("list");
   const [proposalsStatusFilter, setProposalsStatusFilter] = useState<"pending" | "pending_response" | "accepted" | "refused" | "expired" | null>(null);
+  const [proposalsAutoFilter, setProposalsAutoFilter] = useState(false);
+  const [proposalsPage, setProposalsPage] = useState(0);
   const [proposalsSearchName, setProposalsSearchName] = useState("");
   const propFilterCategory = (p: any): "pending" | "pending_response" | "accepted" | "refused" | "expired" => {
     if (p.status === "accepted") return "accepted";
@@ -5896,7 +5913,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   };
 
   // ── Chargement des utilisateurs avec recherche ──
-  const loadUsers = async (search = "", page = 0, sort = usersSort, searchEmail = "") => {
+  const loadUsers = async (search = "", page = 0, sort = usersSort, searchEmail = "", filter = usersFilter) => {
     setUsersLoading(true);
     try {
       const pageSize = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
@@ -5916,15 +5933,26 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         "banned":   "is_banned.desc.nullslast,created_at.desc",
       };
       const serverSort = serverSorts[sort] || "created_at.desc";
-      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
+      // Filtre réel (exclut, pas juste réordonne) — appliqué côté serveur, donc valable sur
+      // toutes les pages, pas seulement celle affichée à l'instant.
+      const filterClauses: Record<string, string> = {
+        admin: "is_admin=eq.true",
+        premium: "is_premium=eq.true",
+        verified: "is_verified=eq.true",
+        banned: "is_banned=eq.true",
+        male: "gender=eq.Homme",
+        female: "gender=eq.Femme",
+      };
+      const filterQs = filter ? `&${filterClauses[filter]}` : "";
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       if (search.trim() || searchEmail.trim()) {
         const nameQ = search.trim() ? `name.ilike.*${encodeURIComponent(search.trim())}*` : null;
         const emailQ = searchEmail.trim() ? `email.ilike.*${encodeURIComponent(searchEmail.trim())}*` : null;
         // Toujours envelopper dans or=(...), même avec un seul filtre : la syntaxe "colonne.operateur.valeur"
         // (avec un point) n'est valide qu'à l'intérieur de or(...) — utilisée seule, elle est invalide
         // et Supabase l'ignore silencieusement, d'où le filtre qui ne trouvait jamais rien.
-        const filter = [nameQ, emailQ].filter(Boolean).join(",");
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&or=(${filter})&order=${serverSort}&limit=${pageSize}&offset=${offset}`;
+        const orFilter = [nameQ, emailQ].filter(Boolean).join(",");
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&or=(${orFilter})&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       // Quand une recherche est active, on trie par pertinence (correspondance exacte / "commence par" en premier)
@@ -8116,6 +8144,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={usersViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               </div>
             </div>
+          </div>
+          {/* ── Filtres réels (excluent, contrairement au tri ci-dessus) — s'appliquent sur toutes
+               les pages, pas seulement celle affichée. ── */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+            {([["admin","⚙️ Admin"],["premium","★ Premium"],["verified","✓ Vérifiés"],["banned","⛔ Bannis"],["male","👨 Hommes"],["female","👩 Femmes"]] as [typeof usersFilter, string][]).map(([key, label]) => (
+              <div key={label} onClick={() => { const next = usersFilter === key ? null : key; setUsersFilter(next); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, next); }}
+                style={{ fontSize: "0.72rem", fontWeight: 600, color: usersFilter === key ? "#fff" : "#555", background: usersFilter === key ? G.rouge : G.creme, border: `1.5px solid ${usersFilter === key ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 11px", cursor: "pointer" }}>
+                {label}
+              </div>
+            ))}
+            {usersFilter && <div onClick={() => { setUsersFilter(null); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, null); }} style={{ fontSize: "0.72rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "5px 9px", textDecoration: "underline" }}>Tout afficher</div>}
           </div>
 
           {usersLoading ? (
@@ -10998,10 +11037,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       </div>
                     </div>
                     <div style={{ marginTop: 12 }}>
-                      <button onClick={() => { setMmAutoLog([]); loadMmAutoLog(); }} style={{ background: "rgba(124,58,237,0.08)", color: "#7c3aed", border: "1.5px solid rgba(124,58,237,0.2)", borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>
-                        {mmAutoLogLoading ? "Chargement…" : "Voir le journal des auto-propositions"}
+                      <button onClick={() => { const next = !mmAutoLogOpen; setMmAutoLogOpen(next); if (next && mmAutoLog.length === 0) loadMmAutoLog(); }} style={{ background: "rgba(124,58,237,0.08)", color: "#7c3aed", border: "1.5px solid rgba(124,58,237,0.2)", borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                        {mmAutoLogLoading ? "Chargement…" : mmAutoLogOpen ? "▲ Replier le journal des auto-propositions" : "▼ Voir le journal des auto-propositions"}
                       </button>
-                      {mmAutoLog.length > 0 && (
+                      {mmAutoLogOpen && mmAutoLog.length > 0 && (
                         <div style={{ marginTop: 10, maxHeight: 220, overflowY: "auto", border: `1px solid ${G.gris}`, borderRadius: 10 }}>
                           {mmAutoLog.map(p => (
                             <div key={p.id} style={{ padding: "9px 12px", borderBottom: `1px solid ${G.gris}`, fontSize: "0.76rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -11011,7 +11050,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           ))}
                         </div>
                       )}
-                      {!mmAutoLogLoading && mmAutoLog.length === 0 && (
+                      {mmAutoLogOpen && !mmAutoLogLoading && mmAutoLog.length === 0 && (
                         <div style={{ fontSize: "0.72rem", color: "#bbb", marginTop: 8 }}>Aucune auto-proposition pour l'instant.</div>
                       )}
                     </div>
@@ -11210,7 +11249,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 </div>
                 <button onClick={() => openProposeNew()} style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", color: "#fff", border: "none", borderRadius: 50, padding: "8px 18px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Nouvelle proposition</button>
-                <button onClick={loadProposals} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+                <button onClick={() => loadProposals(proposalsPage, proposalsStatusFilter, proposalsAutoFilter)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
               </div>
 
               {/* Auto-proposition spontanée nocturne */}
@@ -11236,10 +11275,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 </div>
                 <div style={{ marginTop: 12 }}>
-                  <button onClick={() => { setSpAutoLog([]); loadSpAutoLog(); }} style={{ background: "rgba(230,126,34,0.08)", color: "#d35400", border: "1.5px solid rgba(230,126,34,0.2)", borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>
-                    {spAutoLogLoading ? "Chargement…" : "Voir le journal des auto-propositions"}
+                  <button onClick={() => { const next = !spAutoLogOpen; setSpAutoLogOpen(next); if (next && spAutoLog.length === 0) loadSpAutoLog(); }} style={{ background: "rgba(230,126,34,0.08)", color: "#d35400", border: "1.5px solid rgba(230,126,34,0.2)", borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                    {spAutoLogLoading ? "Chargement…" : spAutoLogOpen ? "▲ Replier le journal des auto-propositions" : "▼ Voir le journal des auto-propositions"}
                   </button>
-                  {spAutoLog.length > 0 && (
+                  {spAutoLogOpen && spAutoLog.length > 0 && (
                     <div style={{ marginTop: 10, maxHeight: 220, overflowY: "auto", border: `1px solid ${G.gris}`, borderRadius: 10 }}>
                       {spAutoLog.map(p => (
                         <div key={p.id} style={{ padding: "9px 12px", borderBottom: `1px solid ${G.gris}`, fontSize: "0.76rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -11249,7 +11288,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       ))}
                     </div>
                   )}
-                  {!spAutoLogLoading && spAutoLog.length === 0 && (
+                  {spAutoLogOpen && !spAutoLogLoading && spAutoLog.length === 0 && (
                     <div style={{ fontSize: "0.72rem", color: "#bbb", marginTop: 8 }}>Aucune auto-proposition pour l'instant.</div>
                   )}
                 </div>
@@ -11257,20 +11296,23 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                 {([["pending","En attente","#f39c12"],["pending_response","En attente de réponse","#2980b9"],["accepted","Acceptée","#27ae60"],["refused","Refusée","#e74c3c"],["expired","Expirée","#888"]] as [typeof proposalsStatusFilter, string, string][]).map(([key, label, color]) => (
-                  <div key={label as string} onClick={() => setProposalsStatusFilter(f => f === key ? null : key)}
+                  <div key={label as string} onClick={() => { const next = proposalsStatusFilter === key ? null : key; setProposalsStatusFilter(next); setProposalsPage(0); loadProposals(0, next, proposalsAutoFilter); }}
                     style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: color as string, fontWeight: 600, cursor: "pointer", padding: "4px 9px", borderRadius: 50, background: proposalsStatusFilter === key ? `${color}1f` : "transparent", border: `1.5px solid ${proposalsStatusFilter === key ? color : "transparent"}` }}>
                     <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill={color as string}/></svg><span>{label}</span>
                   </div>
                 ))}
-                {proposalsStatusFilter && <div onClick={() => setProposalsStatusFilter(null)} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
+                <div onClick={() => { const next = !proposalsAutoFilter; setProposalsAutoFilter(next); setProposalsPage(0); loadProposals(0, proposalsStatusFilter, next); }}
+                  style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#7c3aed", fontWeight: 600, cursor: "pointer", padding: "4px 9px", borderRadius: 50, background: proposalsAutoFilter ? "rgba(124,58,237,0.12)" : "transparent", border: `1.5px solid ${proposalsAutoFilter ? "#7c3aed" : "transparent"}` }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Auto-propose</span>
+                </div>
+                {(proposalsStatusFilter || proposalsAutoFilter) && <div onClick={() => { setProposalsStatusFilter(null); setProposalsAutoFilter(false); setProposalsPage(0); loadProposals(0, null, false); }} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
               </div>
               <div style={{ marginBottom: 14 }}>
-                <input value={proposalsSearchName} onChange={e => setProposalsSearchName(e.target.value)} placeholder="Rechercher une personne (prénom)…" style={{ width: "100%", maxWidth: 340, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
+                <input value={proposalsSearchName} onChange={e => setProposalsSearchName(e.target.value)} placeholder="Rechercher une personne (prénom, page actuelle)…" style={{ width: "100%", maxWidth: 340, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
                 {proposalsSearchName.trim() && (() => {
                   const q = proposalsSearchName.trim().toLowerCase();
-                  const base = proposalsStatusFilter ? proposals.filter(p => propFilterCategory(p) === proposalsStatusFilter) : proposals;
-                  const n = base.filter(p => (p.profile1?.name || "").toLowerCase().includes(q) || (p.profile2?.name || "").toLowerCase().includes(q)).length;
-                  return <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 6 }}>{n} proposition{n > 1 ? "s" : ""} {proposalsStatusFilter ? "dans ce filtre " : ""}pour « {proposalsSearchName.trim()} »</div>;
+                  const n = proposals.filter(p => (p.profile1?.name || "").toLowerCase().includes(q) || (p.profile2?.name || "").toLowerCase().includes(q)).length;
+                  return <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 6 }}>{n} proposition{n > 1 ? "s" : ""} sur cette page pour « {proposalsSearchName.trim()} » — change de page pour chercher ailleurs.</div>;
                 })()}
               </div>
               {proposalsLoading ? (
@@ -11360,6 +11402,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 );
               })()}
+              {!proposalsLoading && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 18 }}>
+                  <Btn variant="ghost" onClick={() => { const p = Math.max(0, proposalsPage - 1); setProposalsPage(p); loadProposals(p, proposalsStatusFilter, proposalsAutoFilter); }} disabled={proposalsPage === 0} style={{ padding: "8px 16px", fontSize: "0.78rem" }}>← Précédent</Btn>
+                  <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Page {proposalsPage + 1}</div>
+                  <Btn variant="ghost" onClick={() => { const p = proposalsPage + 1; setProposalsPage(p); loadProposals(p, proposalsStatusFilter, proposalsAutoFilter); }} disabled={proposals.length < PROPOSALS_PAGE_SIZE} style={{ padding: "8px 16px", fontSize: "0.78rem" }}>Suivant →</Btn>
+                </div>
+              )}
             </div>
           )}
 
