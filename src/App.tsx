@@ -4112,7 +4112,7 @@ function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children:
         </div>
       </div>
     )}
-    <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "20px 20px 40px" }}>
+    <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "8px 20px 40px" }}>
       <div style={{ width: "100%", maxWidth: 420, overflowX: "hidden" }}>
         {children}
       </div>
@@ -4661,7 +4661,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     ];
     return (
       <AuthLayout onBack={() => onNav("landing")} title="Avant de commencer" subtitle="Voici ce qu'il te faudra pour créer ton compte (environ 2 minutes) :">
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28, marginTop: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28, marginTop: 4 }}>
           {requirements.map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 14, padding: "13px 15px" }}>
               <div style={{ width: 38, height: 38, borderRadius: 11, background: `linear-gradient(135deg, ${G.rouge}, ${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{r.icon}</div>
@@ -4703,7 +4703,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
       {successMsg && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}><div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, textAlign: "center" }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111", marginBottom: 10 }}>COMPTE CRÉÉ !</h3><p style={{ fontSize: "0.92rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{signupSuccessMsg}</p><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.78rem", color: "#aaa" }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />Redirection...</div></div></div>}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div style={{ marginTop: 20 }} />
+      <div style={{ marginTop: 4 }} />
 
       {/* ÉTAPE 1 - Email + mot de passe */}
       {step === 1 && <>
