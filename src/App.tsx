@@ -377,6 +377,13 @@ let FEATURE_GROUP_PHOTOS = true;
 let FEATURE_MODERATION_INSULTS = true;
 // Blocage automatique du partage de numéro/réseaux pour les comptes gratuits (hasContactInfo).
 let FEATURE_MODERATION_CONTACT = true;
+// Avertissement officiel (1/3, 2/3, 3/3) + bannissement automatique au 3e, en cas de tentative
+// de partage de contact — remplace le simple signalement quand activé.
+let AUTO_WARN_BAN_CONTACT_ENABLED = false;
+export function setAUTO_WARN_BAN_CONTACT_ENABLED(v: any) { AUTO_WARN_BAN_CONTACT_ENABLED = v === true || v === "true"; }
+// Garde-fou "une seule fois par session" — se réinitialise naturellement à chaque nouveau
+// chargement de l'app (nouvelle session), pas besoin de le stocker ailleurs.
+let autoWarnContactTriggeredThisSession = false;
 let APPOINTMENTS_ENABLED = true;
 let APPT_PHONE_ENABLED = true;
 let APPT_PHYSICAL_ENABLED = true;
@@ -438,7 +445,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -456,6 +463,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
   if (map["feature_moderation_insults"] !== undefined) FEATURE_MODERATION_INSULTS = map["feature_moderation_insults"] !== "false";
   if (map["feature_moderation_contact"] !== undefined) FEATURE_MODERATION_CONTACT = map["feature_moderation_contact"] !== "false";
+  if (map["auto_warn_ban_contact_enabled"] !== undefined) setAUTO_WARN_BAN_CONTACT_ENABLED(map["auto_warn_ban_contact_enabled"]);
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
@@ -9979,22 +9987,45 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       return;
     }
     if (FEATURE_MODERATION_CONTACT && !auth.isPremium && hasContactInfo(text)) {
-      // ── Signalement automatique : tentative de partage/demande de contact par un compte gratuit ──
-      try {
-        await sb.insert(auth.token, "reports", {
-          reporter_id: auth.userId,
-          reported_id: null,
-          reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim()} · Réponse auto envoyée`,
-          status: "pending",
-        });
-        // ── Réponse automatique de l'Assistant Moyo Dating à l'auteur (apparaît dans SA messagerie support) ──
-        await sb.insert(auth.token, "reports", {
-          reporter_id: auth.userId,
-          reported_id: auth.userId,
-          reason: `${SUPPORT_PREFIX_REPLY} ${AUTO_MOD_CONTACT_REPLY}`,
-          status: "reviewed",
-        });
-      } catch {}
+      if (AUTO_WARN_BAN_CONTACT_ENABLED) {
+        // ── Nouveau comportement : avertissement officiel (1/3, 2/3, 3/3) + bannissement
+        //    automatique au 3e, une seule fois par session pour ne pas spammer la personne. ──
+        if (!autoWarnContactTriggeredThisSession) {
+          autoWarnContactTriggeredThisSession = true;
+          try {
+            await fetch(`${SUPABASE_URL}/functions/v1/auto-warn-contact`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}` },
+              body: JSON.stringify({ user_id: auth.userId }),
+            });
+          } catch {}
+        }
+        // Toujours la réponse de l'Assistant dans sa messagerie support (inchangé).
+        try {
+          await sb.insert(auth.token, "reports", {
+            reporter_id: auth.userId,
+            reported_id: auth.userId,
+            reason: `${SUPPORT_PREFIX_REPLY} ${AUTO_MOD_CONTACT_REPLY}`,
+            status: "reviewed",
+          });
+        } catch {}
+      } else {
+        // ── Ancien comportement, inchangé : signalement [AUTO-MOD CONTACT] pour revue manuelle. ──
+        try {
+          await sb.insert(auth.token, "reports", {
+            reporter_id: auth.userId,
+            reported_id: null,
+            reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim()} · Réponse auto envoyée`,
+            status: "pending",
+          });
+          await sb.insert(auth.token, "reports", {
+            reporter_id: auth.userId,
+            reported_id: auth.userId,
+            reason: `${SUPPORT_PREFIX_REPLY} ${AUTO_MOD_CONTACT_REPLY}`,
+            status: "reviewed",
+          });
+        } catch {}
+      }
       onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !");
       return;
     }

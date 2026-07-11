@@ -435,6 +435,39 @@ export function AdminDesktopPage() {
       await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.match_proposal_expiry_days`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
     } catch {}
   };
+  // ── Onglet "Automatisations" : raccourcis vers des interrupteurs qui vivent ailleurs
+  //    (Marketing, Matchs) — ce sont les MÊMES réglages en base, pas des copies séparées :
+  //    changer ici change bien le même interrupteur que celui affiché dans son onglet d'origine. ──
+  type AutoShortcutKey = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled";
+  const [autoShortcuts, setAutoShortcuts] = React.useState<Record<AutoShortcutKey, boolean>>({
+    phone_completion_prompt_enabled: false,
+    verification_prompt_enabled: false,
+    premium_nudge_enabled: false,
+    mm_auto_propose_enabled: false,
+    spontaneous_auto_propose_enabled: false,
+    auto_warn_ban_contact_enabled: false,
+  });
+  React.useEffect(() => {
+    if (!auth) return;
+    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled"];
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(rows => {
+        if (!Array.isArray(rows)) return;
+        setAutoShortcuts(cur => {
+          const next = { ...cur };
+          rows.forEach((row: { key: AutoShortcutKey; value: string }) => { next[row.key] = row.value === "true"; });
+          return next;
+        });
+      }).catch(() => {});
+  }, [auth?.userId]);
+  const toggleAutoShortcut = async (key: AutoShortcutKey) => {
+    const next = !autoShortcuts[key];
+    setAutoShortcuts(cur => ({ ...cur, [key]: next }));
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
+    } catch {}
+  };
   const [appConfig, setAppConfig] = React.useState({
     limitLikes: "5",
     limitMessages: "3",
@@ -468,7 +501,7 @@ export function AdminDesktopPage() {
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
-  const [configTab, setConfigTab] = React.useState<"general" | "contenus" | "tarifs" | "equipe" | "securite">("general");
+  const [configTab, setConfigTab] = React.useState<"general" | "contenus" | "tarifs" | "equipe" | "securite" | "auto">("general");
   const [adminActionModal, setAdminActionModal] = React.useState<{ level: string | null; label: string; color: string } | null>(null);
   const [adminActionEmail, setAdminActionEmail] = React.useState("");
 
@@ -654,6 +687,7 @@ export function AdminDesktopPage() {
                 ["tarifs", "Tarifs & Paiements", "M1 4h22v16H1z M1 10h22"],
                 ["equipe", "Équipe & Alertes", "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"],
                 ["securite", "Sécurité & Système", "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"],
+                ["auto", "Automatisations", "M12 2v4 M12 18v4 M4.93 4.93l2.83 2.83 M16.24 16.24l2.83 2.83 M2 12h4 M18 12h4 M4.93 19.07l2.83-2.83 M16.24 7.76l2.83-2.83"],
               ] as [typeof configTab, string, string][]).map(([key, label, icon]) => {
                 const active = configTab === key;
                 return (
@@ -675,6 +709,44 @@ export function AdminDesktopPage() {
             {/* ── Zone contenu ── */}
             <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "18px 26px 30px", minWidth: 0, background: "#EEF2F8" }}>
             <div style={{ columnCount: 2, columnGap: 22 }}>
+            {configTab === "auto" && <OffCanvasSection title="Profil & Vérification">
+              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourcis — modifier ici change le même réglage que dans Marketing → Profil incomplet.</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Demander le téléphone manquant</span>
+                <SwitchBtn on={autoShortcuts.phone_completion_prompt_enabled} onToggle={() => toggleAutoShortcut("phone_completion_prompt_enabled")} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Inciter à certifier son compte</span>
+                <SwitchBtn on={autoShortcuts.verification_prompt_enabled} onToggle={() => toggleAutoShortcut("verification_prompt_enabled")} />
+              </div>
+            </OffCanvasSection>}
+            {configTab === "auto" && <OffCanvasSection title="Monétisation">
+              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourci — modifier ici change le même réglage que dans Marketing → Inciter au Premium.</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Inciter à passer Premium</span>
+                <SwitchBtn on={autoShortcuts.premium_nudge_enabled} onToggle={() => toggleAutoShortcut("premium_nudge_enabled")} />
+              </div>
+            </OffCanvasSection>}
+            {configTab === "auto" && <OffCanvasSection title="Auto-propositions">
+              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourcis — modifier ici change le même réglage que dans Matchs. Les horaires, seuils et limites détaillés restent à régler depuis leur onglet d'origine.</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Matchmaking intelligent (nocturne)</span>
+                <SwitchBtn on={autoShortcuts.mm_auto_propose_enabled} onToggle={() => toggleAutoShortcut("mm_auto_propose_enabled")} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Propositions spontanées</span>
+                <SwitchBtn on={autoShortcuts.spontaneous_auto_propose_enabled} onToggle={() => toggleAutoShortcut("spontaneous_auto_propose_enabled")} />
+              </div>
+            </OffCanvasSection>}
+
+            {configTab === "auto" && <OffCanvasSection title="Modération">
+              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Quand un compte gratuit tente de partager ou demander un contact : avertissement officiel automatique (1/3, 2/3), puis bannissement automatique au 3e — avec le même motif affiché que pour un bannissement manuel. Une seule fois par session pour ne pas spammer la personne. Désactivé = comportement d'avant (juste un signalement à traiter toi-même). Le journal de ce qui a été fait automatiquement est visible dans Signalements → Rapport auto.</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Avertir / bannir automatiquement (partage de contact)</span>
+                <SwitchBtn on={autoShortcuts.auto_warn_ban_contact_enabled} onToggle={() => toggleAutoShortcut("auto_warn_ban_contact_enabled")} />
+              </div>
+            </OffCanvasSection>}
+
             {configTab === "general" && <OffCanvasSection title="Règles">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#FAFAFA", borderRadius: 12 }}>
                 <div>
@@ -4941,13 +5013,32 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     setPwResetLoading(true);
     setPwResetResult(null);
     try {
+      // ── Rafraîchir le jeton juste avant l'appel, pour ne jamais tomber sur "session invalide"
+      //    si la session admin est ouverte depuis un moment (le jeton expire après ~1h). Cette
+      //    action est sensible, on préfère être sûr plutôt que de faire confiance à un jeton
+      //    potentiellement expiré. ──
+      let freshToken = auth!.token;
+      if (auth!.refreshToken) {
+        try {
+          const rr = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+            body: JSON.stringify({ refresh_token: auth!.refreshToken }),
+          });
+          const rd = await rr.json().catch(() => null);
+          if (rr.ok && rd?.access_token) freshToken = rd.access_token;
+        } catch { /* si le rafraîchissement échoue, on retente quand même avec le jeton actuel */ }
+      }
       const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-reset-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}` },
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${freshToken}` },
         body: JSON.stringify({ target_user_id: targetUser.id, new_password: newPw }),
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok || !data?.success) throw new Error(data?.error || `Erreur (HTTP ${r.status})`);
+      if (!r.ok || !data?.success) {
+        if (r.status === 401) throw new Error("Ta session a expiré. Déconnecte-toi puis reconnecte-toi, ensuite réessaie.");
+        throw new Error(data?.error || `Erreur (HTTP ${r.status})`);
+      }
       logAdminAction(auth!.token, auth!.userId, auth!.name, `Mot de passe réinitialisé pour ${targetUser.name}.`, targetUser.id);
       setPwResetResult({ ok: true, msg: `Nouveau mot de passe défini : ${newPw}` });
     } catch (e: any) {
@@ -5491,7 +5582,19 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
 
   // ── Reports ──
   const [reports, setReports] = useState<ReportRow[]>([]);
-  const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived">("all");
+  const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived" | "auto">("all");
+  const [autoLogReports, setAutoLogReports] = useState<{ id: string; reason: string; created_at: string }[]>([]);
+  const [autoLogLoading, setAutoLogLoading] = useState(false);
+  const loadAutoLogReports = async () => {
+    if (!auth) return;
+    setAutoLogLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?status=eq.auto_log&order=created_at.desc&limit=200&select=id,reason,created_at`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => []);
+      if (Array.isArray(d)) setAutoLogReports(d);
+    } catch {}
+    setAutoLogLoading(false);
+  };
   const [archiveSearch, setArchiveSearch] = useState("");
   const [archiveTypeFilter, setArchiveTypeFilter] = useState<"all" | "messaging" | "system" | "profile">("all");
   const [archiveActionFilter, setArchiveActionFilter] = useState<"all" | "reviewed" | "rejected" | "banned" | "archived">("all");
@@ -5976,7 +6079,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       // ── Charger un échantillon de profils pour top villes + derniers inscrits ──
       const [recentProfilesRes, reps] = await Promise.all([
         sb.query<AdminProfile>(auth.token, "profiles", "?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,is_complete&order=created_at.desc&limit=500"),
-        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&order=created_at.desc&limit=50"),
+        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&status=neq.auto_log&order=created_at.desc&limit=50"),
       ]);
 
       // Top villes (sur l'échantillon de 500 derniers inscrits)
@@ -8840,24 +8943,25 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           {/* Sous-onglets, affichés uniquement sur Signalements (pas sur l'onglet Messagerie) */}
           {activeTab === "reports" && (
           <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
-            {(["all", "user", "system", "archived"] as const).map(f => {
+            {(["all", "user", "system", "auto", "archived"] as const).map(f => {
               const isActive = reportFilter === f;
               const isArchived = f === "archived";
-              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : "Archives";
+              const isAuto = f === "auto";
+              const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : f === "auto" ? "Rapport auto" : "Archives";
               const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : f === "user" ? profilePendingCount : f === "system" ? systemPendingCount : null;
               return (
                 <div
                   key={f}
-                  onClick={() => setReportFilter(f)}
+                  onClick={() => { setReportFilter(f); if (isAuto) loadAutoLogReports(); }}
                   style={{
                     display: "flex", alignItems: "center", gap: 5,
                     padding: "7px 13px", borderRadius: 50, fontSize: "0.74rem", fontWeight: 600,
                     cursor: "pointer", flexShrink: 0, transition: "all 0.15s",
                     background: isActive
-                      ? isArchived ? "#6c757d" : G.rouge
+                      ? isArchived ? "#6c757d" : isAuto ? "#7c3aed" : G.rouge
                       : G.blanc,
                     color: isActive ? "#fff" : isArchived ? "#6c757d" : "#555",
-                    boxShadow: isActive ? `0 2px 8px ${isArchived ? "rgba(108,117,125,0.3)" : "rgba(192,57,43,0.25)"}` : "none",
+                    boxShadow: isActive ? `0 2px 8px ${isArchived ? "rgba(108,117,125,0.3)" : isAuto ? "rgba(124,58,237,0.3)" : "rgba(192,57,43,0.25)"}` : "none",
                     border: `1px solid ${isActive ? (isArchived ? "#6c757d" : G.rouge) : G.gris}`,
                   }}
                 >
@@ -9053,7 +9157,24 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             ) : (
               <div data-admlist={effectiveFilter === "messaging" ? undefined : ""} style={{ maxWidth: 720, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-              {effectiveFilter === "messaging" ? (() => {
+              {effectiveFilter === "auto" ? (() => {
+                if (autoLogLoading) return <p style={{ textAlign: "center", color: "#aaa", fontSize: "0.85rem", padding: 30 }}>Chargement…</p>;
+                if (autoLogReports.length === 0) return <p style={{ textAlign: "center", color: "#bbb", fontSize: "0.85rem", padding: 30 }}>Aucune activité automatique enregistrée pour l'instant.</p>;
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {autoLogReports.map(r => {
+                      const isBan = r.reason.includes("Banni automatiquement");
+                      return (
+                        <div key={r.id} style={{ background: G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", borderLeft: `3px solid ${isBan ? "#e74c3c" : "#7c3aed"}` }}>
+                          <div style={{ fontSize: "0.82rem", color: G.brun, lineHeight: 1.5 }}>{r.reason.replace("[AUTO-CONTACT] ", "")}</div>
+                          <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 4 }}>{new Date(r.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })() :
+              effectiveFilter === "messaging" ? (() => {
                 // ── Vue Messagerie : grouper les échanges par utilisateur ──
                 const convMap: Record<string, { userId: string; messages: ReportRow[] }> = {};
                 filteredReports.forEach(r => {
