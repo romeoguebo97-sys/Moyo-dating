@@ -6508,9 +6508,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
       const wipedProfile = {
         name: "Compte supprimé", photo_url: null, bio: "", religion: null, profession: null,
-        hobbies: null, phone: null, relational_profile: null, whatsapp_username: null,
+        hobbies: null, phone: null, relational_profile: null,
         is_premium: false, premium_until: null, premium_is_gift: false, is_admin: false,
-        is_verified: false, is_certified: false, admin_pin: null,
+        is_verified: false, admin_pin: null,
         is_banned: true, is_visible: false, ban_reason: reason || null, ban_until: null,
         account_deleted: true,
         last_notice_acknowledged: false, last_notice_at: new Date().toISOString(),
@@ -9217,7 +9217,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>
                 {effectiveFilter === "archived"
                   ? `Archivés (${archivedCount})`
-                  : effectiveFilter === "user"
+                  : effectiveFilter === "auto"
+                    ? `Rapport auto (${autoLogReports.length})`
+                    : effectiveFilter === "user"
                     ? `Profils (${filteredReports.length})`
                     : effectiveFilter === "system"
                       ? `Système (${filteredReports.length})`
@@ -9237,12 +9239,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               )}
             </div>
 
-            {filteredReports.length === 0 ? (
+            {(effectiveFilter === "auto" ? (!autoLogLoading && autoLogReports.length === 0) : filteredReports.length === 0) ? (
               <div style={{ textAlign: "center", padding: "28px 0" }}>
                 {effectiveFilter === "archived"
                   ? <>
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
                       <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucun signalement archivé</p>
+                    </>
+                  : effectiveFilter === "auto"
+                  ? <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 10px", display: "block" }}><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                      <p style={{ color: "#bbb", fontSize: "0.82rem" }}>Aucune activité automatique enregistrée pour l'instant.</p>
                     </>
                   : effectiveFilter === "messaging"
                   ? <>
