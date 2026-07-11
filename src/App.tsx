@@ -15080,7 +15080,6 @@ export default function App() {
   const persistDismissedSurvey = (id: string) => { surveyDismissRef.current.add(id); try { localStorage.setItem(`moyo_surveys_dismissed_${auth.userId}`, JSON.stringify([...surveyDismissRef.current])); } catch {} };
   const [propJump, setPropJump] = useState(0);
   const dismissedPropsRef = useRef<Set<string>>((() => { try { return new Set<string>(JSON.parse(localStorage.getItem(`moyo_seen_props_${auth.userId}`) || "[]")); } catch { return new Set<string>(); } })());
-  const persistDismissedProp = (id: string) => { dismissedPropsRef.current.add(id); try { localStorage.setItem(`moyo_seen_props_${auth.userId}`, JSON.stringify([...dismissedPropsRef.current])); } catch {} };
   const [proposalResponding, setProposalResponding] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
