@@ -683,7 +683,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -4275,6 +4275,11 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
         setErrorMsg("Profil introuvable. Réessaie dans quelques secondes.");
         setLoading(false); return;
       }
+      if ((profiles[0] as any).account_deleted) {
+        await sb.signOut(res.access_token);
+        setErrorMsg("Tu as gaffé. Ton compte est supprimé.");
+        setLoading(false); return;
+      }
       if ((profiles[0] as any).is_banned) {
         try { await sb.update(res.access_token, "profiles", res.user.id, { last_notice_acknowledged: true }); } catch {}
         await sb.signOut(res.access_token);
@@ -4500,10 +4505,16 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
     let authRes: any = null;
     try {
       // Vérifier si le compte existe déjà
-      const existing = await sb.query<Profile>(SUPABASE_KEY, "profiles", `?email=eq.${encodeURIComponent(emailClean)}&select=id,name,photo_url,age,city`);
+      const existing = await sb.query<Profile>(SUPABASE_KEY, "profiles", `?email=eq.${encodeURIComponent(emailClean)}&select=id,name,photo_url,age,city,account_deleted`);
 
       if (existing.length > 0) {
         const existingProfile = existing[0] as any;
+        // ── Compte supprimé définitivement par un admin : on bloque sans donner aucun détail ──
+        if (existingProfile.account_deleted) {
+          setErrorMsg("Erreur");
+          setLoading(false);
+          return;
+        }
         // Incomplet si : pas de photo OU nom par défaut "..." OU (âge=18 ET ville=Brazzaville = valeurs par défaut jamais modifiées)
         const isIncomplete = !existingProfile.photo_url
           || existingProfile.name === "..."
@@ -9964,8 +9975,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       loadConvs();
       return;
     }
-    // Modération : insultes, arnaques, contenu interdit
-    const mod = FEATURE_MODERATION_INSULTS ? moderateMessage(text) : { blocked: false };
+    // Modération : insultes, arnaques, contenu interdit — les admins sont exemptés (tests internes)
+    const mod = (FEATURE_MODERATION_INSULTS && !auth.isAdmin) ? moderateMessage(text) : { blocked: false };
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       // ── Alerte système auto-mod : ce n'est PAS un signalement utilisateur contre un autre profil.
@@ -9986,19 +9997,36 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       }
       return;
     }
-    if (FEATURE_MODERATION_CONTACT && !auth.isPremium && hasContactInfo(text)) {
+    if (FEATURE_MODERATION_CONTACT && !auth.isAdmin && !auth.isPremium && hasContactInfo(text)) {
       if (AUTO_WARN_BAN_CONTACT_ENABLED) {
         // ── Nouveau comportement : avertissement officiel (1/3, 2/3, 3/3) + bannissement
         //    automatique au 3e, une seule fois par session pour ne pas spammer la personne. ──
         if (!autoWarnContactTriggeredThisSession) {
           autoWarnContactTriggeredThisSession = true;
           try {
-            await fetch(`${SUPABASE_URL}/functions/v1/auto-warn-contact`, {
+            const autoWarnRes = await fetch(`${SUPABASE_URL}/functions/v1/auto-warn-contact`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}` },
               body: JSON.stringify({ user_id: auth.userId }),
             });
-          } catch {}
+            // ── La fonction Edge auto-warn-contact écrit elle-même l'avertissement, le bannissement
+            //    éventuel ET la trace "reports" (status "auto_log") — rien à dupliquer ici.
+            //    On se contente de vérifier que l'appel a bien réussi, et de logguer précisément
+            //    l'erreur serveur sinon (au lieu de l'avaler en silence comme avant). ──
+            if (!autoWarnRes.ok) {
+              const errData = await autoWarnRes.json().catch(() => null);
+              console.error("[Moyo][AutoWarnContact] ❌ Échec de l'appel à la fonction Edge :", autoWarnRes.status, errData?.error || "(pas de détail renvoyé)");
+            } else {
+              const okData = await autoWarnRes.json().catch(() => null);
+              if (okData && okData.ok === false) {
+                console.error("[Moyo][AutoWarnContact] ❌ La fonction Edge a répondu ok:false :", okData.error || "(pas de détail)");
+              } else {
+                console.log("[Moyo][AutoWarnContact] ✅", okData);
+              }
+            }
+          } catch (e: any) {
+            console.error("[Moyo][AutoWarnContact] ❌ Erreur réseau lors de l'appel à la fonction Edge :", e?.message || e);
+          }
         }
         // Toujours la réponse de l'Assistant dans sa messagerie support (inchangé).
         try {
@@ -12332,7 +12360,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
     // Modération : insultes, arnaques, contenu interdit — le partage de contact/réseaux sociaux
     // reste volontairement libre ici, le groupe étant réservé aux membres Premium (déjà autorisé
     // pour eux en messagerie privée aussi).
-    const mod = FEATURE_MODERATION_INSULTS ? moderateMessage(text) : { blocked: false };
+    const mod = (FEATURE_MODERATION_INSULTS && !auth.isAdmin) ? moderateMessage(text) : { blocked: false };
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       try {
@@ -16195,7 +16223,7 @@ export default function App() {
             <svg width="28" height="28" viewBox="0 0 24 24" fill="#1a73e8" stroke="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
           </div>
           <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111", marginBottom: 8 }}>Fais certifier ton compte</h3>
-          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>C'est gratuit, et ça rassure les autres membres que ton profil est un vrai compte (il y a parfois de faux profils). Réponse sous 24h.</p>
+          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>C'est gratuit. Un profil certifié rassure les autres membres, car il a été vérifié par l'équipe Moyo. Tu inspires davantage confiance et augmentes tes chances de faire de belles rencontres.</p>
           <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo Dating.\n\n👤 Nom : ${auth.name}\n🎂 Âge : ${verifyPromptMe.age} ans\n⚥ Genre : ${verifyPromptMe.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" onClick={() => setVerifyPromptOpen(false)} style={{ textDecoration: "none", display: "block" }}>
             <Btn variant="primary" style={{ width: "100%" }}>Faire certifier mon compte (gratuit) →</Btn>
           </a>

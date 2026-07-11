@@ -438,7 +438,7 @@ export function AdminDesktopPage() {
   // ── Onglet "Automatisations" : raccourcis vers des interrupteurs qui vivent ailleurs
   //    (Marketing, Matchs) — ce sont les MÊMES réglages en base, pas des copies séparées :
   //    changer ici change bien le même interrupteur que celui affiché dans son onglet d'origine. ──
-  type AutoShortcutKey = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled";
+  type AutoShortcutKey = AutoShortcutKeyShared;
   const [autoShortcuts, setAutoShortcuts] = React.useState<Record<AutoShortcutKey, boolean>>({
     phone_completion_prompt_enabled: false,
     verification_prompt_enabled: false,
@@ -1087,7 +1087,7 @@ export function AdminDesktopPage() {
       )}
       <div style={{ maxWidth: 1760, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
         <div className="adm-wrap">
-          <AdminPinGate auth={auth} onBack={() => window.close()} onBadgeCount={() => {}} />
+          <AdminPinGate auth={auth} onBack={() => window.close()} onBadgeCount={() => {}} autoShortcuts={autoShortcuts} onToggleAutoShortcut={toggleAutoShortcut} />
         </div>
       </div>
     </div>
@@ -2542,11 +2542,44 @@ function AdminNotes({ auth, targetType, targetId }: { auth: Auth; targetType: "u
   );
 }
 
-export function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount: (n: number) => void }) {
+export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoShortcutsProp, onToggleAutoShortcut: onToggleAutoShortcutProp }: { auth: Auth; onBack: () => void; onBadgeCount: (n: number) => void; autoShortcuts?: Record<AutoShortcutKeyShared, boolean>; onToggleAutoShortcut?: (key: AutoShortcutKeyShared) => void }) {
   const [pinVerified, setPinVerified] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
   const [pinLoading, setPinLoading] = useState(false);
+  // ── Repli local : uniquement utilisé quand AdminPinGate est monté seul (App.tsx mobile),
+  //    sans AdminDesktopPage au-dessus pour fournir les réglages partagés. ──
+  const [localAutoShortcuts, setLocalAutoShortcuts] = useState<Record<AutoShortcutKeyShared, boolean>>({
+    phone_completion_prompt_enabled: false,
+    verification_prompt_enabled: false,
+    premium_nudge_enabled: false,
+    mm_auto_propose_enabled: false,
+    spontaneous_auto_propose_enabled: false,
+    auto_warn_ban_contact_enabled: false,
+  });
+  useEffect(() => {
+    if (autoShortcutsProp || !auth) return;
+    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled"];
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(rows => {
+        if (!Array.isArray(rows)) return;
+        setLocalAutoShortcuts(cur => {
+          const next = { ...cur };
+          rows.forEach((row: { key: AutoShortcutKeyShared; value: string }) => { next[row.key] = row.value === "true"; });
+          return next;
+        });
+      }).catch(() => {});
+  }, [auth?.userId, !!autoShortcutsProp]);
+  const toggleLocalAutoShortcut = async (key: AutoShortcutKeyShared) => {
+    const next = !localAutoShortcuts[key];
+    setLocalAutoShortcuts(cur => ({ ...cur, [key]: next }));
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
+    } catch {}
+  };
+  const autoShortcuts = autoShortcutsProp ?? localAutoShortcuts;
+  const onToggleAutoShortcut = onToggleAutoShortcutProp ?? toggleLocalAutoShortcut;
   const verifyPin = async () => {
     if (pinInput.length < 4) return;
     setPinLoading(true);
@@ -2565,7 +2598,7 @@ export function AdminPinGate({ auth, onBack, onBadgeCount }: { auth: Auth; onBac
     } catch { setPinError("Erreur réseau. Réessayez."); }
     setPinLoading(false);
   };
-  if (pinVerified) return <Admin auth={auth} onBack={() => { setPinVerified(false); onBack(); }} onBadgeCount={onBadgeCount} />;
+  if (pinVerified) return <Admin auth={auth} onBack={() => { setPinVerified(false); onBack(); }} onBadgeCount={onBadgeCount} autoShortcuts={autoShortcuts} onToggleAutoShortcut={onToggleAutoShortcut} />;
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
@@ -3185,7 +3218,8 @@ function AdminHelpModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void }) {
+type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled";
+function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void; autoShortcuts: Record<AutoShortcutKeyShared, boolean>; onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
     if (!auth.isAdmin) {
@@ -3228,6 +3262,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     email?: string;
     photo_url?: string | null;
     admin_level?: string | null;
+    account_deleted?: boolean;
   };
 
   // ── Onglet actif ──
@@ -3362,7 +3397,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Auto-proposition nocturne : ces réglages sont lus par la fonction Supabase
   //    (auto-propose-matchmaking) exécutée chaque nuit par une tâche planifiée. Le calcul de
   //    compatibilité et les filtres restent strictement identiques au système manuel. ──
-  const [mmAutoEnabled, setMmAutoEnabled] = useState(false);
   const [mmAutoTimes, setMmAutoTimes] = useState("03:00");
   const [mmAutoMinScore, setMmAutoMinScore] = useState("80");
   const [mmAutoDailyLimit, setMmAutoDailyLimit] = useState("8");
@@ -3377,7 +3411,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const rows = await r.json().catch(() => []);
         const map: Record<string, string> = {};
         (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
-        if (map["mm_auto_propose_enabled"] !== undefined) setMmAutoEnabled(map["mm_auto_propose_enabled"] === "true");
         if (map["mm_auto_times"] !== undefined) setMmAutoTimes(map["mm_auto_times"]);
         if (map["mm_auto_min_score"] !== undefined) setMmAutoMinScore(map["mm_auto_min_score"]);
         if (map["mm_auto_daily_limit"] !== undefined) setMmAutoDailyLimit(map["mm_auto_daily_limit"]);
@@ -3930,7 +3963,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   // ── Propositions spontanées automatiques (règle : homme plus âgé), lues chaque nuit par la
   //    fonction Supabase auto-propose-spontaneous. Le bouton manuel "Proposer un match" reste
   //    inchangé et continue de fonctionner exactement pareil. ──
-  const [spAutoEnabled, setSpAutoEnabled] = useState(false);
   const [spAutoTimes, setSpAutoTimes] = useState("08:00,14:00,20:00");
   const [spAutoDailyLimit, setSpAutoDailyLimit] = useState("6");
   const [spAutoPerRunLimit, setSpAutoPerRunLimit] = useState("2");
@@ -3945,7 +3977,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         const rows = await r.json().catch(() => []);
         const map: Record<string, string> = {};
         (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
-        if (map["spontaneous_auto_propose_enabled"] !== undefined) setSpAutoEnabled(map["spontaneous_auto_propose_enabled"] === "true");
         if (map["spontaneous_auto_times"] !== undefined) setSpAutoTimes(map["spontaneous_auto_times"]);
         if (map["spontaneous_auto_daily_limit"] !== undefined) setSpAutoDailyLimit(map["spontaneous_auto_daily_limit"]);
         if (map["spontaneous_auto_per_run_limit"] !== undefined) setSpAutoPerRunLimit(map["spontaneous_auto_per_run_limit"]);
@@ -5450,11 +5481,8 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     }
   };
     const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "phoneprompt" | "premiumnudge">("statuts");
-    const [phonePromptEnabled, setPhonePromptEnabled] = useState(false);
     const [phonePromptMissingCount, setPhonePromptMissingCount] = useState<number | null>(null);
-    const [verifyPromptEnabled, setVerifyPromptEnabled] = useState(false);
     const [verifyPromptMissingCount, setVerifyPromptMissingCount] = useState<number | null>(null);
-    const [premiumNudgeEnabled, setPremiumNudgeEnabled] = useState(false);
     const [premiumNudgeTarget, setPremiumNudgeTarget] = useState("all");
     const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("Passe Premium pour multiplier tes chances de rencontre !");
     useEffect(() => {
@@ -5465,9 +5493,6 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
           const rows = await r.json().catch(() => []);
           const map: Record<string, string> = {};
           (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
-          if (map["phone_completion_prompt_enabled"] !== undefined) setPhonePromptEnabled(map["phone_completion_prompt_enabled"] === "true");
-          if (map["verification_prompt_enabled"] !== undefined) setVerifyPromptEnabled(map["verification_prompt_enabled"] === "true");
-          if (map["premium_nudge_enabled"] !== undefined) setPremiumNudgeEnabled(map["premium_nudge_enabled"] === "true");
           if (map["premium_nudge_target"] !== undefined) setPremiumNudgeTarget(map["premium_nudge_target"]);
           if (map["premium_nudge_message"] !== undefined) setPremiumNudgeMessage(map["premium_nudge_message"]);
         } catch {}
@@ -5483,30 +5508,9 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         } catch {}
       })();
     }, [auth?.userId]);
-    const togglePhonePrompt = async () => {
-      const next = !phonePromptEnabled;
-      setPhonePromptEnabled(next);
-      if (!auth) return;
-      try {
-        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.phone_completion_prompt_enabled`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
-      } catch {}
-    };
-    const toggleVerifyPrompt = async () => {
-      const next = !verifyPromptEnabled;
-      setVerifyPromptEnabled(next);
-      if (!auth) return;
-      try {
-        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.verification_prompt_enabled`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
-      } catch {}
-    };
-    const togglePremiumNudge = async () => {
-      const next = !premiumNudgeEnabled;
-      setPremiumNudgeEnabled(next);
-      if (!auth) return;
-      try {
-        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_nudge_enabled`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
-      } catch {}
-    };
+    const togglePhonePrompt = () => onToggleAutoShortcut("phone_completion_prompt_enabled");
+    const toggleVerifyPrompt = () => onToggleAutoShortcut("verification_prompt_enabled");
+    const togglePremiumNudge = () => onToggleAutoShortcut("premium_nudge_enabled");
     const savePremiumNudgeSetting = async (key: string, value: string) => {
       if (!auth) return;
       try {
@@ -5585,13 +5589,22 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
   const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived" | "auto">("all");
   const [autoLogReports, setAutoLogReports] = useState<{ id: string; reason: string; created_at: string }[]>([]);
   const [autoLogLoading, setAutoLogLoading] = useState(false);
+  const [autoLogCount, setAutoLogCount] = useState<number | null>(null);
+  const loadAutoLogCount = async () => {
+    if (!auth) return;
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?status=eq.auto_log&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
+      const total = r.headers.get("content-range")?.split("/")[1];
+      if (total) setAutoLogCount(parseInt(total) || 0);
+    } catch {}
+  };
   const loadAutoLogReports = async () => {
     if (!auth) return;
     setAutoLogLoading(true);
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?status=eq.auto_log&order=created_at.desc&limit=200&select=id,reason,created_at`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const d = await r.json().catch(() => []);
-      if (Array.isArray(d)) setAutoLogReports(d);
+      if (Array.isArray(d)) { setAutoLogReports(d); setAutoLogCount(d.length); }
     } catch {}
     setAutoLogLoading(false);
   };
@@ -6132,6 +6145,7 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
         pwaInstalls: parseCount(rPwaInstalls),
       });
       setReports(reps);
+      loadAutoLogCount();
       // ── Charger automatiquement les profils reporter + reported ──
       const idsToFetch = [...new Set(
         reps.flatMap((r: ReportRow) => [r.reporter_id, r.reported_id].filter(Boolean) as string[])
@@ -6436,6 +6450,88 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
     } catch (e: any) {
       console.error("[Moyo][Admin][Delete] ❌ Erreur :", e?.message || e);
       showToast("Erreur suppression : " + (e?.message || "inconnue"), "error");
+    }
+    setActionLoading(null);
+  };
+
+  // ── Suppression définitive (bannissement le plus strict) ──
+  const wipeAccountKeepEmail = async (user: AdminProfile, reason: string) => {
+    if (user.id === auth.userId) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setActionLoading(user.id);
+    try {
+      await Promise.all([
+        sb.delete(auth.token, "likes", `?from_user=eq.${user.id}`),
+        sb.delete(auth.token, "likes", `?to_user=eq.${user.id}`),
+        sb.delete(auth.token, "blocks", `?blocker_id=eq.${user.id}`),
+        sb.delete(auth.token, "blocks", `?blocked_id=eq.${user.id}`),
+        sb.delete(auth.token, "profile_views", `?viewer_id=eq.${user.id}`),
+        sb.delete(auth.token, "profile_views", `?viewed_id=eq.${user.id}`),
+        sb.delete(auth.token, "profile_visits", `?visitor_id=eq.${user.id}`),
+        sb.delete(auth.token, "profile_visits", `?visited_id=eq.${user.id}`),
+        sb.delete(auth.token, "dismissed_cards", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "app_ratings", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "user_warnings", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "reports", `?reporter_id=eq.${user.id}`),
+        sb.delete(auth.token, "reports", `?reported_id=eq.${user.id}`),
+        sb.delete(auth.token, "match_proposals", `?user1_id=eq.${user.id}`),
+        sb.delete(auth.token, "match_proposals", `?user2_id=eq.${user.id}`),
+        sb.delete(auth.token, "match_requests", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "appointments", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "group_members", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "group_messages", `?sender_id=eq.${user.id}`),
+        sb.delete(auth.token, "survey_responses", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "feature_requests", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "status_status_views", `?viewer_id=eq.${user.id}`),
+        sb.delete(auth.token, "status_status_likes", `?liker_id=eq.${user.id}`),
+      ]);
+      const myStatuses = await sb.query<{ id: string }>(auth.token, "statuses", `?user_id=eq.${user.id}&select=id`).catch(() => []);
+      if (Array.isArray(myStatuses) && myStatuses.length > 0) {
+        for (const s of myStatuses) {
+          await sb.delete(auth.token, "status_status_views", `?status_id=eq.${s.id}`);
+          await sb.delete(auth.token, "status_status_likes", `?status_id=eq.${s.id}`);
+        }
+        await sb.delete(auth.token, "statuses", `?user_id=eq.${user.id}`);
+      }
+
+      const matches = await sb.query<{ id: string }>(
+        auth.token, "matches",
+        `?or=(user1.eq.${user.id},user2.eq.${user.id})&select=id`
+      );
+      if (Array.isArray(matches) && matches.length > 0) {
+        for (const m of matches) {
+          await sb.delete(auth.token, "messages", `?match_id=eq.${m.id}`);
+        }
+        await sb.delete(auth.token, "matches", `?user1=eq.${user.id}`);
+        await sb.delete(auth.token, "matches", `?user2=eq.${user.id}`);
+      }
+
+      const wipedProfile = {
+        name: "Compte supprimé", photo_url: null, bio: "", religion: null, profession: null,
+        hobbies: null, phone: null, relational_profile: null, whatsapp_username: null,
+        is_premium: false, premium_until: null, premium_is_gift: false, is_admin: false,
+        is_verified: false, is_certified: false, admin_pin: null,
+        is_banned: true, is_visible: false, ban_reason: reason || null, ban_until: null,
+        account_deleted: true,
+        last_notice_acknowledged: false, last_notice_at: new Date().toISOString(),
+      };
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify(wipedProfile),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => null);
+        throw new Error(err?.message || `HTTP ${r.status}`);
+      }
+
+      showToast(`Compte de ${user.name} supprimé définitivement (email bloqué).`, "success");
+      logAdminAction(auth.token, auth.userId, auth.name, `Suppression définitive : ${user.name} (toutes les données effacées, email conservé pour bloquer toute réinscription).`, user.id);
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, ...wipedProfile } as any : u));
+      loadStats();
+    } catch (e: any) {
+      console.error("[Moyo][Admin][WipeAccount] ❌ Erreur :", e?.message || e);
+      showToast("Erreur suppression définitive : " + (e?.message || "inconnue"), "error");
     }
     setActionLoading(null);
   };
@@ -7770,6 +7866,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                   <button onClick={() => doBan({ is_banned: false, is_visible: false, ban_until: new Date(Date.now() + hours * 3600000).toISOString(), ban_reason: banReason || null }, `${u.name} a été banni(e) pour ${hours}h.`)} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.86rem", fontWeight: 800, cursor: "pointer" }}>Bannir pour {hours}h</button>
                 </div>
+                <button onClick={() => { close(); confirm(`⚠️ Supprimer TOUTES les données de ${u.name} (matchs, likes, messages, statuts...) ? L'email restera bloqué pour empêcher toute réinscription. Cette action est IRRÉVERSIBLE.`, () => wipeAccountKeepEmail(u, banReason || "Suppression définitive")); }} style={{ textAlign: "left", border: `1.5px solid #1a1a1a`, background: "#1a1a1a", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ fontSize: "1.3rem" }}>🗑️</span>
+                  <span><span style={{ fontWeight: 800, color: "#fff", fontSize: "0.92rem" }}>Suppression définitive</span><br /><span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.65)" }}>Efface tout (matchs, likes, messages, statuts, signalements...). Le compte ne peut plus jamais être recréé avec cet email. Action irréversible.</span></span>
+                </button>
               </div>
             </div>
           </div>
@@ -8948,7 +9048,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               const isArchived = f === "archived";
               const isAuto = f === "auto";
               const label = f === "all" ? "En attente" : f === "user" ? "Profils" : f === "system" ? "Système" : f === "auto" ? "Rapport auto" : "Archives";
-              const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : f === "user" ? profilePendingCount : f === "system" ? systemPendingCount : null;
+              const count = f === "archived" ? archivedCount : f === "all" ? pendingCount : f === "user" ? profilePendingCount : f === "system" ? systemPendingCount : f === "auto" ? autoLogCount : null;
               return (
                 <div
                   key={f}
@@ -9747,7 +9847,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Demander le numéro de téléphone</div>
                   <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Une fois activé, tout membre sans numéro de téléphone enregistré voit une fenêtre bloquante lui demandant de le renseigner avant de pouvoir continuer à utiliser l'app. Une seule fois par personne — dès qu'il l'a renseigné, il ne la revoit plus.</div>
                 </div>
-                <SwitchBtn on={phonePromptEnabled} onToggle={togglePhonePrompt} />
+                <SwitchBtn on={autoShortcuts.phone_completion_prompt_enabled} onToggle={togglePhonePrompt} />
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 12, padding: "12px 16px", marginTop: 8 }}>
                 <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(230,126,34,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -9768,7 +9868,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter à certifier son compte</div>
                   <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Une fois activé, tout membre non vérifié voit une fenêtre l'invitant à demander la certification gratuite de son compte. Le bouton envoie la même demande WhatsApp que le bouton "Faire vérifier mon compte" dans son Profil. La fenêtre se ferme dès qu'il clique — la vérification reste ensuite à valider manuellement, comme d'habitude, depuis sa fiche.</div>
                 </div>
-                <SwitchBtn on={verifyPromptEnabled} onToggle={toggleVerifyPrompt} />
+                <SwitchBtn on={autoShortcuts.verification_prompt_enabled} onToggle={toggleVerifyPrompt} />
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 12, padding: "12px 16px", marginTop: 8 }}>
                 <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(26,115,232,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -9789,7 +9889,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter à passer Premium</div>
                   <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Une fenêtre non bloquante s'affiche (une fois par jour maximum) au groupe ciblé, avec un bouton "Passer Premium →" et un bouton "Plus tard" plus discret pour fermer sans y donner suite.</div>
                 </div>
-                <SwitchBtn on={premiumNudgeEnabled} onToggle={togglePremiumNudge} />
+                <SwitchBtn on={autoShortcuts.premium_nudge_enabled} onToggle={togglePremiumNudge} />
               </div>
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Cible</div>
@@ -11373,7 +11473,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ fontSize: "0.8rem", fontWeight: 800, color: G.brun }}>Auto-proposition nocturne</div>
                         <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Propose automatiquement, aux horaires que tu choisis, les meilleures paires — sans que tu aies à cliquer. Même calcul et mêmes exclusions que ci-dessus. Ne force jamais un couple qui a un historique de refus.</div>
                       </div>
-                      <SwitchBtn on={mmAutoEnabled} onToggle={() => { const v = !mmAutoEnabled; setMmAutoEnabled(v); saveMmAutoSetting("mm_auto_propose_enabled", v ? "true" : "false"); }} />
+                      <SwitchBtn on={autoShortcuts.mm_auto_propose_enabled} onToggle={() => onToggleAutoShortcut("mm_auto_propose_enabled")} />
                     </div>
                     <div style={{ marginBottom: 12 }}>
                       <TimesEditor value={mmAutoTimes} onSave={async (v) => { setMmAutoTimes(v); await saveMmAutoSetting("mm_auto_times", v); }} />
@@ -11614,7 +11714,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <div style={{ fontSize: "0.8rem", fontWeight: 800, color: G.brun }}>Auto-proposition spontanée</div>
                     <div style={{ fontSize: "0.72rem", color: "#888", marginTop: 2 }}>Propose automatiquement des paires selon ta règle (l'homme plus âgé que la femme), sans profil relationnel — immédiatement à l'inscription d'un nouveau compte, puis aux horaires que tu choisis ci-dessous pour les autres. Ne force jamais un couple avec un historique de refus, et n'inclut jamais les comptes admin.</div>
                   </div>
-                  <SwitchBtn on={spAutoEnabled} onToggle={() => { const v = !spAutoEnabled; setSpAutoEnabled(v); saveSpAutoSetting("spontaneous_auto_propose_enabled", v ? "true" : "false"); }} />
+                  <SwitchBtn on={autoShortcuts.spontaneous_auto_propose_enabled} onToggle={() => onToggleAutoShortcut("spontaneous_auto_propose_enabled")} />
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <TimesEditor value={spAutoTimes} onSave={async (v) => { setSpAutoTimes(v); await saveSpAutoSetting("spontaneous_auto_times", v); }} />
