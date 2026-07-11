@@ -5700,6 +5700,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [archivePage, setArchivePage] = useState(1);
   // ── Modèles de réponse (Assistant Moyo Dating) ──
   const TEMPLATE_CATS = ["Accueil", "Abonnement", "Paiement", "Sécurité", "Fonctionnalités", "Signalements", "Mise en avant", "Autre"];
+  // ── Catégories personnalisées ajoutées par l'admin, en plus des catégories fixes ci-dessus ──
+  const [customTemplateCats, setCustomTemplateCats] = useState<string[]>([]);
+  const allTemplateCats = [...TEMPLATE_CATS, ...customTemplateCats.filter(c => !TEMPLATE_CATS.includes(c))];
+  const persistTemplateCats = async (next: string[]) => {
+    setCustomTemplateCats(next);
+    try { await saveSetting("support_template_categories", JSON.stringify(next), auth.token); } catch {}
+  };
   const DEFAULT_SUPPORT_TEMPLATES = [
     { id: "t1", category: "Accueil", title: "Accueil - Message de bienvenue", content: "Bonjour 👋 Merci de contacter Moyo Dating. Comment pouvons-nous vous aider aujourd'hui ?" },
     { id: "t2", category: "Abonnement", title: "Abonnement - Annulation", content: "Oui, vous pouvez annuler votre abonnement Premium à tout moment depuis vos paramètres. L'accès Premium reste actif jusqu'à la fin de votre période en cours." },
@@ -5718,14 +5725,29 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [templateSearch, setTemplateSearch] = useState("");
   const [templateCat, setTemplateCat] = useState("all");
   const [templateModal, setTemplateModal] = useState<null | { id?: string; title: string; content: string; category: string }>(null);
+  const [newCatModal, setNewCatModal] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const createTemplateCat = () => {
+    const name = newCatName.trim();
+    if (!name || allTemplateCats.includes(name)) return;
+    persistTemplateCats([...customTemplateCats, name]);
+    setNewCatModal(false);
+    setNewCatName("");
+    showToast(`Catégorie « ${name} » créée`, "success");
+  };
   const [tplMenu, setTplMenu] = useState<string | null>(null);
   useEffect(() => {
     if (!auth) return;
     (async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.support_templates&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(support_templates,support_template_categories)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const d = await r.json().catch(() => []);
-        if (Array.isArray(d) && d[0]?.value) { const parsed = JSON.parse(d[0].value); if (Array.isArray(parsed) && parsed.length) setSupportTemplates(parsed); }
+        if (Array.isArray(d)) {
+          const tplRow = d.find((row: any) => row.key === "support_templates");
+          if (tplRow?.value) { const parsed = JSON.parse(tplRow.value); if (Array.isArray(parsed) && parsed.length) setSupportTemplates(parsed); }
+          const catRow = d.find((row: any) => row.key === "support_template_categories");
+          if (catRow?.value) { const parsedCats = JSON.parse(catRow.value); if (Array.isArray(parsedCats)) setCustomTemplateCats(parsedCats); }
+        }
       } catch {}
     })();
   }, [auth]);
@@ -6010,28 +6032,32 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
   // ── Users ──
   const [users, setUsers] = useState<AdminProfile[]>([]);
-  // ── Likes reçus en attente de retour (pas encore devenus un match), par utilisateur —
-  //    calculé pour la page actuellement affichée uniquement (pas pour tous les comptes). ──
+  // ── Likes reçus ET likes envoyés, en attente de retour (pas encore devenus un match), par
+  //    utilisateur — calculé pour la page actuellement affichée uniquement. ──
   const [pendingLikesCount, setPendingLikesCount] = useState<Record<string, number>>({});
+  const [sentPendingLikesCount, setSentPendingLikesCount] = useState<Record<string, number>>({});
   const loadPendingLikes = async (pageUsers: AdminProfile[]) => {
-    if (!auth || pageUsers.length === 0) { setPendingLikesCount({}); return; }
+    if (!auth || pageUsers.length === 0) { setPendingLikesCount({}); setSentPendingLikesCount({}); return; }
     try {
       const ids = pageUsers.map(u => u.id);
       const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
       const [likesRaw, matchesRaw] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/likes?to_user=in.(${ids.join(",")})&select=from_user,to_user&limit=5000`, { headers: H }).then(r => r.json()).catch(() => []),
+        fetch(`${SUPABASE_URL}/rest/v1/likes?or=(to_user.in.(${ids.join(",")}),from_user.in.(${ids.join(",")}))&select=from_user,to_user&limit=5000`, { headers: H }).then(r => r.json()).catch(() => []),
         fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.in.(${ids.join(",")}),user2.in.(${ids.join(",")}))&select=user1,user2&limit=5000`, { headers: H }).then(r => r.json()).catch(() => []),
       ]);
       const matchedPairs = new Set((Array.isArray(matchesRaw) ? matchesRaw : []).map((m: any) => [m.user1, m.user2].sort().join("_")));
       const counts: Record<string, number> = {};
+      const sentCounts: Record<string, number> = {};
       (Array.isArray(likesRaw) ? likesRaw : []).forEach((l: any) => {
         if (!l.to_user || !l.from_user) return;
         const pairKey = [l.from_user, l.to_user].sort().join("_");
         if (matchedPairs.has(pairKey)) return; // déjà un match → plus "en attente"
         counts[l.to_user] = (counts[l.to_user] || 0) + 1;
+        sentCounts[l.from_user] = (sentCounts[l.from_user] || 0) + 1;
       });
       setPendingLikesCount(counts);
-    } catch { setPendingLikesCount({}); }
+      setSentPendingLikesCount(sentCounts);
+    } catch { setPendingLikesCount({}); setSentPendingLikesCount({}); }
   };
   // Helper : premium à vie
   const isLifetimePremium = (u: AdminProfile) => !!u.premium_until && new Date(u.premium_until).getFullYear() >= 2090;
@@ -7754,6 +7780,23 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {newCatModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => { setNewCatModal(false); setNewCatName(""); }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>Créer une catégorie</div>
+              <button onClick={() => { setNewCatModal(false); setNewCatName(""); }} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
+            </div>
+            <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+              <input autoFocus value={newCatName} onChange={e => setNewCatName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") createTemplateCat(); }} placeholder="Nom de la catégorie" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", fontFamily: "inherit" }} />
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button onClick={() => { setNewCatModal(false); setNewCatName(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "11px 20px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                <button onClick={createTemplateCat} disabled={!newCatName.trim() || allTemplateCats.includes(newCatName.trim())} style={{ background: (!newCatName.trim() || allTemplateCats.includes(newCatName.trim())) ? "rgba(192,57,43,0.4)" : G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "11px 20px", fontSize: "0.84rem", fontWeight: 800, cursor: (!newCatName.trim() || allTemplateCats.includes(newCatName.trim())) ? "not-allowed" : "pointer" }}>Créer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {templateModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setTemplateModal(null)}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 460, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
@@ -7769,7 +7812,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div>
                 <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#888", marginBottom: 6 }}>Catégorie</div>
                 <select value={templateModal.category} onChange={e => setTemplateModal(m => m ? { ...m, category: e.target.value } : m)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", background: G.blanc, cursor: "pointer" }}>
-                  {TEMPLATE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                  {allTemplateCats.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
@@ -8769,6 +8812,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             {pendingLikesCount[u.id]}
                           </div>
                         )}
+                        {/* Likes envoyés en attente de retour (personne likée n'a pas encore répondu) */}
+                        {!!sentPendingLikesCount[u.id] && (
+                          <div title="Likes envoyés en attente d'un retour (pas encore un match)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(41,128,185,0.08)", color: "#2980b9", borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0, marginLeft: 6 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                            {sentPendingLikesCount[u.id]}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -8849,6 +8899,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div title="Likes reçus en attente d'un retour (pas encore un match)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(233,30,140,0.08)", color: "#e91e8c", borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0 }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                           {pendingLikesCount[u.id]}
+                        </div>
+                      )}
+                      {!!sentPendingLikesCount[u.id] && (
+                        <div title="Likes envoyés en attente d'un retour (pas encore un match)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(41,128,185,0.08)", color: "#2980b9", borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                          {sentPendingLikesCount[u.id]}
                         </div>
                       )}
                       {isLoading && (
@@ -9898,14 +9954,17 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
                   <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Modèles de réponse</div>
-                  <button onClick={() => setTemplateModal({ title: "", content: "", category: "Autre" })} style={{ display: "flex", alignItems: "center", gap: 6, background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "8px 13px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Créer un modèle</button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => setNewCatModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "8px 13px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Créer une catégorie</button>
+                    <button onClick={() => setTemplateModal({ title: "", content: "", category: "Autre" })} style={{ display: "flex", alignItems: "center", gap: 6, background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "8px 13px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Créer un modèle</button>
+                  </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: G.creme, borderRadius: 10, padding: "9px 12px", marginBottom: 10 }}>
                   <IcoSearch />
                   <input value={templateSearch} onChange={e => setTemplateSearch(e.target.value)} placeholder="Rechercher un modèle…" style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: "0.82rem", color: G.brun }} />
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                  {(["all", ...TEMPLATE_CATS]).map(c => {
+                  {(["all", ...allTemplateCats]).map(c => {
                     const active = templateCat === c;
                     return <button key={c} onClick={() => setTemplateCat(c)} style={{ padding: "5px 11px", borderRadius: 999, border: `1.5px solid ${active ? G.rouge : G.gris}`, background: active ? "rgba(192,57,43,0.08)" : "#fff", color: active ? G.rouge : "#666", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{c === "all" ? `Tous (${supportTemplates.length})` : c}</button>;
                   })}
