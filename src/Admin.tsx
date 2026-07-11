@@ -3937,6 +3937,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [proposeSelected2, setProposeSelected2] = useState<AdminProfile | null>(null);
   const [proposeP1Locked, setProposeP1Locked] = useState(false);
   const [proposeDuration, setProposeDuration] = useState("48");
+  // ── Sélection multiple sur la liste des propositions (Réactiver/Archiver en masse) ──
+  const [selectedProposals, setSelectedProposals] = useState<Set<string>>(new Set());
+  const [bulkProposalActionLoading, setBulkProposalActionLoading] = useState(false);
   // ── Durée d'expiration globale des propositions de match (en jours), pilotable depuis
   //    Configuration → Tarifs & Paiements. Sert de valeur par défaut pour toute nouvelle
   //    proposition (manuelle, réactivation, matchmaking, auto-propositions). ──
@@ -4137,6 +4140,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const PROPOSALS_PAGE_SIZE = 30;
   const loadProposals = async (page = 0, statusFilter: typeof proposalsStatusFilter = null, originFilter: typeof proposalsOriginFilter = null) => {
     setProposalsLoading(true);
+    setSelectedProposals(new Set());
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&expires_at=lt.${new Date().toISOString()}`, {
         method: "PATCH",
@@ -4185,6 +4189,46 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setProposalsBadgeCount(newResponses);
     } catch {}
     setProposalsLoading(false);
+  };
+
+  // ── Réactiver en masse toutes les propositions expirées sélectionnées ──
+  const bulkReactivateProposals = async (visible: MatchProposal[]) => {
+    const targets = visible.filter(p => selectedProposals.has(p.id) && p.status === "expired");
+    if (targets.length === 0) return;
+    setBulkProposalActionLoading(true);
+    const newExpiry = new Date(Date.now() + (parseInt(proposeDuration) || 48) * 3600 * 1000).toISOString();
+    let okCount = 0;
+    for (const p of targets) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ status: "pending", expires_at: newExpiry, archived: false }) });
+        if (r.ok) okCount++;
+      } catch {}
+    }
+    const okIds = new Set(targets.map(t => t.id));
+    setProposals(prev => prev.map(x => okIds.has(x.id) ? { ...x, status: "pending", expires_at: newExpiry } : x));
+    setSelectedProposals(prev => { const next = new Set(prev); okIds.forEach(id => next.delete(id)); return next; });
+    if (okCount > 0) logAdminAction(auth.token, auth.userId, auth.name, `${okCount} proposition(s) réactivée(s) en masse (expire dans ${proposeDuration}h)`, auth.userId);
+    showToast(okCount > 0 ? `✅ ${okCount} proposition${okCount > 1 ? "s" : ""} réactivée${okCount > 1 ? "s" : ""}` : "Erreur lors de la réactivation", okCount > 0 ? "success" : "error");
+    setBulkProposalActionLoading(false);
+  };
+
+  // ── Archiver en masse les propositions sélectionnées (refusées, expirées ou acceptées) ──
+  const bulkArchiveProposals = async (visible: MatchProposal[]) => {
+    const targets = visible.filter(p => selectedProposals.has(p.id) && p.status !== "pending");
+    if (targets.length === 0) return;
+    setBulkProposalActionLoading(true);
+    let okCount = 0;
+    for (const p of targets) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ archived: true }) });
+        if (r.ok) okCount++;
+      } catch {}
+    }
+    const okIds = new Set(targets.map(t => t.id));
+    setProposals(prev => prev.filter(x => !okIds.has(x.id)));
+    setSelectedProposals(prev => { const next = new Set(prev); okIds.forEach(id => next.delete(id)); return next; });
+    showToast(okCount > 0 ? `✅ ${okCount} proposition${okCount > 1 ? "s" : ""} archivée${okCount > 1 ? "s" : ""}` : "Erreur lors de l'archivage", okCount > 0 ? "success" : "error");
+    setBulkProposalActionLoading(false);
   };
 
   // ── Suivi des couples issus du MATCHMAKING (origin = "matchmaking") ──
@@ -5587,7 +5631,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   // ── Reports ──
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived" | "auto">("all");
-  const [autoLogReports, setAutoLogReports] = useState<{ id: string; reason: string; created_at: string }[]>([]);
+  const [autoLogReports, setAutoLogReports] = useState<{ id: string; reason: string; created_at: string; reporter_id?: string }[]>([]);
   const [autoLogLoading, setAutoLogLoading] = useState(false);
   const [autoLogCount, setAutoLogCount] = useState<number | null>(null);
   const loadAutoLogCount = async () => {
@@ -5602,11 +5646,53 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     if (!auth) return;
     setAutoLogLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?status=eq.auto_log&order=created_at.desc&limit=200&select=id,reason,created_at`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?status=eq.auto_log&order=created_at.desc&limit=200&select=id,reason,created_at,reporter_id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const d = await r.json().catch(() => []);
-      if (Array.isArray(d)) { setAutoLogReports(d); setAutoLogCount(d.length); }
+      if (Array.isArray(d)) {
+        setAutoLogReports(d);
+        setAutoLogCount(d.length);
+        // ── Précharger les profils (photo, nom...) des personnes concernées, pour l'avatar cliquable ──
+        const ids = [...new Set(d.map((x: any) => x.reporter_id).filter(Boolean))] as string[];
+        const missing = ids.filter(id => !reportProfilesCache[id]);
+        if (missing.length > 0) {
+          try {
+            const profilesRes = await sb.query<AdminProfile>(
+              auth.token, "profiles",
+              "?select=id,name,age,city,gender,photo_url,is_premium,is_verified,is_banned,is_admin,admin_level,warning_count,created_at&id=in.(" + missing.join(",") + ")"
+            );
+            const cache: Record<string, AdminProfile> = {};
+            profilesRes.forEach((p: AdminProfile) => { cache[p.id] = p; });
+            setReportProfilesCache(prev => ({ ...prev, ...cache }));
+          } catch {}
+        }
+      }
     } catch {}
     setAutoLogLoading(false);
+  };
+  // ── Archiver une entrée du Rapport auto : ne la supprime pas, la sort simplement de cette
+  //    vue (status "auto_log_archived", jamais visible ailleurs dans Signalements). ──
+  const archiveAutoLogReport = async (id: string) => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    setReportActionLoading(id);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ status: "auto_log_archived" }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => null);
+        showToast(`Erreur archivage : ${err?.message || r.status}`, "error");
+        setReportActionLoading(null);
+        return;
+      }
+      setAutoLogReports(prev => prev.filter(x => x.id !== id));
+      setAutoLogCount(prev => (prev !== null ? Math.max(0, prev - 1) : prev));
+      showToast("Entrée archivée.", "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setReportActionLoading(null);
   };
   const [archiveSearch, setArchiveSearch] = useState("");
   const [archiveTypeFilter, setArchiveTypeFilter] = useState<"all" | "messaging" | "system" | "profile">("all");
@@ -6092,7 +6178,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       // ── Charger un échantillon de profils pour top villes + derniers inscrits ──
       const [recentProfilesRes, reps] = await Promise.all([
         sb.query<AdminProfile>(auth.token, "profiles", "?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,is_complete&order=created_at.desc&limit=500"),
-        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&status=neq.auto_log&order=created_at.desc&limit=50"),
+        sb.query<ReportRow>(auth.token, "reports", "?select=id,reason,reporter_id,reported_id,status,created_at&status=not.like.auto_log*&order=created_at.desc&limit=50"),
       ]);
 
       // Top villes (sur l'échantillon de 500 derniers inscrits)
@@ -6159,7 +6245,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
           );
           const cache: Record<string, AdminProfile> = {};
           profilesRes.forEach((p: AdminProfile) => { cache[p.id] = p; });
-          setReportProfilesCache(cache);
+          setReportProfilesCache(prev => ({ ...prev, ...cache }));
         } catch (_) {}
       }
       console.log(`[Moyo][Admin] ✅ Dashboard chargé - ${parseCount(rTotalUsers)} profils, ${reps.length} signalements`);
@@ -8035,6 +8121,28 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   )}
                 </div>
               </div>
+              {/* Actions de modération — identiques à la carte utilisateur de l'onglet Utilisateurs */}
+              {(() => {
+                const u = reportProfilePreview;
+                const isLoading = actionLoading === u.id;
+                const isSelf = u.id === auth.userId;
+                const iAmSuperAdmin = (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID;
+                const targetIsSuperAdmin = (u as any).admin_level === "superadmin";
+                const cannotModerate = isSelf || (targetIsSuperAdmin && !iAmSuperAdmin);
+                return (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                    <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => { setReportProfilePreview(null); openProposeFromCard(u); }} />
+                    <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setReportProfilePreview(null); setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
+                    {!isCurrentlyBanned(u)
+                      ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setReportProfilePreview(null); setBanModal(u); setBanHours("24"); setBanReason(""); }} />
+                      : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
+                    }
+                    <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
+                    <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setReportProfilePreview(null); setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
+                    <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setReportProfilePreview(null); setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
+                  </div>
+                );
+              })()}
               <button
                 onClick={() => setReportProfilePreview(null)}
                 style={{ width: "100%", background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}
@@ -9271,10 +9379,36 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {autoLogReports.map(r => {
                       const isBan = r.reason.includes("Banni automatiquement");
+                      const p = r.reporter_id ? reportProfilesCache[r.reporter_id] : null;
+                      const isArchiving = reportActionLoading === r.id;
                       return (
-                        <div key={r.id} style={{ background: G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", borderLeft: `3px solid ${isBan ? "#e74c3c" : "#7c3aed"}` }}>
-                          <div style={{ fontSize: "0.82rem", color: G.brun, lineHeight: 1.5 }}>{r.reason.replace("[AUTO-CONTACT] ", "")}</div>
-                          <div style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 4 }}>{new Date(r.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                        <div key={r.id} style={{ background: G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", borderLeft: `3px solid ${isBan ? "#e74c3c" : "#7c3aed"}`, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                          <div
+                            onClick={() => { if (p) setReportProfilePreview(p); }}
+                            style={{ cursor: p ? "pointer" : "default", flexShrink: 0 }}
+                            title={p ? `Voir la fiche de ${p.name}` : undefined}
+                          >
+                            <Avatar url={p?.photo_url} gender={p?.gender} size={38} premium={p?.is_premium} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              onClick={() => { if (p) setReportProfilePreview(p); }}
+                              style={{ fontSize: "0.82rem", color: G.brun, lineHeight: 1.5, cursor: p ? "pointer" : "default" }}
+                            >
+                              {r.reason.replace("[AUTO-CONTACT] ", "")}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4, gap: 8 }}>
+                              <div style={{ fontSize: "0.68rem", color: "#aaa" }}>{new Date(r.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                              <button
+                                onClick={() => archiveAutoLogReport(r.id)}
+                                disabled={isArchiving}
+                                style={{ display: "flex", alignItems: "center", gap: 4, background: "transparent", border: `1px solid ${G.gris}`, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, color: "#888", cursor: isArchiving ? "not-allowed" : "pointer", opacity: isArchiving ? 0.5 : 1, flexShrink: 0 }}
+                              >
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                                {isArchiving ? "…" : "Archiver"}
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -11793,7 +11927,44 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 const q = proposalsSearchName.trim().toLowerCase();
                 const visibleProposals = q ? nameFiltered.filter(p => (p.profile1?.name || "").toLowerCase().includes(q) || (p.profile2?.name || "").toLowerCase().includes(q)) : nameFiltered;
                 if (visibleProposals.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition dans cette catégorie</div>;
+                const visibleIds = visibleProposals.map(p => p.id);
+                const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedProposals.has(id));
+                const selectedCount = visibleIds.filter(id => selectedProposals.has(id)).length;
+                const selectedExpiredCount = visibleProposals.filter(p => selectedProposals.has(p.id) && p.status === "expired").length;
+                const selectedArchivableCount = visibleProposals.filter(p => selectedProposals.has(p.id) && p.status !== "pending").length;
                 return (
+                <>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                  <div
+                    onClick={() => setSelectedProposals(prev => {
+                      const next = new Set(prev);
+                      if (allVisibleSelected) visibleIds.forEach(id => next.delete(id));
+                      else visibleIds.forEach(id => next.add(id));
+                      return next;
+                    })}
+                    style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, color: "#8e44ad" }}
+                  >
+                    <div style={{ width: 17, height: 17, borderRadius: 5, border: `1.5px solid ${allVisibleSelected ? "#8e44ad" : G.gris}`, background: allVisibleSelected ? "#8e44ad" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {allVisibleSelected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </div>
+                    {allVisibleSelected ? "Tout désélectionner" : "Tout sélectionner"} ({visibleIds.length})
+                  </div>
+                  {selectedCount > 0 && (
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "0.74rem", color: "#888" }}>{selectedCount} sélectionnée{selectedCount > 1 ? "s" : ""}</span>
+                      {selectedExpiredCount > 0 && (
+                        <button disabled={bulkProposalActionLoading} onClick={() => bulkReactivateProposals(visibleProposals)} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.25)", borderRadius: 50, padding: "6px 14px", fontSize: "0.74rem", fontWeight: 700, color: "#1a8c4a", cursor: bulkProposalActionLoading ? "not-allowed" : "pointer", opacity: bulkProposalActionLoading ? 0.6 : 1 }}>
+                          Réactiver ({selectedExpiredCount})
+                        </button>
+                      )}
+                      {selectedArchivableCount > 0 && (
+                        <button disabled={bulkProposalActionLoading} onClick={() => bulkArchiveProposals(visibleProposals)} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "6px 14px", fontSize: "0.74rem", fontWeight: 700, color: "#555", cursor: bulkProposalActionLoading ? "not-allowed" : "pointer", opacity: bulkProposalActionLoading ? 0.6 : 1 }}>
+                          Archiver ({selectedArchivableCount})
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div style={proposalsViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
                   {visibleProposals.map(p => {
                     const statusInfo = p.status === "pending"
@@ -11810,7 +11981,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     const leftResponse = p1IsWoman ? p.user1_response : p.user2_response;
                     const rightResponse = p1IsWoman ? p.user2_response : p.user1_response;
                     return (
-                      <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}` }}>
+                      <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}`, position: "relative" }}>
+                        <div
+                          onClick={() => setSelectedProposals(prev => { const next = new Set(prev); if (next.has(p.id)) next.delete(p.id); else next.add(p.id); return next; })}
+                          title="Sélectionner"
+                          style={{ position: "absolute", top: 10, right: 10, width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${selectedProposals.has(p.id) ? "#8e44ad" : G.gris}`, background: selectedProposals.has(p.id) ? "#8e44ad" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 2 }}
+                        >
+                          {selectedProposals.has(p.id) && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
                             <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${leftResponse === "accepted" ? "#27ae60" : leftResponse === "refused" ? "#e74c3c" : G.gris}` }}>{leftProfile?.photo_url && <img src={leftProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
@@ -11866,6 +12044,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     );
                   })}
                 </div>
+                </>
                 );
               })()}
               {!proposalsLoading && (
