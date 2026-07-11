@@ -5358,7 +5358,70 @@ function Admin({ auth, onBack, onBadgeCount }: { auth: Auth; onBack: () => void;
       default: return base;
     }
   };
-    const [mktTab, setMktTab] = useState<"statuts" | "features" | "event">("statuts");
+    const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "phoneprompt" | "premiumnudge">("statuts");
+    const [phonePromptEnabled, setPhonePromptEnabled] = useState(false);
+    const [phonePromptMissingCount, setPhonePromptMissingCount] = useState<number | null>(null);
+    const [verifyPromptEnabled, setVerifyPromptEnabled] = useState(false);
+    const [verifyPromptMissingCount, setVerifyPromptMissingCount] = useState<number | null>(null);
+    const [premiumNudgeEnabled, setPremiumNudgeEnabled] = useState(false);
+    const [premiumNudgeTarget, setPremiumNudgeTarget] = useState("all");
+    const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("Passe Premium pour multiplier tes chances de rencontre !");
+    useEffect(() => {
+      if (!auth) return;
+      (async () => {
+        try {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const rows = await r.json().catch(() => []);
+          const map: Record<string, string> = {};
+          (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
+          if (map["phone_completion_prompt_enabled"] !== undefined) setPhonePromptEnabled(map["phone_completion_prompt_enabled"] === "true");
+          if (map["verification_prompt_enabled"] !== undefined) setVerifyPromptEnabled(map["verification_prompt_enabled"] === "true");
+          if (map["premium_nudge_enabled"] !== undefined) setPremiumNudgeEnabled(map["premium_nudge_enabled"] === "true");
+          if (map["premium_nudge_target"] !== undefined) setPremiumNudgeTarget(map["premium_nudge_target"]);
+          if (map["premium_nudge_message"] !== undefined) setPremiumNudgeMessage(map["premium_nudge_message"]);
+        } catch {}
+        try {
+          const r2 = await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(phone.is.null,phone.eq.)&is_banned=eq.false&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact" } });
+          const countHeader = r2.headers.get("content-range");
+          setPhonePromptMissingCount(countHeader ? parseInt(countHeader.split("/")[1] || "0") : null);
+        } catch {}
+        try {
+          const r3 = await fetch(`${SUPABASE_URL}/rest/v1/profiles?is_verified=eq.false&is_banned=eq.false&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact" } });
+          const countHeader3 = r3.headers.get("content-range");
+          setVerifyPromptMissingCount(countHeader3 ? parseInt(countHeader3.split("/")[1] || "0") : null);
+        } catch {}
+      })();
+    }, [auth?.userId]);
+    const togglePhonePrompt = async () => {
+      const next = !phonePromptEnabled;
+      setPhonePromptEnabled(next);
+      if (!auth) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.phone_completion_prompt_enabled`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
+      } catch {}
+    };
+    const toggleVerifyPrompt = async () => {
+      const next = !verifyPromptEnabled;
+      setVerifyPromptEnabled(next);
+      if (!auth) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.verification_prompt_enabled`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
+      } catch {}
+    };
+    const togglePremiumNudge = async () => {
+      const next = !premiumNudgeEnabled;
+      setPremiumNudgeEnabled(next);
+      if (!auth) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_nudge_enabled`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
+      } catch {}
+    };
+    const savePremiumNudgeSetting = async (key: string, value: string) => {
+      if (!auth) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+      } catch {}
+    };
   const campTargetLabel = (t: string) => CAMP_TARGETS.find(x => x.key === t)?.label || "Tous les utilisateurs gratuits";
   const campName = (t: string) => ({ all: "Premium pour tous", femmes: "Premium spécial femmes", hommes: "Premium spécial hommes", nouveaux: "Bienvenue nouveaux inscrits", inactifs: "Campagne de réengagement", actifs: "Premium membres actifs", verifies: "Premium comptes vérifiés" } as Record<string, string>)[t] || "Campagne Premium";
   useEffect(() => {
@@ -9527,13 +9590,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>]] as [("statuts" | "features" | "event"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>]] as [("statuts" | "features" | "event" | "phoneprompt" | "premiumnudge"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
 
           {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
-          {mktTab !== "event" && (
+          {mktTab !== "event" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
             {(mktTab === "statuts" ? [
               { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
@@ -9554,6 +9617,74 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             ))}
           </div>
+          )}
+
+          {mktTab === "phoneprompt" && (
+            <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Demander le numéro de téléphone</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Une fois activé, tout membre sans numéro de téléphone enregistré voit une fenêtre bloquante lui demandant de le renseigner avant de pouvoir continuer à utiliser l'app. Une seule fois par personne — dès qu'il l'a renseigné, il ne la revoit plus.</div>
+                </div>
+                <SwitchBtn on={phonePromptEnabled} onToggle={togglePhonePrompt} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 12, padding: "12px 16px", marginTop: 8 }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(230,126,34,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{phonePromptMissingCount === null ? "…" : phonePromptMissingCount}</div>
+                  <div style={{ fontSize: "0.76rem", color: "#888", fontWeight: 600 }}>membres actifs sans numéro renseigné actuellement</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {mktTab === "phoneprompt" && (
+            <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640, marginTop: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter à certifier son compte</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Une fois activé, tout membre non vérifié voit une fenêtre l'invitant à demander la certification gratuite de son compte. Le bouton envoie la même demande WhatsApp que le bouton "Faire vérifier mon compte" dans son Profil. La fenêtre se ferme dès qu'il clique — la vérification reste ensuite à valider manuellement, comme d'habitude, depuis sa fiche.</div>
+                </div>
+                <SwitchBtn on={verifyPromptEnabled} onToggle={toggleVerifyPrompt} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 12, padding: "12px 16px", marginTop: 8 }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(26,115,232,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#1a73e8" stroke="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{verifyPromptMissingCount === null ? "…" : verifyPromptMissingCount}</div>
+                  <div style={{ fontSize: "0.76rem", color: "#888", fontWeight: 600 }}>membres actifs non certifiés actuellement</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {mktTab === "premiumnudge" && (
+            <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter à passer Premium</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Une fenêtre non bloquante s'affiche (une fois par jour maximum) au groupe ciblé, avec un bouton "Passer Premium →" et un bouton "Plus tard" plus discret pour fermer sans y donner suite.</div>
+                </div>
+                <SwitchBtn on={premiumNudgeEnabled} onToggle={togglePremiumNudge} />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Cible</div>
+                <select value={premiumNudgeTarget} onChange={e => { setPremiumNudgeTarget(e.target.value); savePremiumNudgeSetting("premium_nudge_target", e.target.value); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.blanc }}>
+                  <option value="all">Tous les membres gratuits</option>
+                  <option value="femmes">Femmes uniquement</option>
+                  <option value="hommes">Hommes uniquement</option>
+                  <option value="nouveaux">Nouveaux inscrits (moins de 7 jours)</option>
+                  <option value="inactifs">Inactifs (plus de 14 jours sans connexion)</option>
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Message affiché dans la fenêtre</div>
+                <textarea value={premiumNudgeMessage} onChange={e => setPremiumNudgeMessage(e.target.value)} onBlur={() => savePremiumNudgeSetting("premium_nudge_message", premiumNudgeMessage)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
+              </div>
+            </div>
           )}
 
           {mktTab === "statuts" && (

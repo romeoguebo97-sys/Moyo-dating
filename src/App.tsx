@@ -15069,6 +15069,15 @@ export default function App() {
   const [userGender, setUserGender] = useState<string>("");
   const [selfBan, setSelfBan] = useState<{ until: string | null; name?: string; email?: string; reason?: string | null } | null>(null);
   const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string; pairKey?: string } | null>(null);
+  // ── Fenêtre bloquante demandant le numéro de téléphone, si activée par l'admin et que le
+  //    membre n'en a pas encore renseigné un. Ne se ferme qu'une fois le numéro enregistré. ──
+  const [phonePromptOpen, setPhonePromptOpen] = useState(false);
+  const [phonePromptValue, setPhonePromptValue] = useState("");
+  const [phonePromptSaving, setPhonePromptSaving] = useState(false);
+  const [verifyPromptOpen, setVerifyPromptOpen] = useState(false);
+  const [verifyPromptMe, setVerifyPromptMe] = useState<{ age?: number; gender?: string }>({});
+  const [premiumNudgeOpen, setPremiumNudgeOpen] = useState(false);
+  const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("");
   // ── Sondages (côté membre) ──
   const [activeSurvey, setActiveSurvey] = useState<any | null>(null);
   const [showSurveyInvite, setShowSurveyInvite] = useState(false);
@@ -15933,6 +15942,48 @@ export default function App() {
     checkProposals();
     checkProposalsRef.current = checkProposals;
 
+    // Vérification unique au chargement : quelles campagnes "profil incomplet" sont actives,
+    // et ce membre correspond-il à l'une d'elles ? Une seule fenêtre à la fois (téléphone en
+    // priorité, puis vérification, puis incitation Premium).
+    (async () => {
+      try {
+        const [settingRows, profileRows] = await Promise.all([
+          sb.query<{ key: string; value: string }>(auth.token, "app_settings", `?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message)&select=key,value`),
+          sb.query<{ phone: string | null; age?: number; gender?: string; is_verified?: boolean; is_premium?: boolean; created_at?: string; last_seen?: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=phone,age,gender,is_verified,is_premium,created_at,last_seen`),
+        ]);
+        const settings: Record<string, string> = {};
+        (Array.isArray(settingRows) ? settingRows : []).forEach(r => { settings[r.key] = r.value; });
+        const me = Array.isArray(profileRows) && profileRows[0] ? profileRows[0] : null;
+        if (!me) return;
+
+        const hasPhone = !!(me.phone && me.phone.trim());
+        if (settings["phone_completion_prompt_enabled"] === "true" && !hasPhone) { setPhonePromptOpen(true); return; }
+
+        if (settings["verification_prompt_enabled"] === "true" && !me.is_verified) { setVerifyPromptMe({ age: me.age, gender: me.gender }); setVerifyPromptOpen(true); return; }
+
+        if (settings["premium_nudge_enabled"] === "true" && !me.is_premium) {
+          const target = settings["premium_nudge_target"] || "all";
+          const matchesTarget =
+            target === "all" ? true :
+            target === "femmes" ? me.gender === "Femme" :
+            target === "hommes" ? me.gender === "Homme" :
+            target === "nouveaux" ? (me.created_at ? (Date.now() - new Date(me.created_at).getTime()) < 7 * 24 * 3600 * 1000 : false) :
+            target === "inactifs" ? (me.last_seen ? (Date.now() - new Date(me.last_seen).getTime()) > 14 * 24 * 3600 * 1000 : false) :
+            true;
+          if (matchesTarget) {
+            const seenKey = `moyo_premium_nudge_seen_${auth.userId}`;
+            const lastSeen = localStorage.getItem(seenKey);
+            const today = new Date().toDateString();
+            if (lastSeen !== today) {
+              setPremiumNudgeMessage(settings["premium_nudge_message"] || "Passe Premium pour multiplier tes chances de rencontre !");
+              setPremiumNudgeOpen(true);
+              localStorage.setItem(seenKey, today);
+            }
+          }
+        }
+      } catch {}
+    })();
+
     const fallbackInterval = setInterval(() => {
       if (isUnmatchingRef.current) return;
       checkUnread();
@@ -16075,8 +16126,69 @@ export default function App() {
     {pendingWarning && <UserWarningModal warning={pendingWarning} onAcknowledge={acknowledgeWarning} />}
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
 
+    {/* ── Fenêtre bloquante : numéro de téléphone manquant (priorité maximale, ne peut pas être fermée) ── */}
+    {phonePromptOpen && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 20000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111", marginBottom: 8 }}>Ton profil est incomplet</h3>
+          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Renseigne ton numéro de téléphone pour continuer à utiliser Moyo Dating.</p>
+          <input
+            value={phonePromptValue}
+            onChange={e => setPhonePromptValue(e.target.value.slice(0, 25))}
+            placeholder="+242 06 513 20 12"
+            type="tel"
+            style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", fontFamily: "inherit", marginBottom: 16, textAlign: "center", outline: "none" }}
+          />
+          <Btn variant="primary" loading={phonePromptSaving} disabled={!phonePromptValue.trim()} style={{ width: "100%" }} onClick={async () => {
+            const v = phonePromptValue.trim();
+            if (!v || !auth) return;
+            setPhonePromptSaving(true);
+            try {
+              await sb.update(auth.token, "profiles", auth.userId, { phone: v });
+              setPhonePromptOpen(false);
+            } catch {}
+            setPhonePromptSaving(false);
+          }}>Enregistrer →</Btn>
+        </div>
+      </div>
+    )}
+
+    {/* ── Fenêtre : demande de vérification du compte (se ferme une fois la demande envoyée) ── */}
+    {verifyPromptOpen && !phonePromptOpen && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 20000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,115,232,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="#1a73e8" stroke="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+          </div>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111", marginBottom: 8 }}>Fais certifier ton compte</h3>
+          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>C'est gratuit, et ça rassure les autres membres que ton profil est un vrai compte (il y a parfois de faux profils). Réponse sous 24h.</p>
+          <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo Dating.\n\n👤 Nom : ${auth.name}\n🎂 Âge : ${verifyPromptMe.age} ans\n⚥ Genre : ${verifyPromptMe.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" onClick={() => setVerifyPromptOpen(false)} style={{ textDecoration: "none", display: "block" }}>
+            <Btn variant="primary" style={{ width: "100%" }}>Faire certifier mon compte (gratuit) →</Btn>
+          </a>
+        </div>
+      </div>
+    )}
+
+    {/* ── Fenêtre : incitation à passer Premium (dismissible, "Plus tard") ── */}
+    {premiumNudgeOpen && !phonePromptOpen && !verifyPromptOpen && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 19000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <PremiumBadge size={30} />
+          </div>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111", marginBottom: 8 }}>Passe Premium</h3>
+          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>{premiumNudgeMessage}</p>
+          <Btn variant="primary" style={{ width: "100%", marginBottom: 10 }} onClick={() => { setPremiumNudgeOpen(false); showPremium(premiumNudgeMessage); }}>Passer Premium →</Btn>
+          <button onClick={() => setPremiumNudgeOpen(false)} style={{ background: "none", border: "none", color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", padding: "6px 12px" }}>Plus tard</button>
+        </div>
+      </div>
+    )}
+
     {/* ── SONDAGE : invitation ── */}
-    {activeSurvey && !showSurveyInvite && !pendingWarning && !pendingBroadcast && !pendingProposal && (
+    {activeSurvey && !showSurveyInvite && !pendingWarning && !pendingBroadcast && !pendingProposal && !phonePromptOpen && !verifyPromptOpen && !premiumNudgeOpen && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 22, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
           <div style={{ background: "linear-gradient(135deg,#2980b9,#1c5e8c)", padding: "26px 22px", textAlign: "center" }}>
