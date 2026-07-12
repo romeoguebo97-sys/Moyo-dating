@@ -6241,6 +6241,23 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   // ── Bottom Sheet menu ──
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [bottomSheetProfile, setBottomSheetProfile] = useState<Profile | null>(null);
+  // ── Double-tap sur la photo pour liker (comme Instagram/TikTok), en plus du bouton cœur.
+  //    lastTapRef mémorise le dernier tap (carte + horodatage) pour détecter un double-tap
+  //    rapide ; un tap isolé ne fait rien de plus qu'avant. ──
+  const lastTapRef = useRef<{ id: string; time: number } | null>(null);
+  const [doubleTapHeartId, setDoubleTapHeartId] = useState<string | null>(null);
+  const handleCardTap = (prof: Profile) => {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last && last.id === prof.id && now - last.time < 300) {
+      lastTapRef.current = null;
+      if (!likedIds.has(prof.id)) handleLike(prof);
+      setDoubleTapHeartId(prof.id);
+      setTimeout(() => setDoubleTapHeartId(cur => cur === prof.id ? null : cur), 700);
+    } else {
+      lastTapRef.current = { id: prof.id, time: now };
+    }
+  };
   const openBottomSheet = (prof: Profile) => {
     // Synchronise current pour que les actions bloquer/signaler ciblent ce profil
     const idx = profiles.findIndex(p => p.id === prof.id);
@@ -6682,10 +6699,15 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     el.scrollTop = 0;
   }
 }} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 62px)", height: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 62px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "var(--c-shell-bg)", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
-  <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
+  <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;} .moyo-doubletap-heart{animation:moyoDoubleTapHeart 0.7s cubic-bezier(0.2,1.2,0.4,1) forwards;filter:drop-shadow(0 4px 18px rgba(0,0,0,0.35))} @keyframes moyoDoubleTapHeart{0%{transform:scale(0);opacity:0}15%{transform:scale(1.15);opacity:1}30%{transform:scale(0.95)}45%{transform:scale(1.05)}60%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
-    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100% - 12px)", minHeight: 480, borderRadius: 28, overflow: "hidden", marginBottom: 12, background: "var(--c-shell-bg)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
-      {prof.photo_url ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(90% - 12px)", minHeight: 440, borderRadius: 28, overflow: "hidden", marginBottom: 12, background: "var(--c-shell-bg)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
+      {prof.photo_url ? <img src={prof.photo_url ?? undefined} alt={prof.name} onClick={() => handleCardTap(prof)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", cursor: "pointer" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div onClick={() => handleCardTap(prof)} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+      {doubleTapHeartId === prof.id && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+          <svg className="moyo-doubletap-heart" width="110" height="110" viewBox="0 0 24 24" fill="#fff" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+      )}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
       {/* ✕ haut droite - sur chaque carte */}
       <button onClick={() => { setViewMode("card"); }} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0 }}>
