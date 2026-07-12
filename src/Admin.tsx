@@ -447,10 +447,14 @@ export function AdminDesktopPage() {
     spontaneous_auto_propose_enabled: false,
     auto_warn_ban_contact_enabled: false,
     promo_active: false,
+    // Par défaut activé (cohérent avec App.tsx : absence de réglage = diffusion générale active),
+    // contrairement aux autres raccourcis qui démarrent désactivés par défaut.
+    broadcast_enabled: true,
+    premium_event_active: false,
   });
   React.useEffect(() => {
     if (!auth) return;
-    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active"];
+    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -477,6 +481,22 @@ export function AdminDesktopPage() {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: value ? "true" : "false" }) });
     } catch {}
+  };
+  const [premiumEventShortcutLoading, setPremiumEventShortcutLoading] = React.useState(false);
+  const [activeBroadcastCount, setActiveBroadcastCount] = React.useState<number | null>(null);
+  // ── Désactivation rapide UNIQUEMENT (voir note sur premium_event_active plus haut) : reprend
+  //    exactement la même logique que togglePremiumEvent côté onglet Marketing pour la partie
+  //    désactivation — les abonnés Premium réels (premium_until valide) ne sont jamais touchés. ──
+  const deactivatePremiumEventShortcut = async () => {
+    if (!auth) return;
+    setPremiumEventShortcutLoading(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: "false" }) });
+      const now = new Date().toISOString();
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(premium_until.is.null,premium_until.lt.${now})`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_premium: false }) });
+      setAutoShortcuts(cur => ({ ...cur, premium_event_active: false }));
+    } catch {}
+    setPremiumEventShortcutLoading(false);
   };
   const [appConfig, setAppConfig] = React.useState({
     limitLikes: "5",
@@ -512,6 +532,20 @@ export function AdminDesktopPage() {
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
   const [configTab, setConfigTab] = React.useState<"general" | "contenus" | "tarifs" | "equipe" | "securite" | "auto">("general");
+  // ── Vue d'ensemble Automatisations : nombre de diffusions générales actives en ce moment
+  //    (pas juste le coupe-circuit broadcast_enabled — plusieurs annonces peuvent être actives
+  //    simultanément, ce qui est justement ce que cette vue permet de repérer d'un coup d'œil). ──
+  React.useEffect(() => {
+    if (!auth || configTab !== "auto") return;
+    fetch(`${SUPABASE_URL}/rest/v1/broadcasts?expires_at=gt.${new Date().toISOString()}&select=id`, {
+      method: "HEAD",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" },
+    }).then(r => {
+      const cr = r.headers.get("content-range");
+      const total = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0;
+      setActiveBroadcastCount(isNaN(total) ? 0 : total);
+    }).catch(() => setActiveBroadcastCount(null));
+  }, [auth?.userId, configTab]);
   const [adminActionModal, setAdminActionModal] = React.useState<{ level: string | null; label: string; color: string } | null>(null);
   const [adminActionEmail, setAdminActionEmail] = React.useState("");
 
@@ -719,6 +753,41 @@ export function AdminDesktopPage() {
             {/* ── Zone contenu ── */}
             <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "18px 26px 30px", minWidth: 0, background: "#EEF2F8" }}>
             <div style={{ columnCount: 2, columnGap: 22 }}>
+            {configTab === "auto" && (() => {
+              const items: { key: AutoShortcutKey | "__broadcast_count__"; label: string; on: boolean; sub?: string; warn?: boolean }[] = [
+                { key: "phone_completion_prompt_enabled", label: "Profil incomplet", on: autoShortcuts.phone_completion_prompt_enabled },
+                { key: "verification_prompt_enabled", label: "Vérification du compte", on: autoShortcuts.verification_prompt_enabled },
+                { key: "premium_nudge_enabled", label: "Inciter à passer Premium", on: autoShortcuts.premium_nudge_enabled },
+                { key: "promo_active", label: "Super promo Premium", on: autoShortcuts.promo_active },
+                { key: "broadcast_enabled", label: "Diffusion générale", on: autoShortcuts.broadcast_enabled, sub: activeBroadcastCount === null ? undefined : `${activeBroadcastCount} diffusion${activeBroadcastCount > 1 ? "s" : ""} active${activeBroadcastCount > 1 ? "s" : ""} en ce moment`, warn: (activeBroadcastCount || 0) > 1 },
+                { key: "premium_event_active", label: "Campagne Premium gratuite", on: autoShortcuts.premium_event_active },
+                { key: "mm_auto_propose_enabled", label: "Auto-propositions (matchmaking)", on: autoShortcuts.mm_auto_propose_enabled },
+                { key: "spontaneous_auto_propose_enabled", label: "Auto-propositions spontanées", on: autoShortcuts.spontaneous_auto_propose_enabled },
+                { key: "auto_warn_ban_contact_enabled", label: "Avertir/bannir auto (contact)", on: autoShortcuts.auto_warn_ban_contact_enabled },
+              ];
+              const activeCount = items.filter(i => i.on).length;
+              return (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: 18, marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <div style={{ fontWeight: 900, fontSize: "0.95rem", color: G.brun }}>Vue d'ensemble</div>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: activeCount > 0 ? "#1e8449" : "#999", background: activeCount > 0 ? "rgba(39,174,96,0.1)" : "rgba(136,136,136,0.1)", borderRadius: 50, padding: "3px 11px" }}>{activeCount} / {items.length} actif{activeCount > 1 ? "s" : ""}</div>
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 12 }}>Tout ce qui tourne en ce moment, pour éviter d'en oublier plusieurs activés en même temps.</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 6 }}>
+                    {items.map(it => (
+                      <div key={it.key} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "7px 9px", borderRadius: 10, background: it.warn ? "rgba(230,126,34,0.08)" : "transparent" }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: it.on ? (it.warn ? "#E67E22" : "#27ae60") : "#ccc", marginTop: 5, flexShrink: 0 }} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: "0.8rem", fontWeight: 600, color: it.on ? G.brun : "#aaa" }}>{it.label}</div>
+                          {it.sub && <div style={{ fontSize: "0.68rem", color: it.warn ? "#E67E22" : "#999", fontWeight: it.warn ? 700 : 400 }}>{it.sub}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {configTab === "auto" && <OffCanvasSection title="Profil & Vérification">
               <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourcis — modifier ici change le même réglage que dans Marketing → Profil incomplet.</div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
@@ -758,6 +827,27 @@ export function AdminDesktopPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
                 <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Avertir / bannir automatiquement (partage de contact)</span>
                 <SwitchBtn on={autoShortcuts.auto_warn_ban_contact_enabled} onToggle={() => toggleAutoShortcut("auto_warn_ban_contact_enabled")} />
+              </div>
+            </OffCanvasSection>}
+
+            {configTab === "auto" && <OffCanvasSection title="Communication">
+              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourci — désactive/réactive instantanément l'affichage des diffusions aux membres, sans toucher à celles déjà créées ni à leur date d'expiration (qui reprennent normalement dès la réactivation).</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Diffusion générale</span>
+                <SwitchBtn on={autoShortcuts.broadcast_enabled} onToggle={() => toggleAutoShortcut("broadcast_enabled")} />
+              </div>
+              <div style={{ borderTop: "1px solid #eee", margin: "12px 0" }} />
+              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Campagne Premium gratuite (Marketing → Campagnes Premium) : cette bascule met le Premium gratuitement à TOUS les comptes gratuits d'un coup — pas de raccourci "Activer" ici, il faut d'abord choisir la cible et la durée dans son onglet d'origine. Seule la désactivation rapide est possible ici (les vrais abonnés Premium ne sont jamais touchés).</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <div>
+                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Campagne Premium gratuite</span>
+                  <div style={{ fontSize: "0.7rem", color: autoShortcuts.premium_event_active ? "#1e8449" : "#999", fontWeight: 700, marginTop: 2 }}>{autoShortcuts.premium_event_active ? "● Active" : "Inactive"}</div>
+                </div>
+                {autoShortcuts.premium_event_active ? (
+                  <button onClick={deactivatePremiumEventShortcut} disabled={premiumEventShortcutLoading} style={{ background: "rgba(231,76,60,0.1)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.3)", borderRadius: 50, padding: "7px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: premiumEventShortcutLoading ? "not-allowed" : "pointer" }}>{premiumEventShortcutLoading ? "…" : "Désactiver"}</button>
+                ) : (
+                  <span style={{ fontSize: "0.72rem", color: "#bbb" }}>—</span>
+                )}
               </div>
             </OffCanvasSection>}
 
@@ -2571,10 +2661,12 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
     spontaneous_auto_propose_enabled: false,
     auto_warn_ban_contact_enabled: false,
     promo_active: false,
+    broadcast_enabled: true,
+    premium_event_active: false,
   });
   useEffect(() => {
     if (autoShortcutsProp || !auth) return;
-    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active"];
+    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -3241,7 +3333,7 @@ function AdminHelpModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active";
+type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active" | "broadcast_enabled" | "premium_event_active";
 function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut, onSetAutoShortcut }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void; autoShortcuts: Record<AutoShortcutKeyShared, boolean>; onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void; onSetAutoShortcut: (key: AutoShortcutKeyShared, value: boolean) => void }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
@@ -5431,7 +5523,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   }, [showMatchList]);
 
   // ── ÉVÉNEMENT PREMIUM ──
+  // Contrairement aux autres raccourcis d'Automatisations : ACTIVER cette campagne distribue
+  // le Premium gratuit à tous les comptes gratuits, avec une date de fin qui vient du formulaire
+  // "Créer une campagne" (cible + durée) juste au-dessus. Pas de raccourci "Activer" générique
+  // possible sans configurer cible/durée d'abord — seul un raccourci "Désactiver" a du sens
+  // depuis Automatisations (voir plus bas, section Communication).
   const [premiumEventActive, setPremiumEventActive] = useState(false);
+  useEffect(() => { setPremiumEventActive(autoShortcuts.premium_event_active); }, [autoShortcuts.premium_event_active]);
   const [premiumEventLoading, setPremiumEventLoading] = useState(false);
   const [premiumEventConfirm, setPremiumEventConfirm] = useState(false);
   const [premiumEventExpiresAt, setPremiumEventExpiresAt] = useState("");
@@ -5467,6 +5565,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
             body: JSON.stringify({ is_premium: false }),
           });
           setPremiumEventActive(false);
+          onSetAutoShortcut("premium_event_active", false);
         }
       } catch {}
     };
@@ -5512,6 +5611,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         showToast("Événement Premium désactivé. Les abonnés réels conservent leur statut.", "success");
       }
       setPremiumEventActive(newState);
+      onSetAutoShortcut("premium_event_active", newState);
     } catch {
       showToast("Erreur lors de la modification de l'événement Premium.", "error");
     } finally {
@@ -7215,21 +7315,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
   // ── Classify reports ──
   const classifyReport = (r: ReportRow): { label: string; color: string } => {
-    if (r.reason?.startsWith("[AUTO-MOD")) return { label: "Auto-modération", color: "#e67e22" };
+    if (r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[AUTO-CONTACT")) return { label: "Auto-modération", color: "#e67e22" };
     if (r.reason?.startsWith("[BOT SIGNALEMENT]")) return { label: "Alerte bot", color: "#8e44ad" };
     if (isSupportReason(r.reason)) return { label: "Messagerie", color: G.vert };
     if (!r.reported_id) return { label: "Alerte système", color: "#7f8c8d" };
     return { label: "Signalement profil", color: G.rouge };
   };
 
-  const ARCHIVED_STATUSES = ["reviewed", "rejected", "banned", "archived"];
+  const ARCHIVED_STATUSES = ["reviewed", "rejected", "banned", "archived", "auto_log_archived"];
   const isPending = (r: ReportRow) => !ARCHIVED_STATUSES.includes(r.status);
   const isSupportReport = (r: ReportRow) => isSupportReason(r.reason);
   // Messagerie = messages envoyés par l'utilisateur (SUPPORT_USER) OU réponses utilisateur à nos messages (SUPPORT_USER après un SUPPORT_REPLY)
   const isSupportUserMessage = (r: ReportRow) => !!r.reason?.startsWith(SUPPORT_PREFIX_USER) || (!!r.reason?.startsWith(SUPPORT_PREFIX_REPLY) === false && isSupportReason(r.reason));
   const isSupportInbox = (r: ReportRow) => isSupportReason(r.reason); // tout échange support
   const isSupportAdminReply = (r: ReportRow) => !!r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
-  const isSystemReport = (r: ReportRow) => !isSupportReport(r) && (r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[BOT") || !r.reported_id);
+  const isSystemReport = (r: ReportRow) => !isSupportReport(r) && (r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[AUTO-CONTACT") || r.reason?.startsWith("[BOT") || !r.reported_id);
   const isProfileReport = (r: ReportRow) => !isSupportReport(r) && !isSystemReport(r) && !!r.reported_id;
 
   // Onglet "Messagerie" (top-level) = même vue que le sous-filtre "messaging", mais depuis son propre onglet

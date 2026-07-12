@@ -381,6 +381,11 @@ let FEATURE_MODERATION_CONTACT = true;
 // de partage de contact — remplace le simple signalement quand activé.
 let AUTO_WARN_BAN_CONTACT_ENABLED = false;
 export function setAUTO_WARN_BAN_CONTACT_ENABLED(v: any) { AUTO_WARN_BAN_CONTACT_ENABLED = v === true || v === "true"; }
+// ── Interrupteur maître "Diffusion générale" : par défaut activé (true) tant que le réglage
+//    n'a jamais été explicitement désactivé, pour ne rien casser sur les installations existantes
+//    qui n'ont pas encore cette clé en base. ──
+let BROADCAST_ENABLED = true;
+export function setBROADCAST_ENABLED(v: any) { BROADCAST_ENABLED = v !== "false" && v !== false; }
 // Garde-fou "une seule fois par session" — se réinitialise naturellement à chaque nouveau
 // chargement de l'app (nouvelle session), pas besoin de le stocker ailleurs.
 let autoWarnContactTriggeredThisSession = false;
@@ -445,7 +450,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -464,6 +469,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_moderation_insults"] !== undefined) FEATURE_MODERATION_INSULTS = map["feature_moderation_insults"] !== "false";
   if (map["feature_moderation_contact"] !== undefined) FEATURE_MODERATION_CONTACT = map["feature_moderation_contact"] !== "false";
   if (map["auto_warn_ban_contact_enabled"] !== undefined) setAUTO_WARN_BAN_CONTACT_ENABLED(map["auto_warn_ban_contact_enabled"]);
+  if (map["broadcast_enabled"] !== undefined) setBROADCAST_ENABLED(map["broadcast_enabled"]);
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
@@ -709,17 +715,19 @@ const broadcastTargetsUser = (target: string | null | undefined, isPremium: bool
 //    et nombre d'ignorés ("Plus tard" / fermeture). Lecture-puis-écriture non atomique :
 //    en cas de clics quasi simultanés d'utilisateurs différents, un comptage peut se perdre.
 //    Suffisant pour un indicateur marketing approximatif, pas pour de la facturation. ──
+// ── Compteur simple pour la Super Promo : nombre de clics "J'en profite" et nombre
+//    d'ignorés ("Plus tard" / fermeture). Passe par la fonction Postgres dédiée
+//    increment_promo_counter (SECURITY DEFINER) plutôt qu'un accès direct à app_settings —
+//    un membre normal n'a pas les droits d'écrire dans app_settings (RLS réservée aux admins),
+//    donc un GET+PATCH direct échouait silencieusement pour tout le monde sauf les admins.
+//    Cette fonction est atomique côté serveur, donc pas de clic perdu en cas de clics simultanés. ──
 export const bumpPromoCounter = async (key: "promo_clicks" | "promo_ignored", token: string) => {
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` } });
-    const d = await r.json().catch(() => []);
-    const current = Array.isArray(d) && d[0]?.value ? (parseInt(d[0].value) || 0) : 0;
-    const next = String(current + 1);
-    const patch = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" }, body: JSON.stringify({ value: next }) });
-    const patched = await patch.json().catch(() => []);
-    if (!Array.isArray(patched) || patched.length === 0) {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ key, value: "1" }) });
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_promo_counter`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ counter_key: key }),
+    });
   } catch {}
 };
 export type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null; is_feature?: boolean; target_gender?: string | null; feature_user_id?: string | null; feature_profile?: Profile };
@@ -15958,6 +15966,7 @@ export default function App() {
         .then(r => r.ok ? r.json() : []).then((d: any) => { if (Array.isArray(d) && d[0]?.gender) setUserGender(d[0].gender); }).catch(() => {});
     }
     const checkBroadcast = async () => {
+      if (!BROADCAST_ENABLED) return;
       try {
         const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
         const r = await fetch(
@@ -16354,6 +16363,7 @@ export default function App() {
 
     // ── REALTIME broadcasts - modal instantané sans refresh ──
     const checkBroadcastRealtime = async () => {
+      if (!BROADCAST_ENABLED) return;
       try {
         const lastSeen = localStorage.getItem(`moyo_broadcast_seen_${auth.userId}`) || "1970-01-01";
         const profileR = await fetch(
