@@ -5550,7 +5550,11 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
         setPromoActive(map["promo_active"] === "true");
         if (map["promo_price_fcfa"]) setPromoPrice(map["promo_price_fcfa"]);
-        if (map["promo_expires_at"]) setPromoExpiresAt(map["promo_expires_at"].slice(0, 16));
+        if (map["promo_expires_at"]) {
+          const d = new Date(map["promo_expires_at"]);
+          const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+          setPromoExpiresAt(local.toISOString().slice(0, 16));
+        }
         if (map["promo_target"]) setPromoTarget(map["promo_target"]);
         if (map["promo_message"]) setPromoMessage(map["promo_message"]);
         if (map["promo_start"]) setPromoStart(map["promo_start"]);

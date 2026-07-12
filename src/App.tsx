@@ -2018,11 +2018,13 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   const promoDays = Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31;
   const PREMIUM_PLANS = [
     promo && { id: "promo", label: "Super promo (1 mois)", per: "mois", amount: promo.price, days: promoDays, popular: true, badge: PREMIUM_PRICE_FCFA > 0 ? `-${Math.floor((1 - promo.price / PREMIUM_PRICE_FCFA) * 100)}%` : null },
-    PLAN_WEEK_ENABLED && { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA, days: PREMIUM_DAYS_WEEK },
-    PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: !promo },
-    PLAN_2MONTH_ENABLED && { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, days: PREMIUM_DAYS_2MONTH, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
+    !promo && PLAN_WEEK_ENABLED && { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA, days: PREMIUM_DAYS_WEEK },
+    !promo && PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: true },
+    !promo && PLAN_2MONTH_ENABLED && { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, days: PREMIUM_DAYS_2MONTH, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
   ].filter(Boolean) as { id: string; label: string; per: string; amount: number; days: number; popular?: boolean; badge?: string | null }[];
   const [planId, setPlanId] = useState(promo ? "promo" : "1mois");
+  // Montant économisé grâce à la promo (affiché à côté du prix pour valoriser l'offre)
+  const promoSavings = promo ? Math.max(0, PREMIUM_PRICE_FCFA - promo.price) : 0;
   const selectedPlan = PREMIUM_PLANS.find(p => p.id === planId) || PREMIUM_PLANS[0];
   const planAmount = selectedPlan.amount;
   const [txRef, setTxRef] = useState("");
@@ -2170,6 +2172,9 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
             );
           })}
         </div>
+        {promo && promoSavings > 0 && (
+          <div style={{ textAlign: "center", fontSize: "0.8rem", fontWeight: 700, color: "#1a5c3a", marginBottom: 4 }}>Vous économisez {promoSavings.toLocaleString("fr-FR")} FCFA</div>
+        )}
         <div style={{ padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", flexShrink: 0 }}>
           <button onClick={() => setStep("b2")} style={{ width: "100%", background: gold, color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: "pointer" }}>Suivant →</button>
         </div>
@@ -2572,7 +2577,10 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
                 );
               })}
             </div>
-            <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#7a6a3a", fontWeight: 600, marginBottom: 14 }}>Formule sélectionnée : <span style={{ fontWeight: 800, color: "#3a2e10" }}>{selectedPlan.label}</span>, <span style={{ fontWeight: 800, color: gold }}>{planAmount.toLocaleString("fr-FR")} FCFA</span></div>
+            <div style={{ textAlign: "center", fontSize: "0.78rem", color: "#7a6a3a", fontWeight: 600, marginBottom: promo && promoSavings > 0 ? 4 : 14 }}>Formule sélectionnée : <span style={{ fontWeight: 800, color: "#3a2e10" }}>{selectedPlan.label}</span>, <span style={{ fontWeight: 800, color: gold }}>{planAmount.toLocaleString("fr-FR")} FCFA</span></div>
+            {promo && promoSavings > 0 && (
+              <div style={{ textAlign: "center", fontSize: "0.8rem", fontWeight: 700, color: "#1a5c3a", marginBottom: 14 }}>Vous économisez {promoSavings.toLocaleString("fr-FR")} FCFA</div>
+            )}
           </>
         )}
         {isDiaspora && (
