@@ -6681,7 +6681,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
     setProfiles(prev => shuffleArray([...prev]));
     el.scrollTop = 0;
   }
-}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "100%", height: isWide ? "calc(100vh - 20px)" : "100%", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "var(--c-shell-bg)", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
+}} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 62px)", height: isWide ? "calc(100vh - 20px)" : "calc(100dvh - 62px)", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "var(--c-shell-bg)", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
     <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100% - 12px)", minHeight: 480, borderRadius: 28, overflow: "hidden", marginBottom: 12, background: "var(--c-shell-bg)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
