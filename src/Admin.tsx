@@ -5607,10 +5607,11 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     setPromoCountLoading(true);
     (async () => {
       try {
-        let q = "select=id&is_premium=eq.false&city=not.ilike.*diaspora*";
+        let q = "select=id";
         if (promoGender === "femmes") q += "&gender=eq.Femme";
         else if (promoGender === "hommes") q += "&gender=eq.Homme";
         if (promoPlan === "nouveaux") { const d30 = new Date(Date.now() - 30 * 86400000).toISOString(); q += `&created_at=gte.${d30}`; }
+        else if (promoPlan === "gratuit") q += "&is_premium=eq.false";
         const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${q}`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
         const cr = r.headers.get("content-range"); const total = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0;
         if (!cancelled) setPromoCount(isNaN(total) ? 0 : total);
